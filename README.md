@@ -10,10 +10,11 @@ fitting module (i.e., halo model) with a given sampling technique.
 
 1. Installation
 
-    a) Contact Cristóbal Sifón (sifon@strw.leidenuniv.nl) to be granted access
-       to the KiDS-GGL repository
+    a) Contact Cristóbal Sifón (sifon@strw.leidenuniv.nl) to become a member
+       of the KiDS-WL repository and join the KiDS-GGL team
 
-    b) from the folder where you want the package to be located, run:
+
+    a) From the folder where you want the package to be located, run:
 
             git clone git@github.com:KiDS-WL/KiDS-GGL.git
 

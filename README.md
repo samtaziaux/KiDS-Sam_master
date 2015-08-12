@@ -25,4 +25,6 @@ fitting module (i.e., halo model) with a given sampling technique.
 
 3. Run
 
-    a) run!
+    a) from the command-line, type:
+
+        kids-ggl -c <config_file>

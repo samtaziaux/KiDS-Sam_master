@@ -3,6 +3,18 @@ from glob import glob
 #from ConfigParser import SafeConfigParser
 
 def read_config(config_file, version='0.5.7'):
+    valid_types = ('normal', 'lognormal', 'uniform', 'exp',
+                   'fixed', 'read', 'function')
+    params = []
+    param_types = []
+    prior_types = []
+    val1 = []
+    val2 = []
+    val3 = []
+    val4 = []
+    starting = []
+    meta_names = []
+    fits_format = []
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -14,16 +26,13 @@ def read_config(config_file, version='0.5.7'):
         elif line[0] == 'covariance':
             covfile = glob(line[1])
             if len(covfile) > 1:
-                msg = 'More than one possible covariance file'
+                msg = 'More than one matching covariance filename'
                 raise ValueError(msg)
             covfile = covfile[0]
             covcols = [int(i) for i in line[2].split(',')]
         elif line[0] == 'halomodel':
-            model = line[1]
+            model = read_function(line[1])
         # also read param names - follow the satellites Early Science function
-        elif line[0][:11] == 'model_param':
-            model_params.append(line[1])
-
         elif line[0] == 'hm_param':
             if line[2] not in valid_types:
                 msg = 'ERROR: Please provide only valid prior types in the'
@@ -34,6 +43,9 @@ def read_config(config_file, version='0.5.7'):
                 exit()
             params.append(line[1])
             prior_types.append(line[2])
+            if line[2] == 'function':
+                val1.append(read_function(line[3]))
+                val2.append(-1)
             if line[2] == 'read':
                 filename = os.path.join(path, line[3])
                 val1.append(loadtxt(filename, usecols=(int(line[4]),)))
@@ -57,7 +69,7 @@ def read_config(config_file, version='0.5.7'):
                 val4.append(inf)
             if line[2] == 'uniform':
                 starting.append(float(line[-1]))
-        elif line[0] == 'values':
+        elif line[0] == 'hm_params':
             if line[2] != 'fixed':
                 msg = 'ERROR: Arrays can only contain fixed values.'
                 print msg
@@ -69,7 +81,23 @@ def read_config(config_file, version='0.5.7'):
             val2.append(-1)
             val3.append(-inf)
             val4.append(inf)
-        elif line[0] == 'metadata':
+        elif line[0] == 'hm_output':
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
-    return
+    out = (datafiles, datacols, covfile, covcols,
+           model, params, param_types, prior_types,
+           val1, val2, val3, val4, starting, meta_names, fits_format)
+    return out
+
+def read_function(function):
+    function_path = function.split('.')
+    if len(function_path) < 2:
+        msg = 'ERROR: the parent module(s) must be given with'
+        msg += 'a function'
+        print msg
+        exit()
+    else:
+        module = __import__(function)
+        for attr in function_path:
+            func = getattr(func, attr)
+    return func

@@ -16,10 +16,14 @@ def main():
 
     # Choose and set up a halo model
     hm_options = halomodel.hm_utils.read_config(parser.config_file)
-    model =
+    datafiles, datacols, covfile, covcols, \
+        model, params, param_types, prior_types, \
+        val1, val2, val3, val4, starting, \
+        meta_names, fits_format = hm_options
+    halomodel.config()
 
-    # MCMC sampler
-    
+    # Setup and run MCMC sampler
+    sampling.run()
 
     return
 

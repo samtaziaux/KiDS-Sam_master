@@ -19,7 +19,13 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
         line = line.split()
         ## General settings
         if line[0] == 'KiDS_version':
-            version = line[1]
+            kids_version = line[1]
+        elif line[0] == 'KiDS_path':
+            kids_path = line[1]
+        elif line[0] == 'GAMA_version':
+            gama_version = line[1]
+        elif line[0] == 'GAMA_path':
+            gama_path = line[1]
         # Cosmology
         elif line[0] == 'Om':
             Om = float(line[1])
@@ -61,7 +67,11 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             if len(bins) == 1:
                 bins = bins[0]
             src_selection[param] = bins
-    out = (version, Om, Ol, Ok, h,
+    #if kids_version and not kids_path:
+        #kids_path =
+    #if gama_version and not gama_path:
+        #gama_path =
+    out = (kids_path, gama_path, Om, Ol, Ok, h,
            folder, filename, purpose, Rbins, ncores,
            lensid_file, group_centre,
            binparam, lens_selection, src_selection)

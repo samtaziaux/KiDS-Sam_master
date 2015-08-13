@@ -1,6 +1,12 @@
+import imp
 import os
 from glob import glob
-#from ConfigParser import SafeConfigParser
+from numpy import array, inf, loadtxt
+
+import sys
+sys.path.append('halomodel')
+
+# local
 
 def read_config(config_file, version='0.5.7'):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
@@ -21,8 +27,11 @@ def read_config(config_file, version='0.5.7'):
         if line.replace(' ', '').replace('\t', '')[0] == '#':
             continue
         line = line.split()
+        if len(line) == 0:
+            continue
         if line[0] == 'model':
-            model = read_function(line[1])
+            model = line[1].split('.')
+            model = read_function(*model)
         # also read param names - follow the satellites Early Science function
         elif line[0] == 'hm_param':
             if line[2] not in valid_types:
@@ -35,10 +44,10 @@ def read_config(config_file, version='0.5.7'):
             params.append(line[1])
             prior_types.append(line[2])
             if line[2] == 'function':
-                val1.append(read_function(line[3]))
+                val1.append(read_function(*(line[3].split('.'))))
                 val2.append(-1)
-            if line[2] == 'read':
-                filename = os.path.join(path, line[3])
+            elif line[2] == 'read':
+                filename = line[3]
                 val1.append(loadtxt(filename, usecols=(int(line[4]),)))
                 val2.append(-1)
             else:
@@ -96,15 +105,6 @@ def read_config(config_file, version='0.5.7'):
            starting, meta_names, fits_format)
     return out
 
-def read_function(function):
-    function_path = function.split('.')
-    if len(function_path) < 2:
-        msg = 'ERROR: the parent module(s) must be given with'
-        msg += 'a function'
-        print msg
-        exit()
-    else:
-        module = __import__(function)
-        for attr in function_path:
-            func = getattr(func, attr)
-    return func
+def read_function(module, function):
+    module = imp.load_module(module, *imp.find_module(module))
+    return getattr(module, function)

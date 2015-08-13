@@ -12,8 +12,7 @@ from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
 from nfw import mass_enclosed, mass_total_sharp
 from utils import cM_duffy08, delta, density_average
 
-def fiducial(theta, R, sat_profile, group_profile,
-             h=1, Om=0.315, Ol=0.685, rmax=2):
+def fiducial(theta, R, h=1, Om=0.315, Ol=0.685, rmax=2):
     # local variables are accessed much faster than global ones
     _abs = abs
     _array = array

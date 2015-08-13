@@ -12,11 +12,8 @@ from os import remove
 from os.path import isfile
 from time import ctime
 
-# local
-import models
-import utils
 
-def emcee(sampling_options, hm_options)
+def emcee(sampling_options, hm_options):
     from itertools import count, izip
     from time import ctime
     from astropy.io.fits import BinTableHDU, Column, Header, PrimaryHDU
@@ -26,23 +23,16 @@ def emcee(sampling_options, hm_options)
     # local
     import nfw
 
-    datafiles, datacols, covfile, covcols, output, \
-        sampler, nwalkers, nsteps, nburn,
+    datafile, datacols, covfile, covcols, output, \
+        sampler, nwalkers, nsteps, nburn, \
         thin, k, threads, sampler_type = sampling_options
     model, params, param_types, prior_types, \
-        val1, val2, val3, val4, \
+        val1, val2, val3, val4, hm_functions, \
         starting, meta_names, fits_format = hm_options
 
     # minus the columns, paramfile, and outputfile entries
-    Ndatafiles = len(datafiles) - 6
-    datafile = datafiles
+    Ndatafiles = len(datafile) - 6
 
-    #output file
-    if output[-5:] != '.fits' and output[-4:] != '.fit':
-        output += '.fits'
-    if len(datacols) not in (2,3):
-        print fmt_error
-        exit()
     if os.path.isfile(output):
         msg = 'Warning: output file %s exists. Overwrite? [y/N] ' %output
         answer = raw_input(msg)
@@ -62,7 +52,7 @@ def emcee(sampling_options, hm_options)
             esd /= oneplusk
     else:
         R, esd = numpy.transpose([numpy.loadtxt(df, usecols=datacols[:2])
-                                  for df in datafile], axes=(2,0,1))
+                                for df in datafile], axes=(2,0,1))
         if len(datacols) == 3:
             oneplusk = array([numpy.loadtxt(df, usecols=[datacols[2]])
                               for df in datafile])
@@ -123,49 +113,49 @@ def emcee(sampling_options, hm_options)
 
     angles = numpy.linspace(0, 2*numpy.pi, 540)
     val1 = numpy.append(val1, [Rrange, angles])
-    #mle = optimize.minimize(
     jfixed = (prior_types == 'fixed') | (prior_types == 'read')
     jfree = ~jfixed
 
     # identify the function. Raises an AttributeError if not found
-    function = model.model()
-    sat_profile = params.sat_profile()
-    group_profile = params.group_profile()
+    #function = model.model()
+    #sat_profile = params.sat_profile()
+    #group_profile = params.group_profile()
+    function = model
 
-    hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
-    print 'Printing header information to', hdrfile
-    hdr = open(hdrfile, 'w')
-    print >>hdr, 'Started', ctime()
-    print >>hdr, 'datafile', ','.join(datafile)
-    print >>hdr, 'cols', argv[1+Ndatafiles]
-    print >>hdr, 'covfile', covfile
-    print >>hdr, 'covcols', covcols
-    print >>hdr, 'model %s' %model
-    print >>hdr, 'sat_profile %s' %sat_profile
-    print >>hdr, 'group_profile %s' %group_profile
-    for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
-                                      val1, val2, val3, val4):
-        try:
-            line = '%s  %s  ' %(p, pt)
-            line += ','.join(numpy.array(v1, dtype=str))
-        except TypeError:
-            line = '%s  %s  %s  %s  %s  %s' \
-                   %(p, pt, str(v1), str(v2), str(v3), str(v4))
-        print >>hdr, line
-    print >>hdr, 'nwalkers  {0:5d}'.format(nwalkers)
-    print >>hdr, 'nsteps    {0:5d}'.format(nsteps)
-    print >>hdr, 'nburn     {0:5d}'.format(nburn)
-    print >>hdr, 'thin      {0:5d}'.format(thin)
-    hdr.close()
+    #hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
+    #print 'Printing header information to', hdrfile
+    #hdr = open(hdrfile, 'w')
+    #print >>hdr, 'Started', ctime()
+    #print >>hdr, 'datafile', ','.join(datafile)
+    #print >>hdr, 'cols', argv[1+Ndatafiles]
+    #print >>hdr, 'covfile', covfile
+    #print >>hdr, 'covcols', covcols
+    #print >>hdr, 'model %s' %model
+    #print >>hdr, 'sat_profile %s' %sat_profile
+    #print >>hdr, 'group_profile %s' %group_profile
+    #for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
+                                      #val1, val2, val3, val4):
+        #try:
+            #line = '%s  %s  ' %(p, pt)
+            #line += ','.join(numpy.array(v1, dtype=str))
+        #except TypeError:
+            #line = '%s  %s  %s  %s  %s  %s' \
+                   #%(p, pt, str(v1), str(v2), str(v3), str(v4))
+        #print >>hdr, line
+    #print >>hdr, 'nwalkers  {0:5d}'.format(nwalkers)
+    #print >>hdr, 'nsteps    {0:5d}'.format(nsteps)
+    #print >>hdr, 'nburn     {0:5d}'.format(nburn)
+    #print >>hdr, 'thin      {0:5d}'.format(thin)
+    #hdr.close()
     # run chain
+    po = starting
     ndim = len(val1[(jfree)])
     if len(po) != ndim:
         msg = 'ERROR: Not all starting points defined for uniform variables.'
-        msg += ' Exiting.'
         print msg
         exit()
     print 'po =', po
-    po = po * numpy.random.uniform(0.99, 1.01, size=(nwalkers,ndim))
+    po *= numpy.random.uniform(0.99, 1.01, size=(nwalkers,ndim))
     lnprior = zeros(ndim)
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
@@ -223,30 +213,30 @@ def emcee(sampling_options, hm_options)
                                 isfile, izip, transpose, xrange)
             metadata, nwriten = out
             #print 'nwritten =', nwritten, i
-    hdr = open(hdrfile, 'a')
-    try:
-        print 'acceptance_fraction =', sampler.acceptance_fraction
-        print >>hdr, 'acceptance_fraction =',
-        for af in sampler.acceptance_fraction:
-            print >>hdr, af,
-    except ImportError:
-        pass
-    try:
-        print 'acor =', sampler.acor
-        print >>hdr, '\nacor =',
-        for ac in sampler.acor:
-            print >>hdr, ac,
-    except ImportError:
-        pass
-    try:
-        print 'acor_time =', sampler.get_autocorr_time()
-        print >>hdr, '\nacor_time =',
-        for act in sampler.get_autocorr_time():
-            print >>hdr, act,
-    except AttributeError:
-        pass
-    print >>hdr, '\nFinished', ctime()
-    hdr.close()
+    #hdr = open(hdrfile, 'a')
+    #try:
+        #print 'acceptance_fraction =', sampler.acceptance_fraction
+        #print >>hdr, 'acceptance_fraction =',
+        #for af in sampler.acceptance_fraction:
+            #print >>hdr, af,
+    #except ImportError:
+        #pass
+    #try:
+        #print 'acor =', sampler.acor
+        #print >>hdr, '\nacor =',
+        #for ac in sampler.acor:
+            #print >>hdr, ac,
+    #except ImportError:
+        #pass
+    #try:
+        #print 'acor_time =', sampler.get_autocorr_time()
+        #print >>hdr, '\nacor_time =',
+        #for act in sampler.get_autocorr_time():
+            #print >>hdr, act,
+    #except AttributeError:
+        #pass
+    #print >>hdr, '\nFinished', ctime()
+    #hdr.close()
     print 'Saved to', hdrfile
     cmd = 'mv {0} {1}'.format(output, output.replace('.fits', '.temp.fits'))
     print cmd

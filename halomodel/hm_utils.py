@@ -100,9 +100,9 @@ def read_config(config_file, version='0.5.7'):
             fits_format.append(line[2].split(','))
     if len(hm_functions) > 0:
         hm_functions = (func for func in hm_functions)
-    out = (model, params, param_types, prior_types,
+    out = (model, params, array(param_types), array(prior_types),
            val1, val2, val3, val4, hm_functions,
-           starting, meta_names, fits_format)
+           array(starting), array(meta_names), fits_format)
     return out
 
 def read_function(module, function):

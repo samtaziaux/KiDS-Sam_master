@@ -29,7 +29,8 @@ def fiducial(theta, R, h=1, Om=0.315, Ol=0.685, rmax=2):
     _random = random
     _transpose = transpose
     _zeros = zeros
-    Rsat, n_Rsat1, n_Rsat2, n_Rsat3, rsat_range, \
+    sat_profile, group_profile, \
+        Rsat, n_Rsat1, n_Rsat2, n_Rsat3, rsat_range, \
         fc_sat, logMsat1, logMsat2, logMsat3, \
         fc_group, logMgroup1, logMgroup2, logMgroup3, \
         z, Mstar, Rranges, angles = theta

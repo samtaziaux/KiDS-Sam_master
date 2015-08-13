@@ -13,7 +13,7 @@ from os.path import isfile
 from time import ctime
 
 
-def emcee(sampling_options, hm_options):
+def run_emcee(sampling_options, hm_options):
     from itertools import count, izip
     from time import ctime
     from astropy.io.fits import BinTableHDU, Column, Header, PrimaryHDU
@@ -113,7 +113,8 @@ def emcee(sampling_options, hm_options):
 
     angles = numpy.linspace(0, 2*numpy.pi, 540)
     val1 = numpy.append(val1, [Rrange, angles])
-    jfixed = (prior_types == 'fixed') | (prior_types == 'read')
+    jfixed = (prior_types == 'fixed') | (prior_types == 'read') | \
+             (prior_types == 'function')
     jfree = ~jfixed
 
     # identify the function. Raises an AttributeError if not found
@@ -121,6 +122,7 @@ def emcee(sampling_options, hm_options):
     #sat_profile = params.sat_profile()
     #group_profile = params.group_profile()
     function = model
+    pickle.dumps(function)
 
     #hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
     #print 'Printing header information to', hdrfile
@@ -148,14 +150,13 @@ def emcee(sampling_options, hm_options):
     #print >>hdr, 'thin      {0:5d}'.format(thin)
     #hdr.close()
     # run chain
-    po = starting
     ndim = len(val1[(jfree)])
-    if len(po) != ndim:
+    if len(starting) != ndim:
         msg = 'ERROR: Not all starting points defined for uniform variables.'
         print msg
         exit()
-    print 'po =', po
-    po *= numpy.random.uniform(0.99, 1.01, size=(nwalkers,ndim))
+    print 'starting =', starting
+    po = starting * numpy.random.uniform(0.99, 1.01, size=(nwalkers,ndim))
     lnprior = zeros(ndim)
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
@@ -183,10 +184,10 @@ def emcee(sampling_options, hm_options):
                                     args=(R,esd,icov,function,
                                           params,prior_types[jfree],
                                           val1,val2,val3,val4,
-                                          jfree,lnprior,likenorm,
-                                          sat_profile,group_profile,
-                                          rng_obsbins,fail_value,
-                                          array,dot,inf,izip,outer,pi))
+                                          jfree,lnprior,likenorm))#,
+                                          #sat_profile,group_profile,
+                                          #rng_obsbins,fail_value,
+                                          #array,dot,inf,izip,outer,pi))
                                           #isfinite,log,log10
                                           #outer,sqrt,zeros))
     # burn-in
@@ -208,9 +209,9 @@ def emcee(sampling_options, hm_options):
         if i*nwalkers % 10000 == nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
-                                fits_format, i, nwritten, Nobsbins,
-                                BinTableHDU, Column, ctime, enumerate,
-                                isfile, izip, transpose, xrange)
+                                fits_format, i, nwritten, Nobsbin)#s,
+                                #BinTableHDU, Column, ctime, enumerate,
+                                #isfile, izip, transpose, xrange)
             metadata, nwriten = out
             #print 'nwritten =', nwritten, i
     #hdr = open(hdrfile, 'a')
@@ -252,9 +253,10 @@ def emcee(sampling_options, hm_options):
     return
 
 def lnprob(theta, R, esd, icov, function, params,
-           prior_types, val1, val2, val3, val4, jfree, lnprior, likenorm,
-           sat_profile, group_profile, rng_obsbins, fail_value,
-           array, dot, inf, izip, outer, pi):
+           prior_types, val1, val2, val3, val4, jfree, lnprior, likenorm):#,
+           #sat_profile, group_profile,
+           #rng_obsbins, fail_value,
+           #array, dot, inf, izip, outer, pi):
            #array, dot, inf, izip, isfinite,
            #log, log10, sqrt):
     """
@@ -332,7 +334,7 @@ def lnprob(theta, R, esd, icov, function, params,
     # run the given model
     v1 = val1.copy()
     v1[jfree] = theta
-    model = function(v1, R, sat_profile, group_profile)
+    model = function(v1, R)
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included

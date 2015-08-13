@@ -26,7 +26,7 @@ def main():
 
     # Setup and run MCMC sampler
     sampling_options = sampling_utils.read_config(args.config_file)
-    sampler.emcee(sampling_options, hm_options)
+    sampler.run_emcee(sampling_options, hm_options)
 
     return
 

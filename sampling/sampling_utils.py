@@ -30,6 +30,11 @@ def read_config(config_file, version='0.5.7'):
                 raise ValueError(msg)
             covfile = covfile[0]
             covcols = [int(i) for i in line[2].split(',')]
+        elif line[0] == 'sampler_output':
+            output = line[1]
+            if output[-5:].lower() != '.fits' or \
+                output[-4:].lower() != '.fit':
+                output += '.fits'
         elif line[0] == 'sampler':
             sampler = sorted(glob(line[1]))
         elif line[0] == 'nwalkers':
@@ -47,7 +52,7 @@ def read_config(config_file, version='0.5.7'):
         elif line[0] == 'sampler_type':
             sampler_type = glob(line[1])
 
-    out = (datafiles, datacols, covfile, covcols,
+    out = (datafiles, datacols, covfile, covcols, output,
            sampler,nwalkers,nsteps,nburn,thin,k,threads,
            sampler_type)
     return out

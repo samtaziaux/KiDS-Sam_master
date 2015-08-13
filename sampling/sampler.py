@@ -25,18 +25,19 @@ def emcee(sampling_options, hm_options)
     import numpy
     # local
     import nfw
-    
-    sampler,nwalkers,nsteps,nburn,thin,k,threads,sampler_type=sampling_options
-    datafiles, datacols, covfile, covcols,
-    model, params, param_types, prior_types,
-    val1, val2, val3, val4, starting, meta_names, fits_format=hm_options
+
+    datafiles, datacols, covfile, covcols, output, \
+        sampler, nwalkers, nsteps, nburn,
+        thin, k, threads, sampler_type = sampling_options
+    model, params, param_types, prior_types, \
+        val1, val2, val3, val4, \
+        starting, meta_names, fits_format = hm_options
 
     # minus the columns, paramfile, and outputfile entries
     Ndatafiles = len(datafiles) - 6
     datafile = datafiles
 
-    #output file 
-    output = 'output' #hardwired name for now -- need to put in ultils
+    #output file
     if output[-5:] != '.fits' and output[-4:] != '.fit':
         output += '.fits'
     if len(datacols) not in (2,3):
@@ -49,10 +50,11 @@ def emcee(sampling_options, hm_options)
             exit()
         if answer[0].lower() != 'y':
             exit()
-            
-    #load data files         
+
+    #load data files
     if type(datafile) == str:
         R, esd = numpy.loadtxt(datafile, usecols=datacols[:2]).T
+        # better in Mpc
         if R[-1] > 500:
             R /= 1000
         if len(datacols) == 3:
@@ -124,7 +126,7 @@ def emcee(sampling_options, hm_options)
     #mle = optimize.minimize(
     jfixed = (prior_types == 'fixed') | (prior_types == 'read')
     jfree = ~jfixed
-    
+
     # identify the function. Raises an AttributeError if not found
     function = model.model()
     sat_profile = params.sat_profile()
@@ -426,6 +428,3 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
         print '(printing every {0}th sample)'.format(thin),
     print '- {0}'.format(ctime())
     return metadata, nwritten
-
-if __name__ == '__main__':
-    main()

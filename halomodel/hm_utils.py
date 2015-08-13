@@ -73,7 +73,13 @@ def read_config(config_file, version='0.5.7'):
             val3.append(-inf)
             val4.append(inf)
         elif line[0] == 'hm_functions':
-            if len(line) == 2:
+            # check if there are comments at the end first
+            if '#' in line:
+                j = line.index('#')
+            else:
+                j = len(line)
+            # how many entries before the comments?
+            if j == 2:
                 f = [read_function(i) for i in line[1].split(',')]
             else:
                 f = [read_function(line[1]+'.'+i)
@@ -83,7 +89,8 @@ def read_config(config_file, version='0.5.7'):
         elif line[0] == 'hm_output':
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
-    hm_functions = (func for func in hm_functions)
+    if len(hm_functions) > 0:
+        hm_functions = (func for func in hm_functions)
     out = (model, params, param_types, prior_types,
            val1, val2, val3, val4, hm_functions,
            starting, meta_names, fits_format)

@@ -13,6 +13,7 @@ def read_config(config_file, version='0.5.7'):
     val3 = []
     val4 = []
     starting = []
+    hm_functions = []
     meta_names = []
     fits_format = []
     config = open(config_file)
@@ -30,7 +31,7 @@ def read_config(config_file, version='0.5.7'):
                 raise ValueError(msg)
             covfile = covfile[0]
             covcols = [int(i) for i in line[2].split(',')]
-        elif line[0] == 'halomodel':
+        elif line[0] == 'model':
             model = read_function(line[1])
         # also read param names - follow the satellites Early Science function
         elif line[0] == 'hm_param':
@@ -81,12 +82,22 @@ def read_config(config_file, version='0.5.7'):
             val2.append(-1)
             val3.append(-inf)
             val4.append(inf)
+        elif line[0] == 'hm_functions':
+            if len(line) == 2:
+                f = [read_function(i) for i in line[1].split(',')]
+            else:
+                f = [read_function(line[1]+'.'+i)
+                     for i in line[2].split(',')]
+            for i in f:
+                hm_functions.append(i)
         elif line[0] == 'hm_output':
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
+    hm_functions = (func for func in hm_functions)
     out = (datafiles, datacols, covfile, covcols,
            model, params, param_types, prior_types,
-           val1, val2, val3, val4, starting, meta_names, fits_format)
+           val1, val2, val3, val4, hm_functions,
+           starting, meta_names, fits_format)
     return out
 
 def read_function(function):

@@ -23,7 +23,8 @@ def main():
     halomodel.config()
 
     # Setup and run MCMC sampler
-    sampling.run()
+    sampling_options = sampling.sampling_utils.read_config(parser.config_file)
+    sampling.run.emcee(sampling_options,hm_options)
 
     return
 

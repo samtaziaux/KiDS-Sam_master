@@ -21,17 +21,7 @@ def read_config(config_file, version='0.5.7'):
         if line.replace(' ', '').replace('\t', '')[0] == '#':
             continue
         line = line.split()
-        elif line[0] == 'data':
-            datafiles = sorted(glob(line[1]))
-            datacols = [int(i) for i in line[2].split(',')]
-        elif line[0] == 'covariance':
-            covfile = glob(line[1])
-            if len(covfile) > 1:
-                msg = 'More than one matching covariance filename'
-                raise ValueError(msg)
-            covfile = covfile[0]
-            covcols = [int(i) for i in line[2].split(',')]
-        elif line[0] == 'model':
+        if line[0] == 'model':
             model = read_function(line[1])
         # also read param names - follow the satellites Early Science function
         elif line[0] == 'hm_param':
@@ -94,8 +84,7 @@ def read_config(config_file, version='0.5.7'):
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
     hm_functions = (func for func in hm_functions)
-    out = (datafiles, datacols, covfile, covcols,
-           model, params, param_types, prior_types,
+    out = (model, params, param_types, prior_types,
            val1, val2, val3, val4, hm_functions,
            starting, meta_names, fits_format)
     return out

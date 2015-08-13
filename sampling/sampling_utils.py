@@ -20,6 +20,16 @@ def read_config(config_file, version='0.5.7'):
         if line.replace(' ', '').replace('\t', '')[0] == '#':
             continue
         line = line.split()
+        if line[0] == 'data':
+            datafiles = sorted(glob(line[1]))
+            datacols = [int(i) for i in line[2].split(',')]
+        elif line[0] == 'covariance':
+            covfile = glob(line[1])
+            if len(covfile) > 1:
+                msg = 'More than one matching covariance filename'
+                raise ValueError(msg)
+            covfile = covfile[0]
+            covcols = [int(i) for i in line[2].split(',')]
         elif line[0] == 'sampler':
             sampler = sorted(glob(line[1]))
         elif line[0] == 'nwalkers':
@@ -37,7 +47,8 @@ def read_config(config_file, version='0.5.7'):
         elif line[0] == 'sampler_type':
             sampler_type = glob(line[1])
 
-    out = (sampler,nwalkers,nsteps,nburn,thin,k,threads,
+    out = (datafiles, datacols, covfile, covcols,
+           sampler,nwalkers,nsteps,nburn,thin,k,threads,
            sampler_type)
     return out
 

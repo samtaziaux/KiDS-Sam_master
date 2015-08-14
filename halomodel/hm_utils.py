@@ -1,29 +1,38 @@
+import imp
 import os
 from glob import glob
-#from ConfigParser import SafeConfigParser
+from numpy import array, inf, loadtxt
+
+import sys
+sys.path.append('halomodel')
+
+# local
 
 def read_config(config_file, version='0.5.7'):
+    valid_types = ('normal', 'lognormal', 'uniform', 'exp',
+                   'fixed', 'read', 'function')
+    params = []
+    param_types = []
+    prior_types = []
+    val1 = []
+    val2 = []
+    val3 = []
+    val4 = []
+    starting = []
+    hm_functions = []
+    meta_names = []
+    fits_format = []
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
             continue
         line = line.split()
-        elif line[0] == 'data':
-            datafiles = sorted(glob(line[1]))
-            datacols = [int(i) for i in line[2].split(',')]
-        elif line[0] == 'covariance':
-            covfile = glob(line[1])
-            if len(covfile) > 1:
-                msg = 'More than one possible covariance file'
-                raise ValueError(msg)
-            covfile = covfile[0]
-            covcols = [int(i) for i in line[2].split(',')]
-        elif line[0] == 'halomodel':
-            model = line[1]
+        if len(line) == 0:
+            continue
+        if line[0] == 'model':
+            model = line[1].split('.')
+            model = read_function(*model)
         # also read param names - follow the satellites Early Science function
-        elif line[0][:11] == 'model_param':
-            model_params.append(line[1])
-
         elif line[0] == 'hm_param':
             if line[2] not in valid_types:
                 msg = 'ERROR: Please provide only valid prior types in the'
@@ -34,8 +43,11 @@ def read_config(config_file, version='0.5.7'):
                 exit()
             params.append(line[1])
             prior_types.append(line[2])
-            if line[2] == 'read':
-                filename = os.path.join(path, line[3])
+            if line[2] == 'function':
+                val1.append(read_function(*(line[3].split('.'))))
+                val2.append(-1)
+            elif line[2] == 'read':
+                filename = line[3]
                 val1.append(loadtxt(filename, usecols=(int(line[4]),)))
                 val2.append(-1)
             else:
@@ -57,7 +69,7 @@ def read_config(config_file, version='0.5.7'):
                 val4.append(inf)
             if line[2] == 'uniform':
                 starting.append(float(line[-1]))
-        elif line[0] == 'values':
+        elif line[0] == 'hm_params':
             if line[2] != 'fixed':
                 msg = 'ERROR: Arrays can only contain fixed values.'
                 print msg
@@ -69,7 +81,30 @@ def read_config(config_file, version='0.5.7'):
             val2.append(-1)
             val3.append(-inf)
             val4.append(inf)
-        elif line[0] == 'metadata':
+        elif line[0] == 'hm_functions':
+            # check if there are comments at the end first
+            if '#' in line:
+                j = line.index('#')
+            else:
+                j = len(line)
+            # how many entries before the comments?
+            if j == 2:
+                f = [read_function(i) for i in line[1].split(',')]
+            else:
+                f = [read_function(line[1]+'.'+i)
+                     for i in line[2].split(',')]
+            for i in f:
+                hm_functions.append(i)
+        elif line[0] == 'hm_output':
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
-    return
+    if len(hm_functions) > 0:
+        hm_functions = (func for func in hm_functions)
+    out = (model, params, array(param_types), array(prior_types),
+           val1, val2, val3, val4, hm_functions,
+           array(starting), array(meta_names), fits_format)
+    return out
+
+def read_function(module, function):
+    module = imp.load_module(module, *imp.find_module(module))
+    return getattr(module, function)

@@ -21,9 +21,36 @@ alpha = 0.057 # Used to calculate m
 beta = -0.37 # Used to calculate m
 inf = np.inf
 
+"""
+def input_variables(purpose, folder, filename, kidsversion, gamaversion,
+                    nsplit, ncores, blindcat, Rbins, src_selection,
+                    lens_selection, group_centre, lensid_file, binparam,
+                    binnum, Om, Ol, Ok, h):
+"""    
 
-def input_variables():
+def input_variables()
 
+	purpose = str(sys.argv[20]) # The type of output that will be generated (shearcatalog, randomcatalog, covariance)
+	folder = str(sys.argv[19]) # The path where the output will be written
+	filename = str(sys.argv[23]) # Additional information about the plot
+	kidsversion = str(sys.argv[24]) # The path to the KiDS catalogues
+	gamaversion = str(sys.argv[24]) # The path to the GAMA catalogues
+	nsplit = int(sys.argv[1])-1 # The number of this particular core/split
+	ncores = int(sys.argv[2]) # The number of cores/splits over which this calculation will be spread
+	blindcat = str(sys.argv[4]) # The blind catalog (A, B, C, D)
+	Rbins = str(sys.argv[18]) # The path to the limits of the radial bins
+	src_selection = str(sys.argv[18]) # 
+	lens_selection = str(sys.argv[18]) # 
+	group_centre = str(sys.argv[5]) # The center definition: Cen, IterCen or BCG
+	lensid_file = str(sys.argv[5]) #
+	binparam = str(sys.argv[12]) # Name of the binning observable in the merged catalog (for no binning use: 'No')	
+	binnum = int(sys.argv[3]) # Number of the bin for which the covariance will be computed (when not binning use '0')
+	Om = float(sys.argv[21]) # The value of Omega(matter) (Omega(Lambda) = 1 - Omega(matter))
+	Ol = float(sys.argv[21]) # The value of Omega(matter) (Omega(Lambda) = 1 - Omega(matter))
+	Ok = float(sys.argv[21])
+	h = float(sys.argv[22]) # The value of the reduced Hubble constant h (H = h*100km/s/Mpc)
+    
+    """
 	Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
 	Ncores = int(sys.argv[2]) # The number of cores/splits over which this calculation will be spread
 	binnum = int(sys.argv[3]) # Number of the bin for which the covariance will be computed (when not binning use '0')
@@ -48,7 +75,9 @@ def input_variables():
 	h = float(sys.argv[22]) # The value of the reduced Hubble constant h (H = h*100km/s/Mpc)
 	filename_addition = str(sys.argv[23]) # Additional information about the plot
 	path_kidscats = str(sys.argv[24]) # The path to the KiDS catalogues
+    """
 
+    
 	if blindcat=='A':
 		blindcatnum=0
 	if blindcat=='B':
@@ -714,7 +743,7 @@ def define_obsbins(obslist, binname, path_obsbins, binnum, lenssel): # Binnning 
 
 
 #def define_lenssel(purpose, galranklist, rankmin, rankmax, Nfoflist, Nfofmin, Nfofmax, binname, binnum, obslist, binmin, binmax, obslim, obslimlist, obslim_min, obslim_max): # Masking the lenses according to the appropriate lens selection and the current KiDS field
-def define_lenssel(gama, lens_param):
+def define_lenssel(gama, lens_param, binname, binmin, binmax):
 
 	#lenssel = [True]*len(galranklist)
 	lenssel = numpy.ones(len(gama['RA']), dtype=bool)
@@ -724,7 +753,7 @@ def define_lenssel(gama, lens_param):
         if len(value) == 1:
             lenssel *= (gama[param] == value[0])
         else:
-            lenssel *= (gama[param] >= value[0]) & (gama[param] < value[1])
+            lenssel *=  (value[0] <= gama[param]) & (gama[param] < value[1])
 
 	## If the lenses aregalaxies...
 	#if not 'star' in purpose:
@@ -737,9 +766,9 @@ def define_lenssel(gama, lens_param):
 		#lenssel = lenssel & (Nfofmin<=Nfoflist)&(Nfoflist<=Nfofmax)
 
 	## If there is observable binning...
-	#if binname != 'No':
+	if binname != None:
 		## The galaxy selection depends on observable
-		#lenssel = lenssel & (binmin<=obslist)&(obslist<binmax)
+		lenssel *=  (binmin <= gama[binname]) & (gama[binname] < binmax])
 
 	## If there is observable binning...
 	#if obslim != 'No':

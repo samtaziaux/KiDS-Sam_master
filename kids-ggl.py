@@ -5,7 +5,8 @@ import argparse
 import esd_production
 import halomodel
 import sampling
-from sampling import sampler, sampling_utils
+import sampler, sampling_utils
+#from sampling import sampler, sampling_utils
 from halomodel import hm_utils
 
 def main():

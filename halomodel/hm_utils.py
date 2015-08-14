@@ -3,8 +3,8 @@ import os
 from glob import glob
 from numpy import array, inf, loadtxt
 
-import sys
-sys.path.append('halomodel')
+#import sys
+#sys.path.append('halomodel')
 
 # local
 

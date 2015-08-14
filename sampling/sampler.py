@@ -11,7 +11,10 @@ from numpy.linalg import det
 from os import remove
 from os.path import isfile
 from time import ctime
+import pickle
 
+def foo(function, v, R):
+    return function(v, R)
 
 def run_emcee(sampling_options, hm_options):
     from itertools import count, izip
@@ -26,9 +29,12 @@ def run_emcee(sampling_options, hm_options):
     datafile, datacols, covfile, covcols, output, \
         sampler, nwalkers, nsteps, nburn, \
         thin, k, threads, sampler_type = sampling_options
-    model, params, param_types, prior_types, \
+    function, params, param_types, prior_types, \
         val1, val2, val3, val4, hm_functions, \
         starting, meta_names, fits_format = hm_options
+
+    #pickle.dumps(function)
+    #print 'pickled'
 
     # minus the columns, paramfile, and outputfile entries
     Ndatafiles = len(datafile) - 6
@@ -121,8 +127,7 @@ def run_emcee(sampling_options, hm_options):
     #function = model.model()
     #sat_profile = params.sat_profile()
     #group_profile = params.group_profile()
-    function = model
-    pickle.dumps(function)
+    #function = model
 
     #hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
     #print 'Printing header information to', hdrfile
@@ -179,9 +184,11 @@ def run_emcee(sampling_options, hm_options):
     for i in xrange(4):
         fail_value.append(9999)
 
+    #pickle.dumps(lnprob)
+    #print 'pickled'
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     threads=threads,
-                                    args=(R,esd,icov,function,
+                                    args=(R,esd,icov,foo,
                                           params,prior_types[jfree],
                                           val1,val2,val3,val4,
                                           jfree,lnprior,likenorm))#,
@@ -334,7 +341,9 @@ def lnprob(theta, R, esd, icov, function, params,
     # run the given model
     v1 = val1.copy()
     v1[jfree] = theta
+
     model = function(v1, R)
+    #model = foo(v1, R)
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included

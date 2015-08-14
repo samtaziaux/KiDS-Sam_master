@@ -13,15 +13,13 @@ import numpy as np
 import sys
 import glob
 from astropy import constants as const, units as u
-from decimal import *
 
 
 def angular(z,Om,Ol):
 
     # Important constants
     c = const.c.value # Speed of light (in m/s)
-    Hdim = 1e2 # dimension of H (H = h*100km/s/Mpc = h*100*1000m/s/1000kpc =
-    h*100m/s/kpc)
+    Hdim = 1e2 # dimension of H (H = h*100km/s/Mpc = h*100*1000m/s/1000kpc = h*100m/s/kpc)
 
     n = 1000.
 

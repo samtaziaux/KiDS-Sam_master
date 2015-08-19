@@ -30,14 +30,13 @@ def main():
 
     start_tot = time.time()
 
-    Nsplit, Nsplits, centering, \
-    lensid_file, lens_binning, binnum, lens_selection, Nobsbins, \
-    src_selection, path_Rbins, path_output, path_splits, path_results, \
-    purpose, name_Rbins, O_matter, O_lambda, Ok, h, \
-    filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-    path_kidscats, path_gamacats, rankmin, rankmax = shear.input_variables()
+    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, \
+            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, path_output, \
+            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+            filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
+            path_kidscats, path_gamacats = shear.input_variables()
 
-
+    
     print 'Step 1: Create split catalogues in parallel'
     print
 
@@ -58,9 +57,9 @@ def main():
 
         Nfofmin = 2
         Nfofmax = inf
-        binname = 'No'
-        path_obsbins = 'No'
-
+        binname = 'None'
+        lens_binning = {'None': np.array([])}
+        
         if Nsplits < Nobsbins:
             Nsplits = Nobsbins
             Nsplit = binnum-1
@@ -69,20 +68,18 @@ def main():
         binnum = 1
 
         if centering == 'Cen':
-            rankmin = rankmax = 1
+            ranks = np.array([1, 1])
 
         else:
-            if all(np.array([rankmin,rankmax]) > 0): # Group catalog
-                rankmin = 1
-                rankmax = inf
+            if all(ranks > 0): # Group catalog
+                ranks = np.array([1, inf])
             else: # Galaxy catalog
-                rankmin = -999
-                rankmax = inf
+                ranks = np.array([-999, inf])
 
 
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, rankmin, rankmax, binname, \
-    binnum, Nobsbins, lens_selection, src_selection, path_Rbins, O_matter, O_lambda, Ok, h)
+    filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+    binnum, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
 
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat+1, filename_var) # Ncat is the number of existing catalogs, we want to go one beyond
@@ -92,6 +89,7 @@ def main():
     # Stop if the catalog already exists.
     outname = shear.define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat)
     print 'Requested file:', outname
+    print
 
     if os.path.isfile(outname):
         print 'This output already exists:', outname
@@ -108,24 +106,27 @@ def main():
 
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
-    catmatch, kidscats, galIDs_infield, kidscat_end, \
-    Rmin, Rmax, Rbins, Rcenters, nRbins, \
-    galIDlist, groupIDlist, galRAlist, galDEClist, galZlist, \
-    Dcllist, Dallist = \
-    shear.import_data(path_Rbins, path_kidscats, path_gamacats, centering, purpose, Ncat, \
-    rankmin, rankmax, O_matter, O_lambda, Ok, h, binname)
+    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
+    shear.import_data(path_Rbins, path_gamacats, path_kidscats, centering, \
+    purpose, Ncat, ranks, O_matter, O_lambda, Ok, h)
+
 
     # Calculate the source variance
+    """
     w_varlist = np.array([])
     e1_varlist = np.array([[]]*4) # These lists will contain all used ellipticities for the variance calculation
     e2_varlist = np.array([[]]*4)
 
-    # Calculate the variance for the 4 blind catalogs
     print 'Importing KiDS catalogs from: %s'%path_kidscats
+    i = 0
     for kidscatname in kidscats:
-        print '	', kidscatname
+        i += 1
+        print '	%i/%i:'%(i, len(kidscats)), kidscatname
+        
         # Import and mask all used data from the sources in this KiDS field
-        srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm = shear.import_kidscat(path_kidscats, kidscatname, kidscat_end, ZBmin, ZBmax)
+        srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm = \
+        shear.import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection)
 
         # Make ellipticity- and lfweight-lists for the variance calculation
         w_varlist = np.append(w_varlist, w)
@@ -133,13 +134,15 @@ def main():
         e2_varlist = np.hstack([e2_varlist, e2.T])
 
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist) # Calculating the variance of the ellipticity for this source selection
+    """
+    # !!!!!!! This is temporary, to speed up the code !!!!!!
+    variance = np.array([0.06423509, 0.08734607, 0.07392235, 0.07810604])
+
 
     # Binnning information of the groups
-    lenssel = shear.define_lenssel(purpose, galranklist, rankmin, rankmax, Nfoflist, Nfofmin, Nfofmax, 'No', binnum, [], -inf, inf, obslim, obslimlist, obslim_min, obslim_max) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
-    binrange, binmin, binmax = shear.define_obsbins(obslist, binname, path_obsbins, binnum, lenssel)
-    Nobsbins = len(binrange)-1
+    lenssel = shear.define_lenssel(gamacat, ranks, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    obsbins, binmin, binmax = shear.define_obsbins(binname, binnum, lens_selection, lenssel, gamacat)
 
-    #	Edogals = np.loadtxt('lensID_N5.dat')
 
     # We translate the range in source redshifts to a range in source distances Ds
     zsrcbins = np.arange(0.025,3.5,0.05) # The range of redshifts corresponding to the 70 values in the probability distribution
@@ -151,11 +154,12 @@ def main():
     print '%s split'%purpose, Nsplit+1, '/', Nsplits, ', Center definition = %s'%centering
     print
 
-    # If the KiDS catalogs are chosen manually:
-    #	kidscats = ['KIDS_231p0_0p5'] # Fewest lenses
-    #	kidscats = ['KIDS_172p5_2p5'] # 710 lenses
-    #	kidscats = ['KIDS_179p0_m0p5'] # Most lenses
-    #	kidscats = ['KIDS_130p0_m0p5']#, 'KIDS_130p0_0p5', 'KIDS_131p0_0p5', 'KIDS_130p0_1p5'] # corresponds to Edo's test group: group ID 100065 (galaxy ID 214484)
+# If the KiDS catalogs are chosen manually:
+#	kidscats = ['KIDS_231p0_0p5'] # Fewest lenses
+#    kidscats = ['KIDS_172p5_2p5'] # 710 lenses
+#	kidscats = ['KIDS_179p0_m0p5'] # Most lenses
+#	kidscats = ['KIDS_130p0_m0p5']#, 'KIDS_130p0_0p5', 'KIDS_131p0_0p5', 'KIDS_130p0_1p5'] # corresponds to Edo's test group: group ID 100065 (galaxy ID 214484)
+
 
     if 'catalog' in purpose:
         # These lists will contain the final output
@@ -170,6 +174,7 @@ def main():
 
     start_tot = time.time()
 
+
     for kidscatname in splitkidscats[Nsplit]:
 
         memfrac = memory.test() # Check which fraction of the memory is full
@@ -179,12 +184,11 @@ def main():
 
         kidscatN = kidscatN+1
 
-        lenssel = shear.define_lenssel(purpose, galranklist, rankmin, rankmax, Nfoflist, Nfofmin, Nfofmax, binname, binnum, obslist, binmin, binmax, obslim, obslimlist, obslim_min, obslim_max)
+        lenssel = shear.define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax)
         matched_galIDs = np.array(catmatch[kidscatname]) # The ID's of the galaxies that lie in this field
 
-        galIDs, galRAs, galDECs, galZs, Dcls, Dals, galIDmask = shear.mask_gamacat(purpose, matched_galIDs, lenssel, centering, galranklist, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist)
+        galIDs, galRAs, galDECs, galZs, Dcls, Dals, galIDmask = shear.mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist)
 
-    #		if len(galIDs) > 0: # If there are any selected galaxies in this field, start the reduction
 
         print 'Analysing field %i/%i: %s (contains %i objects)'%(kidscatN, len(splitkidscats[Nsplit]), kidscatname, len(galIDs))
         if ('random' in purpose):
@@ -192,18 +196,19 @@ def main():
 
         # Split the list of lenses into chunks of 100 max.
         lenssplits = np.append(np.arange(0, len(galIDs), 100), len(galIDs))
-    #			print 'lens splits:', lenssplits
 
         # Import and mask all used data from the sources in this KiDS field
-        srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm = shear.import_kidscat(path_kidscats, kidscatname, kidscat_end, ZBmin, ZBmax)
+        srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm = shear.import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection)
+
 
         if 'covariance' in purpose:
             # These lists will contain the final covariance output [Noutput, Nsrc, NRbins]
             outputnames = ['Cs', 'Ss', 'Zs']
             output = [Cs_out, Ss_out, Zs_out] = np.zeros([len(outputnames), len(w), nRbins])
 
+
         for l in xrange(len(lenssplits)-1):
-            print '	Lens split:', l+1, ':', lenssplits[l], '-', lenssplits[l+1]
+            print 'Lens split %i/%i:'%(l+1, len(lenssplits))#, lenssplits[l], '-', lenssplits[l+1]
 
             # Select all the lens properties that are in this lens split
             galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, Dal_split = [galIDs[lenssplits[l] : lenssplits[l+1]], galRAs[lenssplits[l] : lenssplits[l+1]], galDECs[lenssplits[l] : lenssplits[l+1]], galZs[lenssplits[l] : lenssplits[l+1]], Dcls[lenssplits[l] : lenssplits[l+1]], Dals[lenssplits[l] : lenssplits[l+1]]]

@@ -3,6 +3,11 @@ from glob import glob
 import numpy as np
 #from ConfigParser import SafeConfigParser
 
+# Important constants
+inf = np.inf # Infinity
+nan = np.nan # Not a number
+
+
 def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
                 lensid_file=None, folder='./'):
     #parser = SafeConfigParser()
@@ -60,9 +65,22 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             lensid_file = line[1]
         elif line[0] == 'group_centre':
             group_centre = line[1]
+
+        elif line[0] == 'lens_ranks':
+            try:
+                ranks = np.array([int(i) for i in line[1].split(',')])
+            except:
+                ranks = line[1]
+
         elif line[0] == 'lens_binning':
-            bins = np.array([float(i) for i in line[2].split(',')])
-            lens_binning = {line[1]: bins}
+            binname = line[1]
+            if binname == 'None':
+                bins = np.array([])
+            else:
+                bins = np.array([float(i) for i in line[2].split(',')])
+                if len(bins) == 1:
+                    bins = int(bins[0])
+            lens_binning = {binname: bins}
             
         elif line[0][:10] == 'lens_param':
             param = line[1]
@@ -70,6 +88,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             if len(bins) == 1:
                 bins = bins[0]
             lens_selection[param] = bins
+
         elif line[0] == 'kids_blinds':
             blindcats = line[1].split(',')
         
@@ -90,7 +109,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
     out = (kids_path, gama_path,
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, ncores,
-            lensid_file, group_centre, lens_binning, lens_selection,
+            lensid_file, group_centre, ranks, lens_binning, lens_selection,
             src_selection, blindcats)
 
     return out

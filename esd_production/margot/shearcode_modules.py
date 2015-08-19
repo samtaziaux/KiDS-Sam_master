@@ -32,7 +32,7 @@ def input_variables():
     [path_kidscats, path_gamacats,
             O_matter, O_lambda, Ok, h,
             path_output, filename_addition, purpose, path_Rbins, Nsplits,
-            lensid_file, centering, lens_binning, lens_selection,
+            lensid_file, centering, ranks, lens_binning, lens_selection,
             src_selection, blindcats] = esd_utils.read_config(config_file)
 
     Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
@@ -40,6 +40,11 @@ def input_variables():
     binnum = int(sys.argv[3]) # The number of this particular observable bin
     blindcat = str(sys.argv[4]) # The number of this particular blind KiDS catalog
 
+    print
+    print 'Running:', purpose
+
+
+    # Defining the number of the blind KiDS catalogue
     if blindcat == 'A':
         blindcatnum = 0
     if blindcat == 'B':
@@ -49,30 +54,36 @@ def input_variables():
     if blindcat == 'D':
         blindcatnum = 3
 
-    # Defining filename addition
+
+    # Defining the addition to the file name
     if filename_addition == 'None':
         filename_addition = ''
     else:
         filename_addition = '_%s'%filename_addition
 
-   # Observable bins
+
+    # Reading the name and number of observable bins
     binname = lens_binning.keys()[0]
     Nobsbins = len(lens_binning[binname])
 
-    # Observable limits
-    for param in lens_selection.keys():
-        obslims = lens_selection[param]
-        print 'Observable limits: %s <= %s <= %s'%(obslims[0], param, obslims[1])
+    # Reading the chosen galaxy ranks
+    if type(ranks) == str: # If specified
+        if 'All' in ranks:
+            ranks = np.array([-999, inf])
+        if 'Group' in ranks:
+            ranks = np.array([1, inf])
+        if 'Isolated' in ranks:
+            ranks = np.array([-999, -999])
+        if 'Centrals' in ranks:
+            ranks = np.array([1, 1])
+        if 'Satellites' in ranks:
+            ranks = np.array([2, inf])
+    else:
+        pass
 
-    try:
-        ranklim = lens_selection['rank%s'%centering]
-        rankmin = ranklim[0]
-        rankmax = ranklim[1]
-    except:
-        rankmin = -999
-        rankmax = inf
 
-    # Create all necessary folders once
+
+    # Create all necessary folders
 
     # Path containing the output folders
     path_output = '%s/output_%sbins%s'%(path_output, binname, filename_addition)
@@ -82,23 +93,16 @@ def input_variables():
     path_splits = '%s/splits_%s'%(path_output, purpose)
     path_results = '%s/results_%s'%(path_output, purpose)
 
-    if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum<=1):
+
+    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
 
     #		print 'Nsplit:', Nsplit
     #		print 'blindcat:', blindcat
     #		print 'binnum:', binnum
 
-        if not os.path.isdir(path_output):
-            os.makedirs(path_output)
-
-        if not os.path.isdir(path_catalogs):
-            os.makedirs(path_catalogs)
-
-        if not os.path.isdir(path_splits):
-            os.makedirs(path_splits)
-
-        if not os.path.isdir(path_results):
-            os.makedirs(path_results)
+        for path in [path_output, path_catalogs, path_splits, path_results]:
+            if not os.path.isdir(path):
+                os.makedirs(path)
 
     if 'catalog' in purpose:
 
@@ -106,33 +110,36 @@ def input_variables():
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
-        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum<=1):
+        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == Nobsbins):
 
-            if not os.path.isdir(path_splits):
-                os.makedirs(path_splits)
-
-            if not os.path.isdir(path_results):
-                os.makedirs(path_results)
+            for path in [path_splits, path_results]:
+                if not os.path.isdir(path):
+                    os.makedirs(path)
 
 
-    splitslist = [] # This list will contain all created splits
-    # Determining Ncat, the number of existing catalogs
+    # Name of the Rbins
+    if os.path.isfile(path_Rbins): # from a file
+        name_Rbins = path_Rbins.split('.')[0]
+        name_Rbins = name_Rbins.split('/')[-1]
+        name_Rbins = 'Rbins~%s'%name_Rbins
+    else:
+        name_Rbins = path_Rbins.replace(',', '~')
+        name_Rbins = 'Rbins%s'%name_Rbins
+
+
+    # Determining Ncat, the number of existing random catalogs
+    splitslist = [] # This list will contain all created random splits
+
     if ('random' in purpose):
 
         # Defining the name of the output files
-        if os.path.isfile(path_Rbins): # from a file
-            name_Rbins = path_Rbins.split('.')[0]
-            name_Rbins = name_Rbins.split('/')[-1]
-        else:
-            name_Rbins = 'logRbins%s'%path_Rbins
-
-        if all(np.array([rankmin,rankmax]) > 0):
-            filename_var = 'group_ZB%g-%g_%s_Om%g_h%g'%(ZBmin, ZBmax, name_Rbins, O_matter, h*100)
-        else:
-            filename_var = 'all_ZB%g-%g_%s_Om%g_h%g'%(ZBmin, ZBmax, name_Rbins, O_matter, h*100)
+        filename_var = define_filename_var(purpose.replace('bootstrap', 'catalog'), centering, ranks, binname, \
+                        binnum, Nobsbins, lens_selection, src_selection, \
+                        name_Rbins, O_matter, O_lambda, Ok, h)
 
         for Ncat in xrange(100):
             outname = '%s/%s_%i_%s%s_split%iof*.fits'%(path_splits.replace('bootstrap', 'catalog'), purpose.replace('bootstrap', 'catalog'), Ncat+1, filename_var, filename_addition, Nsplit+1)
+            print outname
             splitfiles = glob.glob(outname)
             splitslist = np.append(splitslist, splitfiles)
 
@@ -141,34 +148,21 @@ def input_variables():
     else:
         Ncat = 1
 
-    print
-    print 'Running:', purpose
 
-
-
-    return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
-            lens_selection, Nobsbins, src_selection, path_Rbins, path_output, \
-            path_splits, path_results, purpose, name_Rbins, O_matter, O_lambda, Ok, h, \
+    return Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, \
+            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, path_output, \
+            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-            path_kidscats, path_gamacats, rankmin, rankmax
+            path_kidscats, path_gamacats
 
 
-def define_filename_var(purpose, centering, rankmin, rankmax, binname,
-                        binnum, Nobsbins, lens_selection, src_selection,
-                        path_Rbins, O_matter, O_lambda, Ok, h): # Define the list of variables for the output filename
-
-
-    # Defining the name of the output files
-    if os.path.isfile(path_Rbins): # from a file
-        name_Rbins = path_Rbins.split('.')[0]
-        name_Rbins = name_Rbins.split('/')[-1]
-    else:
-        name_Rbins = 'logRbins%s'%path_Rbins
-
+def define_filename_var(purpose, centering, ranks, binname, \
+                        binnum, Nobsbins, lens_selection, src_selection, \
+                        name_Rbins, O_matter, O_lambda, Ok, h): # Define the list of variables for the output filename
 
     if 'catalog' in purpose:
 
-        if all(np.array([rankmin,rankmax]) > 0):
+        if all(ranks > 0):
 
             if centering == 'Cen':
                 filename_var = 'groupCen'
@@ -184,37 +178,43 @@ def define_filename_var(purpose, centering, rankmin, rankmax, binname,
 
     else: # Binnning information of the groups
 
-        filename_var = 'rank%s%g-%g'%(centering, rankmin, rankmax)
-        var_print = '%g<=rank%s<=%g,'%(rankmin, centering, rankmax)
+        filename_var = 'rank%s%g~%g'%(centering, ranks[0], ranks[1])
+        var_print = '%g<=rank%s<=%g,'%(ranks[0], centering, ranks[1])
 
-        if binname!='None': # If there is binning
+        if binname != 'None': # If there is binning
             filename_var = '%s_%sbin%sof%i'%(filename_var, binname, binnum, Nobsbins)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
 
-        try: # If there are observable limits
-            obslims = np.sort(lens_selection.keys())
-            for obslim in obslims:
-                obslim_min = lens_selection[obslim][0]
-                obslim_max = lens_selection[obslim][1]
+        obslims = np.sort(lens_selection.keys())
+        for obslim in obslims: # If there are observable limits
+            obslim_min = lens_selection[obslim][0]
+            obslim_max = lens_selection[obslim][1]
 
-                filename_var = '%s_%s%g-%g'%(filename_var, obslim, obslim_min, obslim_max)
-                var_print = '%s %s-limit: %g - %g,'%(var_print, obslim, obslim_min, obslim_max)
+            filename_var = '%s_%s%g~%g'%(filename_var, obslim, obslim_min, obslim_max)
+            var_print = '%s %s-limit: %g - %g,'%(var_print, obslim, obslim_min, obslim_max)
+  
+    srclims = np.sort(src_selection.keys())
+    for srclim in srclims: # If there are observable limits
+        srclim_min = src_selection[srclim][0]
+        srclim_max = src_selection[srclim][1]
 
-        except:
-            pass
-
-
+        filename_var = '%s_%s%g~%g'%(filename_var, srclim, srclim_min, srclim_max)
+        var_print = '%s %s-limit: %g - %g,'%(var_print, srclim, srclim_min, srclim_max)
+  
+  
     filename_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(filename_var, name_Rbins, O_matter, O_lambda, Ok, h)
+    
+    # Replace points with p and minus with m
+    filename_var = filename_var.replace('.', 'p')
+    filename_var = filename_var.replace('-', 'm')
+    filename_var = filename_var.replace('~', '-')
 
-    if 'catalog' in purpose:
-        print 'Lens selection: %s.'%(var_print[0:-1])
-        print
+    print 'Lens selection: %s.'%(var_print.replace(',', '', -1))
 
     return filename_var
 
 
 def define_filename_splits(path_splits, purpose, filename_var, Nsplit, Nsplits, filename_addition, blindcat):
-
 
     # Defining the names of the shear/random catalog
     if 'covariance' in purpose:
@@ -237,14 +237,24 @@ def define_filename_results(path_results, purpose, filename_var, filename_additi
     return resultname
 
 
-def import_data(path_Rbins, path_kidscats, centering, purpose, Ncat, rankmin, rankmax, O_matter, O_lambda, h, binname, obslim): # Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
+def import_data(path_Rbins, path_gamacats, path_kidscats, centering, purpose, \
+Ncat, ranks, O_matter, O_lambda, Ok, h): \
+# Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
 
+    # Import R-range
     Rmin, Rmax, Rbins, Rcenters, nRbins = import_Rrange(path_Rbins)
-    galIDlist, groupIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist, Nfoflist, galranklist, obslist, obslimlist = import_gamacat(centering, purpose, Ncat, rankmin, rankmax, O_matter, O_lambda, h, binname, obslim)
+    # Import GAMA catalogue
+    gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
+    import_gamacat(path_gamacats, centering, purpose, Ncat, ranks, \
+    O_matter, O_lambda, Ok, h)
+    # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats)
-    catmatch, kidscats, galIDs_infield = run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose)
+    # Match the KiDS field and GAMA galaxy coordinates
+    catmatch, kidscats, galIDs_infield = \
+    run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose)
 
-    return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, galIDlist, groupIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist, Nfoflist, galranklist, obslist, obslimlist
+    return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist
 
 
 def import_Rrange(path_Rbins): # Radial bins around the lenses
@@ -262,7 +272,7 @@ def import_Rrange(path_Rbins): # Radial bins around the lenses
     else: # from a specified number (of bins)
         try:
             # Start, End, number of steps and step size of the radius R (logarithmic 10^x)
-            binlist = path_Rbins.split(':')
+            binlist = path_Rbins.split(',')
 
             nRbins = int(binlist[0])
             Rmin = float(binlist[1])
@@ -289,122 +299,57 @@ def import_Rrange(path_Rbins): # Radial bins around the lenses
     return Rmin, Rmax, Rbins, Rcenters, nRbins
 
 
-def import_gamacat(centering, purpose, Ncat, rankmin, rankmax, O_matter, O_lambda, h, binname, obslim): # Load the properties (RA, DEC, Z -> dist) of the gal in the GAMA catalogue
+def import_gamacat(path_gamacats, centering, purpose, Ncat, ranks, \
+O_matter, O_lambda, Ok, h):
+# Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
 
     randomcatname = '/disks/shear9/brouwer/shearprofile/shear_2.1/gen_ran_out.randoms.fits'
-    starcatname = '/disks/shear9/viola/SG/src/All_DR2/All.DR2.clean.cat'
 
-    #	"""
-    # Normal GAMA catalogues
-
-    mergedcatdir = '/data2/brouwer/MergedCatalogues'
-    if os.path.isdir(mergedcatdir):
-        pass
+    # Importing the GAMA catalogues
+    if all(ranks > 0):
+        gamacatname = '%s/CatalogueGroups_v1.0_shuffenv+dens.fits'%path_gamacats
     else:
-        mergedcatdir = '/disks/shear10/brouwer_veersemeer/MergedCatalogues'
+        gamacatname = '%s/ShearMergedCatalogueAll_sv0.8_shuffdeltaR.fits'%path_gamacats
 
-    if all(np.array([rankmin,rankmax]) > 0):
-        mergedcatname = '%s/CatalogueGroups_v1.0_shuffenv+dens.fits'%mergedcatdir
-    else:
-        mergedcatname = '%s/ShearMergedCatalogueAll_sv0.8_shuffdeltaR.fits'%mergedcatdir
 
-    """
+    print 'Importing GAMA catalogue:', gamacatname
+    gamacat = pyfits.open(gamacatname)[1].data
 
-    # New GAMA catalogues
-    mergedcatdir = '/data2/brouwer/MergedCatalogues/DMUG3Cv08/groups'
-    mergedcatname = '%s/G3CGalv08.fits'%mergedcatdir
-
-    """
-
-    print 'Importing GAMA catalogue:', mergedcatname
-    mergedcat = pyfits.open(mergedcatname)
-
-    galIDlist = mergedcat[1].data['ID'] # IDs of all galaxies
-    galZlist = mergedcat[1].data['Z'] # Central Z of the galaxy
-    galranklist = mergedcat[1].data['Rank%s'%centering] # Rank of the galaxy
-
-    if all(np.array([rankmin,rankmax]) > 0):
-        Nfoflist = mergedcat[1].data['Nfof'] # Multiplicity of each group
-        groupIDlist = mergedcat[1].data['GroupID_1'] # IDs of all groups
-    else:
-        Nfoflist = np.array([])
-        groupIDlist = np.array([])
+    galIDlist = gamacat['ID'] # IDs of all galaxies
+    galZlist = gamacat['Z'] # Central Z of the galaxy
 
     if centering == 'Cen':
-        galRAlist = mergedcat[1].data['CenRA'] # Central RA of the galaxy (in degrees)
-        galDEClist = mergedcat[1].data['CenDEC'] # Central DEC of the galaxy (in degrees)
-        galZlist = mergedcat[1].data['Zfof'] # Z of the group
+        galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)
+        galDEClist = gamacat['CenDEC'] # Central DEC of the galaxy (in degrees)
+        galZlist = gamacat['Zfof'] # Z of the group
     else:
-        galRAlist = mergedcat[1].data['RA'] # Central RA of the galaxy (in degrees)
-        galDEClist = mergedcat[1].data['DEC'] # Central DEC of the galaxy (in degrees)
+        galRAlist = gamacat['RA'] # Central RA of the galaxy (in degrees)
+        galDEClist = gamacat['DEC'] # Central DEC of the galaxy (in degrees)
 
-    if binname != 'No':
-        obslist = mergedcat[1].data[binname.replace('corr-', '')] # Chosen binning observable of each group
-    else:
-        obslist = np.array([])
 
-    if obslim != 'No':
-        obslimlist = mergedcat[1].data[obslim.replace('corr-', '')] # Chosen binning observable of each group
-    else:
-        obslimlist = np.array([])
-
-    # print 'Importing merged catalog:', mergedcatname
-
-    if 'random' in purpose or 'star' in purpose:
+    if 'random' in purpose:
         # Determine RA and DEC for the random/star catalogs
         Ncatmin = Ncat * len(galIDlist) # The first item that will be chosen from the catalog
         Ncatmax = (Ncat+1) * len(galIDlist) # The last item that will be chosen from the catalog
+        
+        randomcat = pyfits.open(randomcatname)[1].data
 
-    if 'random' in purpose:
-        print 'Importing:', randomcatname
-        randomcat = pyfits.open(randomcatname)
+        galRAlist = randomcat['ra'][Ncatmin : Ncatmax]
+        galDEClist = randomcat['dec'][Ncatmin : Ncatmax]
 
-        galRAlist = randomcat[1].data['ra'][Ncatmin : Ncatmax]
-        galDEClist = randomcat[1].data['dec'][Ncatmin : Ncatmax]
 
-    if 'star' in purpose:
-        print 'Importing:', starcatname
-        starcat = np.loadtxt(starcatname).T
-
-        galRAlist = starcat[0]
-        galDEClist = starcat[1]
-        galIDlist = np.arange(len(galRAlist))
-        galZlist = np.hstack([galZlist]*int(len(galIDlist)/len(galZlist)+1))[0:len(galIDlist)]
-
-    Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) for z in galZlist]) # The comoving distance to the galaxy center (in kpc/h, where h is the dimensionless Hubble constant)
+    Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) for z in galZlist]) \
+    # The comoving distance to the galaxy center (in kpc/h, where h is the dimensionless Hubble constant)
     Dallist = Dcllist/(1+galZlist) # The angular diameter distance to the galaxy center (in kpc/h)
 
-    # Corrections on GAMA catalog observables
-    if ('AngSep' in binname and 'corr' in binname) or ('AngSep' in obslim and 'corr' in obslim):
-        print 'Applying AngSep correction'
 
-        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.) for z in galZlist])
-        corr_list = Dcllist/Dclgama
-        if 'AngSep' in binname:
-            obslist = obslist * corr_list
-        else:
-            obslimlist = obslimlist * corr_list
-
-    #	if ('logmstar' in binname and 'corr' in binname) or ('logmstar' in obslim and 'corr' in obslim):
-    if ('logmstar' in binname) or ('logmstar' in obslim):
-
-        print 'Applying logmstar fluxscale correction'
-
-        fluxscalelist = mergedcat[1].data['fluxscale'] # Fluxscale, needed for stellar mass correction
-        corr_list = np.log10(fluxscalelist)# - 2*np.log10(h/0.7)
-        if 'logmstar' in binname:
-            obslist = obslist + corr_list
-        else:
-            obslimlist = obslimlist + corr_list
-
-    return galIDlist, groupIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist, Nfoflist, galranklist, obslist, obslimlist
+    return gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist
 
 
 def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS fields
 
     # Load the names of all KiDS catalogues from the specified folder
     kidscatlist = os.listdir(path_kidscats)
-    #	kidscatlist = [kidscatlist[0]]
 
     # Remove all files from the list that are not KiDS catalogues
     for x in kidscatlist:
@@ -439,6 +384,7 @@ def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS 
 def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose): # Create a dictionary of KiDS fields that contain the corresponding galaxies.
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
+#    Rmax = Rmax + Rfield
 
     catmatch = dict()
     totgalIDs = np.array([])
@@ -481,8 +427,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
         # Defining the distance R between the lens center and its surrounding background sources
         catR = Dallist*np.arccos(np.cos(np.radians(galDEClist))*np.cos(np.radians(catDEC))*np.cos(np.radians(galRAlist-catRA))+np.sin(np.radians(galDEClist))*np.sin(np.radians(catDEC)))
 
-    #		coordmask = (catR<(Rmax+Rfield))
-        coordmask = (catR<Rmax)
+    	coordmask = (catR < Rmax)
 
         galIDs = np.array(galIDlist[coordmask])
 
@@ -531,88 +476,63 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
     return newseq
 
 
-def import_kidscat(path_kidscats, kidscatname, kidscat_end, ZBmin, ZBmax): # Import and mask all used data from the sources in this KiDS field
+def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection): # Import and mask all used data from the sources in this KiDS field
 
     kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end) # Full directory & name of the corresponding KiDS catalogue
-    kidscat = pyfits.open(kidscatfile)
+    kidscat = pyfits.open(kidscatfile)[1].data
+#    print 'Importing KiDS catalogue:', kidscatfile
 
-    srcNr = kidscat[1].data['SeqNr'] # List of the ID's of all sources in the KiDS catalogue
-    srcRA = kidscat[1].data['ALPHA_J2000'] # List of the RA's of all sources in the KiDS catalogue
-    srcDEC = kidscat[1].data['DELTA_J2000'] # List of the DEC's of all sources in the KiDS catalogue
-    w = kidscat[1].data['weight'] # The weight of the sources in the stacking
-    srcPZ = kidscat[1].data['PZ_full'] # Full P(z) probability function
-    SN = kidscat[1].data['SNratio'] # The Signal to Noise of the sources (needed for bias)
+    srcNr = kidscat['SeqNr'] # List of the ID's of all sources in the KiDS catalogue
+    srcRA = kidscat['ALPHA_J2000'] # List of the RA's of all sources in the KiDS catalogue
+    srcDEC = kidscat['DELTA_J2000'] # List of the DEC's of all sources in the KiDS catalogue
+    w = kidscat['weight'] # The weight of the sources in the stacking
+    srcPZ = kidscat['PZ_full'] # Full P(z) probability function
+    SN = kidscat['SNratio'] # The Signal to Noise of the sources (needed for bias)
+    srcm = kidscat['m_cor'] # The multiplicative bias m
+    manmask = kidscat['MAN_MASK'] # The manual masking of bad sources (0=good, 1=bad)
 
-    # Masking: we remove sources with weight=0, too high/low redshift ZB, and those masked by the catalog
-    srcZB = kidscat[1].data['Z_B'] # "Best" Z value from the catalog (to apply Z cuts)
-    manmask = kidscat[1].data['MAN_MASK'] # The manual masking of bad sources (0=good, 1=bad)
+    e1_A = kidscat['e1_A'] # The ellipticity of the sources in the X-direction
+    e1_B = kidscat['e1_B']
+    e1_C = kidscat['e1_C']
+    e1_D = kidscat['e1_D']
+    e2_A = kidscat['e2_A']
+    e2_B = kidscat['e2_B']
+    e2_C = kidscat['e2_C']
+    e2_D = kidscat['e2_D']
 
+    c1_A = kidscat['c1_A'] # The ellipticity correction of the sources in the X-direction
+    c1_B = kidscat['c1_B']
+    c1_C = kidscat['c1_C']
+    c1_D = kidscat['c1_D']
+    c2_A = kidscat['c2_A']
+    c2_B = kidscat['c2_B']
+    c2_C = kidscat['c2_C']
+    c2_D = kidscat['c2_D']
 
-    if 'DR2' in path_kidscats:
+    e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D])) # The corrected e1 for all blind catalogs
+    e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D])) # The corrected e2 for all blind catalogs
 
-        e1_A = kidscat[1].data['e1_A'] # The ellipticity of the sources in the X-direction
-        e1_B = kidscat[1].data['e1_B']
-        e1_C = kidscat[1].data['e1_C']
-        e1_D = kidscat[1].data['e1_D']
-        e2_A = kidscat[1].data['e2_A']
-        e2_B = kidscat[1].data['e2_B']
-        e2_C = kidscat[1].data['e2_C']
-        e2_D = kidscat[1].data['e2_D']
+    # Masking: We remove sources with weight=0 and those masked by the catalog
+    srcmask = (w > 0.) & (SN > 0) & (srcm < 0) & (manmask==0) & (-1 < c1_A)
 
-        c1_A = kidscat[1].data['c1_A'] # The ellipticity correction of the sources in the X-direction
-        c1_B = kidscat[1].data['c1_B']
-        c1_C = kidscat[1].data['c1_C']
-        c1_D = kidscat[1].data['c1_D']
-        c2_A = kidscat[1].data['c2_A']
-        c2_B = kidscat[1].data['c2_B']
-        c2_C = kidscat[1].data['c2_C']
-        c2_D = kidscat[1].data['c2_D']
+    # We apply any other cuts specified by the user
+    for param in src_selection.keys():
+        srclims = src_selection[param]
+        if len(srclims) == 1:
+            srcmask *= (kidscat[param] == binlims[0])
+#            print 'Source cut: %s = %g'%(param, srclims[0])
+        else:
+            srcmask *= (srclims[0] <= kidscat[param]) & (kidscat[param] < srclims[1])
+#            print ' Source cut: %g <= %s < %g'%(srclims[0], param, srclims[1])
 
-        e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D])) # The corrected e1 for all blind catalogs
-        e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D])) # The corrected e2 for all blind catalogs
-
-        srcm = kidscat[1].data['m_cor'] # The multiplicative bias m
-        usedmask = (ZBmin < srcZB) & (srcZB < ZBmax) & (w > 0.) & (srcm < 0) & (0 < SN) & (manmask==0) & (-1 < c1_A)
-
-    else:
-
-        print '*** Warning: You are using an old KiDS catalog: %s ***'%path_kidscats
-
-        """
-        e1 = np.transpose(np.array([e1_A, e1_B, e1_C, e1_D])) # e1 for all blind catalogs
-        e2 = np.transpose(np.array([e2_A, e2_B, e2_C, e2_D])) # e2 for all blind catalogs
-
-        size = kidscat[1].data['scalelength']*pix # The size of the sources in arcsec (needed for bias)
-
-        srcm = (beta/np.log(SN))*np.exp(-alpha*size*SN) # The multiplicative bias m
-        usedmask = (ZBmin < srcZB) & (srcZB < ZBmax) & (w > 0.) & (srcm < 0) & (0 < SN) & (manmask==0)
-        """
-
-        e1_A = kidscat[1].data['e1'] # The ellipticity of the sources in the X-direction
-        e1_B = kidscat[1].data['e1']
-        e1_C = kidscat[1].data['e1']
-        e1_D = kidscat[1].data['e1']
-        e2_A = kidscat[1].data['e2']
-        e2_B = kidscat[1].data['e2']
-        e2_C = kidscat[1].data['e2']
-        e2_D = kidscat[1].data['e2']
-
-        e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D])) # The corrected e1 for all blind catalogs
-        e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D])) # The corrected e2 for all blind catalogs
-
-        srcm = kidscat[1].data['m_cor'] # The multiplicative bias m
-        usedmask = (ZBmin < srcZB) & (srcZB < ZBmax) & (w > 0.) & (srcm < 0) & (0 < SN) & (manmask==0) & (-1 < c1_A)
-
-
-    srcNr = srcNr[usedmask]
-    srcRA = srcRA[usedmask]
-    srcDEC = srcDEC[usedmask]
-    w = w[usedmask]
-    srcPZ = srcPZ[usedmask]
-    srcm = srcm[usedmask] # The multiplicative bias m
-
-    e1 = e1[usedmask]
-    e2 = e2[usedmask]
+    srcNr = srcNr[srcmask]
+    srcRA = srcRA[srcmask]
+    srcDEC = srcDEC[srcmask]
+    w = w[srcmask]
+    srcPZ = srcPZ[srcmask]
+    srcm = srcm[srcmask]
+    e1 = e1[srcmask]
+    e2 = e2[srcmask]
 
     return srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm
 
@@ -638,101 +558,102 @@ def calc_variance(e1_varlist, e2_varlist, w_varlist): # Calculating the variance
     return variance
 
 
-def define_obsbins(obslist, binname, path_obsbins, binnum, lenssel): # Binnning information of the groups
+# Binnning information of the groups
+def define_obsbins(binname, binnum, lens_selection, lenssel, gamacat): 
 
-    if binname == 'No':
-        binrange = [-999, -999]
+    if binname == 'None':
+        obsbins = [-999, -999]
         binnum = 1
 
     else:
-        # If the binning is defined by a file
-        if os.path.isfile(path_obsbins):
-            binrange = np.loadtxt(path_obsbins).T
-            Nobsbins = len(binrange)-1 # Number of observable bins
+        # If the bin limits are given
+        obsbins = lens_selection[binname]
+       
+        # Check if the binning is given by a number
+        if type(obsbins) == int:
+            
+            obslist = gamacat[binname]
+            nobsbins = binrange # Number of observable bins
 
-        # Otherwise, check if the binning is given by a number
-        else:
-            try:
-                Nobsbins = int(path_obsbins) # Number of observable bins
+            # We use only selected lenses that have real values for the binning
+            nanmask = np.isfinite(obslist) & lenssel
+            obslist = obslist[nanmask]
 
-                nanmask = (-inf < obslist) & (obslist < inf) & lenssel
-                obslist = obslist[nanmask]
+            # Max value of the observable
+            obslist_max = np.amax(obslist)
 
-                # Min/max value of the observable
-                obslist_min = np.amin(obslist)
-                obslist_max = np.amax(obslist)
+            # Create a number of observable bins of containing an equal number of lenses
+            sorted_obslist = np.sort(obslist) # Sort the observable values
+            obsbin_size = len(obslist)/nobsbins # Determine the number of objects in each bin
 
-                # Create a number of observable bins of containing an equal number of objects
-                sorted_obslist = np.sort(obslist) # Sort the observable values
-                obsbin_size = len(obslist)/Nobsbins # Determine the number of objects in each bin
-
-                binrange = np.array([]) # This array will contain the binning range
-                for o in xrange(Nobsbins): # For every observable bin...
-                    binrange = np.append(binrange, sorted_obslist[o*obsbin_size]) # Append the observable value that contains the determined number of objects
-                binrange = np.append(binrange,obslist_max) # Finally, append the max value of the observable
-
-            except:
-                print 'Observable bin file does not exist:', path_obsbins
-                exit()
+            obsbins = np.array([]) # This array will contain the binning range
+            for o in xrange(nobsbins): # For every observable bin...
+                obsbins = np.append(obsbins, sorted_obslist[o*obsbin_size]) # Append the observable value that contains the determined number of objects
+            obsbins = np.append(obsbins, obslist_max) # Finally, append the max value of the observable
 
         print '%i %s-bins:'%(Nobsbins, binname), binrange
 
     # The current binning values
-    bins = np.sort([binrange[binnum-1], binrange[binnum]])
+    bins = np.sort([obsbins[binnum-1], obsbins[binnum]])
     binmin = float(bins[0])
     binmax = float(bins[1])
     if binmin > binmax:
         print 'Error: Bin minimum is greater than bin maximum!'
         quit()
 
-    return binrange, binmin, binmax
+    return obsbins, binmin, binmax
 
 
-    #def define_lenssel(purpose, galranklist, rankmin, rankmax, Nfoflist, Nfofmin, Nfofmax, binname, binnum, obslist, binmin, binmax, obslim, obslimlist, obslim_min, obslim_max): # Masking the lenses according to the appropriate lens selection and the current KiDS field
-def define_lenssel(gama, lens_param, binname, binmin, binmax):
+def define_obslist(obsname, gamacat): # Corrections on GAMA catalog observables
 
-    #lenssel = [True]*len(galranklist)
-    lenssel = numpy.ones(len(gama['RA']), dtype=bool)
-    # do this:
-    for param in lens_param.keys():
-        value = lens_param[param]
-        if len(value) == 1:
-            lenssel *= (gama[param] == value[0])
+    obslist = gamacat[obsname]
+
+    if 'AngSep' in obsname:
+        print 'Applying cosmology correction "AngSep"'
+
+        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.) for z in galZlist])
+        corr_list = Dcllist/Dclgama
+        obslist = obslist * corr_list
+
+
+    if 'logmstar' in obsname:
+        print 'Applying fluxscale correction to "logmstar"'
+
+        fluxscalelist = gamacat['fluxscale'] # Fluxscale, needed for stellar mass correction
+        corr_list = np.log10(fluxscalelist)# - 2*np.log10(h/0.7)
+        obslist = obslist + corr_list
+
+    return obslist
+
+
+# Masking the lenses according to the appropriate lens selection and the current KiDS field
+def define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax):
+
+    lenssel = np.ones(len(gamacat['RA']), dtype=bool)
+
+    # Add the mask for each chosen lens parameter
+    for param in lens_selection.keys():
+        binlims = lens_selection[param]
+        obslist = define_obslist(param, gamacat)
+        
+        if len(binlims) == 1:
+            lenssel *= (obslist == binlims)
         else:
-            lenssel *=  (value[0] <= gama[param]) & (gama[param] < value[1])
+            lenssel *= (binlims[0] <= gamacat[param]) & (gamacat[param] < binlims[1])
 
-    ## If the lenses aregalaxies...
-    #if not 'star' in purpose:
-        ## The lens selection depends on the galaxy rank
-        #lenssel = lenssel & (rankmin<=galranklist)&(galranklist<=rankmax)
-
-    ## If only group members are selected...
-    #if all(np.array([rankmin, rankmax]) > 0):
-        ## The group member selection depends on the number of group members Nfof
-        #lenssel = lenssel & (Nfofmin<=Nfoflist)&(Nfoflist<=Nfofmax)
-
-    ## If there is observable binning...
-    if binname != None:
-        ## The galaxy selection depends on observable
-        lenssel *=  (binmin <= gama[binname]) & (gama[binname] < binmax)
-
-    ## If there is observable binning...
-    #if obslim != 'No':
-        ## The galaxy selection depends on observable
-        #lenssel = lenssel & (obslim_min[binnum-1]<=obslimlist)&(obslimlist<=obslim_max[binnum-1])
+    if binname != 'None': # If the galaxy selection depends on observable
+        obslist = define_obslist(param, gamacat)
+        lenssel *=  (binmin <= obslist) & (obslist < binmax)
 
     return lenssel
 
 
-def mask_gamacat(purpose, matched_galIDs, lenssel, centering, galranklist, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist): # Mask all GAMA galaxies that are not in this field
+def mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist): # Mask all GAMA galaxies that are not in this field
 
     # Find the selected lenses that lie in this KiDS field
+    galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
 
-    if 'star' in purpose:
-        galIDmask = np.in1d(galIDlist, matched_galIDs)
-    else:
-        galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
-
+    # Mask all lens properties
     galIDs = galIDlist[galIDmask]
     galRAs = galRAlist[galIDmask]
     galDECs = galDEClist[galIDmask]
@@ -972,23 +893,23 @@ def write_stack(filename, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, 
     return
 
 
-def define_plottitle(purpose, centering, rankmin, rankmax, Nfofmin, Nfofmax, obslim, obslim_min, obslim_max, binname, binrange, ZBmin, ZBmax):
+def define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbins, src_selection):
 
     # Define the labels for the plot
-    plottitle = r'%s: %g $\leq$ rank%s $\leq$ %g'%(purpose, rankmin, centering, rankmax)
+    plottitle = r'%s: %g $\leq$ rank%s $\leq$ %g'%(purpose, ranks[0], centering, ranks[1])
 
-    if all(np.array([rankmin, rankmax]) > 0):
-        # The group member selection depends on the number of group members Nfof
-        plottitle = ', %g $\leq$ Nfof $\leq$ %g'%(Nfofmin, Nfofmax)
-
-    # If there are observable limits...
-    if obslim != 'No':
-        # The galaxy selection depends on observable
-        plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, obslim_min[0], obslim, obslim_max[-1])
+    # Add a title part for each chosen lens parameter
+    for param in lens_selection.keys(): # If galaxy selection depends on observable
+        binlims = lens_selection[param]
+        if len(binlims) == 1:
+            plottitle = '%s, %s = %g'%(plottitle, param, binlims)
+        else:
+            plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, binlims[0], param, binlims[1])
 
     plottitle = '%s, %g $\leq$ Z$_B$ $\leq$ %g'%(plottitle, ZBmin, ZBmax)
 
     return plottitle
+    
 
 def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, xlabel, ylabel, n): # Plotting the data
 

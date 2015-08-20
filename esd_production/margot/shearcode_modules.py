@@ -14,7 +14,7 @@ import gc
 import distance
 import esd_utils
 
-# Important constants
+# Important constants(very preliminary!)
 G = const.G.to('pc3/Msun s2')
 c = const.c.to('pc/s')
 pix = 0.187 # Used to translate pixel to arcsec
@@ -62,10 +62,6 @@ def input_variables():
         filename_addition = '_%s'%filename_addition
 
 
-    # Reading the name and number of observable bins
-    binname = lens_binning.keys()[0]
-    Nobsbins = len(lens_binning[binname])
-
     # Reading the chosen galaxy ranks
     if type(ranks) == str: # If specified
         if 'All' in ranks:
@@ -80,8 +76,9 @@ def input_variables():
             ranks = np.array([2, inf])
     else:
         pass
-
-
+    
+    # 'Binnning information of the groups'
+    binname, obsbins, Nobsbins, binmin, binmax = define_obsbins(1, lens_binning, [], [])
 
     # Create all necessary folders
 
@@ -93,16 +90,18 @@ def input_variables():
     path_splits = '%s/splits_%s'%(path_output, purpose)
     path_results = '%s/results_%s'%(path_output, purpose)
 
-
     if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
-
-    #		print 'Nsplit:', Nsplit
-    #		print 'blindcat:', blindcat
-    #		print 'binnum:', binnum
+    
+    #    print 'Nsplit:', Nsplit
+    #    print 'blindcat:', blindcat
+    #    print 'binnum:', binnum
+    #    print 'Nobsbins:', Nobsbins
 
         for path in [path_output, path_catalogs, path_splits, path_results]:
             if not os.path.isdir(path):
                 os.makedirs(path)
+                print 'Creating new folder:', path
+        print
 
     if 'catalog' in purpose:
 
@@ -181,7 +180,7 @@ def define_filename_var(purpose, centering, ranks, binname, \
         filename_var = 'rank%s%g~%g'%(centering, ranks[0], ranks[1])
         var_print = '%g<=rank%s<=%g,'%(ranks[0], centering, ranks[1])
 
-        if binname != 'None': # If there is binning
+        if 'No' not in binname: # If there is binning
             filename_var = '%s_%sbin%sof%i'%(filename_var, binname, binnum, Nobsbins)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
 
@@ -200,8 +199,7 @@ def define_filename_var(purpose, centering, ranks, binname, \
 
         filename_var = '%s_%s%g~%g'%(filename_var, srclim, srclim_min, srclim_max)
         var_print = '%s %s-limit: %g - %g,'%(var_print, srclim, srclim_min, srclim_max)
-  
-  
+    
     filename_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(filename_var, name_Rbins, O_matter, O_lambda, Ok, h)
     
     # Replace points with p and minus with m
@@ -209,7 +207,9 @@ def define_filename_var(purpose, centering, ranks, binname, \
     filename_var = filename_var.replace('-', 'm')
     filename_var = filename_var.replace('~', '-')
 
-    print 'Lens selection: %s.'%(var_print.replace(',', '', -1))
+    print 'Chosen %s-configuration: %s'%(purpose, var_print)
+    print ('     %s, Omatter=%g, Olambda=%g, Ok=%g, h=%g'%(name_Rbins, O_matter, O_lambda, Ok, h)).replace('~', '-')
+    print
 
     return filename_var
 
@@ -558,40 +558,52 @@ def calc_variance(e1_varlist, e2_varlist, w_varlist): # Calculating the variance
     return variance
 
 
+def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat): # Create a number of observable bins containing the same number of lenses
+
+    obslist = gamacat[binname]
+
+    # We use only selected lenses that have real values for the binning
+    nanmask = np.isfinite(obslist) & lenssel_binning
+    obslist = obslist[nanmask]
+
+    # Max value of the observable
+    obslist_max = np.amax(obslist)
+
+    # Create a number of observable bins of containing an equal number of lenses
+    sorted_obslist = np.sort(obslist) # Sort the observable values
+    obsbin_size = len(obslist)/Nobsbins # Determine the number of objects in each bin
+
+    obsbins = np.array([]) # This array will contain the binning range
+    for o in xrange(Nobsbins): # For every observable bin...
+        obsbins = np.append(obsbins, sorted_obslist[o*obsbin_size]) # Append the observable value that contains the determined number of objects
+    obsbins = np.append(obsbins, obslist_max) # Finally, append the max value of the observable
+    
+    return obsbins
+
+
 # Binnning information of the groups
-def define_obsbins(binname, binnum, lens_selection, lenssel, gamacat): 
+def define_obsbins(binnum, lens_binning, lenssel, gamacat): 
 
-    if binname == 'None':
-        obsbins = [-999, -999]
-        binnum = 1
 
-    else:
-        # If the bin limits are given
-        obsbins = lens_selection[binname]
-       
-        # Check if the binning is given by a number
-        if type(obsbins) == int:
-            
-            obslist = gamacat[binname]
-            nobsbins = binrange # Number of observable bins
+    binname = lens_binning.keys()[0]
+    if 'No' not in binname: # If there is binning
+        obsbins = lens_binning[binname]
+        if type(obsbins) == int: # If the number of bins is given
+            Nobsbins = obsbins
+            if len(lenssel) > 0:
+                obsbins = create_obsbins(binname, lens_selection, lenssel, gamacat)
+        else:
+            Nobsbins = len(obsbins)-1 # If the bin limits are given
 
-            # We use only selected lenses that have real values for the binning
-            nanmask = np.isfinite(obslist) & lenssel
-            obslist = obslist[nanmask]
+        print 'Lens binning: Lenses divided in %i %s-bins:'%(Nobsbins, binname), obsbins
+        print
 
-            # Max value of the observable
-            obslist_max = np.amax(obslist)
-
-            # Create a number of observable bins of containing an equal number of lenses
-            sorted_obslist = np.sort(obslist) # Sort the observable values
-            obsbin_size = len(obslist)/nobsbins # Determine the number of objects in each bin
-
-            obsbins = np.array([]) # This array will contain the binning range
-            for o in xrange(nobsbins): # For every observable bin...
-                obsbins = np.append(obsbins, sorted_obslist[o*obsbin_size]) # Append the observable value that contains the determined number of objects
-            obsbins = np.append(obsbins, obslist_max) # Finally, append the max value of the observable
-
-        print '%i %s-bins:'%(Nobsbins, binname), binrange
+    else: # If there is no binning
+        obsbins = np.array([-999, -999])
+        binname = 'No'
+        Nobsbins = 1
+        print 'Lens binning: No binning in observable'
+    print
 
     # The current binning values
     bins = np.sort([obsbins[binnum-1], obsbins[binnum]])
@@ -600,11 +612,12 @@ def define_obsbins(binname, binnum, lens_selection, lenssel, gamacat):
     if binmin > binmax:
         print 'Error: Bin minimum is greater than bin maximum!'
         quit()
+    
+    return binname, obsbins, Nobsbins, binmin, binmax
 
-    return obsbins, binmin, binmax
 
-
-def define_obslist(obsname, gamacat): # Corrections on GAMA catalog observables
+# Corrections on GAMA catalog observables
+def define_obslist(obsname, gamacat):
 
     obslist = gamacat[obsname]
 
@@ -641,8 +654,8 @@ def define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax):
         else:
             lenssel *= (binlims[0] <= gamacat[param]) & (gamacat[param] < binlims[1])
 
-    if binname != 'None': # If the galaxy selection depends on observable
-        obslist = define_obslist(param, gamacat)
+    if 'No' not in binname: # If the galaxy selection depends on observable
+        obslist = define_obslist(binname, gamacat)
         lenssel *=  (binmin <= obslist) & (obslist < binmax)
 
     return lenssel
@@ -906,7 +919,12 @@ def define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbin
         else:
             plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, binlims[0], param, binlims[1])
 
-    plottitle = '%s, %g $\leq$ Z$_B$ $\leq$ %g'%(plottitle, ZBmin, ZBmax)
+    for param in src_selection.keys(): # If galaxy selection depends on observable
+        binlims = src_selection[param]
+        if len(binlims) == 1:
+            plottitle = '%s, %s = %g'%(plottitle, param, binlims)
+        else:
+            plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, binlims[0], param, binlims[1])
 
     return plottitle
     
@@ -1044,7 +1062,7 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
     return
 
 
-def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname, binrange, Rbins, h):
+def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname, obsbins, Rbins, h):
 
     from matplotlib import pyplot as plt
     from matplotlib.colors import LogNorm
@@ -1058,7 +1076,7 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname,
     rc('font',**{'family':'serif','serif':['Computer Modern']})
 
     # Number of observable bins
-    Nobsbins = len(binrange)-1
+    Nobsbins = len(obsbins)-1
 
     # Number and values of radial bins
     nRbins = len(Rbins)-1
@@ -1112,20 +1130,20 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname,
             if N2 != 0:
                 ax_sub.tick_params(axis='y', labelleft='off')
 
-            if binname != 'No':
+            if 'No' not in binname: # If there is binning
                 if N1 == Nobsbins - 1:
                     ax_sub.xaxis.set_label_position('top')
                     if N2 == 0:
-                        ax_sub.set_xlabel(r'%s = %.3g - %.3g'%(binname, binrange[N2], binrange[N2+1]), fontsize=17)
+                        ax_sub.set_xlabel(r'%s = %.3g - %.3g'%(binname, obsbins[N2], obsbins[N2+1]), fontsize=17)
                     else:
-                        ax_sub.set_xlabel(r'%.3g - %.3g'%(binrange[N2], binrange[N2+1]), fontsize=17)
+                        ax_sub.set_xlabel(r'%.3g - %.3g'%(obsbins[N2], obsbins[N2+1]), fontsize=17)
 
                 if N2 == Nobsbins - 1:
                     ax_sub.yaxis.set_label_position('right')
                     if N1 == 0:
-                        ax_sub.set_ylabel(r'%s = %.3g - %.3g'%(binname, binrange[N1], binrange[N1+1]), fontsize=17)
+                        ax_sub.set_ylabel(r'%s = %.3g - %.3g'%(binname, obsbins[N1], obsbins[N1+1]), fontsize=17)
                     else:
-                        ax_sub.set_ylabel(r'%.3g - %.3g'%(binrange[N1], binrange[N1+1]), fontsize=17)
+                        ax_sub.set_ylabel(r'%.3g - %.3g'%(obsbins[N1], obsbins[N1+1]), fontsize=17)
 
     #			ax_sub.set_xticks([1e2,1e3])
     #			ax_sub.set_yticks([1e2,1e3])

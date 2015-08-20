@@ -20,8 +20,6 @@ import shearcode_modules as shear
 
 
 # Important constants
-G = const.G.to('pc3/Msun s2') # Gravitational constant
-c = const.c.to('pc/s') # Speed of light
 inf = np.inf # Infinity
 nan = np.nan # Not a number
 
@@ -40,8 +38,11 @@ def main():
     print 'Step 1: Create split catalogues in parallel'
     print
 
+
     if 'bootstrap' in purpose:
         purpose = purpose.replace('bootstrap', 'catalog')
+
+        path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
@@ -140,8 +141,8 @@ def main():
 
 
     # Binnning information of the groups
-    lenssel = shear.define_lenssel(gamacat, ranks, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
-    obsbins, binmin, binmax = shear.define_obsbins(binname, binnum, lens_selection, lenssel, gamacat)
+    lenssel_binning = shear.define_lenssel(gamacat, ranks, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    obsbins, binmin, binmax = shear.define_obsbins(binnum, lens_selection, lenssel_binning, gamacat)
 
 
     # We translate the range in source redshifts to a range in source distances Ds

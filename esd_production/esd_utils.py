@@ -74,7 +74,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
 
         elif line[0] == 'lens_binning':
             binname = line[1]
-            if binname == 'None':
+            if 'No' in binname:
                 bins = np.array([])
             else:
                 bins = np.array([float(i) for i in line[2].split(',')])

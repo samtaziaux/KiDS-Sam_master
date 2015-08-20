@@ -34,10 +34,14 @@ def main():
     print 'Step 2: Combine splits into one catalogue'
     print
 
+
     if 'bootstrap' in purpose:
         purpose = purpose.replace('bootstrap', 'catalog')
+        
+        path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
+
 
     # You can make two kinds of catalog
     if 'catalog' in purpose:

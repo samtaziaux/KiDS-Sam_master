@@ -42,30 +42,15 @@ def main():
         print 'Step 3: Stack the lenses and create bootstrap samples'
     else:
         print 'Step 3: Stack the lenses and create the ESD profile'
-
-    # Stop if the output ESD profile already exists
-    filename_var = shear.define_filename_var(purpose.replace('catalog', ''), centering, ranks, binname, \
-    'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
-    if ('random' in purpose):
-        filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing catalogs
-    filename_N1 = filename_var.replace('binnum', '%i'%binnum)
-    filenameESD = shear.define_filename_results(path_results.replace('catalog', ''), purpose, filename_N1, filename_addition, Nsplit, blindcat)
-    print 'filename ESD:', filenameESD
-
-    if os.path.isfile(filenameESD):
-        print 'This output already exists:', filenameESD
-        print
-        quit()
-
     print
 
 
     # Define the list of variables for the input catalog
     if all(ranks > 0):
-        filename_var = shear.define_filename_var('catalog', centering, np.array([1, inf]), 'None', \
+        filename_var = shear.define_filename_var('shearcatalog', centering, np.array([1, inf]), 'None', \
         1, 1, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     else:
-        filename_var = shear.define_filename_var('catalog', centering, np.array([-999, inf]), 'None', \
+        filename_var = shear.define_filename_var('shearcatalog', centering, np.array([-999, inf]), 'None', \
         1, 1, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
@@ -108,8 +93,7 @@ def main():
     # Defining the observable binnning range of the groups
     lenssel_binning = shear.define_lenssel(gamacat, ranks, lens_selection, 'None', -inf, inf) \
     # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
-    obsbins, binmin, binmax = shear.define_obsbins(obslist, binname, path_obsbins, binnum, lenssel_binning)
-    Nobsbins = len(obsbins)-1
+    binname, obsbins, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
     lenssel_binning = [] # Empty unused lists
 
 
@@ -132,13 +116,13 @@ def main():
     for binnum in np.arange(Nobsbins)+1:
         
         # Defining the min/max value of each observable bin
-        obsbins, binmin, binmax = shear.define_obsbins(obslist, binname, path_obsbins, binnum, lenssel_binning)
+        binname, obsbins, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
         print
         print '%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, binmin, binmax)
         
         # Mask the galaxies in the shear catalog
-        lenssel = shear.define_lenssel(purpose, galranklist, rankmin, rankmax, Nfoflist, Nfofmin, Nfofmax, binname, binnum, obslist, binmin, binmax, obslim, obslimlist, obslim_min, obslim_max)
+        lenssel = shear.define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax)
 
         if debug:
             print 'lenssel:', len(lenssel)
@@ -148,9 +132,9 @@ def main():
         galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
         galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
-        if binname != 'No':
-            print 'Mean %s value: %g'%(binname, np.mean(obslist[lenssel]))
-        print 'Selected:', len(galIDs), 'galaxies, of which', len(galIDs_matched), 'overlap with KiDS.'
+        if 'No' not in binname: # If there is binning
+            print 'Mean %s value: %g'%(binname, np.mean(obslist[lenssel])) # Print the mean value of the bin
+        print 'Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), 'of which overlap with KiDS.'
         print
 
 
@@ -215,7 +199,7 @@ def main():
         
 
         # Plotting the data for the separate observable bins
-        plottitle = shear.define_plottitle(purpose, centering, rankmin, rankmax, Nfofmin, Nfofmax, obslim, obslim_min, obslim_max, binname, obsbins, ZBmin, ZBmax)
+        plottitle = shear.define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbins, src_selection)
         
         # What plotting style is used (lin or log)
         if 'random' in purpose:
@@ -223,7 +207,7 @@ def main():
         else:
             plotstyle = 'log'
         
-        if binname == 'No':
+        if 'No' not in binname:
             plotlabel = ylabel
         else:
             plotlabel = r'%.3g $\leq$ %s $\textless$ %.3g (%i lenses)'%(binmin, binname.replace('_', ''), binmax, len(galIDs_matched))

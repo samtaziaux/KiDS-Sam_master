@@ -13,6 +13,7 @@ import subprocess as sub
 import shlex
 
 # local
+import shearcode_modules as shear
 import distance
 import esd_utils
 
@@ -34,15 +35,7 @@ def define_runparams(purpose, lens_binning, ncores, blindcats):
         nruns = 1
 
     # Binnning information of the groups
-    binname = lens_binning.keys()[0]
-    if binname != 'None': # If there is binning
-        obsbins = lens_binning[binname]
-        if type(obsbins) == int:
-            nobsbins = obsbins
-        else:
-            nobsbins = len(obsbins)
-    else: # If there is no binning
-        nobsbins = 1
+	binname, obsbins, nobsbins, binmin, binmax = shear.define_obsbins(1, lens_binning, [], [])
     nobsbin = nobsbins # Starting value
 
     # Prepare the values for nsplits and nobsbins
@@ -140,7 +133,6 @@ def main():
     print
 
     return
-
 
 main()
 

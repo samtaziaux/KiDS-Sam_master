@@ -71,6 +71,11 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
                 ranks = np.array([int(i) for i in line[1].split(',')])
             except:
                 ranks = line[1]
+            try:
+                if ranks[0] == ranks[1]:
+                    ranks = np.array([ranks[0]])
+            except:
+                pass
 
         elif line[0] == 'lens_binning':
             binname = line[1]
@@ -78,15 +83,11 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
                 bins = np.array([])
             else:
                 bins = np.array([float(i) for i in line[2].split(',')])
-                if len(bins) == 1:
-                    bins = int(bins[0])
             lens_binning = {binname: bins}
             
         elif line[0][:10] == 'lens_param':
             param = line[1]
             bins = np.array([float(i) for i in line[2].split(',')])
-            if len(bins) == 1:
-                bins = bins[0]
             lens_selection[param] = bins
 
         elif line[0] == 'kids_blinds':
@@ -96,8 +97,6 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
         elif line[0][:9] == 'src_param':
             param = line[1]
             bins = np.array([float(i) for i in line[2].split(',')])
-            if len(bins) == 1:
-                bins = bins[0]
             src_selection[param] = bins
 
 

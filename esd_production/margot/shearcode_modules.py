@@ -64,16 +64,16 @@ def input_variables():
 
     # Reading the chosen galaxy ranks
     if type(ranks) == str: # If specified
-        if 'All' in ranks:
-            ranks = np.array([-999, inf])
-        if 'Group' in ranks:
-            ranks = np.array([1, inf])
         if 'Isolated' in ranks:
-            ranks = np.array([-999, -999])
-        if 'Centrals' in ranks:
-            ranks = np.array([1, 1])
-        if 'Satellites' in ranks:
+            ranks = np.array([-999])
+        elif 'Centrals' in ranks:
+            ranks = np.array([1])
+        elif 'Satellites' in ranks:
             ranks = np.array([2, inf])
+        elif 'All' in ranks:
+            ranks = np.array([-999, inf])
+        elif 'Group' in ranks:
+            ranks = np.array([1, inf])
     else:
         pass
     
@@ -155,9 +155,28 @@ def input_variables():
             path_kidscats, path_gamacats
 
 
+def define_filename_sel(filename_var, var_print, plottitle, selection):
+    
+    selnames = np.sort(selection.keys())
+    for selname in selnames:
+        sellims = selection[selname]
+        if len(sellims) == 1:
+            filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
+            var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
+            plottitle = '%s, %s = %g'%(plottitle, selname, sellims[0])
+        else:
+            filename_var = '%s_%s%g~%g'%(filename_var, selname, sellims[0], sellims[1])
+            var_print = '%s %s-limit: %g - %g,'%(var_print, selname, sellims[0], sellims[1])
+            plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, sellims[0], selname, sellims[1])
+        
+    return filename_var, var_print, plottitle
+    
+
 def define_filename_var(purpose, centering, ranks, binname, \
                         binnum, Nobsbins, lens_selection, src_selection, \
                         name_Rbins, O_matter, O_lambda, Ok, h): # Define the list of variables for the output filename
+
+    var_print = 'Chosen %s-configuration: '%purpose
 
     if 'catalog' in purpose:
 
@@ -177,39 +196,37 @@ def define_filename_var(purpose, centering, ranks, binname, \
 
     else: # Binnning information of the groups
 
-        filename_var = 'rank%s%g~%g'%(centering, ranks[0], ranks[1])
-        var_print = '%g<=rank%s<=%g,'%(ranks[0], centering, ranks[1])
+        filename_var = ''
 
+        # Lens rank selection
+        rank_selection = {'rank%s'%centering: ranks}
+        filename_var, var_print, x = define_filename_sel(filename_var, var_print, '', rank_selection)
+        filename_var = filename_var.replace('_','')
+
+        # Lens binning
         if 'No' not in binname: # If there is binning
             filename_var = '%s_%sbin%sof%i'%(filename_var, binname, binnum, Nobsbins)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
-
-        obslims = np.sort(lens_selection.keys())
-        for obslim in obslims: # If there are observable limits
-            obslim_min = lens_selection[obslim][0]
-            obslim_max = lens_selection[obslim][1]
-
-            filename_var = '%s_%s%g~%g'%(filename_var, obslim, obslim_min, obslim_max)
-            var_print = '%s %s-limit: %g - %g,'%(var_print, obslim, obslim_min, obslim_max)
+        
+        # Lens selection
+        filename_var, var_print, x = define_filename_sel(filename_var, var_print,'', lens_selection)
   
-    srclims = np.sort(src_selection.keys())
-    for srclim in srclims: # If there are observable limits
-        srclim_min = src_selection[srclim][0]
-        srclim_max = src_selection[srclim][1]
-
-        filename_var = '%s_%s%g~%g'%(filename_var, srclim, srclim_min, srclim_max)
-        var_print = '%s %s-limit: %g - %g,'%(var_print, srclim, srclim_min, srclim_max)
+    # Source selection
+    filename_var, var_print, x = define_filename_sel(filename_var, var_print,'', src_selection)
     
     filename_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(filename_var, name_Rbins, O_matter, O_lambda, Ok, h)
+    cosmo_print = ('    %s, Omatter=%g, Olambda=%g, Ok=%g, h=%g'%(name_Rbins, O_matter, O_lambda, Ok, h)).replace('~', '-')
     
     # Replace points with p and minus with m
     filename_var = filename_var.replace('.', 'p')
     filename_var = filename_var.replace('-', 'm')
     filename_var = filename_var.replace('~', '-')
 
-    print 'Chosen %s-configuration: %s'%(purpose, var_print)
-    print ('     %s, Omatter=%g, Olambda=%g, Ok=%g, h=%g'%(name_Rbins, O_matter, O_lambda, Ok, h)).replace('~', '-')
-    print
+    
+    if 'covariance' not in purpose:
+        print var_print
+        print cosmo_print
+        print
 
     return filename_var
 
@@ -243,12 +260,15 @@ Ncat, ranks, O_matter, O_lambda, Ok, h): \
 
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, nRbins = import_Rrange(path_Rbins)
+    
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
     import_gamacat(path_gamacats, centering, purpose, Ncat, ranks, \
     O_matter, O_lambda, Ok, h)
+    
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats)
+    
     # Match the KiDS field and GAMA galaxy coordinates
     catmatch, kidscats, galIDs_infield = \
     run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose)
@@ -427,7 +447,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
         # Defining the distance R between the lens center and its surrounding background sources
         catR = Dallist*np.arccos(np.cos(np.radians(galDEClist))*np.cos(np.radians(catDEC))*np.cos(np.radians(galRAlist-catRA))+np.sin(np.radians(galDEClist))*np.sin(np.radians(catDEC)))
 
-    	coordmask = (catR < Rmax)
+        coordmask = (catR < Rmax)
 
         galIDs = np.array(galIDlist[coordmask])
 
@@ -582,38 +602,50 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat): # Create a numb
 
 
 # Binnning information of the groups
-def define_obsbins(binnum, lens_binning, lenssel, gamacat): 
+def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat): 
 
-
+    # Check how the binning is given
     binname = lens_binning.keys()[0]
     if 'No' not in binname: # If there is binning
         obsbins = lens_binning[binname]
-        if type(obsbins) == int: # If the number of bins is given
-            Nobsbins = obsbins
-            if len(lenssel) > 0:
-                obsbins = create_obsbins(binname, lens_selection, lenssel, gamacat)
+        if len(obsbins) == 1: # If the number of bins is given
+            Nobsbins = int(obsbins[0])
+            if len(lenssel_binning) > 0:
+                obsbins = create_obsbins(binname, Nobsbins, lenssel_binning, gamacat)
+                lens_binning = {binname: obsbins}
         else:
             Nobsbins = len(obsbins)-1 # If the bin limits are given
-
-        print 'Lens binning: Lenses divided in %i %s-bins:'%(Nobsbins, binname), obsbins
-        print
+        
+      
+        if len(lenssel_binning) > 0:
+            
+            obslist = define_obslist(binname, gamacat)
+            
+            print
+            print 'Lens binning: Lenses divided in %i %s-bins'%(Nobsbins, binname)
+            print '%s Min:          Max:          Mean:'%binname
+            for b in xrange(Nobsbins):
+                lenssel = lenssel_binning & (obsbins[b] <= obslist) & (obslist < obsbins[b+1])
+                print '%g    %g    %g'%(obsbins[b], obsbins[b+1], np.mean(obslist[lenssel]))
 
     else: # If there is no binning
         obsbins = np.array([-999, -999])
         binname = 'No'
         Nobsbins = 1
-        print 'Lens binning: No binning in observable'
-    print
 
-    # The current binning values
-    bins = np.sort([obsbins[binnum-1], obsbins[binnum]])
-    binmin = float(bins[0])
-    binmax = float(bins[1])
-    if binmin > binmax:
-        print 'Error: Bin minimum is greater than bin maximum!'
-        quit()
+    try:
+        # The current binning values
+        bins = np.sort([obsbins[binnum-1], obsbins[binnum]])
+        binmin = float(bins[0])
+        binmax = float(bins[1])
+        if binmin > binmax:
+            print 'Error: Bin minimum is greater than bin maximum!'
+            quit()
+    except:
+        binmin = -999
+        binmax = -999
     
-    return binname, obsbins, Nobsbins, binmin, binmax
+    return binname, lens_binning, Nobsbins, binmin, binmax
 
 
 # Corrections on GAMA catalog observables
@@ -640,23 +672,30 @@ def define_obslist(obsname, gamacat):
 
 
 # Masking the lenses according to the appropriate lens selection and the current KiDS field
-def define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax):
+def define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, binmax):
 
     lenssel = np.ones(len(gamacat['RA']), dtype=bool)
-
+    
+     # Add the mask for the lens rank
+    ranklist = gamacat['rank%s'%centering]
+    if len(ranks) == 1:
+        lenssel *= (ranklist == ranks[0])
+    else:
+        lenssel *= (ranks[0] <= ranklist) & (ranklist < ranks[1])
+    
     # Add the mask for each chosen lens parameter
     for param in lens_selection.keys():
         binlims = lens_selection[param]
         obslist = define_obslist(param, gamacat)
         
         if len(binlims) == 1:
-            lenssel *= (obslist == binlims)
+            lenssel *= (obslist == binlims[0])
         else:
-            lenssel *= (binlims[0] <= gamacat[param]) & (gamacat[param] < binlims[1])
+            lenssel *= (binlims[0] <= obslist) & (obslist < binlims[1])
 
     if 'No' not in binname: # If the galaxy selection depends on observable
-        obslist = define_obslist(binname, gamacat)
-        lenssel *=  (binmin <= obslist) & (obslist < binmax)
+        binlist = define_obslist(binname, gamacat)
+        lenssel *=  (binmin <= binlist) & (binlist < binmax)
 
     return lenssel
 
@@ -819,7 +858,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, output, outputna
     # Adding the output
     [fitscols.append(pyfits.Column(name = outputnames[c], format = '%iD'%nRbins, array = output[c])) for c in xrange(len(outputnames))]
 
-    if purpose == 'covariance':
+    if 'covariance' in purpose:
         fitscols.append(pyfits.Column(name = 'e1', format='4D', array= e1))
         fitscols.append(pyfits.Column(name = 'e2', format='4D', array= e2))
         fitscols.append(pyfits.Column(name = 'lfweight', format='1D', array= w))
@@ -905,26 +944,20 @@ def write_stack(filename, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, 
 
     return
 
-
+# Define the labels for the plot
 def define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbins, src_selection):
 
-    # Define the labels for the plot
-    plottitle = r'%s: %g $\leq$ rank%s $\leq$ %g'%(purpose, ranks[0], centering, ranks[1])
+    plottitle = '%s'%purpose
 
-    # Add a title part for each chosen lens parameter
-    for param in lens_selection.keys(): # If galaxy selection depends on observable
-        binlims = lens_selection[param]
-        if len(binlims) == 1:
-            plottitle = '%s, %s = %g'%(plottitle, param, binlims)
-        else:
-            plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, binlims[0], param, binlims[1])
+    # Lens rank selection
+    rank_selection = {'rank%s'%centering: ranks}
+    x, x, plottitle = define_filename_sel('', '', plottitle, rank_selection)
 
-    for param in src_selection.keys(): # If galaxy selection depends on observable
-        binlims = src_selection[param]
-        if len(binlims) == 1:
-            plottitle = '%s, %s = %g'%(plottitle, param, binlims)
-        else:
-            plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, binlims[0], param, binlims[1])
+    # Lens selection
+    x, x, plottitle = define_filename_sel('', '', plottitle, lens_selection)
+  
+    # Source selection
+    x, x, plottitle = define_filename_sel('', '', plottitle, src_selection)
 
     return plottitle
     
@@ -963,7 +996,6 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, xlabel, yl
             plt.title(plottitle, fontsize=title_size)
 
     else:
-
         # Plot and print ESD profile to a file
         plt.title(plottitle,fontsize=title_size)
 
@@ -1051,6 +1083,7 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
     # Change all fonts to 'Computer Modern'
     rc('font',**{'family':'serif','serif':['Computer Modern']})
 
+
     file_ext = plotname.split('.')[-1]
     plotname = plotname.replace('.%s'%file_ext,'_%s.png'%plotstyle)
 
@@ -1062,7 +1095,7 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
     return
 
 
-def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname, obsbins, Rbins, h):
+def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname, lens_binning, Rbins, h):
 
     from matplotlib import pyplot as plt
     from matplotlib.colors import LogNorm
@@ -1076,6 +1109,7 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname,
     rc('font',**{'family':'serif','serif':['Computer Modern']})
 
     # Number of observable bins
+    obsbins = lens_binning.values()[0]
     Nobsbins = len(obsbins)-1
 
     # Number and values of radial bins
@@ -1084,9 +1118,9 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname,
     # Plotting the ueber matrix
     fig = plt.figure(figsize=(12,10))
 
-    gs_full = gridspec.GridSpec(1,2, width_ratios=[20,1], wspace=0.1)
+    gs_full = gridspec.GridSpec(1,2, width_ratios=[20,1])
     gs = gridspec.GridSpecFromSubplotSpec(Nobsbins, Nobsbins, wspace=0, hspace=0, subplot_spec=gs_full[0,0])
-    gs_bar = gridspec.GridSpecFromSubplotSpec(3, 1, height_ratios=[1,3,1], hspace=0, subplot_spec=gs_full[0,1])
+    gs_bar = gridspec.GridSpecFromSubplotSpec(3, 1, height_ratios=[1,3,1], subplot_spec=gs_full[0,1])
     cax = fig.add_subplot(gs_bar[1,0])
 
     ax = fig.add_subplot(gs_full[0,0])

@@ -43,15 +43,30 @@ def main():
     else:
         print 'Step 3: Stack the lenses and create the ESD profile'
     print
+    
+    # Define the list of variables for the output filename
+    filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+    1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    if ('random' or 'star') in purpose:
+        filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
+        print 'Number of existing random catalogs:', Ncat
+
+    filenameESD = shear.define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat)
+
+    # Stop if the output already exists
+    if os.path.isfile(filenameESD):
+        print 'This output already exists:', filenameESD
+        print
+        quit()
 
 
     # Define the list of variables for the input catalog
     if all(ranks > 0):
         filename_var = shear.define_filename_var('shearcatalog', centering, np.array([1, inf]), 'None', \
-        1, 1, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+        -999, -999, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     else:
         filename_var = shear.define_filename_var('shearcatalog', centering, np.array([-999, inf]), 'None', \
-        1, 1, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+        -999, -999, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
 
@@ -91,10 +106,9 @@ def main():
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
 
     # Defining the observable binnning range of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, lens_selection, 'None', -inf, inf) \
+    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', -inf, inf) \
     # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
-    binname, obsbins, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
-    lenssel_binning = [] # Empty unused lists
+    binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
     # Defining the number of bootstrap samples ( = 1 for normal shear stack)
@@ -116,13 +130,13 @@ def main():
     for binnum in np.arange(Nobsbins)+1:
         
         # Defining the min/max value of each observable bin
-        binname, obsbins, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
+        binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
         print
         print '%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, binmin, binmax)
         
         # Mask the galaxies in the shear catalog
-        lenssel = shear.define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax)
+        lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, binmax)
 
         if debug:
             print 'lenssel:', len(lenssel)
@@ -132,11 +146,9 @@ def main():
         galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
         galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
-        if 'No' not in binname: # If there is binning
-            print 'Mean %s value: %g'%(binname, np.mean(obslist[lenssel])) # Print the mean value of the bin
+
         print 'Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), 'of which overlap with KiDS.'
         print
-
 
         # Paths to the resulting files
         filename_bin = filename_var.replace('binnum', '%s'%(binnum))

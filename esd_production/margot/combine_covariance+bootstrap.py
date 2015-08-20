@@ -67,12 +67,12 @@ def main():
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
-    obsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel, gamacat)
+    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
     # These lists will contain the final ESD profile
-    if purpose == 'covariance':
+    if 'covariance' in purpose:
         gammat = np.zeros([Nobsbins,nRbins])
         gammax = np.zeros([Nobsbins,nRbins])
         wk2 = np.zeros([Nobsbins,nRbins])
@@ -98,7 +98,7 @@ def main():
     if 'bootstrap' in purpose: # Calculating the bootstrap covariance
         for N1 in xrange(Nobsbins):
 
-            filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+            filename_N1 = shear.define_filename_var(purpose, centering, ranks, binname, \
             N1+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1) # Ncat is the number of existing randoms
@@ -127,7 +127,7 @@ def main():
             for N2 in xrange(Nobsbins):
     #		if N1 == N2:
 
-                filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+                filename_N2 = shear.define_filename_var(purpose, centering, ranks, binname, \
                 N2+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
                 if ('random' or 'star') in purpose:
                     filename_N2 = '%i_%s'%(Ncat, filename_N2) # Ncat is the number of existing randoms
@@ -157,7 +157,7 @@ def main():
 
         for N1 in xrange(Nobsbins):
 
-            filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+            filename_N1 = shear.define_filename_var(purpose, centering, ranks, binname, \
             N1+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1) # Ncat is the number of existing randoms
@@ -166,7 +166,7 @@ def main():
 
             for x in xrange(len(kidscats)):
                 
-                # Loading the covariance data file of each KiDS field
+               # Loading the covariance data file of each KiDS field
                 shearcatname_N1 = shear.define_filename_splits(path_splits, purpose, filename_N1, kidscats[x], 0, filename_addition, blindcat)
                 
                 if os.path.isfile(shearcatname_N1):
@@ -198,7 +198,7 @@ def main():
                     for N2 in xrange(Nobsbins):
     #					if N1 == N2:
                         
-                        filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+                        filename_N2 = shear.define_filename_var(purpose, centering, ranks, binname, \
                         N2+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
                         if ('random' or 'star') in purpose:
                             filename_N2 = '%i_%s'%(Ncat, filename_N2) # Ncat is the number of existing randoms
@@ -216,7 +216,7 @@ def main():
                         for R1 in xrange(nRbins):
                             for R2 in range(nRbins):
 
-                                if purpose == 'covariance':
+                                if 'covariance' in purpose:
                                     cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2])) # The new covariance matrix
                 else:
                     print colored('ERROR: Not all fields are analysed! Please restart shear code!', 'red')
@@ -224,10 +224,11 @@ def main():
             
             # Calculating the final output values of the accompanying shear data
             ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = shear.calc_stack(gammat[N1], gammax[N1], wk2[N1], np.diagonal(cov[N1,N1,:,:]), srcm[N1], [1,1,1,1], blindcatnum)
-
+            print error_tot[0,0]
+            
             # Determine the stacked galIDs
-            obsbins, binmin, binmax = shear.define_obsbins(binnum, lens_selection, lenssel_binning, gamacat)
-            lenssel = shear.define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax)
+            binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
+            lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, binmax)
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
@@ -255,8 +256,8 @@ def main():
                         
                         radius1[N1,N2,R1,R2] = Rcenters[R1]
                         radius2[N1,N2,R1,R2] = Rcenters[R2]
-                        bin1[N1,N2,R1,R2] = binrange[N1]
-                        bin2[N1,N2,R1,R2] = binrange[N2]
+                        bin1[N1,N2,R1,R2] = (lens_binning.values()[0])[N1]
+                        bin2[N1,N2,R1,R2] = (lens_binning.values()[0])[N2]
                         
                         if (0. < error_tot[N1,R1])&(error_tot[N1,R1] < inf) and (0. < error_tot[N2,R2])&(error_tot[N2,R2] < inf):
                             cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)

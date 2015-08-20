@@ -141,8 +141,8 @@ def main():
 
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
-    obsbins, binmin, binmax = shear.define_obsbins(binnum, lens_selection, lenssel_binning, gamacat)
+    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
     # We translate the range in source redshifts to a range in source distances Ds
@@ -167,7 +167,7 @@ def main():
         outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', 'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', 'lfweight', 'lfweight^2', 'k', 'k^2', 'lfweight*k^2', 'lfweight^2*k^4', 'lfweight^2*k^2', 'Nsources', 'bias_m']
         output = np.zeros([len(outputnames), len(galIDlist), nRbins])
 
-    # Split up the list of KiDS fields, for parallel processing
+    # Split up the list of KiDS fields, for parallel obsbins
     splitkidscats = np.array(shear.split(kidscats, Nsplits))
 
     # Start of the reduction of one KiDS field
@@ -185,7 +185,7 @@ def main():
 
         kidscatN = kidscatN+1
 
-        lenssel = shear.define_lenssel(gamacat, ranks, lens_selection, binname, binmin, binmax)
+        lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, binmax)
         matched_galIDs = np.array(catmatch[kidscatname]) # The ID's of the galaxies that lie in this field
 
         galIDs, galRAs, galDECs, galZs, Dcls, Dals, galIDmask = shear.mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist)
@@ -209,7 +209,7 @@ def main():
 
 
         for l in xrange(len(lenssplits)-1):
-            print 'Lens split %i/%i:'%(l+1, len(lenssplits))#, lenssplits[l], '-', lenssplits[l+1]
+            print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
 
             # Select all the lens properties that are in this lens split
             galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, Dal_split = [galIDs[lenssplits[l] : lenssplits[l+1]], galRAs[lenssplits[l] : lenssplits[l+1]], galDECs[lenssplits[l] : lenssplits[l+1]], galZs[lenssplits[l] : lenssplits[l+1]], Dcls[lenssplits[l] : lenssplits[l+1]], Dals[lenssplits[l] : lenssplits[l+1]]]
@@ -250,7 +250,7 @@ def main():
                         for o in xrange(len(output)):
                             output[o, : ,r][galIDmask_split] = output[o, : ,r][galIDmask_split] + output_onebin[o]
 
-                    if purpose == 'covariance':
+                    if 'covariance' in purpose:
                         # For each radial bin of each lens we calculate the weighted Cs, Ss and Zs
                         output_onebin = [C_tot, S_tot, Z_tot] = shear.calc_covariance_output(incosphilist, insinphilist, klist)
 
@@ -259,7 +259,7 @@ def main():
                             output[o, : ,r] = output[o, : ,r] + output_onebin[o]
 
         # Write the final output of this split to a fits file
-        if purpose == 'covariance':
+        if 'covariance' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, filename_var, kidscatname, 0, filename_addition, blindcat)
             shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, output, outputnames, variance, purpose, e1, e2, w, srcm)
 

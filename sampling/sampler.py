@@ -6,6 +6,7 @@ import emcee
 import numpy
 import os
 import sys
+from itertools import izip
 from numpy import array, inf, isfinite, isnan, log, log10, pi, sqrt
 from numpy.linalg import det
 from os import remove
@@ -129,31 +130,31 @@ def run_emcee(sampling_options, hm_options):
     #group_profile = params.group_profile()
     #function = model
 
-    #hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
-    #print 'Printing header information to', hdrfile
-    #hdr = open(hdrfile, 'w')
-    #print >>hdr, 'Started', ctime()
-    #print >>hdr, 'datafile', ','.join(datafile)
-    #print >>hdr, 'cols', argv[1+Ndatafiles]
-    #print >>hdr, 'covfile', covfile
-    #print >>hdr, 'covcols', covcols
-    #print >>hdr, 'model %s' %model
+    hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
+    print 'Printing header information to', hdrfile
+    hdr = open(hdrfile, 'w')
+    print >>hdr, 'Started', ctime()
+    print >>hdr, 'datafile', ','.join(datafile)
+    print >>hdr, 'cols', datacols
+    print >>hdr, 'covfile', covfile
+    print >>hdr, 'covcols', covcols
+    print >>hdr, 'model %s' %function
     #print >>hdr, 'sat_profile %s' %sat_profile
     #print >>hdr, 'group_profile %s' %group_profile
-    #for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
-                                      #val1, val2, val3, val4):
-        #try:
-            #line = '%s  %s  ' %(p, pt)
-            #line += ','.join(numpy.array(v1, dtype=str))
-        #except TypeError:
-            #line = '%s  %s  %s  %s  %s  %s' \
-                   #%(p, pt, str(v1), str(v2), str(v3), str(v4))
-        #print >>hdr, line
-    #print >>hdr, 'nwalkers  {0:5d}'.format(nwalkers)
-    #print >>hdr, 'nsteps    {0:5d}'.format(nsteps)
-    #print >>hdr, 'nburn     {0:5d}'.format(nburn)
-    #print >>hdr, 'thin      {0:5d}'.format(thin)
-    #hdr.close()
+    for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
+                                      val1, val2, val3, val4):
+        try:
+            line = '%s  %s  ' %(p, pt)
+            line += ','.join(numpy.array(v1, dtype=str))
+        except TypeError:
+            line = '%s  %s  %s  %s  %s  %s' \
+                   %(p, pt, str(v1), str(v2), str(v3), str(v4))
+        print >>hdr, line
+    print >>hdr, 'nwalkers  {0:5d}'.format(nwalkers)
+    print >>hdr, 'nsteps    {0:5d}'.format(nsteps)
+    print >>hdr, 'nburn     {0:5d}'.format(nburn)
+    print >>hdr, 'thin      {0:5d}'.format(thin)
+    hdr.close()
     # run chain
     ndim = len(val1[(jfree)])
     if len(starting) != ndim:
@@ -188,13 +189,13 @@ def run_emcee(sampling_options, hm_options):
     #print 'pickled'
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     threads=threads,
-                                    args=(R,esd,icov,foo,
+                                    args=(R,esd,icov,function,
                                           params,prior_types[jfree],
                                           val1,val2,val3,val4,
-                                          jfree,lnprior,likenorm))#,
+                                          jfree,lnprior,likenorm,
                                           #sat_profile,group_profile,
-                                          #rng_obsbins,fail_value,
-                                          #array,dot,inf,izip,outer,pi))
+                                          rng_obsbins,fail_value,
+                                          array,dot,inf,izip,outer,pi))
                                           #isfinite,log,log10
                                           #outer,sqrt,zeros))
     # burn-in
@@ -216,9 +217,9 @@ def run_emcee(sampling_options, hm_options):
         if i*nwalkers % 10000 == nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
-                                fits_format, i, nwritten, Nobsbin)#s,
-                                #BinTableHDU, Column, ctime, enumerate,
-                                #isfile, izip, transpose, xrange)
+                                fits_format, i, nwritten, Nobsbins,
+                                BinTableHDU, Column, ctime, enumerate,
+                                isfile, izip, transpose, xrange)
             metadata, nwriten = out
             #print 'nwritten =', nwritten, i
     #hdr = open(hdrfile, 'a')
@@ -260,10 +261,10 @@ def run_emcee(sampling_options, hm_options):
     return
 
 def lnprob(theta, R, esd, icov, function, params,
-           prior_types, val1, val2, val3, val4, jfree, lnprior, likenorm):#,
+           prior_types, val1, val2, val3, val4, jfree, lnprior, likenorm,
            #sat_profile, group_profile,
-           #rng_obsbins, fail_value,
-           #array, dot, inf, izip, outer, pi):
+           rng_obsbins, fail_value,
+           array, dot, inf, izip, outer, pi):
            #array, dot, inf, izip, isfinite,
            #log, log10, sqrt):
     """
@@ -369,6 +370,8 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     if isfile(output):
         remove(output)
     chain = transpose(sampler.chain, axes=(2,1,0))
+    print params
+    print jfree
     columns = [Column(name=param, format='E', array=data[:iternum].flatten())
                for param, data in izip(params[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',

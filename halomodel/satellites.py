@@ -10,7 +10,7 @@ from time import time
 # local
 from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
 from nfw import mass_enclosed, mass_total_sharp
-from utils import cM_duffy08, delta, density_average
+from utils import cM_duffy08, delta, density_average, nfw_profile
 
 def fiducial(theta, R, h=1, Om=0.315, Ol=0.685, rmax=2):
     # local variables are accessed much faster than global ones
@@ -54,11 +54,11 @@ def fiducial(theta, R, h=1, Om=0.315, Ol=0.685, rmax=2):
     sigma_group = rs_gr * _delta(cgroup) * rho_m
     rsat = zeros(3)
     rsat_prior = zeros(3)
-    for i, Rs, ni, rs, sigma in _izip(count(), Rsat, n_Rsat,
-                                      rs_gr, sigma_group):
+    for i, Rs, ni, rs, sigma, auxi in _izip(count(), Rsat, n_Rsat,
+                                            rs_gr, sigma_group, aux):
         j = _array([(rsat_range >= Ri) & (rsat_range < rmax)
                     for Ri in Rs], dtype=float)
-        nweighted = _transpose([g*n*_nfw_profile(rsat_range, rs, sigma)
+        nweighted = _transpose([g*n*_nfw_profile(rsat_range, rs, sigma, auxi)
                                for g, n in _izip(j, ni)])
         rdistrib = _array([n.sum() / jj.sum() if jj.sum() else 0
                            for n, jj in _izip(nweighted, j.T)])
@@ -89,11 +89,11 @@ def fiducial(theta, R, h=1, Om=0.315, Ol=0.685, rmax=2):
                                       x[5]/x[1], angles)
                         for x in _izip(R, rs_gr, Rsat, n_Rsat,
                                        sigma_group, Rranges)])
-    lnPderived = _log(nfw_profile(rsat, rs_gr, sigma_group)).sum()
+    lnPderived = _log(nfw_profile(rsat, rs_gr, sigma_group, aux)).sum()
     lnPderived -= _log(_array([romberg(nfw_profile, x[0].min(), rmax,
-                                       args=(x[1],x[2]))
+                                       args=(x[1],x[2], x[3]))
                                for x in _izip(Rsat, rs_gr,
-                                              sigma_group)])).sum()
+                                              sigma_group, aux)])).sum()
     #out = [esd_sat + esd_group, esd_sat, esd_group,
            #rsat, rt, log10(Msat_rt+Mstar), lnPderived]
     out = [esd_sat + esd_group, esd_sat, esd_group,

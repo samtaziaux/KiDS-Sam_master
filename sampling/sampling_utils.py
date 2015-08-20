@@ -81,6 +81,7 @@ def read_config(config_file, version='0.5.7',
     return out
 
 def read_function(function):
+    print 'Reading function', function
     function_path = function.split('.')
     if len(function_path) < 2:
         msg = 'ERROR: the parent module(s) must be given with'

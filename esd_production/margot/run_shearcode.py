@@ -55,7 +55,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
 
     # The shear calculation starts here
 
-    """
+
     # Creating the splits
     for n in xrange(nruns):
         ps = []
@@ -70,7 +70,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
                 ps.append(p)
         for p in ps:
             p.wait()
-    """
+
     
     # Combine the splits according to the purpose
 

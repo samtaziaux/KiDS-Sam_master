@@ -78,7 +78,7 @@ def input_variables():
         pass
     
     # 'Binnning information of the groups'
-    binname, obsbins, Nobsbins, binmin, binmax = define_obsbins(1, lens_binning, [], [])
+    binname, lens_binning, Nobsbins, binmin, binmax = define_obsbins(1, lens_binning, [], [])
 
     # Create all necessary folders
 
@@ -163,11 +163,11 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
         if len(sellims) == 1:
             filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
             var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
-            plottitle = '%s, %s = %g'%(plottitle, selname, sellims[0])
+            plottitle = '%s %s = %g,'%(plottitle, selname, sellims[0])
         else:
             filename_var = '%s_%s%g~%g'%(filename_var, selname, sellims[0], sellims[1])
             var_print = '%s %s-limit: %g - %g,'%(var_print, selname, sellims[0], sellims[1])
-            plottitle = '%s, %g $\leq$ %s $\leq$ %g'%(plottitle, sellims[0], selname, sellims[1])
+            plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, sellims[0], selname, sellims[1])
         
     return filename_var, var_print, plottitle
     
@@ -632,6 +632,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
         obsbins = np.array([-999, -999])
         binname = 'No'
         Nobsbins = 1
+        lens_binning = {binname: obsbins}
 
     try:
         # The current binning values
@@ -1168,16 +1169,16 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname,
                 if N1 == Nobsbins - 1:
                     ax_sub.xaxis.set_label_position('top')
                     if N2 == 0:
-                        ax_sub.set_xlabel(r'%s = %.3g - %.3g'%(binname, obsbins[N2], obsbins[N2+1]), fontsize=17)
+                        ax_sub.set_xlabel(r'%s = %.3g - %.3g'%(binname, obsbins[N2], obsbins[N2+1]), fontsize=12)
                     else:
-                        ax_sub.set_xlabel(r'%.3g - %.3g'%(obsbins[N2], obsbins[N2+1]), fontsize=17)
+                        ax_sub.set_xlabel(r'%.3g - %.3g'%(obsbins[N2], obsbins[N2+1]), fontsize=12)
 
                 if N2 == Nobsbins - 1:
                     ax_sub.yaxis.set_label_position('right')
                     if N1 == 0:
-                        ax_sub.set_ylabel(r'%s = %.3g - %.3g'%(binname, obsbins[N1], obsbins[N1+1]), fontsize=17)
+                        ax_sub.set_ylabel(r'%s = %.3g - %.3g'%(binname, obsbins[N1], obsbins[N1+1]), fontsize=12)
                     else:
-                        ax_sub.set_ylabel(r'%.3g - %.3g'%(obsbins[N1], obsbins[N1+1]), fontsize=17)
+                        ax_sub.set_ylabel(r'%.3g - %.3g'%(obsbins[N1], obsbins[N1+1]), fontsize=12)
 
     #			ax_sub.set_xticks([1e2,1e3])
     #			ax_sub.set_yticks([1e2,1e3])

@@ -35,6 +35,8 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             kids_path = line[1]
         elif line[0] == 'GAMA_path':
             gama_path = line[1]
+        elif line[0] == 'Lens_file':
+			lens_file = line[1]
 
         # Cosmology
         elif line[0] == 'Om':
@@ -57,6 +59,8 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             purpose = line[1]
         elif line[0] == 'Rbins':
             Rbins = line[1]
+        elif line[0] == 'Runit':
+            Runit = line[1]
         elif line[0] == 'ncores':
             ncores = int(line[1])
 
@@ -85,7 +89,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
                 bins = np.array([float(i) for i in line[2].split(',')])
             lens_binning = {binname: bins}
             
-        elif line[0][:10] == 'lens_param':
+        elif line[0][:11] == 'lens_limits':
             param = line[1]
             bins = np.array([float(i) for i in line[2].split(',')])
             lens_selection[param] = bins
@@ -94,7 +98,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             blindcats = line[1].split(',')
         
         # Source selection
-        elif line[0][:9] == 'src_param':
+        elif line[0][:10] == 'src_limits':
             param = line[1]
             bins = np.array([float(i) for i in line[2].split(',')])
             src_selection[param] = bins

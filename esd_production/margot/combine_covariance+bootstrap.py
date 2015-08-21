@@ -125,7 +125,6 @@ def main():
             bias_tot[N1] = ESD[4]
             
             for N2 in xrange(Nobsbins):
-    #		if N1 == N2:
 
                 filename_N2 = shear.define_filename_var(purpose, centering, ranks, binname, \
                 N2+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)

@@ -103,19 +103,19 @@ def main():
     else: # If there is binning
         plottitle2 = r'for %i %s bins between %g and %g.'%(Nobsbins, binname, (lens_binning.values()[0])[0], (lens_binning.values()[0])[-1])
 
-	try:
-		shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname, lens_binning, Rbins, h)
-	except:
-		pass
+    try:
+        shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname, lens_binning, Rbins, h)
+    except:
+        pass
 
-	"""
+
     # Remove the used splits
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-    """
+
     return
     
 main()

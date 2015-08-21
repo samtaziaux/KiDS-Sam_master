@@ -10,6 +10,7 @@ nan = np.nan # Not a number
 
 def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
                 lensid_file=None, folder='./'):
+
     #parser = SafeConfigParser()
     #parser.read(config_file)
     ##print parser.
@@ -35,8 +36,8 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             kids_path = line[1]
         elif line[0] == 'GAMA_path':
             gama_path = line[1]
-        elif line[0] == 'Lens_file':
-			lens_file = line[1]
+        elif line[0] == 'Lens_catalog':
+			lens_catalog = line[1]
 
         # Cosmology
         elif line[0] == 'Om':
@@ -65,7 +66,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             ncores = int(line[1])
 
         # Lens selection
-        elif line[0] == 'lensid_file':
+        elif line[0] == 'lensID_file':
             lensid_file = line[1]
         elif line[0] == 'group_centre':
             group_centre = line[1]
@@ -94,24 +95,40 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             bins = np.array([float(i) for i in line[2].split(',')])
             lens_selection[param] = bins
 
-        elif line[0] == 'kids_blinds':
-            blindcats = line[1].split(',')
+    #    elif line[0] == 'kids_blinds':
+    #        blindcats = line[1].split(',')
         
         # Source selection
         elif line[0][:10] == 'src_limits':
             param = line[1]
             bins = np.array([float(i) for i in line[2].split(',')])
             src_selection[param] = bins
-
-
-    #if kids_version and not kids_path:
-        #kids_path =
-    #if gama_version and not gama_path:
-        #gama_path =
-
+        
+        blindcats = np.array(['A', 'B', 'C', 'D'])
+    
+        """
+        try: # If a KiDS version number was given
+            print 'KiDS version:', kids_version
+            # kids_path = ...
+        except:
+            pass
+        
+        try: # If a GAMA version number was given
+            print 'GAMA version:', gama_version
+            # gama_path = ...
+        except:
+            pass
+        
+        try: # If a custom lens catalog was given
+            print 'Lens catalog:', lens_catalog
+            gama_path = lens_catalog
+        except:
+            pass
+        """
+        
     out = (kids_path, gama_path,
             Om, Ol, Ok, h,
-            folder, filename, purpose, Rbins, ncores,
+            folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, group_centre, ranks, lens_binning, lens_selection,
             src_selection, blindcats)
 

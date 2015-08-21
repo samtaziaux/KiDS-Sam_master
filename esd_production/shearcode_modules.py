@@ -26,19 +26,19 @@ inf = np.inf
 def input_variables():
 
     # Importing the input parameters from the config file
-    config_file = '/data2/brouwer/shearprofile/KiDS-GGL/ggl.config'
-
-    # Input for the codes
-    [path_kidscats, path_gamacats,
-            O_matter, O_lambda, Ok, h,
-            path_output, filename_addition, purpose, path_Rbins, Nsplits,
-            lensid_file, centering, ranks, lens_binning, lens_selection,
-            src_selection, blindcats] = esd_utils.read_config(config_file)
-
+    
     Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
     Nsplits = int(sys.argv[2]) # The number cores/splits
     binnum = int(sys.argv[3]) # The number of this particular observable bin
     blindcat = str(sys.argv[4]) # The number of this particular blind KiDS catalog
+    config_file = str(sys.argv[5]) # The path to the configuration file
+
+    # Input for the codes
+    [path_kidscats, path_gamacats,
+            O_matter, O_lambda, Ok, h,
+            path_output, filename_addition, purpose, path_Rbins, Runit, Nsplits,
+            lensid_file, centering, ranks, lens_binning, lens_selection,
+            src_selection, blindcats] = esd_utils.read_config(config_file)
 
     print
     print 'Running:', purpose
@@ -149,7 +149,7 @@ def input_variables():
 
 
     return Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, \
-            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, path_output, \
+            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, path_output, \
             path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacats
@@ -259,7 +259,7 @@ Ncat, ranks, O_matter, O_lambda, Ok, h): \
 # Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
 
     # Import R-range
-    Rmin, Rmax, Rbins, Rcenters, nRbins = import_Rrange(path_Rbins)
+    Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins)
     
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
@@ -277,7 +277,7 @@ Ncat, ranks, O_matter, O_lambda, Ok, h): \
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist
 
 
-def import_Rrange(path_Rbins): # Radial bins around the lenses
+def define_Rbins(path_Rbins): # Radial bins around the lenses
 
     if os.path.isfile(path_Rbins): # from a file
 

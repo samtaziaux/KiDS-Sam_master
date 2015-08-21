@@ -2,6 +2,7 @@
 """
 Satellite lensing EMCEE wrapper
 """
+import cloud
 import emcee
 import numpy
 import os
@@ -25,7 +26,7 @@ def run_emcee(sampling_options, hm_options):
     from numpy import isfinite, log, log10, outer, sqrt, transpose, zeros
     import numpy
     # local
-    import nfw
+    #import nfw
 
     datafile, datacols, covfile, covcols, output, \
         sampler, nwalkers, nsteps, nburn, \
@@ -33,6 +34,9 @@ def run_emcee(sampling_options, hm_options):
     function, params, param_types, prior_types, \
         val1, val2, val3, val4, hm_functions, \
         starting, meta_names, fits_format = hm_options
+    #function = cloud.serialization.cloudpickle.dumps(model)
+    #del model
+    #print function
 
     #pickle.dumps(function)
     #print 'pickled'
@@ -185,8 +189,6 @@ def run_emcee(sampling_options, hm_options):
     for i in xrange(4):
         fail_value.append(9999)
 
-    #pickle.dumps(lnprob)
-    #print 'pickled'
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     threads=threads,
                                     args=(R,esd,icov,function,
@@ -315,13 +317,13 @@ def lnprob(theta, R, esd, icov, function, params,
         #return -inf, fail_value
     # not normalized yet
     j = (prior_types == 'normal')
-    lnprior[j] = array([-(v - v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
+    lnprior[j] = array([-(v-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
                         for v, v1, v2, v3, v4
                         in izip(theta[j], v1free[j], v2free[j],
                                 v3free[j], v4free[j])])
     j = (prior_types == 'lognormal')
-    lnprior[j] = array([-(log10(v) - v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
+    lnprior[j] = array([-(log10(v)-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
                         for v, v1, v2, v3, v4
                         in izip(theta[j], v1free[j], v2free[j],

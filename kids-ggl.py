@@ -4,11 +4,11 @@ import argparse
 # KiDS-GGL modules
 import esd_production
 #import halomodel
-import sampling
-import sampler, sampling_utils
-#from sampling import sampler, sampling_utils
-#from halomodel import hm_utils
-import hm_utils
+#import sampling
+#import sampler, sampling_utils
+#import hm_utils
+from sampling import sampler, sampling_utils
+from halomodel import hm_utils
 
 def main():
     parser = argparse.ArgumentParser()

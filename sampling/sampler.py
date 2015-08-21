@@ -2,7 +2,6 @@
 """
 Satellite lensing EMCEE wrapper
 """
-import cloud
 import emcee
 import numpy
 import os

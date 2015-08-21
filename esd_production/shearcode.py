@@ -63,7 +63,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
 
             for nsplit in np.arange(nsplits)+1:
 
-                splitsname = 'python -W ignore shear+covariance.py'
+                splitsname = 'python -W ignore esd_production/shear+covariance.py'
                 splitsname += ' %i %i %i %s &' \
                             %(nsplit, nsplits, nobsbin, blindcat)
                 p = sub.Popen(shlex.split(splitsname))
@@ -76,19 +76,19 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
 
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
-        runblinds('combine_splits.py', blindcats, nsplit, nsplits, nobsbin)
+        runblinds('esd_production/combine_splits.py', blindcats, nsplit, nsplits, nobsbin)
 
     # Stacking the lenses into an ESD profile
     if ('bootstrap' in purpose) or ('catalog' in purpose):
-        runblinds('stack_shear+bootstrap.py', blindcats, nsplit, nsplits, nobsbin)        
+        runblinds('esd_production/stack_shear+bootstrap.py', blindcats, nsplit, nsplits, nobsbin)        
 
     # Creating the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
-        runblinds('combine_covariance+bootstrap.py', blindcats, nsplit, nsplits, nobsbin)
+        runblinds('esd_production/combine_covariance+bootstrap.py', blindcats, nsplit, nsplits, nobsbin)
 
     # Plotting the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
-        runblinds('plot_covariance+bootstrap.py', blindcats, nsplit, nsplits, nobsbin)
+        runblinds('esd_production/plot_covariance+bootstrap.py', blindcats, nsplit, nsplits, nobsbin)
 
     return
     
@@ -108,10 +108,7 @@ def runblinds(codename, blindcats, nsplit, nsplits, nobsbin):
     return
 
 
-def main():
-
-    # Importing the input parameters from the config file
-    config_file = '/data2/brouwer/shearprofile/KiDS-GGL/ggl.config'
+def run_esd(config_file):
 
     # Input for the codes
     [kids_path, gama_path,
@@ -136,5 +133,5 @@ def main():
 
     return
 
-main()
+#main()
 

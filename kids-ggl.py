@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 import argparse
+import os
 
 # KiDS-GGL modules
-import esd_production
+#import esd_production
 #import halomodel
 #import sampling
 #import sampler, sampling_utils
 #import hm_utils
+from esd_production import shearcode
 from sampling import sampler, sampling_utils
-from halomodel import hm_utils
+#from halomodel import hm_utils
 
 def main():
     parser = argparse.ArgumentParser()
@@ -17,7 +19,8 @@ def main():
     # options to turn on and off the data production or halo model?
 
     # ESD data production
-    #esd_production.run(parser.config_file)
+    shearcode.run_esd(args.config_file)
+    return
 
     # Choose and set up a halo model
     hm_options = hm_utils.read_config(args.config_file)

@@ -948,7 +948,7 @@ def write_stack(filename, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, 
 # Define the labels for the plot
 def define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbins, src_selection):
 
-    plottitle = '%s'%purpose
+    plottitle = '%s:'%purpose
 
     # Lens rank selection
     rank_selection = {'rank%s'%centering: ranks}
@@ -959,6 +959,8 @@ def define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbin
   
     # Source selection
     x, x, plottitle = define_filename_sel('', '', plottitle, src_selection)
+
+    plottitle = plottitle.rsplit(',', 1)[0]
 
     return plottitle
     

@@ -7,6 +7,7 @@ from numpy import array, inf, loadtxt
 #sys.path.append('halomodel')
 
 # local
+from halomodel import nfw, satellites
 
 def read_config(config_file, version='0.5.7'):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
@@ -106,5 +107,17 @@ def read_config(config_file, version='0.5.7'):
     return out
 
 def read_function(module, function):
-    module = imp.load_module(module, *imp.find_module(module))
-    return getattr(module, function)
+    #import pickle
+    #print module, function,
+    #module = imp.load_module(module, *imp.find_module(module))
+    #print module.__file__,
+    #function = getattr(module, function)
+    # this works for now but is of very limited functionality
+    if module == 'satellites':
+        function = getattr(satellites, function)
+    elif module == 'nfw':
+        function = getattr(nfw, function)
+    print function
+    #pickle.dumps(function)
+    #print 'Pickled!'
+    return function

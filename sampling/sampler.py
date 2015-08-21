@@ -2,30 +2,22 @@
 """
 Satellite lensing EMCEE wrapper
 """
+import cloud
 import emcee
 import numpy
 import os
 import sys
-from itertools import izip
-from numpy import array, inf, isfinite, isnan, log, log10, pi, sqrt
+from astropy.io.fits import BinTableHDU, Column, Header, PrimaryHDU
+from itertools import count, izip
+from numpy import all as npall, array, append, concatenate, dot, inf, isnan
+from numpy import isfinite, log, log10, outer, pi, sqrt, transpose, zeros
 from numpy.linalg import det
 from os import remove
 from os.path import isfile
 from time import ctime
 import pickle
 
-def foo(function, v, R):
-    return function(v, R)
-
 def run_emcee(sampling_options, hm_options):
-    from itertools import count, izip
-    from time import ctime
-    from astropy.io.fits import BinTableHDU, Column, Header, PrimaryHDU
-    from numpy import all as npall, array, append, concatenate, dot, inf
-    from numpy import isfinite, log, log10, outer, sqrt, transpose, zeros
-    import numpy
-    # local
-    import nfw
 
     datafile, datacols, covfile, covcols, output, \
         sampler, nwalkers, nsteps, nburn, \
@@ -33,6 +25,9 @@ def run_emcee(sampling_options, hm_options):
     function, params, param_types, prior_types, \
         val1, val2, val3, val4, hm_functions, \
         starting, meta_names, fits_format = hm_options
+    #function = cloud.serialization.cloudpickle.dumps(model)
+    #del model
+    #print function
 
     #pickle.dumps(function)
     #print 'pickled'
@@ -58,8 +53,8 @@ def run_emcee(sampling_options, hm_options):
             oneplusk = numpy.loadtxt(datafile, usecols=[datacols[2]]).T
             esd /= oneplusk
     else:
-        R, esd = numpy.transpose([numpy.loadtxt(df, usecols=datacols[:2])
-                                for df in datafile], axes=(2,0,1))
+        R, esd = transpose([numpy.loadtxt(df, usecols=datacols[:2])
+                            for df in datafile], axes=(2,0,1))
         if len(datacols) == 3:
             oneplusk = array([numpy.loadtxt(df, usecols=[datacols[2]])
                               for df in datafile])
@@ -85,14 +80,14 @@ def run_emcee(sampling_options, hm_options):
 
     # switch axes to have the diagonals aligned consistently to make it
     # a 2d array
-    cov2d = numpy.transpose(cov, axes=(0,2,1,3))
+    cov2d = cov.transpose(0,2,1,3)
     cov2d = cov2d.reshape((Nobsbins*Nrbins,Nobsbins*Nrbins))
     esd_err = numpy.sqrt(numpy.diag(cov2d)).reshape((Nobsbins,Nrbins))
 
     icov = numpy.linalg.inv(cov2d)
     # reshape back into the desired shape (with the right axes order)
     icov = icov.reshape((Nobsbins,Nrbins,Nobsbins,Nrbins))
-    icov = numpy.transpose(icov, axes=(2,0,3,1))
+    icov = icov.transpose(2,0,3,1)
 
     # values are actually printed in log
     for i1, p in enumerate(params):
@@ -185,8 +180,6 @@ def run_emcee(sampling_options, hm_options):
     for i in xrange(4):
         fail_value.append(9999)
 
-    #pickle.dumps(lnprob)
-    #print 'pickled'
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
                                     threads=threads,
                                     args=(R,esd,icov,function,
@@ -315,13 +308,13 @@ def lnprob(theta, R, esd, icov, function, params,
         #return -inf, fail_value
     # not normalized yet
     j = (prior_types == 'normal')
-    lnprior[j] = array([-(v - v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
+    lnprior[j] = array([-(v-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
                         for v, v1, v2, v3, v4
                         in izip(theta[j], v1free[j], v2free[j],
                                 v3free[j], v4free[j])])
     j = (prior_types == 'lognormal')
-    lnprior[j] = array([-(log10(v) - v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
+    lnprior[j] = array([-(log10(v)-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
                         for v, v1, v2, v3, v4
                         in izip(theta[j], v1free[j], v2free[j],
@@ -370,8 +363,6 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     if isfile(output):
         remove(output)
     chain = transpose(sampler.chain, axes=(2,1,0))
-    print params
-    print jfree
     columns = [Column(name=param, format='E', array=data[:iternum].flatten())
                for param, data in izip(params[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',

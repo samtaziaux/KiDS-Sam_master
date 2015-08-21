@@ -1,9 +1,10 @@
 """
-Auxiliary functions
+Auxiliary functions. This needs to be refactioned to use astropy.cosmology
 
 """
 import os
-from astro import cosmology
+#from astro import cosmology
+from astropy.cosmology import FlatLambdaCDM
 from itertools import izip
 from numpy import array, exp, inf, loadtxt, median, pi
 from scipy.stats import rv_discrete

@@ -32,7 +32,7 @@ def run_emcee(sampling_options, hm_options):
     #print 'pickled'
 
     # minus the columns, paramfile, and outputfile entries
-    Ndatafiles = len(datafile) - 6
+    Ndatafiles = len(datafile)
 
     if os.path.isfile(output):
         msg = 'Warning: output file %s exists. Overwrite? [y/N] ' %output
@@ -89,10 +89,10 @@ def run_emcee(sampling_options, hm_options):
     icov = icov.transpose(2,0,3,1)
 
     # values are actually printed in log
-    for i1, p in enumerate(params):
-        if 'n_Rsat' in p:
-            j = (val1[i1] > 0)
-            val1[i1][j] = 10**val1[i1][j]
+    #for i1, p in enumerate(params):
+        #if 'n_Rsat' in p:
+            #j = (val1[i1] > 0)
+            #val1[i1][j] = 10**val1[i1][j]
     # these are needed for integration and interpolation and should always
     # be used. k=7 gives a precision better than 1% at all radii
     if Rshape[0] == 1:

@@ -7,7 +7,7 @@ from numpy import array, inf, loadtxt
 #sys.path.append('halomodel')
 
 # local
-from halomodel import nfw, satellites
+from halomodel import nfw, nfw_stack, satellites
 
 def read_config(config_file, version='0.5.7'):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
@@ -117,6 +117,8 @@ def read_function(module, function):
         function = getattr(satellites, function)
     elif module == 'nfw':
         function = getattr(nfw, function)
+    elif module == 'nfw_stack':
+        function = getattr(nfw_stack, function)
     print function
     #pickle.dumps(function)
     #print 'Pickled!'

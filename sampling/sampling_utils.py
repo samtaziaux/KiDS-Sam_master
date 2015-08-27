@@ -41,7 +41,7 @@ def read_config(config_file, version='0.5.7',
                 raise ValueError(msg)
         elif line[0] == 'sampler_output':
             output = line[1]
-            if output[-5:].lower() != '.fits' or \
+            if output[-5:].lower() != '.fits' and \
                 output[-4:].lower() != '.fit':
                 output += '.fits'
         # all of this will have to be made more flexible to allow for

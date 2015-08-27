@@ -210,7 +210,7 @@ def run_emcee(sampling_options, hm_options):
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
                                 fits_format, i, nwritten, Nobsbins,
-                                BinTableHDU, Column, ctime, enumerate,
+                                array, BinTableHDU, Column, ctime, enumerate,
                                 isfile, izip, transpose, xrange)
             metadata, nwriten = out
             #print 'nwritten =', nwritten, i
@@ -247,7 +247,7 @@ def run_emcee(sampling_options, hm_options):
     write_to_fits(output, chi2, sampler, nwalkers, thin,
                   params, jfree, metadata, meta_names,
                   fits_format, i+1, nwritten, Nobsbins,
-                  BinTableHDU, Column, ctime, enumerate,
+                  array, BinTableHDU, Column, ctime, enumerate,
                   isfile, izip, transpose, xrange)
     print 'Everything saved to {0}!'.format(output)
     return
@@ -355,7 +355,7 @@ def lnprob(theta, R, esd, icov, function, params,
 
 def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                   metadata, meta_names, fits_format, iternum, nwritten,
-                  Nobsbins, BinTableHDU, Column, ctime, enumerate,
+                  Nobsbins, array, BinTableHDU, Column, ctime, enumerate,
                   isfile, izip, transpose, xrange):
     nexclude = len(chi2)
     lnprior, lnPderived, chi2, lnlike = chi2
@@ -398,9 +398,8 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             # note that all values have three bins!
             else:
                 for k, datum in enumerate(data):
-                    metadata[k][0][j*nwalkers:(j+1)*nwalkers] = datum[0]
-                    metadata[k][1][j*nwalkers:(j+1)*nwalkers] = datum[1]
-                    metadata[k][2][j*nwalkers:(j+1)*nwalkers] = datum[2]
+                    for i in xrange(len(datum)):
+                        metadata[k][i][j*nwalkers:(j+1)*nwalkers] = datum[i]
             lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
                                                            for b in blob])
             lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])

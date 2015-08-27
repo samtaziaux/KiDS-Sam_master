@@ -25,15 +25,14 @@ inf = np.inf
 
 def input_variables():
 
-    # Importing the input parameters from the config file
-    
+    # Input for the codes
     Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
     Nsplits = int(sys.argv[2]) # The number cores/splits
     binnum = int(sys.argv[3]) # The number of this particular observable bin
     blindcat = str(sys.argv[4]) # The number of this particular blind KiDS catalog
     config_file = str(sys.argv[5]) # The path to the configuration file
 
-    # Input for the codes
+    # Importing the input parameters from the config file
     [path_kidscats, path_gamacats,
             O_matter, O_lambda, Ok, h,
             path_output, filename_addition, purpose, path_Rbins, Runit, Nsplits,
@@ -77,7 +76,18 @@ def input_variables():
     else:
         pass
     
-    # 'Binnning information of the groups'
+    
+    # Defining the lensID lens selection/binning
+    if os.path.isdir(lensid_file):
+        
+        lens_selection = {'None': np.array([])}
+        lens_binning = {'None': np.array([])}
+        
+        lens_selection, lens_binning = define_lensid_selection
+        
+        print lens_selection, lens_binning
+    
+    # Binnning information of the lenses
     binname, lens_binning, Nobsbins, binmin, binmax = define_obsbins(1, lens_binning, [], [])
 
     # Create all necessary folders
@@ -90,7 +100,7 @@ def input_variables():
     path_splits = '%s/splits_%s'%(path_output, purpose)
     path_results = '%s/results_%s'%(path_output, purpose)
 
-    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
+    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == 1):
     
     #    print 'Nsplit:', Nsplit
     #    print 'blindcat:', blindcat
@@ -105,11 +115,16 @@ def input_variables():
 
     if 'catalog' in purpose:
 
+    #    print 'Nsplit:', Nsplit
+    #    print 'blindcat:', blindcat
+    #    print 'binnum:', binnum
+    #    print 'Nobsbins:', Nobsbins
+        
         # Path to the output splits and results
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
-        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == Nobsbins):
+        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == 1):
 
             for path in [path_splits, path_results]:
                 if not os.path.isdir(path):
@@ -138,7 +153,7 @@ def input_variables():
 
         for Ncat in xrange(100):
             outname = '%s/%s_%i_%s%s_split%iof*.fits'%(path_splits.replace('bootstrap', 'catalog'), purpose.replace('bootstrap', 'catalog'), Ncat+1, filename_var, filename_addition, Nsplit+1)
-            print outname
+        #    print outname
             splitfiles = glob.glob(outname)
             splitslist = np.append(splitslist, splitfiles)
 
@@ -153,6 +168,21 @@ def input_variables():
             path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacats
+
+# Defining the lensID lens selection/binning
+def define_lensid_selection(lensid_file):
+    
+    # If there is only one lensID bin -> selection
+    lensid_files = lensid_file.split(',')
+    if len(lensid_files == 1):
+        lensids = np.loadtxt(lensid_files[0])
+        lens_selection = {'ID': lensids}
+    else: # If there are multiple lensID bins -> binning
+        for f in xrange(len(lensid_files)):
+            lensids = np.loadtxt(lensid_files[f])
+            lens_binning = ('lensIDbin%i'%f: lensids)
+
+    return lens_selection, lens_binning
 
 
 def define_filename_sel(filename_var, var_print, plottitle, selection):
@@ -616,9 +646,8 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
         else:
             Nobsbins = len(obsbins)-1 # If the bin limits are given
         
-      
+        # Print the lens binning properties
         if len(lenssel_binning) > 0:
-            
             obslist = define_obslist(binname, gamacat)
             
             print
@@ -627,6 +656,9 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
             for b in xrange(Nobsbins):
                 lenssel = lenssel_binning & (obsbins[b] <= obslist) & (obslist < obsbins[b+1])
                 print '%g    %g    %g'%(obsbins[b], obsbins[b+1], np.mean(obslist[lenssel]))
+        
+        if 'lensID' in binname:
+            binname = 'lensIDs'
 
     else: # If there is no binning
         obsbins = np.array([-999, -999])
@@ -634,14 +666,11 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
         Nobsbins = 1
         lens_binning = {binname: obsbins}
 
+    # Try to give the current binning values
     try:
-        # The current binning values
         bins = np.sort([obsbins[binnum-1], obsbins[binnum]])
         binmin = float(bins[0])
         binmax = float(bins[1])
-        if binmin > binmax:
-            print 'Error: Bin minimum is greater than bin maximum!'
-            quit()
     except:
         binmin = -999
         binmax = -999
@@ -673,11 +702,11 @@ def define_obslist(obsname, gamacat):
 
 
 # Masking the lenses according to the appropriate lens selection and the current KiDS field
-def define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, binmax):
+def define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum):
 
     lenssel = np.ones(len(gamacat['RA']), dtype=bool)
     
-     # Add the mask for the lens rank
+    # Add the mask for the lens rank
     ranklist = gamacat['rank%s'%centering]
     if len(ranks) == 1:
         lenssel *= (ranklist == ranks[0])
@@ -689,14 +718,25 @@ def define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, b
         binlims = lens_selection[param]
         obslist = define_obslist(param, gamacat)
         
-        if len(binlims) == 1:
-            lenssel *= (obslist == binlims[0])
+        if 'ID' in param:
+            lenssel *= np.in1d(obslist, binlims)
         else:
-            lenssel *= (binlims[0] <= obslist) & (obslist < binlims[1])
+            if len(binlims) == 1:
+                lenssel *= (obslist == binlims[0])
+            else:
+                lenssel *= (binlims[0] <= obslist) & (obslist < binlims[1])
 
     if 'No' not in binname: # If the galaxy selection depends on observable
-        binlist = define_obslist(binname, gamacat)
-        lenssel *=  (binmin <= binlist) & (binlist < binmax)
+
+        obslist = define_obslist(binname, gamacat)
+        
+        if 'ID' in param:
+            lensids = lens_binning['%s%i'%(binname, binnum)]
+            lenssel *= np.in1d(obslist, binlims)
+        else:
+            binmin = lens_binning[binname][binnum]
+            binmax = lens_binning[binname][binnum+1]
+            lenssel *=  (binmin <= obslist) & (obslist < binmax)
 
     return lenssel
 

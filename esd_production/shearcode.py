@@ -59,7 +59,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
     if 'esd_production' in directory:
         path_shearcodes = ''
         
-
+    
     # Creating the splits
     for n in xrange(nruns):
         ps = []
@@ -74,13 +74,21 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
                 ps.append(p)
         for p in ps:
             p.wait()
-
+    
     
     # Combine the splits according to the purpose
 
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
-        runblinds('%scombine_splits.py'%(path_shearcodes), blindcats, nsplit, nsplits, nobsbin, config_file)
+        ps = []
+        codename = '%scombine_splits.py'%(path_shearcodes)
+        runname = 'python -W ignore %s'%codename
+        runname += ' %i %i %i %s %s &' \
+                %(nsplit, nsplits, nobsbin, blindcat, config_file)
+        p = sub.Popen(shlex.split(runname))
+        ps.append(p)
+        for p in ps:
+            p.wait()
 
     # Stacking the lenses into an ESD profile
     if ('bootstrap' in purpose) or ('catalog' in purpose):
@@ -118,7 +126,7 @@ def run_esd(config_file):
     [kids_path, gama_path,
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, Runit, ncores,
-            lensid_file, group_centre, ranks, lens_binning, lens_selection,
+            lensid_file, lens_weights, group_centre, ranks, lens_binning, lens_selection,
             src_selection, blindcats] = esd_utils.read_config(config_file)
 
     print '\n \n \n \n \n \n \n \n \n \n'

@@ -21,9 +21,9 @@ nan = np.nan # Not a number
 def main():
 
     # Input parameters
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, \
-            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, path_output, \
-            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+            lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
+            path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacats = shear.input_variables()
 
@@ -67,7 +67,7 @@ def main():
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', 'None', 0, -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
     binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
@@ -227,7 +227,7 @@ def main():
             
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
-            lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, binmax)
+            lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]

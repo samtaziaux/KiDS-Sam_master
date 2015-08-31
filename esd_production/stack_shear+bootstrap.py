@@ -22,9 +22,9 @@ nan = np.nan # Not a number
 def main():
 
     # Input parameters
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, \
-            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, path_output, \
-            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+            lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
+            path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacats = shear.input_variables()
 
@@ -106,7 +106,7 @@ def main():
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
 
     # Defining the observable binnning range of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', -inf, inf) \
+    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
     # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
     binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
@@ -136,7 +136,7 @@ def main():
         print '%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, binmin, binmax)
         
         # Mask the galaxies in the shear catalog
-        lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, binname, binmin, binmax)
+        lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
 
         if debug:
             print 'lenssel:', len(lenssel)
@@ -219,7 +219,7 @@ def main():
         else:
             plotstyle = 'log'
         
-        if 'No' not in binname:
+        if 'No' in binname:
             plotlabel = ylabel
         else:
             plotlabel = r'%.3g $\leq$ %s $\textless$ %.3g (%i lenses)'%(binmin, binname.replace('_', ''), binmax, len(galIDs_matched))

@@ -33,9 +33,9 @@ def input_variables():
     config_file = str(sys.argv[5]) # The path to the configuration file
 
     # Importing the input parameters from the config file
-    [path_kidscats, path_gamacats, O_matter, O_lambda, Ok, h,
+    [path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h,
             path_output, filename_addition, purpose, path_Rbins, Runit, Nsplits,
-            lensid_file, lens_weights, centering, ranks, lens_binning, lens_selection,
+            lensid_file, lens_weights, centering, lens_binning, lens_selection,
             src_selection, blindcats] = esd_utils.read_config(config_file)
 
     print
@@ -58,37 +58,16 @@ def input_variables():
         filename_addition = ''
     else:
         filename_addition = '_%s'%filename_addition
-
-
-    # Reading the chosen galaxy ranks
-    if type(ranks) == str: # If specified
-        if 'Isolated' in ranks:
-            ranks = np.array([-999])
-        elif 'Centrals' in ranks:
-            ranks = np.array([1])
-        elif 'Satellites' in ranks:
-            ranks = np.array([2, inf])
-        elif 'All' in ranks:
-            ranks = np.array([-999, inf])
-        elif 'Group' in ranks:
-            ranks = np.array([1, inf])
-    else:
-        pass
+   
     
-    
-    # Defining the lensID lens selection/binning
-    if os.path.isdir(lensid_file):
-        
-        lens_selection = {'None': np.array([])}
-        lens_binning = {'None': np.array([])}
-        
+    # Defining the lens-ID lens selection/binning
+    if 'None' not in lensID_file:
         lens_selection, lens_binning = define_lensid_selection
         
         print lens_selection, lens_binning
     
     # Binnning information of the lenses
     binname, lens_binning, Nobsbins, binmin, binmax = define_obsbins(1, lens_binning, [], [])
-
 
     # Creating all necessary folders
 
@@ -147,7 +126,7 @@ def input_variables():
     if ('random' in purpose):
 
         # Defining the name of the output files
-        filename_var = define_filename_var(purpose.replace('bootstrap', 'catalog'), centering, ranks, binname, \
+        filename_var = define_filename_var(purpose.replace('bootstrap', 'catalog'), centering, binname, \
                         binnum, Nobsbins, lens_selection, src_selection, \
                         name_Rbins, O_matter, O_lambda, Ok, h)
 
@@ -163,28 +142,30 @@ def input_variables():
         Ncat = 1
 
 
-    return  Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+    return  Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
             lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-            path_kidscats, path_gamacats
+            path_kidscats, path_gamacat
+
 
 # Defining the lensID lens selection/binning
-def define_lensid_selection(lensid_file):
+def define_lensid_selection(lensid_file, lens_selection):
     
     # If there is only one lensID bin -> selection
     lensid_files = lensid_file.split(',')
     if len(lensid_files == 1):
         lensids = np.loadtxt(lensid_files[0])
-        lens_selection = {'ID': lensids}
+        lens_selection['ID'] = lensids
     else: # If there are multiple lensID bins -> binning
         for f in xrange(len(lensid_files)):
             lensids = np.loadtxt(lensid_files[f])
-            lens_binning = {'lensIDbin%i'%(f): lensids}
+            lens_binning = {'IDbin%i'%(f): lensids}
 
     return lens_selection, lens_binning
 
 
+# Define the part of the filename and plottitle that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
     
     selnames = np.sort(selection.keys())
@@ -200,9 +181,10 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
             plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, sellims[0], selname, sellims[1])
         
     return filename_var, var_print, plottitle
-    
 
-def define_filename_var(purpose, centering, ranks, binname, \
+    
+# Defining the part of the filename that contains the chosen variables
+def define_filename_var(purpose, centering, binname, \
                         binnum, Nobsbins, lens_selection, src_selection, \
                         name_Rbins, O_matter, O_lambda, Ok, h): # Define the list of variables for the output filename
 
@@ -210,28 +192,12 @@ def define_filename_var(purpose, centering, ranks, binname, \
 
     if 'catalog' in purpose:
 
-        if all(ranks > 0):
-
-            if centering == 'Cen':
-                filename_var = 'groupCen'
-            else:
-                filename_var = 'group'
-
-            var_print = 'Group catalogue, center = %s,'%(centering)
-
-        else:
-            filename_var = 'all'
-
-            var_print = 'Galaxy catalogue,'
+        filename_var = 'all'
+        var_print = 'Galaxy catalogue,'
 
     else: # Binnning information of the groups
 
         filename_var = ''
-
-        # Lens rank selection
-        rank_selection = {'rank%s'%centering: ranks}
-        filename_var, var_print, x = define_filename_sel(filename_var, var_print, '', rank_selection)
-        filename_var = filename_var.replace('_','')
 
         # Lens binning
         if 'No' not in binname: # If there is binning
@@ -252,7 +218,6 @@ def define_filename_var(purpose, centering, ranks, binname, \
     filename_var = filename_var.replace('-', 'm')
     filename_var = filename_var.replace('~', '-')
 
-    
     if 'covariance' not in purpose:
         print var_print
         print cosmo_print
@@ -284,16 +249,17 @@ def define_filename_results(path_results, purpose, filename_var, filename_additi
     return resultname
 
 
-def import_data(path_Rbins, path_gamacats, path_kidscats, centering, purpose, \
-Ncat, ranks, O_matter, O_lambda, Ok, h): \
 # Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
+def import_data(path_Rbins, path_gamacat, path_kidscats, centering, purpose, \
+                Ncat, O_matter, O_lambda, Ok, h):
+
 
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins)
     
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
-    import_gamacat(path_gamacats, centering, purpose, Ncat, ranks, \
+    import_gamacat(path_gamacat, centering, purpose, Ncat, \
     O_matter, O_lambda, Ok, h)
     
     # Determine the coordinates of the KiDS catalogues
@@ -349,18 +315,14 @@ def define_Rbins(path_Rbins): # Radial bins around the lenses
     return Rmin, Rmax, Rbins, Rcenters, nRbins
 
 
-def import_gamacat(path_gamacats, centering, purpose, Ncat, ranks, \
+def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 O_matter, O_lambda, Ok, h):
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
 
     randomcatname = '/disks/shear9/brouwer/shearprofile/shear_2.1/gen_ran_out.randoms.fits'
 
     # Importing the GAMA catalogues
-    if all(ranks > 0):
-        gamacatname = '%s/CatalogueGroups_v1.0_shuffenv+dens.fits'%path_gamacats
-    else:
-        gamacatname = '%s/ShearMergedCatalogueAll_sv0.8_shuffdeltaR.fits'%path_gamacats
-
+    gamacatname = path_gamacat
 
     print 'Importing GAMA catalogue:', gamacatname
     gamacat = pyfits.open(gamacatname)[1].data
@@ -637,29 +599,33 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
     # Check how the binning is given
     binname = lens_binning.keys()[0]
     if 'No' not in binname: # If there is binning
-        obsbins = lens_binning[binname]
-        if len(obsbins) == 1: # If the number of bins is given
-            Nobsbins = int(obsbins[0])
-            if len(lenssel_binning) > 0:
-                obsbins = create_obsbins(binname, Nobsbins, lenssel_binning, gamacat)
-                lens_binning = {binname: obsbins}
-        else:
-            Nobsbins = len(obsbins)-1 # If the bin limits are given
         
-        # Print the lens binning properties
-        if len(lenssel_binning) > 0:
-            obslist = define_obslist(binname, gamacat)
-            
-            print
-            print 'Lens binning: Lenses divided in %i %s-bins'%(Nobsbins, binname)
-            print '%s Min:          Max:          Mean:'%binname
-            for b in xrange(Nobsbins):
-                lenssel = lenssel_binning & (obsbins[b] <= obslist) & (obslist < obsbins[b+1])
-                print '%g    %g    %g'%(obsbins[b], obsbins[b+1], np.mean(obslist[lenssel]))
-        
-        if 'lensID' in binname:
-            binname = 'lensIDs'
+        if 'ID' in binname: # If there are multiple lensID bins
+            Nobsbins = len(lens_binning.values())
+            if len(lenssel_binning) > 0: # If the "lenssel without binning" is given
+                print 'Lens binning: Lenses divided in %i lens-ID bins'%(Nobsbins)
 
+        else:
+            obsbins = lens_binning[binname]
+            if len(obsbins) == 1: # If the number of bins is given
+                Nobsbins = int(obsbins[0])
+                if len(lenssel_binning) > 0: # If the "lenssel without binning" is given
+                    obsbins = create_obsbins(binname, Nobsbins, lenssel_binning, gamacat)
+                    lens_binning = {binname: obsbins}
+            else:
+                Nobsbins = len(obsbins)-1 # If the bin limits are given
+            
+            # Print the lens binning properties
+            if len(lenssel_binning) > 0:
+                obslist = define_obslist(binname, gamacat)
+                
+                print
+                print 'Lens binning: Lenses divided in %i %s-bins'%(Nobsbins, binname)
+                print '%s Min:          Max:          Mean:'%binname
+                for b in xrange(Nobsbins):
+                    lenssel = lenssel_binning & (obsbins[b] <= obslist) & (obslist < obsbins[b+1])
+                    print '%g    %g    %g'%(obsbins[b], obsbins[b+1], np.mean(obslist[lenssel]))
+            
     else: # If there is no binning
         obsbins = np.array([-999, -999])
         binname = 'No'
@@ -702,16 +668,9 @@ def define_obslist(obsname, gamacat):
 
 
 # Masking the lenses according to the appropriate lens selection and the current KiDS field
-def define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax):
+def define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax):
 
     lenssel = np.ones(len(gamacat['RA']), dtype=bool)
-    
-    # Add the mask for the lens rank
-    ranklist = gamacat['rank%s'%centering]
-    if len(ranks) == 1:
-        lenssel *= (ranklist == ranks[0])
-    else:
-        lenssel *= (ranks[0] <= ranklist) & (ranklist < ranks[1])
     
     # Add the mask for each chosen lens parameter
     for param in lens_selection.keys():
@@ -986,13 +945,9 @@ def write_stack(filename, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, 
     return
 
 # Define the labels for the plot
-def define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbins, src_selection):
+def define_plottitle(purpose, centering, lens_selection, binname, Nobsbins, src_selection):
 
     plottitle = '%s:'%purpose
-
-    # Lens rank selection
-    rank_selection = {'rank%s'%centering: ranks}
-    x, x, plottitle = define_filename_sel('', '', plottitle, rank_selection)
 
     # Lens selection
     x, x, plottitle = define_filename_sel('', '', plottitle, lens_selection)

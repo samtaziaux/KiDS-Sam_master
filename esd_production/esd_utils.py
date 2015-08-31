@@ -68,6 +68,11 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
         # Lens selection
         elif line[0] == 'lensID_file':
             lensid_file = line[1]
+ 
+        # Lens weights
+        elif line[0] == 'lens_weights':
+            lens_weights = line[1]
+            
         elif line[0] == 'group_centre':
             group_centre = line[1]
 
@@ -129,7 +134,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
     out = (kids_path, gama_path,
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, Runit, ncores,
-            lensid_file, group_centre, ranks, lens_binning, lens_selection,
+            lensid_file, lens_weights, group_centre, ranks, lens_binning, lens_selection,
             src_selection, blindcats)
 
     return out

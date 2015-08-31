@@ -25,9 +25,9 @@ inf = np.inf
 def main():
 
     # Input parameters
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, \
-            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, path_output, \
-            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+            lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
+            path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacats = shear.input_variables()
 

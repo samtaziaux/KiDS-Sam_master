@@ -33,10 +33,9 @@ def input_variables():
     config_file = str(sys.argv[5]) # The path to the configuration file
 
     # Importing the input parameters from the config file
-    [path_kidscats, path_gamacats,
-            O_matter, O_lambda, Ok, h,
+    [path_kidscats, path_gamacats, O_matter, O_lambda, Ok, h,
             path_output, filename_addition, purpose, path_Rbins, Runit, Nsplits,
-            lensid_file, centering, ranks, lens_binning, lens_selection,
+            lensid_file, lens_weights, centering, ranks, lens_binning, lens_selection,
             src_selection, blindcats] = esd_utils.read_config(config_file)
 
     print
@@ -90,7 +89,8 @@ def input_variables():
     # Binnning information of the lenses
     binname, lens_binning, Nobsbins, binmin, binmax = define_obsbins(1, lens_binning, [], [])
 
-    # Create all necessary folders
+
+    # Creating all necessary folders
 
     # Path containing the output folders
     path_output = '%s/output_%sbins%s'%(path_output, binname, filename_addition)
@@ -163,9 +163,9 @@ def input_variables():
         Ncat = 1
 
 
-    return Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, \
-            lens_selection, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, path_output, \
-            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+    return  Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+            lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
+            path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacats
 
@@ -180,7 +180,7 @@ def define_lensid_selection(lensid_file):
     else: # If there are multiple lensID bins -> binning
         for f in xrange(len(lensid_files)):
             lensids = np.loadtxt(lensid_files[f])
-            lens_binning = ('lensIDbin%i'%f: lensids)
+            lens_binning = {'lensIDbin%i'%(f): lensids}
 
     return lens_selection, lens_binning
 
@@ -434,7 +434,7 @@ def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS 
 def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose): # Create a dictionary of KiDS fields that contain the corresponding galaxies.
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
-#    Rmax = Rmax + Rfield
+    Rmax = Rmax + Rfield
 
     catmatch = dict()
     totgalIDs = np.array([])
@@ -702,7 +702,7 @@ def define_obslist(obsname, gamacat):
 
 
 # Masking the lenses according to the appropriate lens selection and the current KiDS field
-def define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum):
+def define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax):
 
     lenssel = np.ones(len(gamacat['RA']), dtype=bool)
     
@@ -715,6 +715,8 @@ def define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binn
     
     # Add the mask for each chosen lens parameter
     for param in lens_selection.keys():
+        print param
+        
         binlims = lens_selection[param]
         obslist = define_obslist(param, gamacat)
         
@@ -730,12 +732,10 @@ def define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binn
 
         obslist = define_obslist(binname, gamacat)
         
-        if 'ID' in param:
+        if 'ID' in binname:
             lensids = lens_binning['%s%i'%(binname, binnum)]
             lenssel *= np.in1d(obslist, binlims)
         else:
-            binmin = lens_binning[binname][binnum]
-            binmax = lens_binning[binname][binnum+1]
             lenssel *=  (binmin <= obslist) & (obslist < binmax)
 
     return lenssel

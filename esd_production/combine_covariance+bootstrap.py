@@ -21,11 +21,11 @@ nan = np.nan # Not a number
 def main():
 
     # Input parameters
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+    Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
             lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-            path_kidscats, path_gamacats = shear.input_variables()
+            path_kidscats, path_gamacat = shear.input_variables()
 
 
     if 'bootstrap' in purpose:
@@ -35,7 +35,7 @@ def main():
     print
 
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+    filename_var = shear.define_filename_var(purpose, centering, binname, \
     'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
@@ -62,12 +62,12 @@ def main():
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
-    shear.import_data(path_Rbins, path_gamacats, path_kidscats, centering, \
-    purpose, Ncat, ranks, O_matter, O_lambda, Ok, h)
+    shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
+    purpose, Ncat, O_matter, O_lambda, Ok, h)
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', 'None', 0, -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
     binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
@@ -98,7 +98,7 @@ def main():
     if 'bootstrap' in purpose: # Calculating the bootstrap covariance
         for N1 in xrange(Nobsbins):
 
-            filename_N1 = shear.define_filename_var(purpose, centering, ranks, binname, \
+            filename_N1 = shear.define_filename_var(purpose, centering, binname, \
             N1+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1) # Ncat is the number of existing randoms
@@ -126,7 +126,7 @@ def main():
             
             for N2 in xrange(Nobsbins):
 
-                filename_N2 = shear.define_filename_var(purpose, centering, ranks, binname, \
+                filename_N2 = shear.define_filename_var(purpose, centering, binname, \
                 N2+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
                 if ('random' or 'star') in purpose:
                     filename_N2 = '%i_%s'%(Ncat, filename_N2) # Ncat is the number of existing randoms
@@ -156,7 +156,7 @@ def main():
 
         for N1 in xrange(Nobsbins):
 
-            filename_N1 = shear.define_filename_var(purpose, centering, ranks, binname, \
+            filename_N1 = shear.define_filename_var(purpose, centering, binname, \
             N1+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1) # Ncat is the number of existing randoms
@@ -197,7 +197,7 @@ def main():
                     for N2 in xrange(Nobsbins):
     #					if N1 == N2:
                         
-                        filename_N2 = shear.define_filename_var(purpose, centering, ranks, binname, \
+                        filename_N2 = shear.define_filename_var(purpose, centering, binname, \
                         N2+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
                         if ('random' or 'star') in purpose:
                             filename_N2 = '%i_%s'%(Ncat, filename_N2) # Ncat is the number of existing randoms
@@ -227,7 +227,7 @@ def main():
             
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
-            lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
+            lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]

@@ -21,11 +21,11 @@ nan = np.nan # Not a number
 def main():
 
     # Input parameters
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+    Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
             lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-            path_kidscats, path_gamacats = shear.input_variables()
+            path_kidscats, path_gamacat = shear.input_variables()
 
     print 'Final step: Plot the ESD profiles and correlation matrix'
     print
@@ -45,7 +45,7 @@ def main():
 
 
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+    filename_var = shear.define_filename_var(purpose, centering, binname, \
     'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' in purpose) or ('star' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
@@ -57,22 +57,19 @@ def main():
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
-    shear.import_data(path_Rbins, path_gamacats, path_kidscats, centering, \
-    purpose, Ncat, ranks, O_matter, O_lambda, Ok, h)
+    shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
+    purpose, Ncat, O_matter, O_lambda, Ok, h)
     
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
     # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
     binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
     # Writing and showing the plots
 
-    plottitle1 = shear.define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbins, src_selection)
+    plottitle1 = shear.define_plottitle(purpose, centering, lens_selection, binname, Nobsbins, src_selection)
  
-    xlabel = r'radius R [kpc/h$_{%g}$]'%(h*100)
-    ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h$_{%g}$ M$_{\odot}$/pc$^2$]'%(h*100)
-
     if 'bootstrap' not in purpose:
         # Plotting the shear profiles for all observable bins
         for N1 in xrange(Nobsbins):
@@ -84,7 +81,7 @@ def main():
 
             plotlabel = r'%g $\leq$ %s $\textless$ %g'%(binmin, binname.replace('_', ''), binmax)
             try:
-                shear.define_plot(filenameESD, plotlabel, plottitle1, plotstyle, subplots, xlabel, ylabel, N1+1)
+                shear.define_plot(filenameESD, plotlabel, plottitle1, plotstyle, subplots, N1+1, Runit)
             except:
                 pass
         try:
@@ -104,7 +101,7 @@ def main():
         plottitle2 = r'for %i %s bins between %g and %g.'%(Nobsbins, binname, (lens_binning.values()[0])[0], (lens_binning.values()[0])[-1])
 
     try:
-        shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname, lens_binning, Rbins, h)
+        shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname, lens_binning, Rbins, Runit, h)
     except:
         pass
 

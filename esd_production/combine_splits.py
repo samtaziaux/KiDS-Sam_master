@@ -25,11 +25,11 @@ inf = np.inf
 def main():
 
     # Input parameters
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+    Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
             lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-            path_kidscats, path_gamacats = shear.input_variables()
+            path_kidscats, path_gamacat = shear.input_variables()
 
     print 'Step 2: Combine splits into one catalogue'
     print
@@ -58,18 +58,12 @@ def main():
         Nobsbins = 1
         binnum = 1
 
-        if centering == 'Cen':
-            ranks = np.array([1, 1])
-
-        else:
-            if all(ranks > 0): # Group catalog
-                ranks = np.array([1, inf])
-            else: # Galaxy catalog
-                ranks = np.array([-999, inf])
+        if 'Cen' not in centering:
+            lens_selection['rank%s'%centering] = np.array([-999, inf])
 
 
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+    filename_var = shear.define_filename_var(purpose, centering, binname, \
     'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
 
     splitslist = np.array([])

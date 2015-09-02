@@ -28,11 +28,11 @@ def main():
 
     start_tot = time.time()
 
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+    Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
             lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-            path_kidscats, path_gamacats = shear.input_variables()
+            path_kidscats, path_gamacat = shear.input_variables()
 
     
     print 'Step 1: Create split catalogues in parallel'
@@ -68,18 +68,11 @@ def main():
         Nobsbins = 1
         binnum = 1
 
-        if centering == 'Cen':
-            ranks = np.array([1, 1])
-
-        else:
-            if all(ranks > 0): # Group catalog
-                ranks = np.array([1, inf])
-            else: # Galaxy catalog
-                ranks = np.array([-999, inf])
-
+        if 'Cen' not in centering:
+            lens_selection['rank%s'%centering] = np.array([-999, inf])
 
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+    filename_var = shear.define_filename_var(purpose, centering, binname, \
     binnum, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
 
     if ('random' in purpose):
@@ -109,8 +102,8 @@ def main():
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
-    shear.import_data(path_Rbins, path_gamacats, path_kidscats, centering, \
-    purpose, Ncat, ranks, O_matter, O_lambda, Ok, h)
+    shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
+    purpose, Ncat, O_matter, O_lambda, Ok, h)
 
 
     # Calculate the source variance
@@ -141,7 +134,7 @@ def main():
 
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', 'None', 0, -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
     binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
@@ -185,7 +178,7 @@ def main():
 
         kidscatN = kidscatN+1
 
-        lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
+        lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
         matched_galIDs = np.array(catmatch[kidscatname]) # The ID's of the galaxies that lie in this field
 
         galIDs, galRAs, galDECs, galZs, Dcls, Dals, galIDmask = shear.mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist)

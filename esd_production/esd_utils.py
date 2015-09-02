@@ -73,33 +73,21 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
         elif line[0] == 'lens_weights':
             lens_weights = line[1]
             
-        elif line[0] == 'group_centre':
-            group_centre = line[1]
-
-        elif line[0] == 'lens_ranks':
-            try:
-                ranks = np.array([int(i) for i in line[1].split(',')])
-            except:
-                ranks = line[1]
-            try:
-                if ranks[0] == ranks[1]:
-                    ranks = np.array([ranks[0]])
-            except:
-                pass
-
         elif line[0] == 'lens_binning':
             binname = line[1]
+            paramfile = line[2]
             if 'No' in binname:
                 bins = np.array([])
             else:
-                bins = np.array([float(i) for i in line[2].split(',')])
-            lens_binning = {binname: bins}
+                bins = np.array([float(i) for i in line[3].split(',')])
+            lens_binning = {binname: [paramfile, bins]}
             
         elif line[0][:11] == 'lens_limits':
             param = line[1]
-            bins = np.array([float(i) for i in line[2].split(',')])
-            lens_selection[param] = bins
-
+            paramfile = line[2]
+            lims = np.array([float(i) for i in line[3].split(',')])
+            lens_selection[param] = [paramfile, lims]
+            
     #    elif line[0] == 'kids_blinds':
     #        blindcats = line[1].split(',')
         
@@ -107,7 +95,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
         elif line[0][:10] == 'src_limits':
             param = line[1]
             bins = np.array([float(i) for i in line[2].split(',')])
-            src_selection[param] = bins
+            src_selection[param] = ['', bins]
         
         blindcats = np.array(['A', 'B', 'C', 'D'])
     
@@ -134,7 +122,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
     out = (kids_path, gama_path,
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, Runit, ncores,
-            lensid_file, lens_weights, group_centre, ranks, lens_binning, lens_selection,
+            lensid_file, lens_weights, lens_binning, lens_selection,
             src_selection, blindcats)
 
     return out

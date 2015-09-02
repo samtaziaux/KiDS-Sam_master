@@ -22,11 +22,11 @@ nan = np.nan # Not a number
 def main():
 
     # Input parameters
-    Nsplit, Nsplits, centering, ranks, lensid_file, lens_binning, binnum, lens_selection, \
+    Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
             lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
-            path_kidscats, path_gamacats = shear.input_variables()
+            path_kidscats, path_gamacat = shear.input_variables()
 
 
     # Path to the output splits and results
@@ -45,7 +45,7 @@ def main():
     print
     
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+    filename_var = shear.define_filename_var(purpose, centering, binname, \
     1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
@@ -61,12 +61,8 @@ def main():
 
 
     # Define the list of variables for the input catalog
-    if all(ranks > 0):
-        filename_var = shear.define_filename_var('shearcatalog', centering, np.array([1, inf]), 'None', \
-        -999, -999, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
-    else:
-        filename_var = shear.define_filename_var('shearcatalog', centering, np.array([-999, inf]), 'None', \
-        -999, -999, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    filename_var = shear.define_filename_var('shearcatalog', centering, 'None', \
+    -999, -999, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
 
@@ -81,17 +77,17 @@ def main():
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
-    shear.import_data(path_Rbins, path_gamacats, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, ranks, O_matter, O_lambda, Ok, h)
+    shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
+    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h)
 
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Define the list of variables for the output filename
     if 'catalog' in purpose:
-        filename_var = shear.define_filename_var(purpose.replace('catalog',''), centering, ranks, binname, \
+        filename_var = shear.define_filename_var(purpose.replace('catalog',''), centering, binname, \
         'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     else:
-        filename_var = shear.define_filename_var(purpose, centering, ranks, binname, \
+        filename_var = shear.define_filename_var(purpose, centering, binname, \
         'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
     if 'random' in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
@@ -106,7 +102,7 @@ def main():
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
 
     # Defining the observable binnning range of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, ranks, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
     # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
     binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
@@ -121,11 +117,6 @@ def main():
         Nbootstraps = 1
 
 
-    # Define the labels for the plot
-    xlabel = r'radius R [kpc/h$_{%g}$]'%(h*100)
-    ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h$_{%g}$ M$_{\odot}$/pc$^2$]'%(h*100)
-
-
     # Masking the list to keep only the specified galaxies
     for binnum in np.arange(Nobsbins)+1:
         
@@ -136,7 +127,7 @@ def main():
         print '%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, binmin, binmax)
         
         # Mask the galaxies in the shear catalog
-        lenssel = shear.define_lenssel(gamacat, ranks, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
+        lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
 
         if debug:
             print 'lenssel:', len(lenssel)
@@ -207,11 +198,11 @@ def main():
         plotname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_bin, filename_addition, blindcat)
 
         # Printing stacked shear profile to a txt file
-        shear.write_stack(plotname, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)
+        shear.write_stack(plotname, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)
         
 
         # Plotting the data for the separate observable bins
-        plottitle = shear.define_plottitle(purpose, centering, ranks, lens_selection, binname, Nobsbins, src_selection)
+        plottitle = shear.define_plottitle(purpose, centering, lens_selection, binname, Nobsbins, src_selection)
         
         # What plotting style is used (lin or log)
         if 'random' in purpose:
@@ -220,12 +211,12 @@ def main():
             plotstyle = 'log'
         
         if 'No' in binname:
-            plotlabel = ylabel
+            plotlabel = False
         else:
             plotlabel = r'%.3g $\leq$ %s $\textless$ %.3g (%i lenses)'%(binmin, binname.replace('_', ''), binmax, len(galIDs_matched))
 
         try:
-            shear.define_plot(plotname, plotlabel, plottitle, plotstyle, Nobsbins, xlabel, ylabel, binnum)
+            shear.define_plot(plotname, plotlabel, plottitle, plotstyle, Nobsbins, binnum, Runit)
         except:
             pass
 

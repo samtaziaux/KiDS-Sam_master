@@ -35,7 +35,7 @@ def input_variables():
     # Importing the input parameters from the config file
     [path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h,
             path_output, filename_addition, purpose, path_Rbins, Runit, Nsplits,
-            lensid_file, lens_weights, centering, lens_binning, lens_selection,
+            lensid_file, lens_weights, lens_binning, lens_selection,
             src_selection, blindcats] = esd_utils.read_config(config_file)
 
     print
@@ -61,13 +61,24 @@ def input_variables():
    
     
     # Defining the lens-ID lens selection/binning
-    if 'None' not in lensID_file:
-        lens_selection, lens_binning = define_lensid_selection
+    if 'None' not in lensid_file:
+        lens_selection, lens_binning, binname = define_lensid_selection
         
         print lens_selection, lens_binning
     
     # Binnning information of the lenses
     binname, lens_binning, Nobsbins, binmin, binmax = define_obsbins(1, lens_binning, [], [])
+
+    # Defining the center definition
+    centers = np.array(['Cen', 'IterCen', 'BCG'])
+    centering = 'None'
+    for cen in centers:
+        if (cen in binname) or ('rank%s'%cen in lens_selection.keys()):
+            centering = cen
+            print 'Center definition = %s'%centering
+    if centering == 'Cen':
+        lens_selection['rank%s'%centering] = np.array([1])
+        print 'WARNING: With the Cen definition, you can only use Centrals (rank = 1)'
 
     # Creating all necessary folders
 
@@ -79,7 +90,7 @@ def input_variables():
     path_splits = '%s/splits_%s'%(path_output, purpose)
     path_results = '%s/results_%s'%(path_output, purpose)
 
-    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == 1):
+    if (Nsplit == 0) and (blindcatnum==0) and (binnum == 1):
     
     #    print 'Nsplit:', Nsplit
     #    print 'blindcat:', blindcat
@@ -103,7 +114,7 @@ def input_variables():
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
-        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == 1):
+        if (Nsplit==0) and (blindcatnum==0) and (binnum == 1):
 
             for path in [path_splits, path_results]:
                 if not os.path.isdir(path):
@@ -114,10 +125,10 @@ def input_variables():
     if os.path.isfile(path_Rbins): # from a file
         name_Rbins = path_Rbins.split('.')[0]
         name_Rbins = name_Rbins.split('/')[-1]
-        name_Rbins = 'Rbins~%s'%name_Rbins
+        name_Rbins = 'Rbins~%s%s'%(name_Rbins, Runit)
     else:
         name_Rbins = path_Rbins.replace(',', '~')
-        name_Rbins = 'Rbins%s'%name_Rbins
+        name_Rbins = 'Rbins%s%s'%(name_Rbins, Runit)
 
 
     # Determining Ncat, the number of existing random catalogs
@@ -141,7 +152,6 @@ def input_variables():
     else:
         Ncat = 1
 
-
     return  Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
             lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
@@ -152,25 +162,27 @@ def input_variables():
 # Defining the lensID lens selection/binning
 def define_lensid_selection(lensid_file, lens_selection):
     
+    binname = 'ID'
+    
     # If there is only one lensID bin -> selection
     lensid_files = lensid_file.split(',')
     if len(lensid_files == 1):
         lensids = np.loadtxt(lensid_files[0])
-        lens_selection['ID'] = lensids
+        lens_selection['ID'] = ['self', lensids]
     else: # If there are multiple lensID bins -> binning
         for f in xrange(len(lensid_files)):
             lensids = np.loadtxt(lensid_files[f])
-            lens_binning = {'IDbin%i'%(f): lensids}
+            lens_binning = {'IDbin%i'%(f): ['self', lensids]}
 
-    return lens_selection, lens_binning
+    return lens_selection, lens_binning, binname
 
 
 # Define the part of the filename and plottitle that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
-    
+
     selnames = np.sort(selection.keys())
     for selname in selnames:
-        sellims = selection[selname]
+        sellims = (selection[selname])[1]
         if len(sellims) == 1:
             filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
             var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
@@ -188,20 +200,20 @@ def define_filename_var(purpose, centering, binname, \
                         binnum, Nobsbins, lens_selection, src_selection, \
                         name_Rbins, O_matter, O_lambda, Ok, h): # Define the list of variables for the output filename
 
+    filename_var = ''
     var_print = 'Chosen %s-configuration: '%purpose
 
     if 'catalog' in purpose:
-
-        filename_var = 'all'
+        if centering == 'Cen':
+            filename_var = 'Cen'
+        
         var_print = 'Galaxy catalogue,'
 
     else: # Binnning information of the groups
 
-        filename_var = ''
-
         # Lens binning
         if 'No' not in binname: # If there is binning
-            filename_var = '%s_%sbin%sof%i'%(filename_var, binname, binnum, Nobsbins)
+            filename_var = '_%s%sbin%sof%i'%(filename_var, binname, binnum, Nobsbins)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
         
         # Lens selection
@@ -217,6 +229,7 @@ def define_filename_var(purpose, centering, binname, \
     filename_var = filename_var.replace('.', 'p')
     filename_var = filename_var.replace('-', 'm')
     filename_var = filename_var.replace('~', '-')
+    filename_var = filename_var.split('_', 1)[1]
 
     if 'covariance' not in purpose:
         print var_print
@@ -250,9 +263,8 @@ def define_filename_results(path_results, purpose, filename_var, filename_additi
 
 
 # Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
-def import_data(path_Rbins, path_gamacat, path_kidscats, centering, purpose, \
+def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpose, \
                 Ncat, O_matter, O_lambda, Ok, h):
-
 
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins)
@@ -260,7 +272,7 @@ def import_data(path_Rbins, path_gamacat, path_kidscats, centering, purpose, \
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
     import_gamacat(path_gamacat, centering, purpose, Ncat, \
-    O_matter, O_lambda, Ok, h)
+    O_matter, O_lambda, Ok, h, Runit)
     
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats)
@@ -273,7 +285,8 @@ def import_data(path_Rbins, path_gamacat, path_kidscats, centering, purpose, \
     gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist
 
 
-def define_Rbins(path_Rbins): # Radial bins around the lenses
+# Define the radial bins around the lenses
+def define_Rbins(path_Rbins):
 
     if os.path.isfile(path_Rbins): # from a file
 
@@ -304,7 +317,7 @@ def define_Rbins(path_Rbins): # Radial bins around the lenses
 
     """
     print 'path_Rbins', path_Rbins
-    print 'Using: %i radial bins between %.1f and %.1f kpc'%(nRbins, Rmin, Rmax)
+    print 'Using: %i radial bins between %.1f and %.1f'%(nRbins, Rmin, Rmax)
     print 'Rmin', Rmin
     print 'Rmax', Rmax
     print 'Rbins', Rbins
@@ -315,21 +328,19 @@ def define_Rbins(path_Rbins): # Radial bins around the lenses
     return Rmin, Rmax, Rbins, Rcenters, nRbins
 
 
-def import_gamacat(path_gamacat, centering, purpose, Ncat, \
-O_matter, O_lambda, Ok, h):
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
+def import_gamacat(path_gamacat, centering, purpose, Ncat, \
+                    O_matter, O_lambda, Ok, h, Runit):
 
     randomcatname = '/disks/shear9/brouwer/shearprofile/shear_2.1/gen_ran_out.randoms.fits'
 
     # Importing the GAMA catalogues
-    gamacatname = path_gamacat
+    print 'Importing GAMA catalogue:', path_gamacat
 
-    print 'Importing GAMA catalogue:', gamacatname
-    gamacat = pyfits.open(gamacatname)[1].data
+    gamacat = pyfits.open(path_gamacat)[1].data
 
     galIDlist = gamacat['ID'] # IDs of all galaxies
-    galZlist = gamacat['Z'] # Central Z of the galaxy
-
+    
     if centering == 'Cen':
         galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)
         galDEClist = gamacat['CenDEC'] # Central DEC of the galaxy (in degrees)
@@ -337,7 +348,6 @@ O_matter, O_lambda, Ok, h):
     else:
         galRAlist = gamacat['RA'] # Central RA of the galaxy (in degrees)
         galDEClist = gamacat['DEC'] # Central DEC of the galaxy (in degrees)
-
 
     if 'random' in purpose:
         # Determine RA and DEC for the random/star catalogs
@@ -349,11 +359,22 @@ O_matter, O_lambda, Ok, h):
         galRAlist = randomcat['ra'][Ncatmin : Ncatmax]
         galDEClist = randomcat['dec'][Ncatmin : Ncatmax]
 
-
-    Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) for z in galZlist]) \
-    # The comoving distance to the galaxy center (in kpc/h, where h is the dimensionless Hubble constant)
-    Dallist = Dcllist/(1+galZlist) # The angular diameter distance to the galaxy center (in kpc/h)
-
+    # Defining the comoving and angular distance to the galaxy center
+    if 'pc' in Runit: # Rbins in a multiple of pc
+        galZlist = gamacat['Z'] # Central Z of the galaxy
+        Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) for z in galZlist]) # Distance in pc/h, where h is the dimensionless Hubble constant
+        if 'k' in Runit:
+            Dcllist /= 1e3
+        if 'M' in Runit:
+            Dcllist /= 1e6
+    else: # Rbins in a multiple of degrees
+        galZlist = np.zeros(len(galIDlist)) # No redshift
+        Dcllist = np.degrees(np.ones(len(galIDlist))) # Distance in degree on the sky
+        if 'min' in Runit:
+            Dcllist *= 60
+        if 'sec' in Runit:
+            Dcllist *= 60**2
+    Dallist = Dcllist/(1+galZlist) # The angular diameter distance to the galaxy center
 
     return gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist
 
@@ -393,7 +414,8 @@ def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS 
     return kidscoord, kidscat_end
 
 
-def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose): # Create a dictionary of KiDS fields that contain the corresponding galaxies.
+# Create a dictionary of KiDS fields that contain the corresponding galaxies.
+def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose):
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
     Rmax = Rmax + Rfield
@@ -429,6 +451,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
     kidscats = catmatch.keys() # The list of fields with lens centers in them
     galIDs_infield = totgalIDs # The galaxies that have their centers in a field
 
+
     # Adding the lenses outside the fields to the dictionary
     for kidscat in kidscoord.keys():
 
@@ -443,10 +466,10 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
 
         galIDs = np.array(galIDlist[coordmask])
 
-    #		galRs = catR[coordmask]
-    #		galRAs = galRAlist[coordmask]
-    #		galDECs = galDEClist[coordmask]
-    #		Dals = Dallist[coordmask]
+#		galRs = catR[coordmask]
+#		galRAs = galRAlist[coordmask]
+#		galDECs = galDEClist[coordmask]
+#		Dals = Dallist[coordmask]
 
         if 'bootstrap' in purpose:
             lensmask = np.logical_not(np.in1d(galIDs, totgalIDs))
@@ -488,7 +511,8 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
     return newseq
 
 
-def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection): # Import and mask all used data from the sources in this KiDS field
+# Import and mask all used data from the sources in this KiDS field
+def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection):
 
     kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end) # Full directory & name of the corresponding KiDS catalogue
     kidscat = pyfits.open(kidscatfile)[1].data
@@ -529,7 +553,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection): # Im
 
     # We apply any other cuts specified by the user
     for param in src_selection.keys():
-        srclims = src_selection[param]
+        srclims = src_selection[param][1]
         if len(srclims) == 1:
             srcmask *= (kidscat[param] == binlims[0])
 #            print 'Source cut: %s = %g'%(param, srclims[0])
@@ -549,7 +573,8 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection): # Im
     return srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm
 
 
-def calc_variance(e1_varlist, e2_varlist, w_varlist): # Calculating the variance of the ellipticity for this source selection
+# Calculating the variance of the ellipticity for this source selection
+def calc_variance(e1_varlist, e2_varlist, w_varlist):
 
     e1_mean = np.sum(w_varlist*e1_varlist, 1)/np.sum(w_varlist)
     e2_mean = np.sum(w_varlist*e2_varlist, 1)/np.sum(w_varlist)
@@ -570,7 +595,8 @@ def calc_variance(e1_varlist, e2_varlist, w_varlist): # Calculating the variance
     return variance
 
 
-def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat): # Create a number of observable bins containing the same number of lenses
+# Create a number of observable bins containing the same number of lenses
+def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
 
     obslist = gamacat[binname]
 
@@ -601,17 +627,18 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
     if 'No' not in binname: # If there is binning
         
         if 'ID' in binname: # If there are multiple lensID bins
-            Nobsbins = len(lens_binning.values())
+            Nobsbins = len(lens_binning.keys())
             if len(lenssel_binning) > 0: # If the "lenssel without binning" is given
                 print 'Lens binning: Lenses divided in %i lens-ID bins'%(Nobsbins)
 
         else:
-            obsbins = lens_binning[binname]
+            obsbins = lens_binning[binname][1]
+            obsfile = lens_binning[binname][0]
             if len(obsbins) == 1: # If the number of bins is given
                 Nobsbins = int(obsbins[0])
                 if len(lenssel_binning) > 0: # If the "lenssel without binning" is given
                     obsbins = create_obsbins(binname, Nobsbins, lenssel_binning, gamacat)
-                    lens_binning = {binname: obsbins}
+                    lens_binning = {binname: [obsfile, obsbins]}
             else:
                 Nobsbins = len(obsbins)-1 # If the bin limits are given
             
@@ -630,7 +657,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
         obsbins = np.array([-999, -999])
         binname = 'No'
         Nobsbins = 1
-        lens_binning = {binname: obsbins}
+        lens_binning = {binname: ['self', obsbins]}
 
     # Try to give the current binning values
     try:
@@ -656,7 +683,6 @@ def define_obslist(obsname, gamacat):
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list
 
-
     if 'logmstar' in obsname:
         print 'Applying fluxscale correction to "logmstar"'
 
@@ -670,14 +696,19 @@ def define_obslist(obsname, gamacat):
 # Masking the lenses according to the appropriate lens selection and the current KiDS field
 def define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax):
 
-    lenssel = np.ones(len(gamacat['RA']), dtype=bool)
+    lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     
     # Add the mask for each chosen lens parameter
     for param in lens_selection.keys():
-        print param
-        
-        binlims = lens_selection[param]
-        obslist = define_obslist(param, gamacat)
+        binlims = lens_selection[param][1]
+        binfile = lens_selection[param][0]
+        # Importing the binning file
+        if binfile == 'self':
+            obslist = define_obslist(param, gamacat)
+        else:
+            print 'Using %s from %s'%(param, binfile)
+            bincat = pyfits.open(binfile)[1].data
+            obslist = bincat[param]
         
         if 'ID' in param:
             lenssel *= np.in1d(obslist, binlims)
@@ -688,19 +719,25 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, bi
                 lenssel *= (binlims[0] <= obslist) & (obslist < binlims[1])
 
     if 'No' not in binname: # If the galaxy selection depends on observable
-
-        obslist = define_obslist(binname, gamacat)
+        # Importing the binning file
+        if binfile == 'self':
+            obslist = define_obslist(binname, gamacat)
+        else:
+            print 'Using %s from %s'%(binname, binfile)
+            bincat = pyfits.open(binfile)[1].data
+            obslist = bincat[binname]
         
         if 'ID' in binname:
             lensids = lens_binning['%s%i'%(binname, binnum)]
-            lenssel *= np.in1d(obslist, binlims)
+            lenssel *= np.in1d(obslist, lensids)
         else:
             lenssel *=  (binmin <= obslist) & (obslist < binmax)
 
     return lenssel
 
 
-def mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist): # Mask all GAMA galaxies that are not in this field
+# Mask all GAMA galaxies that are not in this field
+def mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist):
 
     # Find the selected lenses that lie in this KiDS field
     galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
@@ -716,7 +753,8 @@ def mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDECl
     return galIDs, galRAs, galDECs, galZs, Dcls, Dals, galIDmask
 
 
-def mask_shearcat(lenssel, galIDlist, gammatlist, gammaxlist, wk2list, w2k2list, srcmlist): # Mask the galaxies in the shear catalog
+# Mask the galaxies in the shear catalog
+def mask_shearcat(lenssel, galIDlist, gammatlist, gammaxlist, wk2list, w2k2list, srcmlist):
 
     galIDs = galIDlist[lenssel]
     gammats = gammatlist[lenssel]
@@ -728,7 +766,8 @@ def mask_shearcat(lenssel, galIDlist, gammatlist, gammaxlist, wk2list, w2k2list,
     return galIDs, gammats, gammaxs, wk2s, w2k2s, srcms
 
 
-def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ): # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
+# Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
+def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ):
 
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
@@ -746,7 +785,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ): # Calculate Sigma_crit (=1/k) an
 
     # Calculate the values of k (=1/Sigmacrit)
     Dals = np.reshape(Dals,[len(Dals),1])
-    k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs/1e3)) # k = 1/Sigmacrit
+    k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
     DlsoDs = [] # Empty unused lists
     Dals = []
 
@@ -758,7 +797,8 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ): # Calculate Sigma_crit (=1/k) an
     return k, kmask
 
 
-def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax): # Calculate the projected distance (srcR) and the shear (gamma_t and gamma_x) of every lens-source pair.
+# Calculate the projected distance (srcR) and the shear (gamma_t and gamma_x) of every lens-source pair
+def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
 
     galRA, srcRA = np.meshgrid(galRAs, srcRA)
     galDEC, srcDEC = np.meshgrid(galDECs, srcDEC)
@@ -787,7 +827,8 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax): # Calc
     return srcR, incosphi, insinphi
 
 
-def calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, Nsrclist, srcm): # For each radial bin of each lens we calculate the output shears and weights
+# For each radial bin of each lens we calculate the output shears and weights
+def calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, Nsrclist, srcm):
 
     # Calculating the needed errors
     wk2list = wlist*klist**2
@@ -828,7 +869,8 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, N
     return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, w_tot, w2_tot, k_tot, k2_tot, wk2_tot, w2k4_tot, w2k2_tot, Nsrc_tot, srcm_tot
 
 
-def calc_covariance_output(incosphilist, insinphilist, klist): # For each radial bin of each lens we calculate the output shears and weights
+# For each radial bin of each lens we calculate the output shears and weights
+def calc_covariance_output(incosphilist, insinphilist, klist):
 
     # For each radial bin of each lens we calculate the weighted sum of the tangential and cross shear
     Cs_tot = sum(-incosphilist*klist, 0)
@@ -838,6 +880,7 @@ def calc_covariance_output(incosphilist, insinphilist, klist): # For each radial
     return Cs_tot, Ss_tot, Zs_tot
 
 
+# Write the shear or covariance catalog to a fits file
 def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, output, outputnames, variance, purpose, e1, e2, w, srcm):
 
     fitscols = []
@@ -883,26 +926,33 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, output, outputna
     return
 
 
-def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum): # Calculating the final output values
+# Calculating the final output values for the ESD profile
+def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
 
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
-    ESDt_tot = gammat / wk2 / (1e3)**2 # Final Excess Surface Density (tangential component)
-    ESDx_tot = gammax / wk2 / (1e3)**2 # Final Excess Surface Density (cross component)
-    error_tot = (w2k2 / wk2**2 * variance)**0.5 / (1e3)**2 # Final error
+    ESDt_tot = gammat / wk2 # Final Excess Surface Density (tangential component)
+    ESDx_tot = gammax / wk2 # Final Excess Surface Density (cross component)
+    error_tot = (w2k2 / wk2**2 * variance)**0.5 # Final error
     bias_tot = (1 + (srcm / wk2)) # Final multiplicative bias (by which the signal is to be divided)
 
     return ESDt_tot, ESDx_tot, error_tot, bias_tot
 
 
-def write_stack(filename, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield): # Printing stacked shear profile to a file
+# Printing stacked ESD profile to a text file
+def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield):
 
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
+    if 'pc' in Runit:
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)	ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)	variance(e_s)'%(Runit, h*100, h*100, h*100)
+    else:
+        filehead = '# Radius(%s)	gamma_t gamma_x	error	bias(1+K)	variance(e_s)'%(Runit)
+
     with open(filename, 'w') as file:
-        print >>file, '# Radius(kpc)	ESD_t(h%g*M_sun/pc^2)	ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)	variance(e_s)'%(h*100, h*100, h*100)
+        print >>file, filehead
 
     with open(filename, 'a') as file:
         for R in xrange(len(Rcenters)):
@@ -944,6 +994,7 @@ def write_stack(filename, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, 
 
     return
 
+
 # Define the labels for the plot
 def define_plottitle(purpose, centering, lens_selection, binname, Nobsbins, src_selection):
 
@@ -960,7 +1011,8 @@ def define_plottitle(purpose, centering, lens_selection, binname, Nobsbins, src_
     return plottitle
     
 
-def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, xlabel, ylabel, n): # Plotting the data
+# Setting up the ESD profile plot(s)
+def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit):
 
     from matplotlib import pyplot as plt
     from matplotlib.colors import LogNorm
@@ -997,6 +1049,14 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, xlabel, yl
         # Plot and print ESD profile to a file
         plt.title(plottitle,fontsize=title_size)
 
+    # Define the labels for the plot
+    if 'pc' in Runit:
+        xlabel = r'Radial distance R (%s/h$_{%g}$)'%(Runit, h*100)
+        ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h$_{%g}$ M$_{\odot}$/pc$^2$]'%(h*100)
+    else:
+        xlabel = r'Radial distance $\theta$ (%s)'%Runit
+        ylabel = r'Shear $\gamma$'
+        
     # Load the text file containing the stacked profile
     data = np.loadtxt(filename).T
 
@@ -1061,6 +1121,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, xlabel, yl
             plt.ylabel(r'Error(%s)'%ylabel,fontsize=15)
 
     plt.xscale('log')
+    
     plt.xlabel(r'%s'%xlabel,fontsize=15)
 
     plt.legend(loc='upper right',ncol=1, prop={'size':12})
@@ -1068,6 +1129,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, xlabel, yl
     return
 
 
+# Writing the ESD profile plot
 def write_plot(plotname, plotstyle): # Writing and showing the plot
 
     from matplotlib import pyplot as plt
@@ -1093,7 +1155,8 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
     return
 
 
-def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname, lens_binning, Rbins, h):
+# Plotting the analytical or bootstrap covariance matrix
+def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname, lens_binning, Rbins, Runit, h):
 
     from matplotlib import pyplot as plt
     from matplotlib.colors import LogNorm
@@ -1107,7 +1170,7 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname,
     rc('font',**{'family':'serif','serif':['Computer Modern']})
 
     # Number of observable bins
-    obsbins = lens_binning.values()[0]
+    obsbins = (lens_binning.values()[0])[1]
     Nobsbins = len(obsbins)-1
 
     # Number and values of radial bins
@@ -1188,8 +1251,14 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, binname,
     ax.spines['right'].set_color('none')
     ax.tick_params(labelleft='off', labelbottom='off', top='off', bottom='off', left='off', right='off')
 
-    ax.set_xlabel(r'Radial distance (kpc/h$_{%g}$)'%(h*100))
-    ax.set_ylabel(r'Radial distance (kpc/h$_{%g}$)'%(h*100))
+    if 'pc' in Runit:
+        labelunit = '%s/h$_{%g}$)'%(Runit, h*100)
+    else:
+        labelunit = Runit
+    
+    ax.set_xlabel(r'Radial distance (%s)'%labelunit)
+    ax.set_ylabel(r'Radial distance (%s)'%labelunit)
+
 
     ax.xaxis.set_label_coords(0.5, -0.05)
     ax.yaxis.set_label_coords(-0.05, 0.5)

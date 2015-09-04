@@ -36,7 +36,7 @@ def main():
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
-    'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
@@ -61,9 +61,9 @@ def main():
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
-    gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
+    gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose, Ncat, O_matter, O_lambda, Ok, h)
+    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights)
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Binnning information of the groups
@@ -99,7 +99,7 @@ def main():
         for N1 in xrange(Nobsbins):
 
             filename_N1 = shear.define_filename_var(purpose, centering, binname, \
-            N1+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+            N1+1, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1) # Ncat is the number of existing randoms
             
@@ -223,7 +223,6 @@ def main():
             
             # Calculating the final output values of the accompanying shear data
             ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = shear.calc_stack(gammat[N1], gammax[N1], wk2[N1], np.diagonal(cov[N1,N1,:,:]), srcm[N1], [1,1,1,1], blindcatnum)
-            print error_tot[0,0]
             
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
@@ -233,7 +232,7 @@ def main():
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
             # Printing stacked shear profile to a text file
-            shear.write_stack(filenameESD, Rcenters, ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1], h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)
+            shear.write_stack(filenameESD, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1], h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)
 
         for N1 in range(Nobsbins):
             for N2 in range(Nobsbins):

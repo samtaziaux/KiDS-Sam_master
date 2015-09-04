@@ -34,7 +34,6 @@ def main():
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacat = shear.input_variables()
 
-    
     print 'Step 1: Create split catalogues in parallel'
     print
 
@@ -52,12 +51,12 @@ def main():
             if not os.path.isdir(path_results):
                 os.makedirs(path_results)
 
+    if 'covariance' in purpose:
+        Nsplits = 1
 
     # You can make two kinds of catalog
     if 'catalog' in purpose:
 
-        Nfofmin = 2
-        Nfofmax = inf
         binname = 'None'
         lens_binning = {'None': np.array([])}
         
@@ -65,15 +64,18 @@ def main():
             Nsplits = Nobsbins
             Nsplit = binnum-1
 
+
         Nobsbins = 1
         binnum = 1
 
-        if 'Cen' not in centering:
+        if centering != 'Cen':
             lens_selection['rank%s'%centering] = np.array([-999, inf])
+
+
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
-    binnum, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    binnum, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
 
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat+1, filename_var) # Ncat is the number of existing catalogs, we want to go one beyond
@@ -101,9 +103,9 @@ def main():
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
-    gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
+    gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose, Ncat, O_matter, O_lambda, Ok, h)
+    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights)
 
 
     # Calculate the source variance
@@ -148,6 +150,7 @@ def main():
     print '%s split'%purpose, Nsplit+1, '/', Nsplits, ', Center definition = %s'%centering
     print
 
+
 # If the KiDS catalogs are chosen manually:
 #	kidscats = ['KIDS_231p0_0p5'] # Fewest lenses
 #    kidscats = ['KIDS_172p5_2p5'] # 710 lenses
@@ -181,7 +184,9 @@ def main():
         lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
         matched_galIDs = np.array(catmatch[kidscatname]) # The ID's of the galaxies that lie in this field
 
-        galIDs, galRAs, galDECs, galZs, Dcls, Dals, galIDmask = shear.mask_gamacat(purpose, matched_galIDs, lenssel, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist)
+        # Find the selected lenses that lie in this KiDS field
+        galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
+        [galIDs, galRAs, galDECs, galweights, galZs, Dcls, Dals] = [gallist[galIDmask] for gallist in [galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist]]
 
 
         print 'Analysing field %i/%i: %s (contains %i objects)'%(kidscatN, len(splitkidscats[Nsplit]), kidscatname, len(galIDs))
@@ -205,7 +210,11 @@ def main():
             print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
 
             # Select all the lens properties that are in this lens split
-            galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, Dal_split = [galIDs[lenssplits[l] : lenssplits[l+1]], galRAs[lenssplits[l] : lenssplits[l+1]], galDECs[lenssplits[l] : lenssplits[l+1]], galZs[lenssplits[l] : lenssplits[l+1]], Dcls[lenssplits[l] : lenssplits[l+1]], Dals[lenssplits[l] : lenssplits[l+1]]]
+            galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
+            Dal_split, galweights_split = [galIDs[lenssplits[l] : lenssplits[l+1]], \
+            galRAs[lenssplits[l] : lenssplits[l+1]], galDECs[lenssplits[l] : lenssplits[l+1]], \
+            galZs[lenssplits[l] : lenssplits[l+1]], Dcls[lenssplits[l] : lenssplits[l+1]], \
+            Dals[lenssplits[l] : lenssplits[l+1]], galweights[lenssplits[l] : lenssplits[l+1]]]
 
             galIDmask_split = np.in1d(galIDlist, galID_split) # Create a mask for the complete list of lenses, that only highlights the lenses in this lens split
 
@@ -245,7 +254,7 @@ def main():
 
                     if 'covariance' in purpose:
                         # For each radial bin of each lens we calculate the weighted Cs, Ss and Zs
-                        output_onebin = [C_tot, S_tot, Z_tot] = shear.calc_covariance_output(incosphilist, insinphilist, klist)
+                        output_onebin = [C_tot, S_tot, Z_tot] = shear.calc_covariance_output(incosphilist, insinphilist, klist, galweights_split)
 
                         # Writing the complete output to the output lists
                         for o in xrange(len(output)):

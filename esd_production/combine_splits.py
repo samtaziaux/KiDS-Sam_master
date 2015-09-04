@@ -58,13 +58,13 @@ def main():
         Nobsbins = 1
         binnum = 1
 
-        if 'Cen' not in centering:
+        if centering != 'Cen':
             lens_selection['rank%s'%centering] = np.array([-999, inf])
 
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
-    'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
 
     splitslist = np.array([])
     # Find all created random splits

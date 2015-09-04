@@ -66,7 +66,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
         for nobsbin in np.arange(nobsbins)+1:
 
             for nsplit in np.arange(nsplits)+1:
-
+                
                 splitsname = 'python -W ignore %sshear+covariance.py'%(path_shearcodes)
                 splitsname += ' %i %i %i %s %s &' \
                             %(nsplit, nsplits, nobsbin, blindcat, config_file)

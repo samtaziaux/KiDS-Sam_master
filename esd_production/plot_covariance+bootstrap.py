@@ -56,9 +56,9 @@ def main():
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
-    gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
+    gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose, Ncat, O_matter, O_lambda, Ok, h)
+    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights)
     
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) \

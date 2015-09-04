@@ -46,7 +46,7 @@ def main():
     
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
-    1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    1, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
@@ -62,7 +62,7 @@ def main():
 
     # Define the list of variables for the input catalog
     filename_var = shear.define_filename_var('shearcatalog', centering, 'None', \
-    -999, -999, {'None': np.array([])}, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    -999, -999, {'None': np.array([])}, src_selection, ['None', ''], name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
 
@@ -76,19 +76,19 @@ def main():
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
-    gamacat, galIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist = \
+    gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h)
+    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights)
 
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Define the list of variables for the output filename
     if 'catalog' in purpose:
         filename_var = shear.define_filename_var(purpose.replace('catalog',''), centering, binname, \
-        'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+        'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     else:
         filename_var = shear.define_filename_var(purpose, centering, binname, \
-        'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+        'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     if 'random' in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
@@ -101,9 +101,21 @@ def main():
     srcmlist = sheardat['bias_m'] # Bias profile of each galaxy
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
 
-    # Defining the observable binnning range of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
+    """
+    # Adding the lens weights
+    print np.shape(wk2list), np.amin(wk2list), np.amax(wk2list)
+    print
+    wk2list = wk2list / np.reshape(galweightlist, [len(galIDlist),1])
+    print np.shape(wk2list), np.amin(wk2list), np.amax(wk2list)
+    nanmask = np.logical_not(np.isfinite(wk2list))
+    wk2list[nanmask] = 0.
+    """
+    
+    print np.shape(wk2list), wk2list
+
     # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
+    # Defining the observable binnning range of the groups
     binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
 
 
@@ -133,10 +145,10 @@ def main():
             print 'lenssel:', len(lenssel)
             print 'galIDlist:', len(galIDlist)
 
-        galIDs, gammats, gammaxs, wk2s, w2k2s, srcms = shear.mask_shearcat(lenssel, galIDlist, gammatlist, gammaxlist, wk2list, w2k2list, srcmlist) # Mask all quantities
+        [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms] = [gallist[lenssel] for gallist in [galIDlist, gammatlist, gammaxlist, wk2list, w2k2list, srcmlist]] # Mask all quantities
         galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
         galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
-
+        print 'After masking:', wk2s
 
         print 'Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), 'of which overlap with KiDS.'
         print
@@ -154,11 +166,11 @@ def main():
             # Mask all objects that are not in this field
             matched_galIDs = np.array(catmatch[kidscats[k]]) # The ID's of the galaxies that lie in this field
             field_mask = np.in1d(galIDs, matched_galIDs) # Define the mask
-            galID, gammat, gammax, wk2, w2k2, srcm = shear.mask_shearcat(field_mask, galIDs, gammats, gammaxs, wk2s, w2k2s, srcms) # Mask all quantities
-
+            [galID, gammat, gammax, wk2, w2k2, srcm] = [gallist[field_mask] for gallist in [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms]] # Mask all quantities
+            
             if len(gammat) > 0: # If there are lenses in this field...
                 field_shears[k] = np.array([sum(gammat,0), sum(gammax,0), sum(wk2,0), sum(w2k2,0), sum(srcm,0)]) # Add the field to the ESD-profile table
-        
+            
         # Taking the bootstrap samples
         if 'bootstrap' in purpose:
             print 'Number of bootstraps: %g'%Nbootstraps
@@ -183,10 +195,15 @@ def main():
         # Calculating the normal shear profile
         shear_sample = np.array(np.sum(field_shears, 0)) # Sum all fields
         
+        print 'Before:', wk2
         gammat, gammax, wk2, w2k2, srcm = [shear_sample[x] for x in xrange(5)] # The summed quantities
+        print 'After:', wk2
+
+
         output = np.array(shear.calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum)) # Write the output to the bootstrap sample table
 
         ESDt_tot, ESDx_tot, error_poisson, bias_tot = [output[x] for x in xrange(len(outputnames))]
+
         if 'bootstrap' not in purpose:
             error_tot = error_poisson
 
@@ -215,16 +232,10 @@ def main():
         else:
             plotlabel = r'%.3g $\leq$ %s $\textless$ %.3g (%i lenses)'%(binmin, binname.replace('_', ''), binmax, len(galIDs_matched))
 
-        try:
-            shear.define_plot(plotname, plotlabel, plottitle, plotstyle, Nobsbins, binnum, Runit)
-        except:
-            pass
+        shear.define_plot(plotname, plotlabel, plottitle, plotstyle, Nobsbins, binnum, Runit, h)
 
     # Writing and showing the plot
-    try:
-        shear.write_plot(plotname, plotstyle)
-    except:
-        pass
+    shear.write_plot(plotname, plotstyle)
         
     return
 

@@ -73,10 +73,6 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
                 ps.append(p)
         for p in ps:
             p.wait()
-<<<<<<< HEAD
-=======
-    
->>>>>>> f84e6a5ddcf5752b6300e96af8a68303f08ce93f
     
 
     # Combine the splits according to the purpose

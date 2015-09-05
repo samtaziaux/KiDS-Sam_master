@@ -75,7 +75,7 @@ def input_variables():
             centering = cen
             print 'Center definition = %s'%centering
     if centering == 'Cen':
-        lens_selection['rank%s'%centering] = np.array([1])
+        lens_selection['rank%s'%centering] = ['self', np.array([1])]
         print 'WARNING: With the Cen definition, you can only use Centrals (rank = 1)'
 
     # Creating all necessary folders
@@ -215,11 +215,12 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
         
         # Lens selection
-        filename_var, var_print, x = define_filename_sel(filename_var, var_print,'', lens_selection)
+        filename_var, var_print, x = define_filename_sel(filename_var, var_print, '', lens_selection)
     
-        if lens_weights[0] != 'None':
-            filename_var = '%s_lw~%s'%(filename_var, lens_weights[0])
-            var_print = '%s Lens weights: %s,'%(var_print, lens_weights[0])
+        weightname = lens_weights.keys()[0]
+        if weightname != 'None':
+            filename_var = '%s_lw~%s'%(filename_var, weightname)
+            var_print = '%s Lens weights: %s,'%(var_print, weightname)
     
     # Source selection
     filename_var, var_print, x = define_filename_sel(filename_var, var_print,'', src_selection)
@@ -269,7 +270,7 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpo
                 Ncat, O_matter, O_lambda, Ok, h, lens_weights):
 
     # Import R-range
-    Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins)
+    Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins, Runit)
     
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
@@ -288,7 +289,7 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpo
 
 
 # Define the radial bins around the lenses
-def define_Rbins(path_Rbins):
+def define_Rbins(path_Rbins, Runit):
 
     if os.path.isfile(path_Rbins): # from a file
 
@@ -316,6 +317,21 @@ def define_Rbins(path_Rbins):
         except:
             print 'Observable bin file does not exist:', path_Rbins
             exit()
+    
+    # Translating from k/Mpc to pc, or from arcmin/sec to deg
+    const = 1.
+    if 'pc' in Runit:
+        if 'k' in Runit:
+            const = 1e3
+        if 'M' in Runit:
+            const = 1e6
+    else:
+        if 'sec' in Runit:
+            const = 1/(60.**2)
+        if 'min' in Runit:
+            const = 1/60.
+                
+    [Rmin, Rmax, Rbins] = [r*const for r in [Rmin, Rmax, Rbins]]
 
     """
     print 'path_Rbins', path_Rbins
@@ -362,8 +378,9 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         galDEClist = randomcat['dec'][Ncatmin : Ncatmax]
 
     #Defining the lens weights
-    if 'None' not in lens_weights:
-        galweightlist = pyfits.open(lens_weights[1])[1].data[lens_weights[0]]
+    weightname = lens_weights.keys()[0]
+    if weightname != 'None':
+        galweightlist = pyfits.open(lens_weights.values()[0])[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
 
@@ -371,17 +388,10 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
     if 'pc' in Runit: # Rbins in a multiple of pc
         galZlist = gamacat['Z'] # Central Z of the galaxy
         Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) for z in galZlist]) # Distance in pc/h, where h is the dimensionless Hubble constant
-        if 'k' in Runit:
-            Dcllist /= 1e3
-        if 'M' in Runit:
-            Dcllist /= 1e6
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
         Dcllist = np.degrees(np.ones(len(galIDlist))) # Distance in degree on the sky
-        if 'min' in Runit:
-            Dcllist *= 60
-        if 'sec' in Runit:
-            Dcllist *= 60**2
+
     Dallist = Dcllist/(1+galZlist) # The angular diameter distance to the galaxy center
 
     return gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -728,6 +738,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, bi
 
     if 'No' not in binname: # If the galaxy selection depends on observable
         # Importing the binning file
+        binfile = lens_binning[binname][0]
         if binfile == 'self':
             obslist = define_obslist(binname, gamacat)
         else:
@@ -764,6 +775,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ):
     # Calculate the values of k (=1/Sigmacrit)
     Dals = np.reshape(Dals,[len(Dals),1])
     k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
+
     DlsoDs = [] # Empty unused lists
     Dals = []
 
@@ -850,10 +862,12 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, N
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
+    galweights = np.reshape(galweights, [len(galweights), 1])
+
     # For each radial bin of each lens we calculate the weighted sum of the tangential and cross shear
-    Cs_tot = sum(-incosphilist*klist, 0)
-    Ss_tot = sum(-insinphilist*klist, 0)
-    Zs_tot = sum(klist**2 / galweights, 0)
+    Cs_tot = sum(-incosphilist*klist*galweights, 0)
+    Ss_tot = sum(-insinphilist*klist*galweights, 0)
+    Zs_tot = sum(klist**2*galweights, 0)
 
     return Cs_tot, Ss_tot, Zs_tot
 
@@ -914,10 +928,6 @@ def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
     ESDx_tot = gammax / wk2 # Final Excess Surface Density (cross component)
     error_tot = (w2k2 / wk2**2 * variance)**0.5 # Final error
     bias_tot = (1 + (srcm / wk2)) # Final multiplicative bias (by which the signal is to be divided)
-
-    print 'gammat', gammat
-    print 'wk2', wk2
-    print 'ESDt_tot', ESDt_tot
 
     return ESDt_tot, ESDx_tot, error_tot, bias_tot
 
@@ -1091,8 +1101,8 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
         plt.yscale('log')
         errorl[errorl>=data_y] = ((data_y[errorl>=data_y])*0.9999999999)
 
-        plt.autoscale(enable=False, axis='both', tight=None)
-        plt.axis([1e1,1e4,1e-1,1e4])
+#        plt.autoscale(enable=False, axis='both', tight=None)
+ #       plt.axis([1e1,1e4,1e-1,1e4])
         plt.ylim(1e-1,1e4)
 
         if plotstyle == 'log':

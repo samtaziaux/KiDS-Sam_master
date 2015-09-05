@@ -52,14 +52,8 @@ def main():
         print 'Number of existing random catalogs:', Ncat
 
     filenameESD = shear.define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat)
-
-    # Stop if the output already exists
-    if os.path.isfile(filenameESD):
-        print 'This output already exists:', filenameESD
-        print
-        quit()
-
-
+    print 'Requested file:', filenameESD
+    
     # Define the list of variables for the input catalog
     filename_var = shear.define_filename_var('shearcatalog', centering, 'None', \
     -999, -999, {'None': np.array([])}, src_selection, ['None', ''], name_Rbins, O_matter, O_lambda, Ok, h)
@@ -101,18 +95,10 @@ def main():
     srcmlist = sheardat['bias_m'] # Bias profile of each galaxy
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
 
-    """
     # Adding the lens weights
-    print np.shape(wk2list), np.amin(wk2list), np.amax(wk2list)
-    print
-    wk2list = wk2list / np.reshape(galweightlist, [len(galIDlist),1])
-    print np.shape(wk2list), np.amin(wk2list), np.amax(wk2list)
-    nanmask = np.logical_not(np.isfinite(wk2list))
-    wk2list[nanmask] = 0.
-    """
+    galweightlist = np.reshape(galweightlist, [len(galIDlist),1])
+    [gammatlist, gammaxlist, wk2list, w2k2list, srcmlist] = [gallist*galweightlist for gallist in [gammatlist, gammaxlist, wk2list, w2k2list*galweightlist, srcmlist]]
     
-    print np.shape(wk2list), wk2list
-
     # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
     # Defining the observable binnning range of the groups
@@ -148,7 +134,6 @@ def main():
         [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms] = [gallist[lenssel] for gallist in [galIDlist, gammatlist, gammaxlist, wk2list, w2k2list, srcmlist]] # Mask all quantities
         galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
         galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
-        print 'After masking:', wk2s
 
         print 'Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), 'of which overlap with KiDS.'
         print
@@ -195,10 +180,7 @@ def main():
         # Calculating the normal shear profile
         shear_sample = np.array(np.sum(field_shears, 0)) # Sum all fields
         
-        print 'Before:', wk2
         gammat, gammax, wk2, w2k2, srcm = [shear_sample[x] for x in xrange(5)] # The summed quantities
-        print 'After:', wk2
-
 
         output = np.array(shear.calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum)) # Write the output to the bootstrap sample table
 
@@ -228,7 +210,7 @@ def main():
             plotstyle = 'log'
         
         if 'No' in binname:
-            plotlabel = False
+            plotlabel = r'ESD$_t$'
         else:
             plotlabel = r'%.3g $\leq$ %s $\textless$ %.3g (%i lenses)'%(binmin, binname.replace('_', ''), binmax, len(galIDs_matched))
 

@@ -11,7 +11,6 @@ import os
 import time
 
 from astropy import constants as const, units as u
-import numpy.core._dotblas
 import memory_test as memory
 import time
 import gc
@@ -51,27 +50,22 @@ def main():
             if not os.path.isdir(path_results):
                 os.makedirs(path_results)
 
-    if 'covariance' in purpose:
-        Nsplits = 1
-
-    # You can make two kinds of catalog
     if 'catalog' in purpose:
 
         binname = 'None'
-        lens_binning = {'None': np.array([])}
-        
+        lens_binning = {'None': ['self', np.array([])]}
         if Nsplits < Nobsbins:
             Nsplits = Nobsbins
             Nsplit = binnum-1
-
-
         Nobsbins = 1
         binnum = 1
 
-        if centering != 'Cen':
-            lens_selection['rank%s'%centering] = np.array([-999, inf])
+        if centering == 'Cen':
+            lens_selection = {'rank%s'%centering: ['self', np.array([1])]}
+        else:
+            lens_selection = {}
 
-
+        lens_weights = {'None': ''}
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \

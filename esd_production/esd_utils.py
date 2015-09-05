@@ -73,12 +73,12 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
  
         # Lens weights
         elif line[0] == 'lens_weights':
-            lensweight_name = line[1]
-            if lensweight_name != 'None':
-                lensweight_file = line[2]
+            weightname = line[1]
+            if weightname == 'None':
+                weightfile = ''
             else:
-                lensweight_file = ''
-            lens_weights = [lensweight_name, lensweight_file]
+                weightfile = weightfile = line[2]
+            lens_weights = {weightname: weightfile}
             
         elif line[0] == 'lens_binning':
             binname = line[1]
@@ -102,7 +102,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
         elif line[0][:10] == 'src_limits':
             param = line[1]
             bins = np.array([float(i) for i in line[2].split(',')])
-            src_selection[param] = ['', bins]
+            src_selection[param] = ['self', bins]
         
     
         """

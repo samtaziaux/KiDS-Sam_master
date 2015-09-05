@@ -11,7 +11,6 @@ import os
 import time
 import shearcode_modules as shear
 from astropy import constants as const, units as u
-import numpy.core._dotblas
 
 # Important constants
 inf = np.inf # Infinity
@@ -46,7 +45,7 @@ def main():
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
-    'binnum', Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+    'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' in purpose) or ('star' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
@@ -79,9 +78,13 @@ def main():
             filename_N1 = filename_var.replace('binnum', '%i'%(N1+1))
             filenameESD = shear.define_filename_results(path_results, purpose, filename_N1, filename_addition, Nsplit, blindcat)
 
-            plotlabel = r'%g $\leq$ %s $\textless$ %g'%(binmin, binname.replace('_', ''), binmax)
+            if 'No' in binname:
+                plotlabel = r'ESD$_t$'
+            else:
+                plotlabel = r'%g $\leq$ %s $\textless$ %g'%(binmin, binname.replace('_', ''), binmax)
+            
             try:
-                shear.define_plot(filenameESD, plotlabel, plottitle1, plotstyle, subplots, N1+1, Runit)
+                shear.define_plot(filenameESD, plotlabel, plottitle1, plotstyle, subplots, N1+1, Runit, h)
             except:
                 pass
         try:
@@ -98,21 +101,21 @@ def main():
     if binname == 'No': # If there is no binning
         plottitle2 = ''
     else: # If there is binning
-        plottitle2 = r'for %i %s bins between %g and %g.'%(Nobsbins, binname, (lens_binning.values()[0])[0], (lens_binning.values()[0])[-1])
+        plottitle2 = r'for %i %s bins between %g and %g.'%(Nobsbins, binname, (lens_binning.values()[0])[1][0], (lens_binning.values()[0])[1][-1])
 
     try:
         shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname, lens_binning, Rbins, Runit, h)
     except:
         pass
 
-
+    """
     # Remove the used splits
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-
+    """
     return
     
 main()

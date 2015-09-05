@@ -11,7 +11,6 @@ import os
 import time
 import shearcode_modules as shear
 from astropy import constants as const, units as u
-import numpy.core._dotblas
 from termcolor import colored
 
 # Important constants
@@ -127,7 +126,7 @@ def main():
             for N2 in xrange(Nobsbins):
 
                 filename_N2 = shear.define_filename_var(purpose, centering, binname, \
-                N2+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+                N2+1, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
                 if ('random' or 'star') in purpose:
                     filename_N2 = '%i_%s'%(Ncat, filename_N2) # Ncat is the number of existing randoms
                 
@@ -157,14 +156,14 @@ def main():
         for N1 in xrange(Nobsbins):
 
             filename_N1 = shear.define_filename_var(purpose, centering, binname, \
-            N1+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+            N1+1, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1) # Ncat is the number of existing randoms
             
             filenameESD = shear.define_filename_results(path_results, purpose, filename_N1, filename_addition, Nsplit, blindcat)
 
             for x in xrange(len(kidscats)):
-                
+
                # Loading the covariance data file of each KiDS field
                 shearcatname_N1 = shear.define_filename_splits(path_splits, purpose, filename_N1, kidscats[x], 0, filename_addition, blindcat)
                 
@@ -198,7 +197,7 @@ def main():
     #					if N1 == N2:
                         
                         filename_N2 = shear.define_filename_var(purpose, centering, binname, \
-                        N2+1, Nobsbins, lens_selection, src_selection, name_Rbins, O_matter, O_lambda, Ok, h)
+                        N2+1, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
                         if ('random' or 'star') in purpose:
                             filename_N2 = '%i_%s'%(Ncat, filename_N2) # Ncat is the number of existing randoms
 
@@ -254,8 +253,8 @@ def main():
                         
                         radius1[N1,N2,R1,R2] = Rcenters[R1]
                         radius2[N1,N2,R1,R2] = Rcenters[R2]
-                        bin1[N1,N2,R1,R2] = (lens_binning.values()[0])[N1]
-                        bin2[N1,N2,R1,R2] = (lens_binning.values()[0])[N2]
+                        bin1[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N1]
+                        bin2[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N2]
                         
                         if (0. < error_tot[N1,R1])&(error_tot[N1,R1] < inf) and (0. < error_tot[N2,R2])&(error_tot[N2,R2] < inf):
                             cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)

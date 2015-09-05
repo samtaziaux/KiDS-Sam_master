@@ -42,24 +42,21 @@ def main():
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
-
-    # You can make two kinds of catalog
     if 'catalog' in purpose:
 
-        Nfofmin = 2
-        Nfofmax = inf
         binname = 'None'
-        path_obsbins = 'None'
-        
+        lens_binning = {'None': ['self', np.array([])]}
         if Nsplits < Nobsbins:
             Nsplits = Nobsbins
             Nsplit = binnum-1
 
+        if centering == 'Cen':
+            lens_selection = {'rank%s'%centering: ['self', np.array([1])]}
+        else:
+            lens_selection = {}
+        
         Nobsbins = 1
         binnum = 1
-
-        if centering != 'Cen':
-            lens_selection['rank%s'%centering] = np.array([-999, inf])
 
 
     # Define the list of variables for the output filename

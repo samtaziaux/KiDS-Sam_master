@@ -15,6 +15,8 @@ from halomodel import hm_utils
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', dest='config_file')
+    parser.add_argument('--demo', dest='demo', action='store_true',
+                        help='do a demo run with the input parameters')
     args = parser.parse_args()
     # options to turn on and off the data production or halo model?
 
@@ -31,7 +33,7 @@ def main():
 
     # Setup and run MCMC sampler
     sampling_options = sampling_utils.read_config(args.config_file)
-    sampler.run_emcee(sampling_options, hm_options)
+    sampler.run_emcee(sampling_options, hm_options, args.demo)
 
     return
 

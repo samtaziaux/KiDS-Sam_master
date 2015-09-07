@@ -16,7 +16,7 @@ from os.path import isfile
 from time import ctime
 import pickle
 
-def run_emcee(sampling_options, hm_options):
+def run_emcee(sampling_options, hm_options, demo=False):
 
     datafile, datacols, covfile, covcols, output, \
         sampler, nwalkers, nsteps, nburn, \
@@ -34,7 +34,9 @@ def run_emcee(sampling_options, hm_options):
     # minus the columns, paramfile, and outputfile entries
     Ndatafiles = len(datafile)
 
-    if os.path.isfile(output):
+    if demo:
+        print ' ** Running demo only **'
+    elif os.path.isfile(output):
         msg = 'Warning: output file %s exists. Overwrite? [y/N] ' %output
         answer = raw_input(msg)
         if len(answer) == 0:
@@ -124,31 +126,32 @@ def run_emcee(sampling_options, hm_options):
     #group_profile = params.group_profile()
     #function = model
 
-    hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
-    print 'Printing header information to', hdrfile
-    hdr = open(hdrfile, 'w')
-    print >>hdr, 'Started', ctime()
-    print >>hdr, 'datafile', ','.join(datafile)
-    print >>hdr, 'cols', datacols
-    print >>hdr, 'covfile', covfile
-    print >>hdr, 'covcols', covcols
-    print >>hdr, 'model %s' %function
-    #print >>hdr, 'sat_profile %s' %sat_profile
-    #print >>hdr, 'group_profile %s' %group_profile
-    for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
-                                      val1, val2, val3, val4):
-        try:
-            line = '%s  %s  ' %(p, pt)
-            line += ','.join(numpy.array(v1, dtype=str))
-        except TypeError:
-            line = '%s  %s  %s  %s  %s  %s' \
-                   %(p, pt, str(v1), str(v2), str(v3), str(v4))
-        print >>hdr, line
-    print >>hdr, 'nwalkers  {0:5d}'.format(nwalkers)
-    print >>hdr, 'nsteps    {0:5d}'.format(nsteps)
-    print >>hdr, 'nburn     {0:5d}'.format(nburn)
-    print >>hdr, 'thin      {0:5d}'.format(thin)
-    hdr.close()
+    if not demo:
+        hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
+        print 'Printing header information to', hdrfile
+        hdr = open(hdrfile, 'w')
+        print >>hdr, 'Started', ctime()
+        print >>hdr, 'datafile', ','.join(datafile)
+        print >>hdr, 'cols', datacols
+        print >>hdr, 'covfile', covfile
+        print >>hdr, 'covcols', covcols
+        print >>hdr, 'model %s' %function
+        #print >>hdr, 'sat_profile %s' %sat_profile
+        #print >>hdr, 'group_profile %s' %group_profile
+        for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
+                                        val1, val2, val3, val4):
+            try:
+                line = '%s  %s  ' %(p, pt)
+                line += ','.join(numpy.array(v1, dtype=str))
+            except TypeError:
+                line = '%s  %s  %s  %s  %s  %s' \
+                    %(p, pt, str(v1), str(v2), str(v3), str(v4))
+            print >>hdr, line
+        print >>hdr, 'nwalkers  {0:5d}'.format(nwalkers)
+        print >>hdr, 'nsteps    {0:5d}'.format(nsteps)
+        print >>hdr, 'nburn     {0:5d}'.format(nburn)
+        print >>hdr, 'thin      {0:5d}'.format(thin)
+        hdr.close()
     # run chain
     ndim = len(val1[(jfree)])
     if len(starting) != ndim:
@@ -156,6 +159,21 @@ def run_emcee(sampling_options, hm_options):
         print msg
         exit()
     print 'starting =', starting
+
+    if demo:
+        import pylab
+        v1 = val1.copy()
+        v1[jfree] = starting
+        model = function(v1, R)
+        fig, axes = pylab.subplots(figsize=(5*Ndatafiles,5), ncols=Ndatafiles)
+        for ax, Ri, gt, gt_err, f in izip(axes, R, esd, esd_err, model[0]):
+            ax.errorbar(Ri[1:], gt, yerr=gt_err, fmt='ko', ms=10)
+            ax.plot(Ri[1:], f, 'r-', lw=2)
+            ax.set_xscale('log')
+        fig.tight_layout(w_pad=0.01)
+        fig.show()
+        return
+
     po = starting * numpy.random.uniform(0.99, 1.01, size=(nwalkers,ndim))
     lnprior = zeros(ndim)
     mshape = meta_names.shape

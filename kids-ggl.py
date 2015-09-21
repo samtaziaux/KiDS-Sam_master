@@ -26,11 +26,6 @@ def main():
 
     # Choose and set up a halo model
     hm_options = hm_utils.read_config(args.config_file)
-    #model, params, param_types, prior_types, \
-        #val1, val2, val3, val4, hm_functions, \
-        #starting, meta_names, fits_format = hm_options
-    #halomodel.config()
-
     # Setup and run MCMC sampler
     sampling_options = sampling_utils.read_config(args.config_file)
     sampler.run_emcee(hm_options, sampling_options, args)

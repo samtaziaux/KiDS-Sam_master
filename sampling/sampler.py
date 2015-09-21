@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Satellite lensing EMCEE wrapper
+
 """
 import emcee
 import numpy
@@ -16,14 +17,18 @@ from os.path import isfile
 from time import ctime
 import pickle
 
-def run_emcee(sampling_options, hm_options, demo=False):
+import sampling_utils
 
-    datafile, datacols, covfile, covcols, output, \
-        sampler, nwalkers, nsteps, nburn, \
-        thin, k, threads, sampler_type = sampling_options
+def run_emcee(hm_options, sampling_options, args):
+    # load halo model setup
     function, params, param_types, prior_types, \
         val1, val2, val3, val4, hm_functions, \
         starting, meta_names, fits_format = hm_options
+    # load MCMC sampler setup
+    datafile, datacols, covfile, covcols, output, \
+        sampler, nwalkers, nsteps, nburn, \
+        thin, k, threads, sampler_type = sampling_options
+
     #function = cloud.serialization.cloudpickle.dumps(model)
     #del model
     #print function
@@ -31,10 +36,7 @@ def run_emcee(sampling_options, hm_options, demo=False):
     #pickle.dumps(function)
     #print 'pickled'
 
-    # minus the columns, paramfile, and outputfile entries
-    Ndatafiles = len(datafile)
-
-    if demo:
+    if args.demo:
         print ' ** Running demo only **'
     elif os.path.isfile(output):
         msg = 'Warning: output file %s exists. Overwrite? [y/N] ' %output
@@ -43,82 +45,35 @@ def run_emcee(sampling_options, hm_options, demo=False):
             exit()
         if answer[0].lower() != 'y':
             exit()
+    if not args.demo:
+        print 'Started -', ctime()
 
     #load data files
-    if type(datafile) == str:
-        R, esd = numpy.loadtxt(datafile, usecols=datacols[:2]).T
-        # better in Mpc
-        if R[-1] > 500:
-            R /= 1000
-        if len(datacols) == 3:
-            oneplusk = numpy.loadtxt(datafile, usecols=[datacols[2]]).T
-            esd /= oneplusk
-    else:
-        R, esd = transpose([numpy.loadtxt(df, usecols=datacols[:2])
-                            for df in datafile], axes=(2,0,1))
-        if len(datacols) == 3:
-            oneplusk = array([numpy.loadtxt(df, usecols=[datacols[2]])
-                              for df in datafile])
-            esd /= oneplusk
-        for i in xrange(len(R)):
-            if R[i][-1] > 500:
-                R[i] /= 1000
+    Ndatafiles = len(datafile)
+    R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins)
     Nobsbins, Nrbins = esd.shape
-    Rshape = numpy.array(R).shape
     rng_obsbins = xrange(Nobsbins)
     rng_rbins = xrange(Nrbins)
-
     # load covariance
-    cov = numpy.loadtxt(covfile, usecols=[covcols[0]])
-    if len(covcols) == 2:
-        cov /= numpy.loadtxt(covfile, usecols=[covcols[1]])
+    cov = sampling_utils.load_covariance(covfile, covcols,
+                                         Nobsbins, Nrbins, exclude_bins)
+    cov, icov, likenorm, esd_err, cov2d = cov
 
-    # 4-d matrix
-    cov = cov.reshape((Nobsbins,Nobsbins,Nrbins,Nrbins))
-    prod_detC = array([det(cov[m][n])
-                       for m in rng_obsbins for n in rng_obsbins]).prod()
-    likenorm = -0.5 * (Nobsbins**2*log(2*pi) + log(prod_detC))
-
-    # switch axes to have the diagonals aligned consistently to make it
-    # a 2d array
-    cov2d = cov.transpose(0,2,1,3)
-    cov2d = cov2d.reshape((Nobsbins*Nrbins,Nobsbins*Nrbins))
-    esd_err = numpy.sqrt(numpy.diag(cov2d)).reshape((Nobsbins,Nrbins))
-
-    icov = numpy.linalg.inv(cov2d)
-    # reshape back into the desired shape (with the right axes order)
-    icov = icov.reshape((Nobsbins,Nrbins,Nobsbins,Nrbins))
-    icov = icov.transpose(2,0,3,1)
-
-    # values are actually printed in log
-    #for i1, p in enumerate(params):
-        #if 'n_Rsat' in p:
-            #j = (val1[i1] > 0)
-            #val1[i1][j] = 10**val1[i1][j]
-    # these are needed for integration and interpolation and should always
-    # be used. k=7 gives a precision better than 1% at all radii
-    if Rshape[0] == 1:
-        Rrange = numpy.logspace(log10(0.99*R.min()), log10(1.01*R.max()),
-                                2**k)
-        # this assumes that a value at R=0 will never be provided, which is
-        # obviously true in real observations
-        R = numpy.append(0, R)
-        Rrange = numpy.append(0, Rrange)
-    else:
-        Rrange = [numpy.logspace(log10(0.99*Ri.min()),
-                                 log10(1.01*Ri.max()),
-                                 2**k)
-                  for Ri in R]
-        R = [numpy.append(0, Ri) for Ri in R]
-        Rrange = [numpy.append(0, Ri) for Ri in Rrange]
-        R = numpy.array(R)
-        Rrange = numpy.array(Rrange)
-
+    # needed for offset central profile
+    R, Rrange = sampling_utils.setup_integrand(R, k)
     angles = numpy.linspace(0, 2*numpy.pi, 540)
     val1 = numpy.append(val1, [Rrange, angles])
+
+    # identify fixed and free parameters
     jfixed = (prior_types == 'fixed') | (prior_types == 'read') | \
              (prior_types == 'function')
     jfree = ~jfixed
+    ndim = len(val1[(jfree)])
+    if len(starting) != ndim:
+        msg = 'ERROR: Not all starting points defined for free parameters.'
+        print msg
+        exit()
+    print 'starting =', starting
 
     # identify the function. Raises an AttributeError if not found
     #function = model.model()
@@ -126,18 +81,19 @@ def run_emcee(sampling_options, hm_options, demo=False):
     #group_profile = params.group_profile()
     #function = model
 
-    if not demo:
+    if not args.demo:
         hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
         print 'Printing header information to', hdrfile
         hdr = open(hdrfile, 'w')
         print >>hdr, 'Started', ctime()
         print >>hdr, 'datafile', ','.join(datafile)
-        print >>hdr, 'cols', datacols
+        print >>hdr, 'cols', ','.join([str(c) for c in datacols])
         print >>hdr, 'covfile', covfile
-        print >>hdr, 'covcols', covcols
+        print >>hdr, 'covcols', ','.join([str(c) for c in covcols])
+        if exclude_bins is not None:
+            print >>hdr, 'exclude_bins', ','.join([str(c)
+                                                   for c in exclude_bins])
         print >>hdr, 'model %s' %function
-        #print >>hdr, 'sat_profile %s' %sat_profile
-        #print >>hdr, 'group_profile %s' %group_profile
         for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
                                         val1, val2, val3, val4):
             try:
@@ -152,28 +108,45 @@ def run_emcee(sampling_options, hm_options, demo=False):
         print >>hdr, 'nburn     {0:5d}'.format(nburn)
         print >>hdr, 'thin      {0:5d}'.format(thin)
         hdr.close()
-    # run chain
-    ndim = len(val1[(jfree)])
-    if len(starting) != ndim:
-        msg = 'ERROR: Not all starting points defined for uniform variables.'
-        print msg
-        exit()
-    print 'starting =', starting
 
-    if demo:
+    # are we just running a demo?
+    if args.demo:
         import pylab
+        from matplotlib import cm
         v1 = val1.copy()
         v1[jfree] = starting
         model = function(v1, R)
-        fig, axes = pylab.subplots(figsize=(5*Ndatafiles,5), ncols=Ndatafiles)
+        residuals = esd - model[0]
+        dof = esd.size - len(v1[jfree])
+        chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+                      for m in rng_obsbins for n in rng_obsbins]).sum()
+        print ' ** chi2 = %.2f/%d **' %(chi2, dof)
+        fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
+        #if exclude_bins is not None:
+            #alldata = sampling_utils.load_datapoints(datafile, datacols,
+                                                     #exclude_bins)
+            #Rall, esdall = alldata
+            #for ax, Ri
         for ax, Ri, gt, gt_err, f in izip(axes, R, esd, esd_err, model[0]):
             ax.errorbar(Ri[1:], gt, yerr=gt_err, fmt='ko', ms=10)
-            ax.plot(Ri[1:], f, 'r-', lw=2)
+            ax.plot(Ri[1:], f, 'r-', lw=3)
             ax.set_xscale('log')
+        if npall(esd - esd_err > 0):
+            for ax in axes:
+                ax.set_yscale('log')
         fig.tight_layout(w_pad=0.01)
-        fig.show()
-        return
+        pylab.show()
+        fig, axes = pylab.subplots(figsize=(8,8), nrows=cov.shape[0],
+                                   ncols=cov.shape[0])
+        for m, axm in enumerate(axes):
+            for n, axmn in enumerate(axm):
+                axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
+                            cmap=cm.CMRmap_r)
+        fig.tight_layout()
+        pylab.show()
+        exit()
 
+    # set up starting point for all walkers
     po = starting * numpy.random.uniform(0.99, 1.01, size=(nwalkers,ndim))
     lnprior = zeros(ndim)
     mshape = meta_names.shape
@@ -203,22 +176,18 @@ def run_emcee(sampling_options, hm_options, demo=False):
                                           params,prior_types[jfree],
                                           val1,val2,val3,val4,
                                           jfree,lnprior,likenorm,
-                                          #sat_profile,group_profile,
                                           rng_obsbins,fail_value,
                                           array,dot,inf,izip,outer,pi))
                                           #isfinite,log,log10
                                           #outer,sqrt,zeros))
     # burn-in
     if nburn > 0:
-        #to = time()
         pos, prob, state = sampler.run_mcmc(po, nburn)
         sampler.reset()
-        #print 'Burn-in phase finished in %.2f min' %((time() - to) / 60)
-        print 'Burn-in phase finished ({0})'.format(ctime())
+        print '{0} Burn-in steps finished ({1})'.format(nburn, ctime())
     else:
         pos = po
     # incrementally save output
-    #to = time()
     chi2 = [zeros(nwalkers*nsteps/thin) for i in xrange(4)]
     nwritten = 0
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
@@ -231,32 +200,33 @@ def run_emcee(sampling_options, hm_options, demo=False):
                                 array, BinTableHDU, Column, ctime, enumerate,
                                 isfile, izip, transpose, xrange)
             metadata, nwriten = out
-            #print 'nwritten =', nwritten, i
-    #hdr = open(hdrfile, 'a')
-    #try:
-        #print 'acceptance_fraction =', sampler.acceptance_fraction
-        #print >>hdr, 'acceptance_fraction =',
-        #for af in sampler.acceptance_fraction:
-            #print >>hdr, af,
-    #except ImportError:
-        #pass
-    #try:
-        #print 'acor =', sampler.acor
-        #print >>hdr, '\nacor =',
-        #for ac in sampler.acor:
-            #print >>hdr, ac,
-    #except ImportError:
-        #pass
-    #try:
-        #print 'acor_time =', sampler.get_autocorr_time()
-        #print >>hdr, '\nacor_time =',
-        #for act in sampler.get_autocorr_time():
-            #print >>hdr, act,
-    #except AttributeError:
-        #pass
-    #print >>hdr, '\nFinished', ctime()
-    #hdr.close()
+
+    hdr = open(hdrfile, 'a')
+    try:
+        print 'acceptance_fraction =', sampler.acceptance_fraction
+        print >>hdr, 'acceptance_fraction =',
+        for af in sampler.acceptance_fraction:
+            print >>hdr, af,
+    except ImportError:
+        pass
+    try:
+        print 'acor =', sampler.acor
+        print >>hdr, '\nacor =',
+        for ac in sampler.acor:
+            print >>hdr, ac,
+    except ImportError:
+        pass
+    try:
+        print 'acor_time =', sampler.get_autocorr_time()
+        print >>hdr, '\nacor_time =',
+        for act in sampler.get_autocorr_time():
+            print >>hdr, act,
+    except AttributeError:
+        pass
+    print >>hdr, '\nFinished', ctime()
+    hdr.close()
     print 'Saved to', hdrfile
+
     cmd = 'mv {0} {1}'.format(output, output.replace('.fits', '.temp.fits'))
     print cmd
     os.system(cmd)
@@ -267,16 +237,14 @@ def run_emcee(sampling_options, hm_options, demo=False):
                   fits_format, i+1, nwritten, Nobsbins,
                   array, BinTableHDU, Column, ctime, enumerate,
                   isfile, izip, transpose, xrange)
+    os.remove(output.replace('.fits', '.temp.fits'))
     print 'Everything saved to {0}!'.format(output)
     return
 
 def lnprob(theta, R, esd, icov, function, params,
            prior_types, val1, val2, val3, val4, jfree, lnprior, likenorm,
-           #sat_profile, group_profile,
-           rng_obsbins, fail_value,
-           array, dot, inf, izip, outer, pi):
-           #array, dot, inf, izip, isfinite,
-           #log, log10, sqrt):
+           rng_obsbins, fail_value, array, dot, inf, izip, outer, pi):
+           #array, dot, inf, izip, isfinite, log, log10, sqrt):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
     given a model, times the prior on the model parameters.
@@ -354,7 +322,6 @@ def lnprob(theta, R, esd, icov, function, params,
     v1[jfree] = theta
 
     model = function(v1, R)
-    #model = foo(v1, R)
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
@@ -405,19 +372,19 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                         data[i] = transpose([b[i] for b in blob],
                                             axes=(1,0,2))
             # each k is one satellite radial bin
-            if len(data) == 1:
-                # not working but not sure will ever use it
-                metadata[0][0][j*nwalkers:(j+1)*nwalkers] = data[0]
-                if shape[1] == 4:
-                    metadata[0][1][j*nwalkers:(j+1)*nwalkers] = data[1]
-                    metadata[0][2][j*nwalkers:(j+1)*nwalkers] = data[2]
-                    metadata[0][3][j*nwalkers:(j+1)*nwalkers] = data[3]
-            # this is the fiducial case with the three bins
-            # note that all values have three bins!
-            else:
-                for k, datum in enumerate(data):
-                    for i in xrange(len(datum)):
-                        metadata[k][i][j*nwalkers:(j+1)*nwalkers] = datum[i]
+            #if len(data) == 1:
+                ## not working but not sure will ever use it
+                #metadata[0][0][j*nwalkers:(j+1)*nwalkers] = data[0]
+                #if shape[1] == 4:
+                    #metadata[0][1][j*nwalkers:(j+1)*nwalkers] = data[1]
+                    #metadata[0][2][j*nwalkers:(j+1)*nwalkers] = data[2]
+                    #metadata[0][3][j*nwalkers:(j+1)*nwalkers] = data[3]
+            ## this is the fiducial case with the three bins
+            ## note that all values have three bins!
+            #else:
+            for k, datum in enumerate(data):
+                for i in xrange(len(datum)):
+                    metadata[k][i][j*nwalkers:(j+1)*nwalkers] = datum[i]
             lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
                                                            for b in blob])
             lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])

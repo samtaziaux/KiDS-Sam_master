@@ -50,13 +50,13 @@ def run_emcee(hm_options, sampling_options, args):
 
     #load data files
     Ndatafiles = len(datafile)
-    R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins)
+    R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins=None)
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = xrange(Nobsbins)
     rng_rbins = xrange(Nrbins)
     # load covariance
     cov = sampling_utils.load_covariance(covfile, covcols,
-                                         Nobsbins, Nrbins, exclude_bins)
+                                         Nobsbins, Nrbins, exclude_bins=None)
     cov, icov, likenorm, esd_err, cov2d = cov
 
     # needed for offset central profile

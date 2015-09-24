@@ -401,13 +401,13 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
     # Defining the comoving and angular distance to the galaxy center
     if 'pc' in Runit: # Rbins in a multiple of pc
-        galZlist = gamacat['Z'] # Central Z of the galaxy
+        galZlist = gamacat['Zfof'] # Central Z of the galaxy
         Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) for z in galZlist]) # Distance in pc/h, where h is the dimensionless Hubble constant
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
         Dcllist = np.degrees(np.ones(len(galIDlist))) # Distance in degree on the sky
 
-    if lensid_file is not 'None':
+    if lensid_file != 'None':
         lensid = np.loadtxt(lensid_file)
         match_idfile = np.in1d(galIDlist, lensid)
         # I cannot modify the length of the pyfits arrays but creating a

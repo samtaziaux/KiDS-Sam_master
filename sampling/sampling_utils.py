@@ -21,7 +21,7 @@ def load_datapoints(datafile, datacols, exclude_bins=None):
         R, esd = numpy.transpose([numpy.loadtxt(df, usecols=datacols[:2])
                                   for df in datafile], axes=(2,0,1))
         if len(datacols) == 3:
-            oneplusk = array([numpy.loadtxt(df, usecols=[datacols[2]])
+            oneplusk = numpy.array([numpy.loadtxt(df, usecols=[datacols[2]])
                               for df in datafile])
             esd /= oneplusk
         for i in xrange(len(R)):

@@ -34,7 +34,8 @@ def define_runparams(purpose, lens_binning, ncores, blindcats):
         nruns = 1
 
     # Binnning information of the groups
-    binname, lens_binning, nobsbins, binmin, binmax = shear.define_obsbins(1, lens_binning, [], [])
+    obsbins = shear.define_obsbins(1, lens_binning, [], [])
+    binname, lens_binning, nobsbins, binmin, binmax = obsbins
     nobsbin = nobsbins # Starting value
 
     # Prepare the values for nsplits and nobsbins
@@ -50,7 +51,8 @@ def define_runparams(purpose, lens_binning, ncores, blindcats):
     return nruns, nsplits, nsplit, nobsbins, nobsbin, blindcat
 
     
-def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat, blindcats, config_file):
+def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
+                   blindcat, blindcats, config_file):
 
     # The shear calculation starts here
     directory = os.getcwd()
@@ -66,9 +68,11 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
 
             for nsplit in np.arange(nsplits)+1:
                 
-                splitsname = 'python -W ignore %sshear+covariance.py'%(path_shearcodes)
+                splitsname = 'python -W ignore %sshear+covariance.py' \
+                             %(path_shearcodes)
                 splitsname += ' %i %i %i %s %s &' \
-                            %(nsplit, nsplits, nobsbin, blindcat, config_file)
+                              %(nsplit, nsplits, nobsbin,
+                                blindcat, config_file)
                 p = sub.Popen(shlex.split(splitsname))
                 ps.append(p)
         for p in ps:
@@ -91,15 +95,21 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat,
 
     # Stacking the lenses into an ESD profile
     if ('bootstrap' in purpose) or ('catalog' in purpose):
-        runblinds('%sstack_shear+bootstrap.py'%(path_shearcodes), blindcats, nsplit, nsplits, nobsbin, config_file)        
+        runblinds('%sstack_shear+bootstrap.py' \
+                  %(path_shearcodes), blindcats,
+                    nsplit, nsplits, nobsbin, config_file)        
 
     # Creating the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
-        runblinds('%scombine_covariance+bootstrap.py'%(path_shearcodes), blindcats, nsplit, nsplits, nobsbin, config_file)
+        runblinds('%scombine_covariance+bootstrap.py' \
+                  %(path_shearcodes), blindcats,
+                    nsplit, nsplits, nobsbin, config_file)
 
     # Plotting the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
-        runblinds('%splot_covariance+bootstrap.py'%(path_shearcodes), blindcats, nsplit, nsplits, nobsbin, config_file)
+        runblinds('%splot_covariance+bootstrap.py' \
+                  %(path_shearcodes), blindcats,
+                    nsplit, nsplits, nobsbin, config_file)
 
     return
     
@@ -133,10 +143,12 @@ def run_esd(config_file):
     print
 
     # Define the initial parameters for this shearcode run
-    nruns, nsplits, nsplit, nobsbins, nobsbin, blindcat = define_runparams(purpose, lens_binning, ncores, blindcats)
+    runparams = define_runparams(purpose, lens_binning, ncores, blindcats)
+    nruns, nsplits, nsplit, nobsbins, nobsbin, blindcat = runparams
     
     # Excecute the parallelized shearcode run
-    run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins, blindcat, blindcats, config_file)
+    run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
+                   blindcat, blindcats, config_file)
 
     end_tot = (time.time()-start_tot)/60
     print 'Finished in: %g minutes' %end_tot

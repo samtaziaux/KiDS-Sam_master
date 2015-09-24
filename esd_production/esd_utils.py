@@ -21,6 +21,9 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
     src_selection = {}
     model_params = []
     sampler_params = []
+    kids_path = 'None'
+    gama_path = 'None'
+    filename = 'None'
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -119,11 +122,11 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             pass
         """
         
-    try: # If a custom lens catalog was given
-        gama_path = lens_catalog
-        print 'Lens catalog:', lens_catalog
-    except:
-        pass
+    #try: # If a custom lens catalog was given
+        #gama_path = lensid_file
+        #print 'Lens catalog:', lensid_file
+    #except:
+        #pass
         
         
     out = (kids_path, gama_path,

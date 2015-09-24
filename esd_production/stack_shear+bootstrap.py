@@ -72,7 +72,7 @@ def main():
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights)
+    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file)
 
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 

@@ -3,7 +3,7 @@ import os
 from glob import glob
 #from ConfigParser import SafeConfigParser
 
-def load_datapoints(datafile, datacols, exclude_bins=None):
+def load_datapoints(datafile, datacols, exclude_bins):
     if type(datafile) == str:
         R, esd = numpy.loadtxt(datafile, usecols=datacols[:2]).T
         # better in Mpc
@@ -34,7 +34,7 @@ def load_datapoints(datafile, datacols, exclude_bins=None):
                                 if j not in exclude_bins] for esdi in esd])
     return R, esd
 
-def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
+def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins):
     cov = numpy.loadtxt(covfile, usecols=[covcols[0]])
     if len(covcols) == 2:
         cov /= numpy.loadtxt(covfile, usecols=[covcols[1]])

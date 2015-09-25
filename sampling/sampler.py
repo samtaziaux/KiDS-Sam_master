@@ -25,7 +25,7 @@ def run_emcee(hm_options, sampling_options, args):
         val1, val2, val3, val4, hm_functions, \
         starting, meta_names, fits_format = hm_options
     # load MCMC sampler setup
-    datafile, datacols, covfile, covcols, output, \
+    datafile, datacols, covfile, covcols, exclude_bins, output, \
         sampler, nwalkers, nsteps, nburn, \
         thin, k, threads, sampler_type = sampling_options
 
@@ -158,7 +158,7 @@ def run_emcee(hm_options, sampling_options, args):
             if len(f) == 1:
                 metadata[j].append(zeros(nwalkers*nsteps/thin))
             else:
-                size = (nwalkers*nsteps/thin, int(f[:-1]))
+                size = (nwalkers*nsteps/thin, int(f[:-1])-len(exclude_bins))
                 metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     fail_value = []

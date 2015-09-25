@@ -48,5 +48,5 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
 - Make sure you have tested your model using the demo before you set up a full run!
 - After running a demo, run an MCMC chain of your model with as few steps as possible to make sure that the output looks the way you want it to look. Fix anything that you can and report any possible bugs.
-- Always check how many cores are available in your machine before running on parallel.
+- Always check how many cores are available in your machine before running in parallel.
 - **Contribute!**

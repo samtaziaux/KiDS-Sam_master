@@ -158,7 +158,10 @@ def run_emcee(hm_options, sampling_options, args):
             if len(f) == 1:
                 metadata[j].append(zeros(nwalkers*nsteps/thin))
             else:
-                size = (nwalkers*nsteps/thin, int(f[:-1])-len(exclude_bins))
+                if exclude_bins is not None:
+                    size = (nwalkers*nsteps/thin, int(f[:-1])-len(exclude_bins))
+                else:
+                    size = (nwalkers*nsteps/thin, int(f[:-1]))
                 metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     fail_value = []

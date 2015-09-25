@@ -90,16 +90,7 @@ def read_config(config_file, version='0.5.7',
                 path_data='', path_covariance=''):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
                    'fixed', 'read', 'function')
-    params = []
-    param_types = []
-    prior_types = []
-    val1 = []
-    val2 = []
-    val3 = []
-    val4 = []
-    starting = []
-    meta_names = []
-    fits_format = []
+    exclude_bins = None
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -115,6 +106,8 @@ def read_config(config_file, version='0.5.7',
             if len(datacols) not in (2,3):
                 msg = 'datacols must have either two or three elements'
                 raise ValueError(msg)
+        elif line[0] == 'exclude_bins':
+            exclude_bins = [int(i) for i in line[1].split(',')]
         if line[0] == 'path_covariance':
             path_covariance = line[1]
         elif line[0] == 'covariance':
@@ -159,7 +152,7 @@ def read_config(config_file, version='0.5.7',
         raise ValueError(msg)
     covfile = covfile[0]
 
-    out = (datafiles, datacols, covfile, covcols, output,
+    out = (datafiles, datacols, covfile, covcols, exclude_bins, output,
            sampler, nwalkers, nsteps, nburn, thin, k, threads,
            sampler_type)
     return out

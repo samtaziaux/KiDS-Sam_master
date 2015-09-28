@@ -103,7 +103,7 @@ def main():
 
 
     # Calculate the source variance
-    """
+#    """
     w_varlist = np.array([])
     e1_varlist = np.array([[]]*4) # These lists will contain all used ellipticities for the variance calculation
     e2_varlist = np.array([[]]*4)
@@ -124,9 +124,9 @@ def main():
         e2_varlist = np.hstack([e2_varlist, e2.T])
 
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist) # Calculating the variance of the ellipticity for this source selection
-    """
+#    """
     # !!!!!!! This is temporary, to speed up the code !!!!!!
-    variance = np.array([0.06423509, 0.08734607, 0.07392235, 0.07810604])
+#    variance = np.array([0.06423509, 0.08734607, 0.07392235, 0.07810604])
 
 
     # Binnning information of the groups

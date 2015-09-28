@@ -72,14 +72,14 @@ def input_variables():
     centers = np.array(['Cen', 'IterCen', 'BCG'])
     centering = 'None'
     for cen in centers:
-        if ('rank%s' %cen in binname) or \
-            ('rank%s' %cen in lens_selection.keys()):
+        if ('Rank%s'%cen in binname) or \
+            ('Rank%s'%cen in lens_selection.keys()):
             centering = cen
             print 'Center definition = %s'%centering
     if centering == 'Cen':
-        lens_selection['rank%s'%centering] = ['self', np.array([1])]
+        lens_selection['Rank%s'%centering] = ['self', np.array([1])]
         msg = 'WARNING: With the Cen definition,'
-        msg += ' you can only use Centrals (rank = 1)'
+        msg += ' you can only use Centrals (Rank = 1)'
         print msg
 
     # Creating all necessary folders
@@ -401,7 +401,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
     # Defining the comoving and angular distance to the galaxy center
     if 'pc' in Runit: # Rbins in a multiple of pc
-        galZlist = gamacat['Zfof'] # Central Z of the galaxy
+        galZlist = gamacat['Z'] # Central Z of the galaxy
         Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) for z in galZlist]) # Distance in pc/h, where h is the dimensionless Hubble constant
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
@@ -471,7 +471,7 @@ def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS 
 def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose):
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
-    Rmax = Rmax + Rfield
+#    Rmax = Rmax + Rfield
 
     catmatch = dict()
     totgalIDs = np.array([])
@@ -541,7 +541,6 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
             catmatch[kidscat] = np.append(catmatch[kidscat], galIDs, 0)
 
 
-    #			print kidscat, Rmax
     #			print 'Average(R):', np.average(catR[coordmask]), ', Max(R):', np.amax(catR[coordmask]), ', Average(RA):', np.average(galRAlist[coordmask]), ', Average(DEC):', np.average(galDEClist[coordmask])
 
     kidscats = catmatch.keys()

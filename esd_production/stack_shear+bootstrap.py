@@ -72,7 +72,7 @@ def main():
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file)
+    purpose.replace('bootstrap', 'catalog'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file)
 
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
@@ -128,7 +128,7 @@ def main():
         lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
 
         if debug:
-            print 'lenssel:', len(lenssel)
+            print 'lenssel:', sum(lenssel)
             print 'galIDlist:', len(galIDlist)
 
         [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms] = [gallist[lenssel] for gallist in [galIDlist, gammatlist, gammaxlist, wk2list, w2k2list, srcmlist]] # Mask all quantities
@@ -213,12 +213,18 @@ def main():
             plotlabel = r'ESD$_t$'
         else:
             plotlabel = r'%.3g $\leq$ %s $\textless$ %.3g (%i lenses)'%(binmin, binname.replace('_', ''), binmax, len(galIDs_matched))
-
-        shear.define_plot(plotname, plotlabel, plottitle, plotstyle, Nobsbins, binnum, Runit, h)
-
-    # Writing and showing the plot
-    shear.write_plot(plotname, plotstyle)
         
+        try:
+            shear.define_plot(plotname, plotlabel, plottitle, plotstyle, Nobsbins, binnum, Runit, h)
+        except:
+            pass
+        
+    # Writing and showing the plot
+    try:
+        shear.write_plot(plotname, plotstyle)
+    except:
+        print 'Failed to write ESD plot for:', plotname 
+    
     return
 
 main()

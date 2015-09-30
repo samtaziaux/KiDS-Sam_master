@@ -58,16 +58,16 @@ def input_variables():
     else:
         filename_addition = '_%s'%filename_addition
     
-    # Defining the lens-ID lens selection/binning
-    if 'None' not in lensid_file:
-        lens_selection = define_lensid_selection(lensid_file, lens_selection)
-        lens_selection, lens_binning, binname = lens_selection
-        #print lens_selection, lens_binning
     
     # Binnning information of the lenses
     obsbins = define_obsbins(1, lens_binning, [], [])
     binname, lens_binning, Nobsbins, binmin, binmax = obsbins
-
+    
+    # Defining the lens-ID lens selection/binning
+    if 'None' not in lensid_file:
+        selection = define_lensid_selection(lensid_file, lens_selection, lens_binning, binname)
+        lens_selection, lens_binning, binname = selection
+    
     # Defining the center definition
     centers = np.array(['Cen', 'IterCen', 'BCG'])
     centering = 'None'
@@ -164,24 +164,20 @@ def input_variables():
 
 
 # Defining the lensID lens selection/binning
-def define_lensid_selection(lensid_file, lens_selection):
+def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname):
     
-    #binname = 'ID'
-    binname = 'CATAID'
+    IDname = 'ID'
     
-    # If there is only one lensID bin -> selection
-    lens_binning = {}
     lensid_files = lensid_file.split(',')
-    if len(lensid_files) == 1:
+
+    if len(lensid_files) == 1: # If there is only one lensID bin -> selection
         lensids = np.loadtxt(lensid_files[0])
-        #lens_selection['ID'] = ['self', lensids]
-        #lens_binning['ID'] = 'None'
-        lens_selection[binname] = ['self', lensids]
-        lens_binning[binname] = 'None'
+        lens_selection[IDname] = ['self', lensids]
     else: # If there are multiple lensID bins -> binning
+        binname = IDname
+        lens_binning = dict()
         for i, f in enumerate(lensid_files):
             lensids = np.loadtxt(f)
-            #lens_binning['IDbin%i' %i] = ['self', lensids]
             lens_binning['%sbin%i' %(binname, i)] = ['self', lensids]
 
     return lens_selection, lens_binning, binname
@@ -193,14 +189,20 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
     selnames = np.sort(selection.keys())
     for selname in selnames:
         sellims = (selection[selname])[1]
-        if len(sellims) == 1:
-            filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
-            var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
-            plottitle = '%s %s = %g,'%(plottitle, selname, sellims[0])
+
+        if 'ID' in selname:
+            filename_var = '%s_%ss%g'%(filename_var, selname, len(sellims))
+            var_print = '%s #%ss = %g,'%(var_print, selname, len(sellims))
+            plottitle = '%s $\#$ %ss = %g,'%(plottitle, selname, len(sellims))
         else:
-            filename_var = '%s_%s%g~%g'%(filename_var, selname, sellims[0], sellims[1])
-            var_print = '%s %s-limit: %g - %g,'%(var_print, selname, sellims[0], sellims[1])
-            plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, sellims[0], selname, sellims[1])
+            if len(sellims) == 1:
+                filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
+                var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
+                plottitle = '%s %s = %g,'%(plottitle, selname, sellims[0])
+            else:
+                filename_var = '%s_%s%g~%g'%(filename_var, selname, sellims[0], sellims[1])
+                var_print = '%s %s-limit: %g - %g,'%(var_print, selname, sellims[0], sellims[1])
+                plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, sellims[0], selname, sellims[1])
         
     return filename_var, var_print, plottitle
 
@@ -287,7 +289,7 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpo
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     import_gamacat(path_gamacat, centering, purpose, Ncat, \
-    O_matter, O_lambda, Ok, h, Runit, lens_weights, lensid_file)
+    O_matter, O_lambda, Ok, h, Runit, lens_weights)
     
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats)
@@ -360,7 +362,7 @@ def define_Rbins(path_Rbins, Runit):
 
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
 def import_gamacat(path_gamacat, centering, purpose, Ncat, \
-                    O_matter, O_lambda, Ok, h, Runit, lens_weights, lensid_file):
+                    O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
     randomcatname = '/disks/shear9/brouwer/shearprofile/shear_2.1/gen_ran_out.randoms.fits'
 
@@ -369,10 +371,10 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
     gamacat = pyfits.open(path_gamacat, ignore_missing_end=True)[1].data
 
-    try:
-        galIDlist = gamacat['ID'] # IDs of all galaxies
-    except KeyError:
-        galIDlist = gamacat['CATAID']
+
+    galIDlist = gamacat['ID'] # IDs of all galaxies
+#    except KeyError:
+#        galIDlist = gamacat['CATAID']
     
     if centering == 'Cen':
         galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)
@@ -394,7 +396,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
     #Defining the lens weights
     weightname = lens_weights.keys()[0]
-    if weightname != 'None':
+    if 'No' not in weightname:
         galweightlist = pyfits.open(lens_weights.values()[0])[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
@@ -407,6 +409,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         galZlist = np.zeros(len(galIDlist)) # No redshift
         Dcllist = np.degrees(np.ones(len(galIDlist))) # Distance in degree on the sky
 
+    """
     if lensid_file != 'None':
         lensid = np.loadtxt(lensid_file)
         match_idfile = np.in1d(galIDlist, lensid)
@@ -426,6 +429,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         for name in gamacat.names:
             newgamacat[name] = gamacat[name]
     gamacat = newgamacat
+    """
 
     Dallist = Dcllist/(1+galZlist) # The angular diameter distance to the galaxy center
 
@@ -749,7 +753,7 @@ def define_obslist(obsname, gamacat):
 def define_lenssel(gamacat, centering, lens_selection, lens_binning,
                    binname, binnum, binmin, binmax):
 
-    lenssel = np.ones(len(gamacat[gamacat.keys()[0]]), dtype=bool)
+    lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
     #binname = 'No'
     

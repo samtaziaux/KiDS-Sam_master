@@ -90,7 +90,7 @@ def main():
         try:
             shear.write_plot(filenameESD, plotstyle)
         except:
-            pass
+            print "Failed to create ESD Plot of:", filenameESD
 
     # Creating the ueber-matrix plot
     filename_N1 = filename_var.replace('binnumof', 's')
@@ -106,16 +106,16 @@ def main():
     try:
         shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname, lens_binning, Rbins, Runit, h)
     except:
-        pass
+        print "Failed to create Matrix Plot of", filenamecov
 
-    """
+    
     # Remove the used splits
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-    """
+    
     return
     
 main()

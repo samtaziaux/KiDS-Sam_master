@@ -72,3 +72,32 @@ def fiducial(theta, R, h=1, Om=0.315, Ol=0.685):
     Mavg = fsat * Msat + (1-fsat) * Mcentral
     out = [esd_total, esd_sat, esd_host, esd_central, Mavg, 0]
     return out
+    
+    
+def centrals(theta, R, h=1, Om=0.315, Ol=0.685):
+    # local variables are accessed much faster than global ones
+    _array = array
+    _cM_duffy08 = cM_duffy08
+    _cumsum = cumsum
+    _delta = delta
+    _izip = izip
+
+    central_profile, fc_central, logMcentral, z, Mstar, Rrange, angles = theta
+
+    Mcentral = _array([logMcentral])
+    ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
+    # some auxiliaries
+    rho_m = density_average(z, h, Om, Ol)
+    aux = 200*rho_m * 4*3.14159265/3
+    #r200_gr = (Mcentral / aux) ** (1./3)
+    rs_cent = (Mcentral / aux) ** (1./3) / ccentral
+    sigma_central = rs_cent * _delta(ccentral) * rho_m
+    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2)
+                 for Mi, Ri in izip(Mstar, R)]
+    # central signal
+    esd_central = [pm + central_profile(Ri[1:]/rs, sigma)
+                   for pm, Ri, rs, sigma in izip(pointmass, R,
+                                                 rs_cent, sigma_central)]
+    esd_central = _array(esd_central)
+    out = [esd_central, Mcentral, ccentral, rho_m, rs_cent, sigma_central, pointmass, 0]
+    return out

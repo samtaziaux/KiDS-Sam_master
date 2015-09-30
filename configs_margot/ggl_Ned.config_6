@@ -29,19 +29,19 @@ ncores                1                                # Any number of cores you
 
 # Lens selection
 
-lensID_file        None                                                                                 # Path to text file with chosen lens IDs (optional).
+#lensID_file        None                                                                                 # Path to text file with chosen lens IDs (optional).
+lensID_file       /data2/brouwer/shearprofile/KiDS-GGL/configs_margot/Ned/Ned_lensIDs_6.txt
 
 #lens_weights      mstarweight   ../brouwer/environment_project/mstarweight.fits                        # Weight name and path to fits file with lens weights (optional). (Not yet working)
 lens_weights       None    
 
-#lens_binning      None                                                                                 # Lens parameter for binning, path to fits file (choose "self" for same as lens catalog), and 
-#lens_binning      envS4          self                                                      0,1,2,3,4   #     bin edges (at least 3 edges, bin[i-1] <= x < bin[i]), or the number of bins.
-lens_binning       logage         self                                                      0,9.3,9.5,inf
+lens_binning       None
+#lens_binning      logmstar       self              9.7,10.2,10.55,10.9,11.1,11.2,11.35,11.5,12.0          # Lens parameter for binning, path to fits file (choose "self" for same as lens catalog), and 
+#lens_binning      logmstar       self                                             10.3,10.8,11.1          #     bin edges (at least 3 edges, bin[i-1] <= x < bin[i]), or the number of bins.
 
-lens_limits1       logmstar       self                                                      10.3,10.8
-#lens_limits1      RankBCG        self                                                      1           # Lens parameter for limits, path to fits file (choose "self" for same as lens catalog), and 
-#lens_limits2      Nfof           self                                                      5,inf       #      (one value) or (two comma separated limits) between -inf and inf.
-
+#lens_limits1      logage         self                                             0.,9.3,9.5,inf           # Lens parameter for limits, path to fits file (choose "self" for same as lens catalog), and 
+#lens_limits1      logage         self                                             0.,9.3,9.5,inf           #      (one value) or (two comma separated limits) between -inf and inf.
+#lens_limits1      logage         self                                             0.,9.3,9.5,inf
 
 # Source selection
 src_limits1           Z_B        0.005,1.2             # Source parameter for limits and one value, or
@@ -54,41 +54,17 @@ src_limits1           Z_B        0.005,1.2             # Source parameter for li
 model             nfw_stack.fiducial          # the name of the halo model python function
 
 # Halo model parameters
-hm_param          sat_profile     function    nfw.esd
 hm_param          host_profile    function    nfw.esd_offset
 hm_param          central_profile function    nfw.esd
-hm_param          Rsat            read        /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/Angsephist_envS4bin.txt  0
-hm_param          n_Rsat1         read        /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/Angsephist_envS4bin.txt  1
-hm_param          n_Rsat2         read        /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/Angsephist_envS4bin.txt  2
-hm_param          n_Rsat3         read        /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/Angsephist_envS4bin.txt  3
-hm_param          n_Rsat4         read        /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/Angsephist_envS4bin.txt  4
-hm_param          Rsat            read        brouwer/environment_project/Angsephist_envS4bin.txt 0
-hm_param          n_Rsat1         read        brouwer/environment_project/Angsephist_envS4bin.txt  1
-hm_param          n_Rsat2         read        brouwer/environment_project/Angsephist_envS4bin.txt  2
-hm_param          n_Rsat3         read        brouwer/environment_project/Angsephist_envS4bin.txt  3
-hm_param          n_Rsat4         read        brouwer/environment_project/Angsephist_envS4bin.txt  4
-hm_params         fsat            fixed       0.186168,0.276374,0.374559,0.465667
-hm_param          fc_sat          fixed       1.0
-hm_param          Msat1           uniform     1e7     1e13      5e11
-hm_param          Msat2           uniform     1e7     1e13      5e11
-hm_param          Msat3           uniform     1e7     1e13      5e11
-hm_param          Msat4           uniform     1e7     1e13      5e11
-hm_param          fc_group        uniform     0       2         0.5
 hm_param          Mgroup1         uniform     1e10   1e15      5e13
 hm_param          Mgroup2         uniform     1e10   1e15      5e13
 hm_param          Mgroup3         uniform     1e10   1e15      5e13
 hm_param          Mgroup4         uniform     1e10   1e15      5e13
-hm_params         zgal            fixed       0.210286,0.232955,0.249876,0.270485
-hm_params         Mstar           fixed       4.25431e+10,5.63205e+10,6.83098e+10,8.72784e+10
-#hm_functions     abs,min
-#hm_functions     itertools izip
-#hm_functions     numpy     array,cumsum,digitize,log,all,transpose,zeros
-#hm_functions     nfw       mass_total_sharp
-#hm_functions     utils     cm_duffy08,delta,nfw_profile
+hm_params         zgal            fixed       
+hm_params         Mstar           fixed       
 
 # these are extras returned by the model; last column are the fits formats (see pyfits docs)
 hm_output         esd_total1,esd_total2,esd_total3,esd_total4            10E,10E,10E,10E
-hm_output         esd_sat1,esd_sat2,esd_sat3,esd_sat4                    10E,10E,10E,10E
 hm_output         esd_host1,esd_host2,esd_host3,esd_host4                10E,10E,10E,10E
 hm_output         esd_central1,esd_central2,esd_central3,esd_central4    10E,10E,10E,10E
 hm_output         Mavg1,Mavg2,Mavg3,Mavg4                                E,E,E,E

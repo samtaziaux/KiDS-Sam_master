@@ -43,7 +43,7 @@ def run_emcee(hm_options, sampling_options, args):
         answer = raw_input(msg)
         if len(answer) == 0:
             exit()
-        if answer[0].lower() != 'y':
+        if answer.lower() not in ('y', 'yes'):
             exit()
     if not args.demo:
         print 'Started -', ctime()
@@ -158,10 +158,9 @@ def run_emcee(hm_options, sampling_options, args):
             if len(f) == 1:
                 metadata[j].append(zeros(nwalkers*nsteps/thin))
             else:
+                size = [nwalkers*nsteps/thin, int(f[:-1])]
                 if exclude_bins is not None:
-                    size = (nwalkers*nsteps/thin, int(f[:-1])-len(exclude_bins))
-                else:
-                    size = (nwalkers*nsteps/thin, int(f[:-1]))
+                    size[1] -= len(exclude_bins)
                 metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     fail_value = []

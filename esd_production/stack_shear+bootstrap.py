@@ -2,7 +2,7 @@
 
 "Part of the module to determine the shear as a function of radius from a galaxy."
 
-debug = True
+debug = False
 
 # Import the necessary libraries
 import pyfits

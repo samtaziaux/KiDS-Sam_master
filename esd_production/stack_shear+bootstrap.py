@@ -2,7 +2,7 @@
 
 "Part of the module to determine the shear as a function of radius from a galaxy."
 
-debug = False
+debug = True
 
 # Import the necessary libraries
 import pyfits
@@ -72,7 +72,8 @@ def main():
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('bootstrap', 'catalog'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file)
+    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file)
+    # The bootstrap lens-field matching is used to prevent duplicated lenses.
 
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
@@ -152,7 +153,7 @@ def main():
             matched_galIDs = np.array(catmatch[kidscats[k]]) # The ID's of the galaxies that lie in this field
             field_mask = np.in1d(galIDs, matched_galIDs) # Define the mask
             [galID, gammat, gammax, wk2, w2k2, srcm] = [gallist[field_mask] for gallist in [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms]] # Mask all quantities
-            
+
             if len(gammat) > 0: # If there are lenses in this field...
                 field_shears[k] = np.array([sum(gammat,0), sum(gammax,0), sum(wk2,0), sum(w2k2,0), sum(srcm,0)]) # Add the field to the ESD-profile table
             
@@ -181,11 +182,11 @@ def main():
         shear_sample = np.array(np.sum(field_shears, 0)) # Sum all fields
         
         gammat, gammax, wk2, w2k2, srcm = [shear_sample[x] for x in xrange(5)] # The summed quantities
-
+        if debug:
+            print 'gammat:', gammat/1.e6
         output = np.array(shear.calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum)) # Write the output to the bootstrap sample table
 
         ESDt_tot, ESDx_tot, error_poisson, bias_tot = [output[x] for x in xrange(len(outputnames))]
-
         if 'bootstrap' not in purpose:
             error_tot = error_poisson
 

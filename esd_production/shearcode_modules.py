@@ -1001,7 +1001,7 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, bias_t
     print 'Written: ESD profile data:', filename
 
 
-    if len(galIDs_matched)>0 and blindcatnum == 0:
+    if len(galIDs_matched)>0 and blindcatnum == 3:
         # Writing galID's to another file
         galIDsname_split = filename.rsplit('_',1)
         galIDsname = '%s_lensIDs.txt'%galIDsname_split[0]
@@ -1106,8 +1106,8 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
     errorl[errorl==-999] = np.nan
 
 
-    if type(Nsubplots) != int:
-        data_x = data_x + n*0.1*data_x
+#    if type(Nsubplots) != int:
+#        data_x = data_x + n*0.1*data_x
 
     if 'lin' in plotstyle:
 

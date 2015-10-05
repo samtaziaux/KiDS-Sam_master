@@ -1,0 +1,48 @@
+### General settings ###
+
+# Source and lens catalogues
+KiDS_path           /data2/brouwer/KidsCatalogues/LF_cat_DR2_v2             # Path to folder that contains the KiDS catalogs (optional - supersedes KiDS_version).
+GAMA_path           /data2/brouwer/MergedCatalogues/GAMACatalogue_1.0.fits  # Path the GAMA catalog (optional - supersedes GAMA_version).
+# lens_catalog      /data2/brouwer/MergedCatalogues/troughs.fits            # Path to the fits file with your custom lens catalogue (supersedes GAMA catalog),
+                                                                            #     containing columns for: 'ID', 'RA', 'DEC', optional: 'Z' (if Runit = *pc), used lens paramaters.
+
+# cosmology
+Om                  0.315                                       # Omega matter.
+Ol                  0.685                                       # Omega Lambda. (Not yet working, please use: 1-Om)
+Ok                  0                                           # Omega curvature. (Not yet working, please use: 0)
+h                   1.0                                         # Reduced Hubble constant. (h = H0/(100 km/s/Mpc))
+
+
+### ESD Production ###
+
+# Algorithm
+ESD_output_folder     /disks/shear10/brouwer_veersemeer/pipeline_testresults            # Path to ESD output folder.
+ESD_output_filename   oldcatmatch                             # This flag will be appended to the filenames (optional).
+ESD_purpose           shearcovariance                     # One of {'shearcatalog', 'shearcovariance', 'shearbootstrap',
+#ESD_purpose           shearcatalog                    #     'randomcatalog', 'randombootstrap'}.
+#Rbins                1                                # One of the standard options (1-5, see help file), (Not yet working) or
+#Rbins                Rbins.txt                        #     either a file with the radial binning or a
+Rbins                 10,20,2000                       #     comma-separated list with (Rmin,Rmax,Nbins).
+Runit                 kpc                              # One of these physical {pc, kpc, Mpc} or sky {arcsec, arcmin, deg} coordinates.
+ncores                1                                # Any number of cores your machine can use to run the code.
+
+
+# Lens selection
+
+lensID_file        None                                                                                 # Path to text file with chosen lens IDs (optional).
+
+#lens_weights      mstarweight   ../brouwer/environment_project/mstarweight.fits                        # Weight name and path to fits file with lens weights (optional). (Not yet working)
+lens_weights       None    
+
+#lens_binning       None                                                                          
+#lens_binning       logmstar       self              9.7,10.2,10.55,10.9,11.1,11.2,11.35,11.5,12.0          # Lens parameter for binning, path to fits file (choose "self" for same as lens catalog), and 
+ lens_binning       logmstar       self                                             10.3,10.8,11.1          #     bin edges (at least 3 edges, bin[i-1] <= x < bin[i]), or the number of bins.
+
+lens_limits1       loglwage         self                                             0,9.3              # Lens parameter for limits, path to fits file (choose "self" for same as lens catalog), and 
+                                                                                                           #      (one value) or (two comma separated limits) between -inf and inf.
+
+
+# Source selection
+src_limits1           Z_B        0.005,1.2             # Source parameter for limits and one value, or
+# src_limits2                                          #     two comma separated limits between -inf and inf.
+kids_blinds             D

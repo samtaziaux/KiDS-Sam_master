@@ -29,14 +29,19 @@ ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h M$_{\odot}/pc^2$]'
 filenames = []
 #filenames = np.append(filenames, [''])
 
+# Redshift test for Koen
 
+
+
+
+"""
 # Pipeline tests
 filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG-999--999_logmstarbin1of8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_D.txt'])
 filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_logmstarbins_oldcatmatch/results_shearcatalog/shearcatalog_logmstarbin1of8_RankBCGm999_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_oldcatmatch_D.txt'])
 filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_logmstarbins_oldcatmatch/results_shearcovariance/shearcovariance_logmstarbin1of8_RankBCGm999_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_oldcatmatch_D.txt'])
 
 
-"""
+
 filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_LumBbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG1-1_Nfof5-inf_LumBbin1of6_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_D.txt'])
 filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_LumBbins_oldcatmatch/results_shearcatalog/shearcatalog_LumBbin1of6_Nfof5-inf_RankBCG1_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_oldcatmatch_D.txt'])
 """

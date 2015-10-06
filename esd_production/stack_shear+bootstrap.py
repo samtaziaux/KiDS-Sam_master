@@ -45,8 +45,8 @@ def main():
     print
     
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, binname, \
-    1, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
+    filename_var = shear.define_filename_var(purpose.replace('catalog',''), centering, binname, \
+    Nobsbins, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
@@ -72,18 +72,14 @@ def main():
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file)
+    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
     # The bootstrap lens-field matching is used to prevent duplicated lenses.
 
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Define the list of variables for the output filename
-    if 'catalog' in purpose:
-        filename_var = shear.define_filename_var(purpose.replace('catalog',''), centering, binname, \
-        'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
-    else:
-        filename_var = shear.define_filename_var(purpose, centering, binname, \
-        'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
+    filename_var = shear.define_filename_var(purpose.replace('catalog',''), centering, binname, \
+    'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     if 'random' in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var) # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
@@ -194,11 +190,10 @@ def main():
         # Printing the ESD profile to a file
         
         # Path to the output plot and text files
-        shearcatname = shear.define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat)
-        plotname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_bin, filename_addition, blindcat)
+        stackname = shear.define_filename_results(path_results, purpose, filename_bin, filename_addition, Nsplit, blindcat)
 
         # Printing stacked shear profile to a txt file
-        shear.write_stack(plotname, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)
+        shear.write_stack(stackname, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)
         
 
         # Plotting the data for the separate observable bins
@@ -216,15 +211,15 @@ def main():
             plotlabel = r'%.3g $\leq$ %s $\textless$ %.3g (%i lenses)'%(binmin, binname.replace('_', ''), binmax, len(galIDs_matched))
         
         try:
-            shear.define_plot(plotname, plotlabel, plottitle, plotstyle, Nobsbins, binnum, Runit, h)
+            shear.define_plot(stackname, plotlabel, plottitle, plotstyle, Nobsbins, binnum, Runit, h)
         except:
             pass
         
     # Writing and showing the plot
     try:
-        shear.write_plot(plotname, plotstyle)
+        shear.write_plot(stackname, plotstyle)
     except:
-        print 'Failed to write ESD plot for:', plotname 
+        print 'Failed to write ESD plot for:', stackname 
     
     return
 

@@ -93,7 +93,7 @@ def input_variables():
     path_splits = '%s/splits_%s' %(path_output, purpose)
     path_results = '%s/results_%s' %(path_output, purpose)
 
-    if (Nsplit == 0) and (blindcatnum==0) and (binnum == 1):
+    if (Nsplit == 0) and (blindcat==blindcats[0]) and (binnum == 1):
     
     #    print 'Nsplit:', Nsplit
     #    print 'blindcat:', blindcat
@@ -117,7 +117,7 @@ def input_variables():
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
-        if (Nsplit==0) and (blindcatnum==0) and (binnum == 1):
+        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == 1):
 
             for path in [path_splits, path_results]:
                 if not os.path.isdir(path):
@@ -271,7 +271,7 @@ def define_filename_splits(path_splits, purpose, filename_var, Nsplit, Nsplits, 
 
 def define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat): # Paths to the resulting files
 
-    if 'catalog' in path_results:
+    if 'catalogs' in path_results:
         resultname = '%s/%s_%s%s.fits'%(path_results, purpose, filename_var, filename_addition)
     else:
         resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, filename_addition, blindcat)
@@ -281,7 +281,7 @@ def define_filename_results(path_results, purpose, filename_var, filename_additi
 
 # Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
 def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpose, \
-                Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file):
+                Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition):
 
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins, Runit)
@@ -296,7 +296,7 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpo
     
     # Match the KiDS field and GAMA galaxy coordinates
     catmatch, kidscats, galIDs_infield = \
-    run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose)
+    run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition)
 
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -409,28 +409,6 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         galZlist = np.zeros(len(galIDlist)) # No redshift
         Dcllist = np.degrees(np.ones(len(galIDlist))) # Distance in degree on the sky
 
-    """
-    if lensid_file != 'None':
-        lensid = np.loadtxt(lensid_file)
-        match_idfile = np.in1d(galIDlist, lensid)
-        # I cannot modify the length of the pyfits arrays but creating a
-        # dictionary of numpy arrays should be the same
-        newgamacat = {}
-        for name in gamacat.names:
-            newgamacat[name] = gamacat[name][match_idfile]
-        galIDlist = galIDlist[match_idfile]
-        galRAlist = galRAlist[match_idfile]
-        galDEClist = galDEClist[match_idfile]
-        galZlist = galZlist[match_idfile]
-        Dcllist = Dcllist[match_idfile]
-        galweightlist = galweightlist[match_idfile]
-    else:
-        newgamacat = {}
-        for name in gamacat.names:
-            newgamacat[name] = gamacat[name]
-    gamacat = newgamacat
-    """
-
     Dallist = Dcllist/(1+galZlist) # The angular diameter distance to the galaxy center
 
     return gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -472,10 +450,13 @@ def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS 
 
 
 # Create a dictionary of KiDS fields that contain the corresponding galaxies.
-def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose):
+def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition):
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
-#    Rmax = Rmax + Rfield
+    if 'oldcatmatch' in filename_addition:
+        print "*** Using old lens-field matching procedure ***"
+    else:
+        Rmax = Rmax + Rfield
 
     catmatch = dict()
     totgalIDs = np.array([])
@@ -1105,9 +1086,13 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
     errorh[errorh==-999] = np.nan
     errorl[errorl==-999] = np.nan
 
+    if all([not(np.isfinite(x)) for x in data_y]):
+        data_y = np.ones(len(data_y))*1e10
+        errorh = np.zeros(len(data_y))
+        errorl = np.zeros(len(data_y))
 
-#    if type(Nsubplots) != int:
-#        data_x = data_x + n*0.1*data_x
+    if type(Nsubplots) != int:
+        data_x = data_x + n*0.1*data_x
 
     if 'lin' in plotstyle:
 
@@ -1142,9 +1127,9 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
         plt.yscale('log')
         errorl[errorl>=data_y] = ((data_y[errorl>=data_y])*0.9999999999)
 
-#        plt.autoscale(enable=False, axis='both', tight=None)
- #       plt.axis([1e1,1e4,1e-1,1e4])
-        plt.ylim(1e-1,1e4)
+#       plt.autoscale(enable=False, axis='both', tight=None)
+#       plt.axis([1e1,1e4,1e-1,1e4])
+        plt.ylim(1e0,1e4)
 
         if plotstyle == 'log':
             plt.errorbar(data_x, data_y, yerr=[errorl,errorh], ls='', marker='o', label=plotlabel)
@@ -1154,6 +1139,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
             plt.plot(data_x, errorh, marker='o', label=plotlabel) # removed ls=''
             plt.ylabel(r'Error(%s)'%ylabel,fontsize=15)
 
+    plt.xlim(1e1,1e4)
     plt.xscale('log')
     
     plt.xlabel(r'%s'%xlabel,fontsize=15)

@@ -17,20 +17,21 @@ from matplotlib import rc, rcParams
 
 # Plotting the data for the separate observable bins
 plotstyle = 'log' # What plotting style is used (lin, log, errorlin, errorlog)
-subplots = False # Are there subplots?
+subplots = True # Are there subplots?
 Nrows = 1 # If so, how into many rows will the subplots be devided?
 extra = '' # difference/ratio as an extra plot
 
 h = 1
-
-xlabel = r'radius R [h$^{-1}$ kpc]'
-ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h M$_{\odot}/pc^2$]'
+Runit = 'kpc'
 
 filenames = []
 #filenames = np.append(filenames, [''])
 
 # Redshift test for Koen
-
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-0p13_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-0p2_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-0p3_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-inf_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
 
 
 
@@ -199,7 +200,7 @@ filelists = np.vstack([filenames])
 
 Nfilelists = len(filelists)
 Nfiles = len(filenames)
-
+print Nfiles
 
 if extra == 'difference' or extra == 'ratio':
     for i in xrange(Nfiles/2):
@@ -255,24 +256,28 @@ if extra == 'difference' or extra == 'ratio':
 
 for i in xrange(Nfiles):
 
-    n = 0
-    subplots = False
+    n = 0.
     if subplots:
-        subplots = Nfiles
+        Nsubplots = Nfiles
         n = i+1
     
 #	n = n+1
     filename = filenames[i]
 
+    lensIDs = ['(%i lenses)'%l for l in [543, 1142, 1843, 2142]]
+
     plotlabel = filename.split('/')[-1]
     plotlabel = (plotlabel.rsplit('.',1)[-2])
     plotlabel = np.array(plotlabel.split('_'))
-    plotlabel = ' '.join(np.hstack([plotlabel[0:4], plotlabel[-2]]))
+    plotlabel = ' '.join(np.hstack([plotlabel[1:4], lensIDs[i]])) # plotlabel[-2]]))
+    plotlabel = plotlabel.replace('p', '.')
+    plotlabel = plotlabel.replace('m', '-')
     plotlabel = r'%s'%plotlabel
     plottitle = ''
 
+    print 
 
-    shear.define_plot(filename, plotlabel, plottitle, plotstyle, subplots, xlabel, ylabel, n)
+    shear.define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, h)
 
 # Plot the ESD profile into a file
 file_ext = filename.split('.')[-1]

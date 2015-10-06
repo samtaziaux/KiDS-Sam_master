@@ -24,8 +24,13 @@ def create_config(outfiles, filenamein, filenameout):
 
 outfiles = np.array([])
 
-for i in xrange(2):
-    filenamein = '/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_logmstarbins_oldcatmatch/results_shearcatalog/shearcatalog_logmstarbin%iof2_loglwage9p5-inf_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_oldcatmatch_lensIDs.txt'%(i+1)
+zlims = ['inf', '0p13', '0p2', '0p3']
+
+for i in xrange(4):
+    
+    x = zlims[i]
+    
+    filenamein = '/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-%s_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_KiDSlensIDs.txt'%(x)
     filenameout = filenamein.replace('catalog', 'covariance')
 
     outfiles = create_config(outfiles, filenamein, filenameout)

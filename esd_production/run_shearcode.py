@@ -45,11 +45,19 @@ findlist = ['@', '710']
 replacelist = np.array([np.arange(6)+1, np.array([1724, 2634, 2201, 1577, 3379, 710])])
 config_files = create_config(replacefile, findlist, replacelist)
 """
-
+"""
 replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/Edo_logagebins.config'
 findlist = np.array(['agelimit'])
 replacelist = np.array([np.array(['0,9.3', '9.3,9.5', '9.5,inf'])])
 config_files = create_config(replacefile, findlist, replacelist)
+"""
+#"""
+replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_redshifts.config'
+findlist = np.array(['Zlim'])
+replacelist = np.array([np.array(['inf', '0.13', '0.2', '0.3'])])
+#replacelist = np.array([np.array(['0.13'])])
+config_files = create_config(replacefile, findlist, replacelist)
+#"""
 
 
 #config_files = ['/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_margot.config']
@@ -59,12 +67,7 @@ config_files = create_config(replacefile, findlist, replacelist)
 
 #config_files = ['/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_margot_mstarweight.config']
 
-"""
-replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_redshifts.config'
-findlist = np.array(['Zlim'])
-replacelist = np.array([np.array(['inf', '0.13', '0.2', '0.3'])])
-config_files = create_config(replacefile, findlist, replacelist)
-"""
+
 
 print
 print 'Running:', config_files

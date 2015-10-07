@@ -18,8 +18,8 @@ h                   1.0                                         # Reduced Hubble
 # Algorithm
 ESD_output_folder     /disks/shear10/brouwer_veersemeer/pipeline_testresults            # Path to ESD output folder.
 ESD_output_filename   oldcatmatch                             # This flag will be appended to the filenames (optional).
-ESD_purpose           shearcovariance                     # One of {'shearcatalog', 'shearcovariance', 'shearbootstrap',
-#ESD_purpose           shearcatalog                    #     'randomcatalog', 'randombootstrap'}.
+#ESD_purpose           shearcovariance                     # One of {'shearcatalog', 'shearcovariance', 'shearbootstrap',
+ESD_purpose           shearcatalog                    #     'randomcatalog', 'randombootstrap'}.
 #Rbins                1                                # One of the standard options (1-5, see help file), (Not yet working) or
 #Rbins                Rbins.txt                        #     either a file with the radial binning or a
 Rbins                 10,20,2000                       #     comma-separated list with (Rmin,Rmax,Nbins).

@@ -454,9 +454,10 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
     if 'oldcatmatch' in filename_addition:
-        print "*** Using old lens-field matching procedure ***"
+        print "*** Using old lens-field matching procedure! ***"
     else:
         Rmax = Rmax + Rfield
+        print "*** Using new lens-field matching procedure! For the 'early science' mode, put 'oldcatmatch' in 'ESD_output_filename.' ***"
 
     catmatch = dict()
     totgalIDs = np.array([])

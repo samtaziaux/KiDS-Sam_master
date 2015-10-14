@@ -74,7 +74,7 @@ def fiducial(theta, R, h=1, Om=0.315, Ol=0.685):
     return out
     
 
-def fiducial_no-pointmass(theta, R, h=1, Om=0.315, Ol=0.685):
+def fiducial_no_pointmass(theta, R, h=1, Om=0.315, Ol=0.685):
     # local variables are accessed much faster than global ones
     _array = array
     _cM_duffy08 = cM_duffy08

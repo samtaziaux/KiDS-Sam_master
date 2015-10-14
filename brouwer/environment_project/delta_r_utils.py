@@ -26,9 +26,6 @@ pi = np.pi
 def create_fieldcoords(gamalims, pixsize, field):
     # Creating all coordinates within this GAMA field
 
-    gamaRAlist = []
-    gamaDEClist = []
-
     gamaRAlist = np.arange(gamalims[field, 0, 0], gamalims[field, 0, 1], pixsize)+pixsize/2
     gamaDEClist = np.arange(gamalims[field, 1, 0], gamalims[field, 1, 1], pixsize)+pixsize/2
 
@@ -117,3 +114,28 @@ def calc_rho_mean(gamalims, O_matter, O_lambda, h):
     print 'GAMA volume:', gamavol, '(Mpc/h)^3'
 
     return gamavol
+    
+    
+    
+def write_catalog(filename, galIDlist, outputnames, output):
+
+    fitscols = []
+
+    # Adding the lens IDs
+    fitscols.append(pyfits.Column(name = 'ID', format='J', array = galIDlist))
+
+    # Adding the output
+    [fitscols.append(pyfits.Column(name = outputnames[c], format = '1D', array = output[c])) for c in xrange(len(outputnames))]
+
+    cols = pyfits.ColDefs(fitscols)
+    tbhdu = pyfits.new_table(cols)
+
+    #	print
+    if os.path.isfile(filename):
+        os.remove(filename)
+        print 'Old catalog overwritten:', filename
+    else:
+        print 'New catalog written:', filename
+    print
+
+    tbhdu.writeto(filename)

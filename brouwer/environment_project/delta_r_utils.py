@@ -23,20 +23,20 @@ pi = np.pi
 
 
 # Creating the RA and DEC coordinates of each GAMA field
-def create_fieldcoords(gamalims, pixsize, field):
-    # Creating all coordinates within this GAMA field
+def create_gridcoords(gridRAlims, gridDEClims, pixsize):
+    # Creating all coordinates within this grid field
 
-    gamaRAlist = np.arange(gamalims[field, 0, 0], gamalims[field, 0, 1], pixsize)+pixsize/2
-    gamaDEClist = np.arange(gamalims[field, 1, 0], gamalims[field, 1, 1], pixsize)+pixsize/2
+    gridRAlist = np.arange(gridRAlims[0], gridRAlims[1], pixsize)+pixsize/2
+    gridDEClist = np.arange(gridDEClims[0], gridDEClims[1], pixsize)+pixsize/2
 
-    gamaRAs, gamaDECs = np.meshgrid(gamaRAlist, gamaDEClist)
+    gridRAs, gridDECs = np.meshgrid(gridRAlist, gridDEClist)
 
-    gamaRAs = np.reshape(gamaRAs, [np.size(gamaRAs)])
-    gamaDECs = np.reshape(gamaDECs, [np.size(gamaDECs)])
+    gridRAs = np.reshape(gridRAs, [np.size(gridRAs)])
+    gridDECs = np.reshape(gridDECs, [np.size(gridDECs)])
 
-    gamacoords = SkyCoord(ra=gamaRAs*u.degree, dec=gamaDECs*u.degree, frame='icrs')
+    gridcoords = SkyCoord(ra=gridRAs*u.degree, dec=gridDECs*u.degree, frame='icrs')
     
-    return gamacoords
+    return gridcoords
     
 
 # Calculating the galaxy magnitudes (following McNaught-Roberts et al.)

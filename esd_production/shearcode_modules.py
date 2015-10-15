@@ -284,7 +284,7 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpo
                 Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition):
 
     # Import R-range
-    Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins, Runit)
+    Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst = define_Rbins(path_Rbins, Runit)
     
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
@@ -298,7 +298,7 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpo
     catmatch, kidscats, galIDs_infield = \
     run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition)
 
-    return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist
 
 
@@ -333,19 +333,26 @@ def define_Rbins(path_Rbins, Runit):
             exit()
     
     # Translating from k/Mpc to pc, or from arcmin/sec to deg
-    const = 1.
+
+    Rconst = -999
     if 'pc' in Runit:
+        Rconst = 1.
         if 'k' in Runit:
-            const = 1e3
+            Rconst = 1e3
         if 'M' in Runit:
-            const = 1e6
-    else:
+            Rconst = 1e6
+    
+    if 'arc' in Runit:
         if 'sec' in Runit:
-            const = 1/(60.**2)
+            Rconst = 1/(60.**2)
         if 'min' in Runit:
-            const = 1/60.
-                
-    [Rmin, Rmax, Rbins] = [r*const for r in [Rmin, Rmax, Rbins]]
+            Rconst = 1/60.
+    
+    if Rconst == -999:
+        print '*** Unit of radial bins not recognized! ***'
+        quit()
+        
+    [Rmin, Rmax, Rbins] = [r*Rconst for r in [Rmin, Rmax, Rbins]]
 
     """
     print 'path_Rbins', path_Rbins
@@ -357,7 +364,7 @@ def define_Rbins(path_Rbins, Runit):
     print 'nRbins', nRbins
     """
 
-    return Rmin, Rmax, Rbins, Rcenters, nRbins
+    return Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst
 
 
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
@@ -457,7 +464,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
         print "*** Using old lens-field matching procedure! ***"
     else:
         Rmax = Rmax + Rfield
-        print "*** Using new lens-field matching procedure! For the 'early science' mode, put 'oldcatmatch' in 'ESD_output_filename.' ***"
+        print "*** Using new lens-field matching procedure *** (for 'early science' mode, put 'oldcatmatch' in 'ESD_output_filename')"
 
     catmatch = dict()
     totgalIDs = np.array([])
@@ -896,12 +903,12 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
 
 # Write the shear or covariance catalog to a fits file
-def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, output, outputnames, variance, purpose, e1, e2, w, srcm):
+def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, output, outputnames, variance, purpose, e1, e2, w, srcm):
 
     fitscols = []
 
-    Rmin = Rbins[0:nRbins]
-    Rmax = Rbins[1:nRbins+1]
+    Rmin = Rbins[0:nRbins]/Rconst
+    Rmax = Rbins[1:nRbins+1]/Rconst
 
     # Adding the radial bins
     if 'bootstrap' in purpose:

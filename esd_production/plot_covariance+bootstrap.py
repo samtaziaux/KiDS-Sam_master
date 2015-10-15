@@ -54,7 +54,7 @@ def main():
     outname = shear.define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat)
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
-    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
     purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)

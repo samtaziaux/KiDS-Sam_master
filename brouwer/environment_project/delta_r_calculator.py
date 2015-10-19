@@ -45,7 +45,9 @@ h = 1.
 # <codecell>
 
 # Importing the GAMA catalogue
-path_gamacat = '/data2/brouwer/MergedCatalogues/GAMACatalogue_1.0.fits'
+#path_gamacat = '/data2/brouwer/MergedCatalogues/GAMACatalogue_1.0.fits'
+path_gamacat = '/disks/shear10/brouwer_veersemeer/MergedCatalogues/GAMACatalogue_1.0.fits'
+
 centering = 'None'
 purpose = 'shearcatalog'
 Ncat = 1

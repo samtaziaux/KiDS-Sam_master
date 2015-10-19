@@ -1137,7 +1137,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
 
 #       plt.autoscale(enable=False, axis='both', tight=None)
 #       plt.axis([1e1,1e4,1e-1,1e4])
-        plt.ylim(1e0,1e4)
+        plt.ylim(1e-1,1e3)
 
         if plotstyle == 'log':
             plt.errorbar(data_x, data_y, yerr=[errorl,errorh], ls='', marker='o', label=plotlabel)

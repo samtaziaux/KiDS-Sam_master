@@ -37,7 +37,45 @@ def create_gridcoords(gridRAlims, gridDEClims, pixsize):
     gridcoords = SkyCoord(ra=gridRAs*u.degree, dec=gridDECs*u.degree, frame='icrs')
     
     return gridcoords
+
+
+# Import GAMA masks for completeness calculation
+def import_gamamasks(path_gamamasks, pixsize_coords):
     
+    gamamasks = np.array([pyfits.open(path_gamamask, ignore_missing_end=True)['PRIMARY'].data for path_gamamask in path_gamamasks])
+    gamamasks[gamamasks ==-2.] = 0.
+
+    # Creating the RA and DEC coordinates of each GAMA field
+    print 'Importing GAMAmask:'
+    print 'Old size:', np.shape(gamamasks)
+    gapsize = pixsize_coords/0.001
+
+    gamaRAnums = np.arange(int(gapsize/2.), int(len(gamamasks[0])+gapsize/2), int(gapsize))
+    gamaDECnums = np.arange(int(gapsize/2.), int(len(gamamasks[0,0])+gapsize/2), int(gapsize))
+    #print gamaRAnums
+    #print gamaDECnums
+                         
+    gama1 = [[129., 141.], [-2.,3.]]
+    gama2 = [[174., 186.], [-3.,2.]]
+    gama3 = [[211.5, 223.5], [-2.,3.]]
+    gamalims = np.array([gama1, gama2, gama3])
+
+    gamamasks_small = np.zeros([len(gamalims), len(gamaRAnums), len(gamaDECnums)])
+
+    for f in xrange(len(gamalims)):
+        for i in xrange(len(gamaRAnums)):
+            gamaRAnum = gamaRAnums[i]
+            gamamasks_small[f, i, :] = gamamasks[f, gamaRAnum, :][gamaDECnums]
+
+    print 'New size:', np.shape(gamamasks_small)
+
+    gamamasks = gamamasks_small
+    gamamasks = np.reshape(gamamasks, [len(gamalims), np.size(gamamasks[0])])
+
+    print 'Final shape:', np.shape(gamamasks)
+    
+    return gamalims, gamamasks
+
 
 # Calculating the galaxy magnitudes (following McNaught-Roberts et al.)
 def calc_magnitude(galZlist, Dcllist, colorlist, petrolist):
@@ -92,25 +130,26 @@ def calc_rho(Rmax, galRA, DDP_RAs, galDEC, DDP_DECs, Dcl, DDP_Dcls, comp):
 
 
 # Calculating the volume of GAMA
-def calc_rho_mean(gamalims, O_matter, O_lambda, h):
+def calc_rho_mean(gamalims, gamamasks, O_matter, O_lambda, h):
     
-    """
-    r1 = distance.comoving(0.039, O_matter, O_lambda, h)/1e3
-    r2 = distance.comoving(0.263, O_matter, O_lambda, h)/1e3
-
-    gamacoords = np.array([gama1,gama2,gama3])
+    r1 = distance.comoving(0.039, O_matter, O_lambda, h)/1e6
+    r2 = distance.comoving(0.263, O_matter, O_lambda, h)/1e6
 
     gamavol = 0.
-    for i in xrange(len(gamacoords)):
+    for i in xrange(len(gamalims)):
         theta1 = np.radians(-gamalims[i,0,0])
         theta2 = np.radians(-gamalims[i,0,1])
         phi1 = np.radians(90.-gamalims[i,1,0])
         phi2 = np.radians(90.-gamalims[i,1,1])
+                
+        completeness = np.sum(gamamasks[i])/np.sum(np.ones(np.shape(gamamasks[i])))
+         
+        print 'Completeness field %i: %g'%(i+1, completeness)
         
-        gamavol = gamavol + 1./3. * (theta1 - theta2) * (r1**3 - r2**3) * (np.cos(phi1) - np.cos(phi2))
-    """
+        gamavol = gamavol + completeness * (1./3. * (theta1 - theta2) * (r1**3 - r2**3) * (np.cos(phi1) - np.cos(phi2)))
+  
+#    gamavol = 6.75e6
     
-    gamavol = 6.75e6
     print 'GAMA volume:', gamavol, '(Mpc/h)^3'
 
     return gamavol

@@ -78,8 +78,11 @@ maglist = utils.calc_magnitude(galZlist, Dcllist, colorlist, petrolist)
 
 zmin = 0.039
 zmax = 0.263
-Dcmin = distance.comoving(zmin, O_matter, O_lambda, h)
-Dcmax = distance.comoving(zmax, O_matter, O_lambda, h)
+Dcmin = distance.comoving(zmin, O_matter, O_lambda, h)*u.pc
+Dcmax = distance.comoving(zmax, O_matter, O_lambda, h)*u.pc
+
+print 'Redshift: Min    Max'
+print zmin, '    ', zmax
 print 'Distance: Min    Max'
 print Dcmin, '  ', Dcmax, 'pc'
 
@@ -107,63 +110,51 @@ print
 # <codecell>
 
 # Import GAMA masks for completeness calculation
-path_gamamasks = ['/disks/shear10/GamaMasks/%smask08000.fits'%g for g in ['g09', 'g12', 'g15']]
-gamamasks = np.array([pyfits.open(path_gamamask, ignore_missing_end=True)['PRIMARY'].data for path_gamamask in path_gamamasks])
-gamamasks[gamamasks ==-2.] = 0.
-
-# Creating the RA and DEC coordinates of each GAMA field
 pixsize_coords = 0.01
-
-print 'Importing GAMAmask:'
-print 'Old size:', np.shape(gamamasks)
-gapsize = pixsize_coords/0.001
-
-gamaRAnums = np.arange(int(gapsize/2.), int(len(gamamasks[0])+gapsize/2), int(gapsize))
-gamaDECnums = np.arange(int(gapsize/2.), int(len(gamamasks[0,0])+gapsize/2), int(gapsize))
-#print gamaRAnums
-#print gamaDECnums
-                     
-gama1 = [[129., 141.], [-2.,3.]]
-gama2 = [[174., 186.], [-3.,2.]]
-gama3 = [[211.5, 223.5], [-2.,3.]]
-gamalims = np.array([gama1, gama2, gama3])
-
-gamamasks_small = np.zeros([len(gamalims), len(gamaRAnums), len(gamaDECnums)])
-
-for f in xrange(len(gamalims)):
-    for i in xrange(len(gamaRAnums)):
-        gamaRAnum = gamaRAnums[i]
-        gamamasks_small[f, i, :] = gamamasks[f, gamaRAnum, :][gamaDECnums]
-
-print 'New size:', np.shape(gamamasks_small)
-
-gamamasks = gamamasks_small
-gamamasks = np.reshape(gamamasks, [len(gamalims), np.size(gamamasks[0])])
-
-print 'Final shape:', np.shape(gamamasks)
+path_gamamasks = ['/disks/shear10/GamaMasks/%smask08000.fits'%g for g in ['g09', 'g12', 'g15']]
+gamalims, gamamasks = utils.import_gamamasks(path_gamamasks, pixsize_coords)
 
 # <codecell>
 
 # Calculating the sizes of the circle (in degree) for each lens, from Rmax (in Mpc)
 Rmax = np.arange(1,9)*u.Mpc # Maximum radius (in Mpc) around each lens
-x, y = np.meshgrid(Rmax, Dals.to(u.Mpc)) # Maximum angular separation (in degree) around each lens
-sepmax = np.degrees((x/y).value)
-x, y = [[],[]]
-
-# The complete size of the circle, to calculate the completeness
-complete = pi*sepmax**2*(1/pixsize_coords**2)
+Rmaxmesh, Dalsmesh = np.meshgrid(Rmax, Dals.to(u.Mpc)) # Maximum angular separation (in degree) around each lens
+sepmax = np.degrees((Rmaxmesh/Dalsmesh).value)
 
 # This array will contain the value delta_r for each lens
 delta_rs = np.zeros(np.shape(sepmax))
 delta_r = np.ones([len(galIDlist), len(Rmax)])*-999
 
-print np.shape(delta_rs)
-print np.shape(delta_r)
+
+# <codecell>
+
+# The part of each sphere that lies above/below the redshift maximum/minimum, to calculate the completeness
+
+dDmax = (Dcmax - Dcls).to(u.Mpc)
+dDmin = (Dcls - Dcmin).to(u.Mpc)
+
+Rmaxmesh, dDmaxmesh = np.meshgrid(Rmax, dDmax)
+Rmaxmesh, dDminmesh = np.meshgrid(Rmax, dDmin)
+
+Dmaxmask = dDmaxmesh < Rmaxmesh
+Dminmask = dDminmesh < Rmaxmesh
+
+dDmesh = np.ones(np.shape(Dmaxmask)) * Rmaxmesh
+
+dDmesh[Dmaxmask] = dDmaxmesh[Dmaxmask]
+dDmesh[Dminmask] = dDminmesh[Dminmask]
+
+height = Rmaxmesh + dDmesh
+
+sphere = 4./3. * pi * Rmaxmesh**3.
+Vinside = (pi/3. * height**2.) * (3.*Rmaxmesh - height)
+distcomp = Vinside/sphere
+
 
 # <codecell>
 
 # Calculating the volume and mean DDP density of GAMA
-gamavol = utils.calc_rho_mean(gamalims, O_matter, O_lambda, h)
+gamavol = utils.calc_rho_mean(gamalims, gamamasks, O_matter, O_lambda, h)
 rho_mean = len(DDP_IDs)/gamavol
 
 print 'mean density', rho_mean
@@ -177,15 +168,15 @@ delta_r = np.ones([len(galIDlist), len(Rmax)])*-999
 comp_rs = np.zeros(np.shape(sepmax))
 comp_r = np.ones([len(galIDlist), len(Rmax)])*-999
 
-print np.shape(delta_rs)
-print np.shape(delta_r)
 
-for f in xrange(len(gamalims)): # For each GAMA field ...
+for f in [0]: #xrange(len(gamalims)): # For each GAMA field ...
     
     print
     print 'GAMA field %i:'%(f+1)
     
-    gamacoords_field = utils.create_fieldcoords(gamalims, pixsize_coords, f) # Create the coordinates of the GAMA mask
+    gridRAlims = gamalims[f, 0]
+    gridDEClims = gamalims[f, 1]
+    gamacoords_field = utils.create_gridcoords(gridRAlims, gridDEClims, pixsize_coords) # Create the coordinates of the GAMA mask
 
     # Masking the lenses that are outside the field
     galfieldmask = (gamalims[f, 0, 0] < galRAs.value) & (galRAs.value < gamalims[f, 0, 1]) \
@@ -197,6 +188,8 @@ for f in xrange(len(gamalims)): # For each GAMA field ...
   
     galcoords_field = galcoords[galfieldmask]
     DDPcoords_field = DDPcoords[DDPfieldmask]
+    distcomp_field = distcomp[galfieldmask]
+    
     rho_field = np.zeros([np.sum(galfieldmask), len(Rmax)])
     comp_field = np.zeros([np.sum(galfieldmask), len(Rmax)])
     
@@ -209,24 +202,40 @@ for f in xrange(len(gamalims)): # For each GAMA field ...
 #    plt.show()
     
     #For each lens in this field ...
-    Ngals = len(galcoords_field)
-    #Ngals = 10
+    #Ngals = len(galcoords_field)
+    Ngals = 20
     for g in xrange(Ngals):
         
-        if g % 100 == 0:
-            print 'Field #%i:'%(f+1), float(g+1)/float(Ngals)*100., '%'
+        if g % 1000 == 0:
+            print 'Galaxy #%i:'%(g+1), float(g+1)/float(Ngals)*100., '%'
         
         # ... find the seperation with all GAMA coordinates and DDP galaxies
         gamasep = (galcoords_field[g]).separation(gamacoords_field).deg
         DDPsep = (galcoords_field[g]).separation_3d(DDPcoords_field).to('Mpc')
+        
+        # Create a test-grid to calculates the completeness
+        compgridRAlims = [galcoords_field[g].ra.deg - 5, galcoords_field[g].ra.deg + 5]
+        compgridDEClims = [galcoords_field[g].dec.deg - 5, galcoords_field[g].dec.deg + 5]
+        compgrid = utils.create_gridcoords(compgridRAlims, compgridDEClims, pixsize_coords)
+        
+        compgridsep = (galcoords_field[g]).separation(compgrid).deg
         
         # for each Rmax...
         for R in xrange(len(Rmax)):
     
             # ... determine the gama coordinates that lie within the circle
             gama_Rmask = gamasep < (sepmax[galfieldmask])[g, R]
-            comp_field[g, R] = np.sum((gamamasks[f])[gama_Rmask])/((complete[galfieldmask])[g, R])
-                        
+            compgrid_Rmask = compgridsep < (sepmax[galfieldmask])[g, R]
+
+            complete = np.sum(2*((sepmax[galfieldmask])[g, R]**2 - compgridsep[compgrid_Rmask]**2)**0.5)
+            
+            comp_field[g, R] = np.sum((gamamasks[f])[gama_Rmask] * \
+                    2*((sepmax[galfieldmask])[g, R]**2 - gamasep[gama_Rmask]**2)**0.5) \
+                    * distcomp_field[g, R] / complete
+            
+            #if R==7:
+            #    print comps[g], comp_field[g, R]
+            
             # ... calculate the number density of DDP galaxies inside the sphere
             sphere_size = (4./3.*pi*Rmax[R]**3)*comp_field[g, R]
             DDP_Rmask = DDPsep < Rmax[R]
@@ -242,6 +251,24 @@ for f in xrange(len(gamalims)): # For each GAMA field ...
     
 delta_r[lensmask] = delta_rs
 comp_r[lensmask] = comp_rs
+
+# <codecell>
+
+# Comparing delta_r histograms
+
+nanmask = np.isfinite(delta8s[0:Ngals])
+
+deltamin = -1
+deltamax = 6
+
+delta8bins = np.arange(deltamin, deltamax, 0.4)
+histbins = np.append(delta8bins, deltamax)
+
+# the histogram of the data
+#delta_margot_hist, histbins, patches = plt.hist(delta_rs[:,7][nanmask], histbins, histtype='step', color = 'blue')
+#delta_tamsyn_hist, histbins, patches = plt.hist(delta8s[nanmask], histbins, histtype='step', color = 'red')
+#plt.ylabel(r'Number of galaxies', fontsize=15)
+#plt.xlabel(r'Local overdensity $\delta_8$', fontsize=15)
 
 # <codecell>
 
@@ -262,9 +289,9 @@ print 'Mean difference:', np.mean(abs(difference)),' Bias:', np.mean(difference)
 #rho_DDP = 5.35e-3
 #print rho_DDP*V_DDP
 
-filename = 'delta_r_new.fits'
+filename = 'delta_r_final.fits'
 deltanames = ['delta_R%i'%i for i in Rmax.value]
-compnames = ['compl_R%i'%i for i in Rmax.value]
+compnames = ['comp_R%i'%i for i in Rmax.value]
 
 outputnames = np.hstack([deltanames, compnames])
 output = np.hstack([delta_r, comp_r]).T

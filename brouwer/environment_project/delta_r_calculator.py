@@ -86,7 +86,7 @@ Dcmax = distance.comoving(zmax, O_matter, O_lambda, h)*u.pc
 print 'Redshift: Min    Max'
 print zmin, '    ', zmax
 print 'Distance: Min    Max'
-print Dcmin, '  ', Dcmax, 'pc'
+print Dcmin, '  ', Dcmax
 
 lensmask = (zmin<galZlist)&(galZlist<zmax)#&(nQlist>=3)&(complist>0.8)
 DDPmask = (lensmask)&(-21.8<maglist)&(maglist<-20.1)
@@ -171,7 +171,7 @@ comp_rs = np.zeros(np.shape(sepmax))
 comp_r = np.ones([len(galIDlist), len(Rmax)])*-999
 
 
-for f in [0]: #xrange(len(gamalims)): # For each GAMA field ...
+for f in xrange(len(gamalims)): # For each GAMA field ...
     
     print
     print 'GAMA field %i:'%(f+1)
@@ -204,8 +204,8 @@ for f in [0]: #xrange(len(gamalims)): # For each GAMA field ...
 #    plt.show()
     
     #For each lens in this field ...
-    #Ngals = len(galcoords_field)
-    Ngals = 20
+    Ngals = len(galcoords_field)
+    #Ngals = 20
     for g in xrange(Ngals):
         
         if g % 1000 == 0:

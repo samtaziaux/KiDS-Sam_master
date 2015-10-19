@@ -9,7 +9,7 @@
 
 # Import the necessary libraries
 import sys
-sys.path.insert(0, '/data2/brouwer/shearprofile/KiDS-GGL/esd_production/')
+sys.path.insert(0, '../../esd_production/')
 
 import pyfits
 import numpy as np
@@ -289,7 +289,7 @@ print 'Mean difference:', np.mean(abs(difference)),' Bias:', np.mean(difference)
 #rho_DDP = 5.35e-3
 #print rho_DDP*V_DDP
 
-filename = 'delta_r_final.fits'
+filename = '/disks/shear10/brouwer_veersemeer/MergedCatalogues/delta_r_catalog.fits'
 deltanames = ['delta_R%i'%i for i in Rmax.value]
 compnames = ['comp_R%i'%i for i in Rmax.value]
 

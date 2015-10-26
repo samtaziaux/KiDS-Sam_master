@@ -16,10 +16,12 @@ import numpy as np
 import distance
 import os
 import time
-import shearcode_modules as shear
-import delta_r_utils as utils
 import gc
 from matplotlib import pyplot as plt
+
+import delta_r_utils as utils
+import shearcode_modules as shear
+import environment_utils as envutils
 
 import astropy.units as u
 from astropy.coordinates import SkyCoord  # High-level coordinates
@@ -291,14 +293,14 @@ print 'Mean difference:', np.mean(abs(difference)),' Bias:', np.mean(difference)
 #rho_DDP = 5.35e-3
 #print rho_DDP*V_DDP
 
-filename = '/disks/shear10/brouwer_veersemeer/MergedCatalogues/delta_r_catalog.fits'
+filename = '/disks/shear10/brouwer_veersemeer/MergedCatalogues/delta_r_catalog_test.fits'
 deltanames = ['delta_R%i'%i for i in Rmax.value]
 compnames = ['comp_R%i'%i for i in Rmax.value]
 
 outputnames = np.hstack([deltanames, compnames])
 output = np.hstack([delta_r, comp_r]).T
 
-utils.write_catalog(filename, galIDlist, outputnames, output)
+envutils.write_catalog(filename, galIDlist, outputnames, output)
 
 # <codecell>
 

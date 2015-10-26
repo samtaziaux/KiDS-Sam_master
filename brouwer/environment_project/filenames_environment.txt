@@ -1,5 +1,0 @@
-
-/disks/shear10/brouwer_veersemeer/shearcode_output/output_envS4bins/results_covariance/covariance_rankBCG-999-inf_envS4bin1of4_ZB0.005-1.2_16bins_Om0.315_h100_A.txt
-/disks/shear10/brouwer_veersemeer/shearcode_output/output_envS4bins/results_covariance/covariance_rankBCG-999-inf_envS4bin2of4_ZB0.005-1.2_16bins_Om0.315_h100_A.txt
-/disks/shear10/brouwer_veersemeer/shearcode_output/output_envS4bins/results_covariance/covariance_rankBCG-999-inf_envS4bin3of4_ZB0.005-1.2_16bins_Om0.315_h100_A.txt
-/disks/shear10/brouwer_veersemeer/shearcode_output/output_envS4bins/results_covariance/covariance_rankBCG-999-inf_envS4bin4of4_ZB0.005-1.2_16bins_Om0.315_h100_A.txt

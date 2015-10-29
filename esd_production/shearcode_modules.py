@@ -665,7 +665,7 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
 
 
 # Binnning information of the groups
-def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat): 
+def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
 
     # Check how the binning is given
     binname = lens_binning.keys()[0]
@@ -689,7 +689,15 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
             
             # Print the lens binning properties
             if len(lenssel_binning) > 0:
-                obslist = define_obslist(binname, gamacat)
+                
+                # Importing the binning file
+                if obsfile == 'self':
+                    obslist = define_obslist(binname, gamacat)
+                else:
+                    print 'Using %s from %s'%(binname, obsfile)
+                    obscat = pyfits.open(obsfile)[1].data
+                    obslist = obscat[binname]
+
                 
                 print
                 print 'Lens binning: Lenses divided in %i %s-bins'%(Nobsbins, binname)
@@ -749,13 +757,13 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
     # Add the mask for each chosen lens parameter
     for param in lens_selection.keys():
         binlims = lens_selection[param][1]
-        binfile = lens_selection[param][0]
+        obsfile = lens_selection[param][0]
         # Importing the binning file
-        if binfile == 'self':
+        if obsfile == 'self':
             obslist = define_obslist(param, gamacat)
         else:
-            print 'Using %s from %s'%(param, binfile)
-            bincat = pyfits.open(binfile)[1].data
+            print 'Using %s from %s'%(param, obsfile)
+            bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[param]
         
         if 'ID' in param:
@@ -768,12 +776,12 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
 
     if 'No' not in binname: # If the galaxy selection depends on observable
         # Importing the binning file
-        binfile = lens_binning[binname][0]
-        if binfile == 'self':
+        obsfile = lens_binning[binname][0]
+        if obsfile == 'self':
             obslist = define_obslist(binname, gamacat)
         else:
-            print 'Using %s from %s'%(binname, binfile)
-            bincat = pyfits.open(binfile)[1].data
+            print 'Using %s from %s'%(binname, obsfile)
+            bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[binname]
         
         if 'ID' in binname:

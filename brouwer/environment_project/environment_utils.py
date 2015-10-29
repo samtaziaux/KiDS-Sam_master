@@ -70,7 +70,8 @@ def calc_halomodel_input(envnames, envlist, ranklist, zlist, mstarlist, weightli
     
     zaverage = []
     mstaraverage = []
-    fsat = []
+    fsatmin = []
+    fsatmax = []
     
     for env in xrange(len(envnames)):
         
@@ -80,12 +81,19 @@ def calc_halomodel_input(envnames, envlist, ranklist, zlist, mstarlist, weightli
         mstaraverage = np.append(mstaraverage, np.average(mstarlist[envmask], weights=weightlist[envmask]))
     
         satmask = (ranklist >= 2)
+        cenmask = (ranklist == 1)
+        isomask = (ranklist == -999.)
+        
         lenses = float(sum(np.ones(len(ranklist[envmask]))*weightlist[envmask]))
         sats = float(sum(np.ones(len(ranklist[satmask*envmask]))*weightlist[satmask*envmask]))
-        fsat = np.append(fsat, sats/lenses)
+        cens = float(sum(np.ones(len(ranklist[cenmask*envmask]))*weightlist[cenmask*envmask]))
+        isos = float(sum(np.ones(len(ranklist[isomask*envmask]))*weightlist[isomask*envmask]))
+        
+        fsatmin = np.append(fsatmin, sats/lenses)
+        fsatmax = np.append(fsatmax, (sats+isos)/lenses)
     
-    obsnames = ['average(Z)', 'average(M*)', 'satellite fraction']
-    obs = np.array([zaverage, mstaraverage, fsat])
+    obsnames = ['average(Z)', 'average(M*)', 'minimum fsat', 'maximum fsat']
+    obs = np.array([zaverage, mstaraverage, fsatmin, fsatmax])
         
     print '              ', envnames
     for o in xrange(len(obs)):
@@ -95,7 +103,7 @@ def calc_halomodel_input(envnames, envlist, ranklist, zlist, mstarlist, weightli
             printline = '%s%s,'%(printline, obs[o, e])
         print printline
         
-    return zaverage, mstaraverage, fsat
+    return zaverage, mstaraverage, fsatmin, fsatmax
 
     
 # Write the results to a fits catalogue

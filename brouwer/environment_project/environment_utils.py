@@ -12,6 +12,154 @@ from matplotlib import gridspec
 from matplotlib import rc, rcParams
 
 
+# Importing mcmc results
+def import_mcmc(filename, burn):
+
+    mcmcname = '%s.fits'%filename
+    headername = '%s.hdr'%filename
+    
+    print 'Importing MCMC results:', mcmcname
+    print '                   and:', headername
+    mcmccat = pyfits.open(mcmcname)[1]
+    mcmcnames = mcmccat.columns.names
+    mcmcdata = mcmccat.data
+    
+    mcmcmask = (mcmcdata['Mcen1'] != 0)
+    end = np.sum(mcmcmask)
+    
+    mcmc = dict()
+    for colname in mcmcnames:
+        mcmc[colname] = (mcmcdata[colname])[burn:end]
+
+    return mcmc, end, mcmcname, headername, mcmcmask
+    
+    
+# Import header file
+def read_header(headername):
+
+    inputparams = dict()
+
+    header = open(headername, 'r').read().split('\n')
+    header = [header[i].split(' ') for i in xrange(len(header))]
+
+    for line in header:
+        if len(line)>1:
+#            print line
+            if line[0] == 'datafile':
+                esdfiles = line[1].split(',')
+            elif line[0] == 'covfile':
+                covfile = line[1]
+            elif 'fixed' in line:
+                inputvalues = line[4].split(',')
+                inputvalues = [float(inputvalues[p]) for p in xrange(len(inputvalues))]
+                inputparams[line[0]] = inputvalues
+    
+    return esdfiles, covfile, inputparams
+
+
+# Importing the ESD profiles
+def read_esdfiles(esdfiles):
+    
+    data = np.loadtxt(esdfiles[0]).T
+    data_x = data[0]
+
+    data_y = np.zeros(len(data_x))
+    error_h = np.zeros(len(data_x))
+    error_l = np.zeros(len(data_x))
+    
+    print 'Imported ESD profiles: %i'%len(esdfiles)
+    
+    for f in xrange(len(esdfiles)):
+        # Load the text file containing the stacked profile
+        data = np.loadtxt(esdfiles[f]).T
+    
+        bias = data[4]
+        bias[bias==-999] = 1
+    
+        datax = data[0]
+        datay = data[1]/bias
+        datay[datay==-999] = np.nan
+    
+        errorh = (data[3])/bias # covariance error
+        errorl = (data[3])/bias # covariance error
+        errorh[errorh==-999] = np.nan
+        errorl[errorl==-999] = np.nan
+        
+        
+        data_y = np.vstack([data_y, datay])
+        error_h = np.vstack([error_h, errorh])
+        error_l = np.vstack([error_l, errorl])
+        
+    data_y = np.delete(data_y, 0, 0)
+    error_h = np.delete(error_h, 0, 0)
+    error_l = np.delete(error_l, 0, 0)
+    
+    return data_x, data_y, error_h, error_l
+
+
+# Taking the median result of all samples after the burn-in phase
+def calc_esds_masses(inputparams, mcmc, esdnames, massnames, envnames):
+        
+    # Calculating the satellite fraction
+    fsat = inputparams['fsat']
+    
+    esd_fracs = np.array([[1, 1-fsat[esd], fsat[esd], fsat[esd]] for esd in xrange(len(esdnames))])
+    
+    print 'ESD fractions:'
+    print esd_fracs
+    print
+    
+    # Creating the full names of the masses
+    masses = np.array([['%s%i'%(m, env+1) \
+                        for env in xrange(len(envnames))] \
+                        for m in massnames])
+   
+    # Creating the full names of the ESDs                        
+    esds = np.array([['%s%i'%(esd, env+1) \
+                    for env in xrange(len(envnames))] \
+                    for esd in esdnames])
+    
+    
+    #"""
+    # Calculating the median ESD fits
+    masslist = mcmc['Mavg1']
+    index = len(masslist)/2
+    sorts = np.argsort(masslist)
+
+    #"""
+    
+    """
+    # Selecting the result with the lowest chi2
+    chi2list = mcmc['chi2']
+    index = np.where(chi2list == np.amin(chi2list))[0][-1]
+    esds_med = np.array([[(mcmc[esds[e,i]])[index] \
+                        for e in xrange(len(esdnames))] \
+                        for i in xrange(len(envnames))])
+    """
+        
+    esds_med = np.array((([[(mcmc[esds[e,i]][sorts])[index] \
+                            for e in xrange(len(esdnames))] \
+                            for i in xrange(len(envnames))])))
+
+    # Calculating the median masses
+    masses_med = np.array([[(mcmc[masses[m, env]])[index] \
+                           for env in xrange(len(envnames))] \
+                           for m in xrange(len(massnames))])
+
+
+    r=1
+    print 'Median ESDs for radial bin %i:'%r
+    tot = esds_med[0,:,r]
+    print tot
+    print
+    print 'Weighted ESDs for radial bin %i:'%r
+    tot = esd_fracs[0]*esds_med[0,:,r]
+    print tot
+    print
+    print 'Total ESD:'
+    print np.sum(tot[1:])
+
+    return fsat, esd_fracs, esds_med, masses_med, esds, masses
 
 
 # Create any histogram for the four environments

@@ -25,6 +25,15 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
             git clone git@github.com:KiDS-WL/KiDS-GGL.git
 
+    c) In order to run the halo model (halo.py) and the sampler there are some additional Python packages needed. You will need hmf v1.7.0 and emcee. Running
+            
+            pip install hmf==1.7.0
+            
+    should install both, as hmf requires emcee in the first place (The latest version of hmf is 1.8.0, but the halo model has not been tested against it). If not
+    
+            pip install emcee
+            
+    will do. hmf specific documentation and source can be found at: https://github.com/steven-murray/hmf
 
 2. Set up your configuration file. See `help/ggl_demo.config` for guidance.
 

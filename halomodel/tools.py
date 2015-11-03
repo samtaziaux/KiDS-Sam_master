@@ -37,24 +37,22 @@ import scipy.special as sp
 
 def Integrate(func_in, x_array): # Simpson integration on fixed spaced data!
 	
-	func_in = np.nan_to_num(func_in)
-	result = simps(func_in, x_array)
-    #result = trapz(func_in, x_array)
-	
-	#print ("Integrating over given function.")
-	return result
+    func_in = np.nan_to_num(func_in)
+    result = simps(func_in, x_array)
+    
+    return result
 
 
 def Integrate1(func_in, x_array): # Gauss - Legendre quadrature!
 	
 	import scipy.integrate as intg
 	
-	func_in = np.nan_to_num(func_in)
+    #func_in = np.nan_to_num(func_in)
 	
 	c = interp1d(np.log(x_array), np.log(func_in), kind='slinear', bounds_error=False, fill_value=0.0)
 	
 	integ = lambda x: np.exp(c(np.log(x)))
-	result = intg.quad(integ, x_array[0], x_array[-1])
+	result = intg.fixed_quad(integ, x_array[0], x_array[-1])
 	
 	#print ("Integrating over given function.")
 	return result[0]
@@ -69,13 +67,14 @@ def extrap1d(x, y, step_size, method):
 	#~ step = len(x)*0.005#len(x)*0.0035#0.005!
 	step = len(x)*step_size
 	
-	xi = np.log(x)
-	yi = np.log(y)
+	xi = np.log10(x)
+	yi = np.log10(y)
 	
 	xs = xi
 	ys = yi
 	
 	minarg = np.argmin(np.nan_to_num(np.gradient(yi)))
+	grad = np.min(np.nan_to_num(np.gradient(yi)))
 	#~ step = minarg - np.where(xi == min(xi, key=lambda x:abs(x - (xi[minarg] - 0.9) )))[0]
 	
 	if step < 3:
@@ -99,15 +98,15 @@ def extrap1d(x, y, step_size, method):
 	elif method == 3:	
 		#~ yslice = y[(minarg-20):(minarg):1] #60
 		#~ xslice = x[(minarg-20):(minarg):1]
-		yslice = y[(minarg-len(x)/500.0):(minarg):1] #60
-		xslice = x[(minarg-len(x)/500.0):(minarg):1]
-		
+		yslice = y[(minarg-20):(minarg):1] #60
+		xslice = x[(minarg-20):(minarg):1]
+        
 		from scipy.optimize import curve_fit
 		def func(x, a, b, c):
 			return a * (1.0+(x/b))**(-2.0)
 				
 		popt, pcov = curve_fit(func, xslice, yslice, p0=(y[0], x[minarg], 0.0))
-    #print popt
+		#print popt
 	
 	for i in range(len(x)):
 		
@@ -122,17 +121,17 @@ def extrap1d(x, y, step_size, method):
 			#~ y_out[i] = np.exp(ys[np.argmin(yi)-50] + (xi[i] - xi[np.argmin(yi)-50])*(ys[np.argmin(yi)-50] - ys[np.argmin(yi)-100])/(xs[np.argmin(yi)-50] - xs[np.argmin(yi)-100])) #ys[0]+(x-xs[0])*(ys[1]-ys[0])/(xs[1]-xs[0])     
 			
 			if method == 1:
-				y_out[i] = np.exp(ys[minarg] + (xi[i] - xi[minarg])*(w[0]))
+				y_out[i] = 10.0**(ys[minarg] + (xi[i] - xi[minarg])*(w[0]))
 			
 			elif method == 2:
-				y_out[i] = np.exp(w[2] + (xi[i])*(w[1]) + ((xi[i])**2.0)*(w[0]))
+				y_out[i] = 10.0**(w[2] + (xi[i])*(w[1]) + ((xi[i])**2.0)*(w[0]))
 				
 			elif method == 3:	
 				y_out[i] = (func(x[i], popt[0], popt[1], popt[2]))
-				
+
 		else:
-			y_out[i] = np.exp(yi[i])
-			
+			y_out[i] = 10.0**(yi[i])
+
 	return y_out
 	
 
@@ -187,6 +186,20 @@ def gas_concentration(mass, x_1, power):
 def star_concentration(mass, x_1, power):
 	r_t = 0.02 * (mass/(x_1))**(power)
 	return r_t
+
+def virial_mass(r, rho_mean, delta_halo):
+    """
+    Returns the virial mass of a given halo radius
+    """
+
+    return 4.0 * np.pi * r ** 3.0 * rho_mean * delta_halo / 3.0
+
+def virial_radius(m, rho_mean, delta_halo):
+    """
+    Returns the virial radius of a given halo mass
+    """
+
+    return ((3.0 * m) / (4.0 * np.pi * rho_mean * delta_halo)) ** (1.0 / 3.0)
 	
 
 if __name__ == '__main__':

@@ -44,7 +44,7 @@ from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
 
 def f_dm(omegab, omegac):
 	
-	f = 1.0 - omegab/(omegab+omegac)
+	f = 1.0 - (omegab/(omegab+omegac))
 	
 	return f
 
@@ -97,7 +97,7 @@ All normalizations should add up to 1, and one precisely!!!
 
 def rhoDM(mass_func, M, omegab, omegac):
 	
-	integ = mass_func.dndlnm*f_dm(omegab, omegac)
+	integ = mass_func.dndlnm*f_dm(mass_func.omegab, mass_func.omegac)
 	rho = Integrate(integ, M)
 	
 	#print rho

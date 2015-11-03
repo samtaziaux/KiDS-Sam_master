@@ -1,5 +1,6 @@
 import numpy as np
 from tools import Integrate
+import scipy.special as sp
 
 
 """
@@ -67,7 +68,7 @@ def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
 
         M_0 = m_0(M[i], A, M_1, gamma_1, gamma_2)
         x = m/M_0
-        phi[i,:] = np.log10(np.e)*np.exp(-(np.log10(x)*np.log10(x))/(2.0*(sigma**2.0)))/(((2.0*np.pi)**0.5)*sigma*m)
+        phi[i,:] = np.log10(np.e) * np.exp(-(np.log10(x)*np.log10(x))/(2.0*(sigma**2.0)))/(((2.0*np.pi)**0.5)*sigma*m)
 
 
     return phi
@@ -87,7 +88,7 @@ def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
 
     for i in range(len(M)):
 
-        M_0 = 0.5 * m_0(M[i], A, M_1, gamma_1, gamma_2)
+        M_0 = 0.562 * m_0(M[i], A, M_1, gamma_1, gamma_2)
         x = m/M_0
         y = -(x**2.0)
         phi[i,:] = phi_0(M[i], b_0, b_1, b_2) * ((x)**(alpha + 1.0)) * np.exp(y) / m
@@ -153,14 +154,14 @@ def m_0(M, A, M_1, gamma_1, gamma_2):
     # Stellar mass as a function of halo mass parametrisation!
     # Fit as a result in my thesis!
 
-    A = 10**A#10.0**(9.125473164494394496e+00)
-    M_1 = 10**M_1#10.0**(1.044861151548183820e+01)
+    A = 10.0**A#10.0**(9.125473164494394496e+00)
+    M_1 = 10.0**M_1#10.0**(1.044861151548183820e+01)
     #gamma_1 = 2.619106875140703838e+00
     #gamma_2 = 8.256965648888969778e-01
     # Above values taken from Cacciato 2009, may not be ok!
 
 
-    m_0 = A*(((M/M_1)**(gamma_1))/((1.0 + (M/M_1))**(gamma_1 - gamma_2)))
+    m_0 = A * ((M/M_1)**(gamma_1))/((1.0 + (M/M_1))**(gamma_1 - gamma_2))
 
     return m_0
 
@@ -184,14 +185,19 @@ def phi_0(M, b_0, b_1, b_2):
 def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
     
     nc = np.ones(len(M))
+    import scipy.integrate as intg
         
     phi_int = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2)
         
     for i in range(len(M)):
         integ = phi_int[i,:]
         nc[i] = Integrate(integ, m)
+    
+    # This works, but above more general, for different definition of CLF/CMF.
+    #func = lambda x: 0.5 * (sp.erf((np.log10(x/m_0(M, A, M_1, gamma_1, gamma_2)))/(sigma * (2.0**0.5))))
+    #nc = (func(m[-1]) - func(m[0]))
+    
     return nc
-
 
 def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
     
@@ -202,6 +208,13 @@ def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
     for i in range(len(M)):
         integ = phi_int[i,:]
         ns[i] = Integrate(integ, m)
+    #p = phi_0(M, b_0, b_1, b_2)
+    #y = 0.562 * m_0(M, A, M_1, gamma_1, gamma_2)
+    
+    # This does not work yet, as gamma function is not propery defined in scipy. It needs some additional lines...
+    #func = lambda x: (-0.5) * p * ((x/y)**(alpha-1.0)) * ((x/y)**(1.0-alpha)) * (sp.gammaincc(np.abs((alpha+1.0)/2.0),((x/y)**2.0))) * sp.gamma(np.abs((alpha+1.0)/2.0))
+    #ns = func(m[-1]) - func(m[0])
+    
     return ns
 
 

@@ -27,7 +27,7 @@ import matplotlib.pyplot as pl
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
-from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
+from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, virial_mass, virial_radius
 
 
 """
@@ -37,12 +37,12 @@ from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
 def NFW(rho_mean, c, R_array):
     
     r_max = R_array[-1]
-    d_c = NFW_Dc(200, c)
+    d_c = NFW_Dc(200.0, c)
     r_s = NFW_RS(c, r_max)
     
     # When using baryons, rho_mean gets is rho_dm!
     
-    profile = (rho_mean*d_c)/((R_array/r_s)*((1+R_array/r_s)**2))
+    profile = (rho_mean*d_c)/((R_array/r_s)*((1.0+R_array/r_s)**2.0))
     
     #print ("NFW.")
     #print ("%s %s %s", d_c, r_s, r_max)
@@ -57,59 +57,61 @@ def NFW_RS(c, r_max):
 
 def NFW_Dc(delta_h, c):
     #print ("DC.")
-    return (delta_h*(c**3))/(3*(np.log(1+c)-(c/(1+c))))
+    return (delta_h*(c**3.0))/(3.0*(np.log(1.0+c)-(c/(1.0+c))))
     
     
 # Fourier transform of NFW profile - analytic!
 
 def NFW_f(z, rho_mean, m_x, r_x, k_x):
 	
-	if len(m_x.shape) == 0:
-		m_x = np.array([m_x])
-		r_x = np.array([r_x])
+    if len(m_x.shape) == 0:
+        m_x = np.array([m_x])
+        r_x = np.array([r_x])
 	
-	u_k = np.zeros((len(k_x), len(m_x)))
+    u_k = np.zeros((len(k_x), len(m_x)))
 	
 	
-	for i in range(len(m_x)):
-		c = Con(z, m_x[i])
-		r_s = NFW_RS(c, r_x[i])
+    for i in range(len(m_x)):
+        c = Con(z, m_x[i])
+        r_s = NFW_RS(c, r_x[i])
 		
-		K = k_x*r_s
+        K = k_x*r_s
 		
-		bs, bc = sp.sici(K)
-		asi, ac = sp.sici((1 + c) * K)
+        bs, bc = sp.sici(K)
+        asi, ac = sp.sici((1.0 + c) * K)
 		
-		u_k[:,i] = 4*np.pi*rho_mean*NFW_Dc(200, c)*(r_s**3) * (np.sin(K) * (asi - bs) - np.sin(c * K) / ((1 + c) * K) + np.cos(K) * (ac - bc))/m_x[i]
-	
-	return u_k
+        u_k[:,i] = 4.0*np.pi*rho_mean*NFW_Dc(200.0, c)*(r_s**3.0) * ((np.sin(K) * (asi - bs)) - (np.sin(c * K) / ((1.0 + c) * K)) + (np.cos(K) * (ac - bc)))/m_x[i]
+
+
+    return u_k
     
 
 def Con(z, M):
 	
-	#duffy rho_crit
-	#c = 6.71 * (M / (2.0 * 10 ** 12)) ** -0.091 * (1 + z) ** -0.44
+    #duffy rho_crit
+    #c = 6.71 * (M / (2.0 * 10.0 ** 12.0)) ** -0.091 * (1 + z) ** -0.44
 	
-	#duffy rho_mean
-	c = 10.14 * (M / (2.0 * 10 ** 12)) ** -0.081 * (1.0 + z) ** -1.01
+    #duffy rho_mean
+    c = 10.14 * (M / (2.0 * 10.0 ** 12.0)) ** -0.081 * (1.0 + z) ** -1.01
+    
+    #maccio08
+    #c = 10**0.830 / (M*0.3/(1e12))**0.098
 	
-	#zehavi
-	#c = ((M / 1.5e13) ** -0.13) * 9.0 / (1 + z)
+    #zehavi
+    #c = ((M / 1.5e13) ** -0.13) * 9.0 / (1 + z)
 
-	#bullock_rescaled
-	#c = (M / 10 ** 12.47) ** (-0.13) * 11 / (1 + z)
+    #bullock_rescaled
+    #c = (M / 10 ** 12.47) ** (-0.13) * 11 / (1 + z)
 	
-	#c = c0 * (M/M0) ** b
-	
-	return c
+    #c = c0 * (M/M0) ** b
+    
+    return c
 	
 	
 def delta_NFW(z, rho_mean, M, r):
 	
-	import hmf.tools as ht
-	
 	c = Con(z, M)
-	r_vir = ht.mass_to_radius(M, rho_mean)/((200.0)**(1.0/3.0))
+	r_vir = virial_radius(M, rho_mean, 200.0)
 	r_s = NFW_RS(c, r_vir)
 	d_c = NFW_Dc(200.0, c)
    
@@ -155,38 +157,34 @@ def av_delta_NFW(mass_func, z, rho_mean, hod, M, r):
 """
 	
 def GM_cen_analy(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):
-	
-	spec = np.ones(len(k_x))
-	integ = np.ones((len(k_x), len(m_x)))
-	
-	from baryons import f_dm
-	
-	u_k = NFW_f(z, rho_mean*f_dm(0.0455, 0.226), m_x, r_x, k_x)
-	
-	for i in range(len(k_x)):
-		integ[i,:] = mass_func.dndlnm * population * u_k[i,:]
-		spec[i] = Integrate(integ[i,:], m_x)
-	
-	spec = spec/(rho_dm*ngal)
-	return spec
+    
+    spec = np.ones(len(k_x))
+    integ = np.ones((len(k_x), len(m_x)))
+    
+    u_k = NFW_f(z, rho_dm, m_x, r_x, k_x)
+    
+    for i in range(len(k_x)):
+        integ[i,:] = mass_func.dndlnm * population * u_k[i,:]/(u_k[0,:])
+        spec[i] = Integrate(integ[i,:], m_x)
+            
+    spec_out = spec/(rho_dm*ngal)
+    return spec_out
 	
 	
 def GM_sat_analy(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):
-	
-	spec = np.ones(len(k_x))
-	integ = np.ones((len(k_x), len(m_x)))
-	
-	from baryons import f_dm
-	
-	u_k = NFW_f(z, rho_mean*f_dm(0.0455, 0.226), m_x, r_x, k_x)
-	
-	for i in range(len(k_x)):
-		integ[i,:] = mass_func.dndlnm * population * u_k[i,:]**2.0
-		spec[i] = Integrate(integ[i,:], m_x)
-	
-	spec = spec/(rho_dm*ngal)
-	
-	return spec
+    
+    spec = np.ones(len(k_x))
+    integ = np.ones((len(k_x), len(m_x)))
+    
+    u_k = NFW_f(z, rho_dm, m_x, r_x, k_x)
+    
+    for i in range(len(k_x)):
+        integ[i,:] = mass_func.dndlnm * population * (u_k[i,:]**2.0)/(u_k[0,:]**2.0)
+        spec[i] = Integrate(integ[i,:], m_x)
+
+    spec_out = spec/(rho_dm*ngal)
+    
+    return spec_out
 	
 	
 def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
@@ -239,44 +237,42 @@ def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
 
 def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):
 	
-	"""
-	Calculates the power spectrum for the component given in the name. Following the construction from Mohammed, but to general power of k!
-	In practice the contributions from k > 50 are so small it is not worth doing it.
-	Extrapolates the power spectrum to get rid of the knee, which is a Taylor series artifact.
-	"""
+    """
+    Calculates the power spectrum for the component given in the name. Following the construction from Mohammed, but to general power of k!
+    In practice the contributions from k > 50 are so small it is not worth doing it.
+    Extrapolates the power spectrum to get rid of the knee, which is a Taylor series artifact.
+    """
 	
-	n = n + 2
+    n = n + 2
 	
-	k_x = np.longdouble(k_x)
+    k_x = np.longdouble(k_x)
 	
-	#T = np.ones((n/2, len(m_x)))
-	spec = np.ones(len(k_x))
-	integ = np.ones((n/2, len(m_x)))
-	T_comb = np.ones((n/2, len(m_x)))
-	comp = np.ones((n/2, len(k_x)), dtype=np.longdouble)
+    #T = np.ones((n/2, len(m_x)))
+    spec = np.ones(len(k_x))
+    integ = np.ones((n/2, len(m_x)))
+    T_comb = np.ones((n/2, len(m_x)))
+    comp = np.ones((n/2, len(k_x)), dtype=np.longdouble)
 	
-	# Calculating all the needed T's! 
-	"""
-	for i in range(0, n/2, 1):
-		T[i,:] = T_n(i, rho_mean, z, m_x, r_x)
-	"""		
-	norm = 1.0/(T_tot[0,:])
+    # Calculating all the needed T's!
+    """
+    for i in range(0, n/2, 1):
+        T[i,:] = T_n(i, rho_mean, z, m_x, r_x)
+    """
+    norm = 1.0/(T_tot[0,:])
 	
-	for k in range(0, n/2, 1):
+    for k in range(0, n/2, 1):
 		
-		T_comb[k,:] = T[k,:]
-		
-		integ[k,:] = norm*(population*mass_func.dndlnm*T_comb[k,:])/(rho_dm*ngal)
-		comp[k,:] = Integrate(integ[k,:], m_x) * (k_x**(k*2.0)) * (-1.0)**(k)
+        integ[k,:] = norm*(population*mass_func.dndlnm*T[k,:])/(rho_dm*ngal)
+        comp[k,:] = Integrate(integ[k,:], m_x) * (k_x**(k*2.0)) * (-1.0)**(k)
 	
-	spec = np.sum(comp, axis=0)
-	spec[spec >= 10.0**10.0] = np.nan
-	spec[spec <= 0.0] = np.nan
+    spec = np.sum(comp, axis=0)
+    spec[spec >= 10.0**10.0] = np.nan
+    spec[spec <= 0.0] = np.nan
 
-	spec_ext = extrap1d(np.float64(k_x), np.float64(spec), 0.001, 3)#0.001,3
+    spec_ext = extrap1d(np.float64(k_x), np.float64(spec), 0.001, 3)#0.001,3
 	
 	
-	return spec_ext
+    return spec_ext
 	
 	
 def GM_sat_spectrum(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):

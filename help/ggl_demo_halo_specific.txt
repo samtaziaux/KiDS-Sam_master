@@ -1,0 +1,133 @@
+########################
+### Halo model setup ###
+########################
+
+############################
+### Specific for halo.py ###
+############################
+
+# Name of the function containing the desired model (several fiducial models
+# will be implemented)
+model             halo.model
+
+## Halo model parameters
+# All parameters taken by the chosen model, in the same order as the model takes them.
+# There are several options here (see provided examples), but the general format is:
+# Format: hm_param    <param_name>    <param_type>    <param_value(s)>, where
+#       hm_param is a flag that cannot be changed (but see below)
+#       <param_name> is a name chosen by the user to identify each parameter. This
+#                    does not need to be the same name as in the python code but it
+#                    is convenient to match them.
+#       <param_type> can be one of {'function', 'read', 'fixed', 'uniform', 'normal'}, where
+#                    'function' is a python function. Currently only NFW profiles are
+#                               implemented, but simpler profiles (e.g., SIS) can be
+#                               implemented directly in the function given by <model>.
+#                    'read' is a column to be read from a file.
+#                    'fixed' is a fixed value for <param_name>.
+#                    'uniform' is a uniform prior.
+#                    'normal' is a normal prior.
+#       <param_value(s)> depends on <param_type>, as follows (by "entries" here we mean space-separated):
+#               if <param_type> =
+#                   a) 'function': <param_value(s)> should have the name of the python function,
+#                                  including the parent module (e.g., 'nfw.esd')
+#                   b) 'read': <param_value(s)> has two entries, the name of the file and the
+#                              column to read from said file.
+#                   c) 'fixed': <param_value(s)> is a single value, that to which this parameter
+#                               is fixed.
+#                   d) 'uniform': <param_value(s)> has three entries, namely the lower limit, upper limit
+#                                 and starting point for the MCMC.
+#                   e) 'normal': <param_value(s)> has four entries, namely the central value, the dispersion,
+#                                the lower limit allowed and the upper limit allowed. The starting point in
+#                                the MCMC will be the central value.
+# There is one exception to all of the above. A list of comma-separated values can be given only if:
+#       1) the flag is set to hm_params instead of hm_param, and
+#       2) <param_type> is set to 'fixed'.
+# This particular halo model takes the following parameters in this order:
+
+# First are parameters used in for conditional luminosity/mass function and derived quantities (HOD, baryonic fractions ...).
+# See Cacciato, 2009 (http://arxiv.org/abs/0807.4932) and 2013 (http://arxiv.org/abs/1207.0503) for details. Shown here are fiducial values from the later paper.
+
+hm_param          sigma_c         fixed     0.157
+hm_param          alpha_s         fixed     -1.18
+hm_param          A               fixed     9.95
+hm_param          M_1             fixed     11.24
+hm_param          gamma_1         fixed     3.18
+hm_param          gamma_2         fixed     0.254
+hm_param          b_0             fixed     -1.17
+hm_param          b_1             fixed     1.53
+hm_param          b_2             fixed     -0.217
+
+# Parameters used when incorporating baryons in halo model. Values and usage as in paper from Fedeli, 2014 (http://arxiv.org/abs/1401.2997).
+
+hm_param          alpha_star      fixed     1.0
+hm_param          beta_gas        fixed     0.666666
+hm_param          r_t0            fixed     0.03
+hm_param          r_c0            fixed     0.05
+
+# Redshift
+
+hm_param          z               fixed     0.0
+
+# Luminosity or stellar mass bins. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
+# !!! Number of bins can be changed, but that also needs to be reflected in halo.model and in halo model output below !!!
+
+hm_param          M_bin_min1      fixed       1.6e12
+hm_param          M_bin_min2      fixed       2.5685e13
+hm_param          M_bin_min3      fixed       4.1453e14
+hm_param          M_bin_min4      fixed       5.5987e13
+hm_param          M_bin_min5      fixed       1.073921e14
+hm_param          M_bin_min6      fixed       2.13363e14
+hm_param          M_bin_max1      fixed       2.5685e13
+hm_param          M_bin_max2      fixed       4.1453e14
+hm_param          M_bin_max3      fixed       5.5987e13
+hm_param          M_bin_max4      fixed       1.073921e14
+hm_param          M_bin_max5      fixed       2.13363e14
+hm_param          M_bin_max6      fixed       6.755309e14
+
+# Extra boolean parameters that either switch calculation of halo model between analytical evaluation or using the Taylor series expansion (Mohammed & Seljak, 2014 - http://arxiv.org/abs/1407.0060),
+# and incorporation of baryons in the calculation. This works, but the outputs are still dark matter only using analytic prescription. That will be made more general, until then
+# the code needs to be changed manually.
+# Values are either 0 or 1.
+
+hm_param          taylor_procedure fixed      0
+hm_param          include_baryons  fixed      0
+
+
+## Halo model output
+# These are any values other than the free parameters, that the model returns. This
+# includes the signal itself!
+# Format: hm_output     <value(s)>      <fits_format(s)>, where
+#       hm_output is a fixed flag
+#       <value(s)> is a comma-separated list of names. The number of names should
+#                  match the number of columns the output value contains (e.g.,
+#                  if it is an ESD with shape (3,10) -- three bins and ten data points
+#                  per bin -- there should be three names)
+#       <fits_format(s)> is the fits format of each name. These will almost always be
+#                        floats (format 'E'). If each name contains an array then the 'E'
+#                        should be preceded by the number of values (e.g., '10E' in the
+#                        example above). Note that this is the total number of data points,
+#                        without accounting for bins discarded by <exclude_bins> (see below).
+hm_output         esd_total1,esd_total2,esd_total3,esd_total4,esd_total5,esd_total6            10E,10E,10E,10E,10E,10E
+hm_output         Mavg1,Mavg2,Mavg3,Mavg4,Mavg5,Mavg6                                E,E,E,E,E,E
+
+
+#######################
+### Additonal info: ###
+#######################
+
+# Halo model is currently using the following functions as default:
+#
+# - halo mass functions as defined in Tinker 2010 (http://arxiv.org/abs/1001.3162)
+# - corresponding bias function also from Tinker 2010 (http://arxiv.org/abs/1001.3162)
+# Note: halo mass function can always be changed when calling hmf, most popular ones are available through hmf package
+# Adding another bias function means adding additional python function in halo.py module (as for now done only for Tinker2010).
+#
+# - Cosmological parameters can be changed in "cosmo_params" dicitonary in halo.model. This is on the To-Do list to be read in from config file, as in principle one should be able to fit for them.
+# - c(M,z) relation is curently used from Duffy et al. 2010 (http://arxiv.org/abs/0804.2486). There are few others available in dark_matter.py, adding additional ones should be done in the same location.
+# - The model is easyly expandable to incorporate different density profiles or other functions, but to be consistent with other parts of the code, one should
+#   first go through the detailed explanation in my master's thesis, which can be found at: https://www.dropbox.com/s/77u49ltf8448eur/thesis_final.pdf?dl=0
+#
+# If I have missed anything or there are more questions, don't hesitate to send me an email: dvornik@strw.leidenuniv.nl
+
+
+

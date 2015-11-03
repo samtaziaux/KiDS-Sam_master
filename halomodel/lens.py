@@ -22,7 +22,7 @@
 #  
 #  
 import time
-from progressbar import *
+#from progressbar import *
 import numpy as np
 import matplotlib.pyplot as pl
 import scipy

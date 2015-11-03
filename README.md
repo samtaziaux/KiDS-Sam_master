@@ -3,6 +3,7 @@ Galaxy-Galaxy Lensing pipeline production
 
 ---
 Update log:
+2015 Nov 3 - Added detail on how to install hmf (Andrej Dvornik)
 
 2015 Sep 25 - Finished a first complete version (Cristóbal Sifón)
 

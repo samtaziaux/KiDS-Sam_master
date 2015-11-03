@@ -368,7 +368,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     radius_range_3d = 10.0 ** np.linspace(-3.2, 4.0, 200, endpoint=True)
     
     radius_range_3d_i = 10.0 ** np.linspace(-2.5, 1.2, 25, endpoint=True)
-    radius_range_2d_i = R[0]#[1:]
+    radius_range_2d_i = R[0][1:]
     
     # Calculating halo model
     

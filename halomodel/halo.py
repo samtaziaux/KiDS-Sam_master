@@ -355,7 +355,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
 
     rho_dm = rho_mean*baryons.f_dm(omegab, omegac)
     
-    if include_baryons is not 0:
+    if include_baryons is 1.0:
         #rho_dm = baryons.rhoDM(hmf, mass_range_lin, omegab, omegac)
         rho_stars = np.array([baryons.rhoSTARS(hmf, i[0], mass_range_lin, sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) for i in izip(hod_mass)])
         rho_gas = np.array([baryons.rhoGAS(hmf, rho_crit, omegab, omegac, i[0], mass_range_lin, sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) for i in izip(hod_mass)])[:,0]
@@ -388,14 +388,14 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     # Power spectrum
     """
 
-    if taylor_procedure is not 0:
+    if taylor_procedure is 1.0:
         T_dm = np.array([T_table(expansion, rho_dm, z, mass_range_lin, radius_range_lin, i[0], "dm", omegab, omegac, 0, 0, sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) for i in izip(hod_mass)])
         T_tot = np.array([T_dm[i][0:1:1,:] for i in range(len(M_bin_min))])
     else:
         T_dm = np.ones((len(hod_mass), (expansion+2)/2, len(mass_range_lin)))
         T_tot = np.array([T_dm[i][0:1:1,:] for i in range(len(M_bin_min))])
 
-    if include_baryons is not 0:
+    if include_baryons is 1.0:
         T_dm = np.array([T_table(expansion, rho_dm, z, mass_range_lin, radius_range_lin, i[0], "dm", omegab, omegac, 0, 0, sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) for i in izip(hod_mass)])
         T_stars = np.array([T_table_multi(expansion_stars, rho_mean, z, mass_range_lin, radius_range_lin, i[0], "stars", omegab, omegac, alpha_star, r_t0, sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) for i in izip(hod_mass)])
         T_gas = np.array([T_table_multi(expansion, rho_mean, z, mass_range_lin, radius_range_lin, i[0], "gas", omegab, omegac, beta_gas, r_c0, sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) for i in izip(hod_mass)])
@@ -409,7 +409,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     
     Pg_2h = np.array([TwoHalo(hmf, ngal_i, pop_g_i, k_range_lin, radius_range_lin, mass_range_lin) for ngal_i, pop_g_i in izip(ngal, pop_g)])
 
-    if taylor_procedure is not 0 or include_baryons is not 0:
+    if taylor_procedure is 1.0 or include_baryons is 1.0:
         Pg_c = np.array([F_k1 * GM_cen_spectrum(hmf, z, rho_dm, rho_mean, expansion, pop_c_i, ngal_i, k_range_lin, radius_range_lin, mass_range_lin, T_dm_i, T_tot_i) for pop_c_i, ngal_i, T_dm_i, T_tot_i in izip(pop_c, ngal, T_dm, T_tot)])
         Pg_s = np.array([F_k1 * GM_sat_spectrum(hmf, z, rho_dm, rho_mean, expansion, pop_s_i, ngal_i, k_range_lin, radius_range_lin, mass_range_lin, T_dm_i, T_tot_i) for pop_s_i, ngal_i, T_dm_i, T_tot_i in izip(pop_s, ngal, T_dm, T_tot)])
     else:
@@ -420,7 +420,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     
     # Galaxy - stars/gas spectra
 
-    if include_baryons is not 0:
+    if include_baryons is 1.0:
         Ps_c = np.array([F_k1 * baryons.GS_cen_spectrum(hmf, z, rho_stars_i, rho_mean, expansion_stars, pop_c_i, ngal_i, k_range_lin, radius_range_lin, mass_range_lin, T_stars_i, T_tot_i) for rho_stars_i, pop_c_i, ngal_i, T_stars_i, T_tot_i in izip(rho_stars, pop_c, ngal, T_stars, T_tot)])
         Ps_s = np.array([F_k1 * baryons.GS_sat_spectrum(hmf, z, rho_stars_i, rho_mean, expansion, pop_s_i, ngal_i, k_range_lin, radius_range_lin, mass_range_lin, T_dm_i, T_stars_i, T_tot_i) for rho_stars_i, pop_s_i, ngal_i, T_dm_i, T_stars_i, T_tot_i in izip(rho_stars, pop_s, ngal, T_dm, T_stars, T_tot)])
     
@@ -434,7 +434,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     #Pg_k_s = np.array([(rho_stars_i*(Ps_c_i + Ps_s_i))/(rho_mean) for rho_stars_i, Ps_c_i, Ps_s_i in izip(rho_stars, Ps_c, Ps_s)])
     #Pg_k_g = np.array([(rho_gas_i*(Pgas_c_i + Pgas_s_i))/(rho_mean) for rho_gas_i, Pgas_c_i, Pgas_s_i in izip(rho_gas, Pgas_c, Pgas_s)])
 
-    if include_baryons is not 0:
+    if include_baryons is 1.0:
         Pg_k = np.array([(rho_dm*(Pg_c_i + Pg_s_i + Pg_2h_i*(rho_mean/rho_dm)) + rho_stars_i*(Ps_c_i + Ps_s_i) + rho_gas_i*(Pgas_c_i + Pgas_s_i))/(rho_mean) for Pg_c_i, Pg_s_i, Pg_2h_i, rho_stars_i, Ps_c_i, Ps_s_i, rho_gas_i, Pgas_c_i, Pgas_s_i in izip(Pg_c, Pg_s, Pg_2h, rho_stars, Ps_c, Ps_s, rho_gas, Pgas_c, Pgas_s)])  # all components
     else:
         Pg_k = np.array([(rho_dm*(Pg_c_i + Pg_s_i + Pg_2h_i*(rho_mean/rho_dm)))/(rho_mean) for Pg_c_i, Pg_s_i, Pg_2h_i in izip(Pg_c, Pg_s, Pg_2h)])
@@ -494,7 +494,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
 
     #print np.nan_to_num(out_esd_tot_inter)
     #print effective_mass
-    #print sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, alpha_star, beta_gas, z
+    print sigma_c, alpha_s, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, alpha_star, beta_gas, z
     #end = time.time()
     #print end-start
 

@@ -22,12 +22,12 @@
 #
 #
 
-# Halo profile code
+# Halo model code
 # Andrej Dvornik, 2014/2015
 
 import time
 import multiprocessing as multi
-from progressbar import *
+#from progressbar import *
 import numpy as np
 import mpmath as mp
 import longdouble_utils as ld

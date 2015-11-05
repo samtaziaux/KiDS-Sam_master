@@ -17,7 +17,7 @@ h                   1.0                                         # Reduced Hubble
 
 # Algorithm
 ESD_output_folder     /data2/dvornik/AssemblyBias/pipeline_results            # Path to ESD output folder.
-ESD_output_filename   AssemblyBias_blue                            # This flag will be appended to the filenames (optional).
+ESD_output_filename   AssemblyBias_red_2                            # This flag will be appended to the filenames (optional).
 ESD_purpose           shearcatalog                     # One of {'shearcatalog', 'shearcovariance', 'shearbootstrap',
 # ESD_purpose         randomcatalog                    #     'randomcatalog', 'randombootstrap'}.
 #Rbins                1                                # One of the standard options (1-5, see help file), (Not yet working) or
@@ -27,7 +27,7 @@ Runit                 kpc                              # One of these physical {
 ncores                12                                # Any number of cores your machine can use to run the code.
 
 # Lens selection
-lensID_file       /data2/dvornik/AssemblyBias/ID_blue.txt                   # Path to text file with chosen lens IDs (optional).
+lensID_file       /data2/dvornik/AssemblyBias/ID_red_bottom.txt                   # Path to text file with chosen lens IDs (optional).
 lens_weights      None                                 # Weight name and path to fits file with lens weights (optional). (Not yet working)
 group_centre          BCG                              # One of {BCG, IterCen, Cen}.
 lens_ranks            All                              # Choose from {'Isolated' (-999), 'Centrals' (1), 'Satellites' (2 inf), 'All' (-999 inf), Group (1 inf)} or

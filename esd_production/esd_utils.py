@@ -124,9 +124,9 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
         """
         
     try: # If a custom lens catalog was given
-        if 'None' not in lensid_file:
-            gama_path = lensid_file
-            print 'Lens catalog:', lensid_file
+        if 'None' not in lens_catalog:
+            gama_path = lens_catalog
+            print 'Lens catalog:', lens_catalog
     except:
         pass
         

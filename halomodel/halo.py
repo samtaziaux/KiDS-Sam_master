@@ -27,7 +27,6 @@
 
 import time
 import multiprocessing as multi
-#from progressbar import *
 import numpy as np
 import mpmath as mp
 import longdouble_utils as ld
@@ -36,9 +35,13 @@ import scipy
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
-import sys
-sys.path.insert(0, '/home/dvornik/MajorProject/pylib/lib/python2.7/site-packages/')
-from hmf import MassFunction
+#import sys
+#sys.path.insert(0, '/home/dvornik/MajorProject/pylib/lib/python2.7/site-packages/')
+try:
+    from hmf import MassFunction
+except ImportError:
+    print('Cannot import hmf, check that you have installed it.')
+    quit()
 
 import baryons
 from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration, star_concentration, virial_mass, virial_radius
@@ -498,7 +501,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     #end = time.time()
     #print end-start
 
-    return [np.nan_to_num(out_esd_tot_inter), effective_mass, effective_mass_bar, 0] # Add other outputs as needed. Total ESD should always be first!
+    return [np.nan_to_num(out_esd_tot_inter), effective_mass, 0] # Add other outputs as needed. Total ESD should always be first!
 
 
 	

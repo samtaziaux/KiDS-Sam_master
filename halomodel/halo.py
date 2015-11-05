@@ -35,13 +35,7 @@ import scipy
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
-#import sys
-#sys.path.insert(0, '/home/dvornik/MajorProject/pylib/lib/python2.7/site-packages/')
-try:
-    from hmf import MassFunction
-except ImportError:
-    print('Cannot import hmf, check that you have installed it.')
-    quit()
+from hmf import MassFunction
 
 import baryons
 from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration, star_concentration, virial_mass, virial_radius

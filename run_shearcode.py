@@ -74,8 +74,9 @@ config_files = create_config(replacefile, findlist, replacelist)
 #config_files = ['/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/Edo_logagebins_%i.config'%(i+1) for i in xrange(3)]
 #config_files = ['/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/Edo_logagebins.config']
 
-config_files = ['/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_margot_mstarweight.config']
+#config_files = ['/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_margot_mstarweight.config']
 
+config_files = ['/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/troughs.config']
 
 
 print

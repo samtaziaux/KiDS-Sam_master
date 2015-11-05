@@ -142,7 +142,7 @@ def calc_esds_masses(inputparams, mcmc, esdnames, massnames, envnames):
                             for i in xrange(len(envnames))])))
 
     # Calculating the median masses
-    masses_med = np.array([[(mcmc[masses[m, env]])[index] \
+    masses_med = np.array([[(mcmc[masses[m, env]][sorts])[index] \
                            for env in xrange(len(envnames))] \
                            for m in xrange(len(massnames))])
 

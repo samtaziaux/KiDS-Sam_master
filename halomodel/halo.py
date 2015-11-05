@@ -495,7 +495,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     #end = time.time()
     #print end-start
 
-    return [np.nan_to_num(out_esd_tot_inter), effective_mass, 0] # Add other outputs as needed. Total ESD should always be first!
+    return [out_esd_tot_inter, effective_mass.T[0], 0] # Add other outputs as needed. Total ESD should always be first!
 
 
 	

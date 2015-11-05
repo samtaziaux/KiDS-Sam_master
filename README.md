@@ -35,7 +35,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
     
             pip install emcee
             
-    will do. hmf specific documentation and source can be found at: https://github.com/steven-murray/hmf
+    will do. hmf specific documentation and source can be found at: https://github.com/steven-murray/hmf.
     Another less common package needed for running the halo model is mpmath. Installation follows the same precision as for others above:
     
             pip install mpmath

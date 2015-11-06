@@ -76,7 +76,9 @@ config_files = create_config(replacefile, findlist, replacelist)
 
 #config_files = ['configs_margot/ggl_margot_mstarweight.config']
 
-config_files = ['configs_margot/troughs.config']
+config_files = ['configs_margot/ggl_environments_cen+iso.config']
+
+#config_files = ['configs_margot/troughs.config']
 
 
 print

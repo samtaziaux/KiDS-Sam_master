@@ -28,7 +28,7 @@ def Mass_Function(M_min, M_max, step, k_min, k_max, k_step, name, **cosmology_pa
     
     m = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step, mf_fit=name, delta_h=200.0, delta_wrt='mean', cut_fit=False, z2=None, nz=None, delta_c=1.686, **cosmology_params)
         
-        return m
+    return m
 
 def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     
@@ -70,15 +70,13 @@ def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     hmf = Mass_Function(M_min, M_max, step, k_min, k_max, k_step, "Tinker10", **cosmology_params)
     p_2h = hmf.power
     
-    rho_crit = hmf.mean_dens_z/(omegac+omegab)
+    rho_crit = hmf.mean_dens_z/(hmf.omegac+hmf.omegab)
     rho_mean = hmf.mean_dens_z
     
-    radius_range_lin = virial_radius(mass_range_lin, rho_mean, 200.0)
-    radius_range = np.log10(radius_range_lin)
     radius_range_3d = 10.0 ** np.linspace(-4.0, 4.0, 1000, endpoint=True)
     
     radius_range_3d_i = 10.0 ** np.linspace(-2.5, 1.2, 25, endpoint=True)
-    radius_range_2d_i = R
+    radius_range_2d_i = R[0]
     
     xi = power_to_corr_ogata(scipy.interpolate.UnivariateSpline(k_range, p_2h, s=0, ext=0), radius_range_3d)
 
@@ -88,7 +86,7 @@ def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     
     out_esd = scipy.interpolate.UnivariateSpline(radius_range_2d_i, np.nan_to_num(d_sur_den), s=0)
     
-    out_esd_inter = out_esd_tot(radius_range_2d_i)
+    out_esd_inter = out_esd(radius_range_2d_i)
 
     return out_esd_inter, p_2h, xi, sur_den
 

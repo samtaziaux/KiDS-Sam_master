@@ -209,7 +209,7 @@ def create_histogram(obsname, obslist, nbins, envnames, envlist, style, norm, we
     
     plt.xlabel(obsname, size=15)
     
-    #plt.show()
+    plt.show()
     plt.clf()
     
     return histbins, hists, histcens

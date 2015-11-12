@@ -42,17 +42,17 @@ def create_config(replacefile, searchlist, replacelist):
 # Defining the config file(s)
 
 """
-replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_Ned.config'
+replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/brouwer/configs_margot/ggl_Ned.config'
 findlist = ['@', '710']
 replacelist = np.array([np.arange(6)+1, np.array([1724, 2634, 2201, 1577, 3379, 710])])
 config_files = create_config(replacefile, findlist, replacelist)
 """
-"""
-replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/Edo_logagebins.config'
+
+replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/brouwer/configs_margot/Edo_logagebins.config'
 findlist = np.array(['agelimit'])
 replacelist = np.array([np.array(['0,9.3', '9.3,9.5', '9.5,inf'])])
 config_files = create_config(replacefile, findlist, replacelist)
-"""
+
 """
 replacefile = '/data2/brouwer/shearprofile/KiDS-GGL/configs_margot/ggl_redshifts.config'
 findlist = np.array(['Zlim'])
@@ -68,17 +68,16 @@ replacelist = np.array([np.arange(4)])
 config_files = create_config(replacefile, findlist, replacelist)
 """
 
-config_files = ['configs_margot/ggl_margot.config']
+#config_files = ['configs_margot/ggl_margot.config']
 
 # Edo's age bins
-#config_files = ['configs_margot/Edo_logagebins_%i.config'%(i+1) for i in xrange(3)]
-#config_files = ['configs_margot/Edo_logagebins.config']
+#config_files = ['brouwer/configs_margot/Edo_logagebins_%i.config'%(i+1) for i in xrange(3)]
+#config_files = ['brouwer/configs_margot/Edo_logagebins.config']
 
-#config_files = ['configs_margot/ggl_margot_mstarweight.config']
+#config_files = ['brouwer/configs_margot/ggl_environments_all.config']
+#config_files = ['brouwer/configs_margot/ggl_environments_cen+iso.config']
 
-#config_files = ['configs_margot/ggl_environments_cen+iso.config']
-
-#config_files = ['configs_margot/troughs.config']
+#config_files = ['brouwer/configs_margot/troughs.config']
 
 
 print

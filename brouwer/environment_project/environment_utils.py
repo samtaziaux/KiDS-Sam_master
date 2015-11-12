@@ -53,8 +53,13 @@ def read_header(headername):
                 inputvalues = line[4].split(',')
                 inputvalues = [float(inputvalues[p]) for p in xrange(len(inputvalues))]
                 inputparams[line[0]] = inputvalues
-    
-    return esdfiles, covfile, inputparams
+            elif line[0] == 'acceptance_fraction':
+                acline = np.array(line[2:])
+                acline = acline[acline != '']
+                acfrac = np.array([float(x) for x in acline])
+                
+                    
+    return esdfiles, covfile, inputparams, acfrac
 
 
 # Importing the ESD profiles
@@ -204,7 +209,7 @@ def create_histogram(obsname, obslist, nbins, envnames, envlist, style, norm, we
     
     plt.xlabel(obsname, size=15)
     
-    #plt.show()
+    plt.show()
     plt.clf()
     
     return histbins, hists, histcens

@@ -116,7 +116,6 @@ for d in xrange(len(deltanames)):
     # Test plot
     deltabins, deltahists, histcens = utils.create_histogram(r'Local overdensity $\delta_%i$'%(d+1), deltalist[deltamask], nbins, envnames, (shuffle_results[d])[deltamask], 'lin', False, False)
 
-
 # Names of the shuffled environments
 shuffenvnames = ['shuffenvR%i'%r for r in np.arange(8)+1]
 

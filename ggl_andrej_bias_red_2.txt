@@ -22,9 +22,9 @@ ESD_purpose           shearcatalog                     # One of {'shearcatalog',
 # ESD_purpose         randomcatalog                    #     'randomcatalog', 'randombootstrap'}.
 #Rbins                1                                # One of the standard options (1-5, see help file), (Not yet working) or
 #Rbins                Rbins.txt                        #     either a file with the radial binning or a
-Rbins                 15,20,5000  #10,20,2000                       #     comma-separated list with (Nbins,Rmin,Rmax).
+Rbins                 15,20,20000  #10,20,2000                       #     comma-separated list with (Nbins,Rmin,Rmax).
 Runit                 kpc                              # One of these physical {pc, kpc, Mpc} or sky {arcsec, arcmin, deg} coordinates.
-ncores                12                                # Any number of cores your machine can use to run the code.
+ncores                6                                # Any number of cores your machine can use to run the code.
 
 # Lens selection
 lensID_file       /data2/dvornik/AssemblyBias/ID_red_bottom.txt                   # Path to text file with chosen lens IDs (optional).

@@ -224,11 +224,13 @@ def main():
             ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = shear.calc_stack(gammat[N1], gammax[N1], wk2[N1], np.diagonal(cov[N1,N1,:,:]), srcm[N1], [1,1,1,1], blindcatnum)
             
             # Determine the stacked galIDs
-            binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(N1, lens_binning, lenssel_binning, gamacat)
-            lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
+            binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, lenssel_binning, gamacat)
+            lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, N1+1, binmin, binmax)
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
+
+            print 'galIDs_matched:', len(galIDs_matched)
 
             # Printing stacked shear profile to a text file
             shear.write_stack(filenameESD, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1], h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)

@@ -11,8 +11,9 @@ from time import time
 from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
 from nfw import mass_enclosed, mass_total_sharp
 from utils import cM_duffy08, delta, density_average
-from twohalo_mm import dsigma_mm
-import calc_bias
+#from twohalo_mm import dsigma_mm
+#import calc_bias
+
 
 def fiducial4(theta, R, h=1, Om=0.315, Ol=0.685):
     # local variables are accessed much faster than global ones
@@ -85,6 +86,7 @@ def fiducial4(theta, R, h=1, Om=0.315, Ol=0.685):
     Mavg = ( fsat * Msat**(2./3.) + (1-fsat) * Mcentral**(2./3.) )**(3./2.)
     out = [esd_total, esd_sat, esd_host, esd_central, Mavg, 0]
     return out
+
 
 
 

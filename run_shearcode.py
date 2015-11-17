@@ -68,7 +68,7 @@ replacelist = np.array([np.arange(4)])
 config_files = create_config(replacefile, findlist, replacelist)
 """
 
-#config_files = ['configs_margot/ggl_margot.config']
+config_files = ['brouwer/configs_margot/ggl_margot.config']
 
 # Edo's age bins
 #config_files = ['brouwer/configs_margot/Edo_logagebins_%i.config'%(i+1) for i in xrange(3)]
@@ -79,7 +79,7 @@ config_files = create_config(replacefile, findlist, replacelist)
 
 #config_files = ['brouwer/configs_margot/troughs.config']
 
-config_files = ['brouwer/configs_margot/ggl_environments_%s.config'%x for x in ['all', 'cen+iso', 'all_shuffled', 'cen+iso_shuffled']]
+#config_files = ['brouwer/configs_margot/ggl_environments_%s.config'%x for x in ['all', 'cen+iso', 'all_shuffled', 'cen+iso_shuffled']]
 
 
 print

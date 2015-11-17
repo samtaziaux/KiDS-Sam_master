@@ -832,7 +832,7 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
     galDEC, srcDEC = np.meshgrid(galDECs, srcDEC)
 
     # Defining the distance R and angle phi between the lens' center and its surrounding background sources
-    srcR = (Dals * np.arccos(np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*np.cos(np.radians(galRA-srcRA)) + np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC))))
+    srcR = Dals * np.arccos(np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*np.cos(np.radians(galRA-srcRA)) + np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC)))
 
     # Masking all lens-source pairs that have a relative distance beyond the maximum distance Rmax
     Rmask = np.logical_not((Rmin < srcR) & (srcR < Rmax))

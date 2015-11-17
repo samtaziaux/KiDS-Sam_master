@@ -31,6 +31,8 @@ if os.path.isdir(gamacatdir):
 else:
     gamacatdir = '/disks/shear10/brouwer_veersemeer/MergedCatalogues'
 
+print gamacatdir
+
 gamacatname = '%s/GAMACatalogue_1.0.fits'%gamacatdir
 deltacatname = '%s/delta_r_catalog.fits'%gamacatdir
 gamacat = pyfits.open(gamacatname)[1].data
@@ -59,7 +61,7 @@ for d in xrange(len(deltanames)):
 #    envcolors = ['red', 'green', 'blue', 'gold']
 
     # Create the delta_r histogram for every environment
-    nbins = 161.
+    nbins = 100.
     deltabins, deltahists, histcens = utils.create_histogram(r'Local overdensity $\delta_%i$'%(d+1), deltalist[deltamask], nbins, envnames, envlist[deltamask], 'lin', False, False)
 
     # Create a dictionary with the IDs in each shuffled environment

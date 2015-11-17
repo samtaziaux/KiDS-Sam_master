@@ -158,7 +158,7 @@ def fiducial4_2halo(theta, R, h=1, Om=0.315, Ol=0.685):
     sigma_8 = 0.829
     omegab_h2 = 0.02205
     n = 0.9603
-    bias = calc_bias.bias(M, Om, omegab_h2, sigma_8, h)
+    bias = calc_bias.bias(Mcentral, Om, omegab_h2, sigma_8, h)
     esd_2halo = [bias * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri)
                    for zi, Ri in izip(z, R)]
     esd_2halo = _array(esd_2halo)

@@ -11,6 +11,7 @@ from time import time
 from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
 from nfw import mass_enclosed, mass_total_sharp
 from utils import cM_duffy08, delta, density_average
+
 #from twohalo_mm import dsigma_mm
 #import calc_bias
 
@@ -88,9 +89,7 @@ def fiducial4(theta, R, h=1, Om=0.315, Ol=0.685):
     return out
 
 
-
-
-def fiducial4_2halo(theta, R, h=1, Om=0.315, Ol=0.685):
+def fiducial4(theta, R, h=1, Om=0.315, Ol=0.685):
     # local variables are accessed much faster than global ones
     _array = array
     _cM_duffy08 = cM_duffy08
@@ -153,6 +152,7 @@ def fiducial4_2halo(theta, R, h=1, Om=0.315, Ol=0.685):
                                        #args=(x[1],x[2]))
                                #for x in _izip(Rsat, rs_cent,
                                               #sigma_group)])).sum()
+
     """
     # 2-halo term signal
     sigma_8 = 0.829
@@ -163,12 +163,14 @@ def fiducial4_2halo(theta, R, h=1, Om=0.315, Ol=0.685):
                    for Ri in izip(R)]
     esd_2halo = _array(esd_2halo)
     """
-    
+
+                                              
     esd_total = _array([f * (esat + ehost) + (1-f) * ecentral
                         for f, esat, ehost, ecentral in izip(fsat, esd_sat,
                                                              esd_host,
                                                              esd_central)])
-                                                             
     Mavg = ( fsat * Msat**(2./3.) + (1-fsat) * Mcentral**(2./3.) )**(3./2.)
     out = [esd_total, esd_sat, esd_host, esd_central, Mavg, 0]
     return out
+
+

@@ -47,7 +47,7 @@ def Bias_Tinker10(var_S):
 
     bias = 1 - A * nu ** a / (nu ** a + delta_c ** a) + B * nu ** b + C * nu ** c
 
-    print y, A, B, C, a, b, c
+    #print y, A, B, C, a, b, c
 
     return bias
 
@@ -58,10 +58,10 @@ def bias(M, Omega_m, omegab_h2, sigma_8, h):
 
     var_S = calc_S(M, Omega_m, Omega_b, sigma_8, h)
 
-#    print 'variance S:', var_S
+    #print 'variance S:', var_S
     
     bias = Bias_Tinker10(var_S)
     
-#    print 'Bias:', bias
+    #print 'Bias:', bias
     
 #main()

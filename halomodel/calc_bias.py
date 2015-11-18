@@ -59,7 +59,5 @@ def calc_bias(M, Omega_m, omegab_h2, sigma_8, h):
     Omega_b = 0.02205/h**2.
     var_S = calc_S(M, Omega_m, Omega_b, sigma_8, h)
     bias = Bias_Tinker10(var_S)
-
-    print 'bias:', bias
     
     return bias

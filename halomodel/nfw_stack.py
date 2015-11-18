@@ -6,6 +6,7 @@ from numpy.random import random, rayleigh
 from scipy.stats import rv_discrete
 from scipy.integrate import romberg
 from time import time
+import numpy as np
 
 # local
 from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
@@ -145,8 +146,8 @@ def fiducial4_2halo(theta, R, h=1, Om=0.315, Ol=0.685):
     
     # central signal
     esd_central = [pm + central_profile(Ri[1:]/rs, sigma)
-                   for pm, Ri, rs, sigma in izip(pointmass, R,
-                                                 rs_cent, sigma_central)]
+                   for pm, Ri, rs, sigma
+                   in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
     #lnPderived = _log(nfw_profile(rsat, rs_cent, sigma_group)).sum()
     #lnPderived -= _log(_array([romberg(nfw_profile, x[0].min(), rmax,
@@ -158,15 +159,18 @@ def fiducial4_2halo(theta, R, h=1, Om=0.315, Ol=0.685):
     sigma_8 = 0.829
     omegab_h2 = 0.02205
     n = 0.9603
-    bias = calc_bias.bias(Mcentral, Om, omegab_h2, sigma_8, h)
-    esd_2halo = bias * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, z[0], R)
+    bias = calc_bias.calc_bias(Mcentral, Om, omegab_h2, sigma_8, h)
+    esd_2halo = [biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri[1:])[0]
+                                        for biasi, zi, Ri
+                                        in izip(bias, z, R)]
     esd_2halo = _array(esd_2halo)
 
     # Total signal
-    esd_total = _array([f * (esat + ehost) + (1-f) * ecentral
-                        for f, esat, ehost, ecentral in izip(fsat, esd_sat,
+    esd_total = _array([f * (esat + ehost) + (1-f) * ecentral + e2halo
+                        for f, esat, ehost, ecentral, e2halo in izip(fsat, esd_sat,
                                                              esd_host,
-                                                             esd_central)])
+                                                             esd_central,
+                                                             esd_2halo)])
     Mavg = ( fsat * Msat**(2./3.) + (1-fsat) * Mcentral**(2./3.) )**(3./2.)
-    out = [esd_total, esd_sat, esd_host, esd_central, Mavg, 0]
+    out = [esd_total, esd_sat, esd_host, esd_central, esd_2halo, Mavg, 0]
     return out

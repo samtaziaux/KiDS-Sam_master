@@ -16,7 +16,7 @@ h                   1.0                                         # Reduced Hubble
 ### ESD Production ###
 
 # Algorithm
-ESD_output_folder     /disks/shear10/brouwer_veersemeer/pipeline_results            # Path to ESD output folder.
+ESD_output_folder     /disks/shear10/brouwer_veersemeer/pipeline_testresults            # Path to ESD output folder.
 ESD_output_filename   oldcatmatch                             # This flag will be appended to the filenames (optional). Include 'oldcatmatch' for old lens-field matching.
 ESD_purpose           shearcovariance                     # One of {'shearcatalog', 'shearcovariance', 'shearbootstrap',
 #ESD_purpose           shearcatalog                    #     'randomcatalog', 'randombootstrap'}.

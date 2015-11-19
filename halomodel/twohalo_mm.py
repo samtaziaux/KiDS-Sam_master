@@ -23,7 +23,7 @@ def memoize(function):
         return rv
     return wrapper
 
-@memoize
+#@memoize
 def Mass_Function(M_min, M_max, step, k_min, k_max, k_step, name, **cosmology_params):
     
     m = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step, mf_fit=name, delta_h=200.0, delta_wrt='mean', cut_fit=False, z2=None, nz=None, delta_c=1.686, **cosmology_params)
@@ -75,7 +75,7 @@ def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     radius_range_3d = 10.0 ** np.linspace(-4.0, 4.0, 1000, endpoint=True)
     
     radius_range_3d_i = 10.0 ** np.linspace(-2.5, 1.5, 25, endpoint=True)
-    radius_range_2d_i = R[0]
+    radius_range_2d_i = R
     
     p_2h = hmf.power
     

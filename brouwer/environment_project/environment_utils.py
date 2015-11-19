@@ -168,27 +168,31 @@ def calc_esds_masses(inputparams, mcmc, esdnames, massnames, envnames):
 
 
 # Create any histogram for the four environments
-def create_histogram(obsname, obslist, nbins, envnames, envlist, style, norm, weightlist):
+def create_histogram(obsname, obslist, bins, envnames, envlist, style, norm, weightlist):
 
-    obsmin = np.amin(obslist)
-    obsmax = np.amax(obslist)
-
-    if 'log' in style:    
-        if obsmin <= 0.:
-            obsmin = np.amin(obslist[obslist > 0.])
-        bins = np.logspace(np.log10(obsmin), np.log10(obsmax), nbins)
-        bins = np.append(bins, obsmax)
+    if (type(bins) == int) or (type(bins) == float):
         
-        plt.xscale('log')
-        plt.yscale('log')
+        nbins = bins
+        obsmin = np.amin(obslist)
+        obsmax = np.amax(obslist)
 
-    if 'lin' in style:
-        bins = np.arange(obsmin, obsmax, abs(obsmax-obsmin)/nbins)
-        bins = np.append(bins, obsmax)
+        if 'log' in style:
+            if obsmin <= 0.:
+                obsmin = np.amin(obslist[obslist > 0.])
+            bins = np.logspace(np.log10(obsmin), np.log10(obsmax), nbins)
+            bins = np.append(bins, obsmax)
+            
+            plt.xscale('log')
+            plt.yscale('log')
+
+        if 'lin' in style:
+            bins = np.arange(obsmin, obsmax, abs(obsmax-obsmin)/nbins)
+            bins = np.append(bins, obsmax)
+    nbins = len(bins)-1
     
     histvals, histbins = np.histogram(obslist, bins)
     hists = np.zeros([len(envnames), nbins])
-    
+        
     for env in xrange(len(envnames)):
         envmask = (envlist == env)
        
@@ -209,7 +213,7 @@ def create_histogram(obsname, obslist, nbins, envnames, envlist, style, norm, we
     
     plt.xlabel(obsname, size=15)
     
-    plt.show()
+#    plt.show()
     plt.clf()
     
     return histbins, hists, histcens

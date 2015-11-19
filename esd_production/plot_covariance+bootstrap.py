@@ -116,6 +116,7 @@ def main():
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
     
+    
     return
     
 main()

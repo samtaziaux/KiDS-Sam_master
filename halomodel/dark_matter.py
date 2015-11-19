@@ -62,7 +62,7 @@ def NFW_Dc(delta_h, c):
     
 # Fourier transform of NFW profile - analytic!
 
-def NFW_f(z, rho_mean, m_x, r_x, k_x):
+def NFW_f(z, rho_mean, f, m_x, r_x, k_x):
 	
     if len(m_x.shape) == 0:
         m_x = np.array([m_x])
@@ -72,7 +72,7 @@ def NFW_f(z, rho_mean, m_x, r_x, k_x):
 	
 	
     for i in range(len(m_x)):
-        c = Con(z, m_x[i])
+        c = Con(z, m_x[i], f)
         r_s = NFW_RS(c, r_x[i])
 		
         K = k_x*r_s
@@ -86,13 +86,13 @@ def NFW_f(z, rho_mean, m_x, r_x, k_x):
     return u_k
     
 
-def Con(z, M):
+def Con(z, M, f):
 	
     #duffy rho_crit
     #c = 6.71 * (M / (2.0 * 10.0 ** 12.0)) ** -0.091 * (1 + z) ** -0.44
 	
     #duffy rho_mean
-    c = 10.14 * (M / (2.0 * 10.0 ** 12.0)) ** -0.081 * (1.0 + z) ** -1.01
+    c = f * 10.14 * (M / (2.0 * 10.0 ** 12.0)) ** -0.081 * (1.0 + z) ** -1.01
     
     #maccio08
     #c = 10**0.830 / (M*0.3/(1e12))**0.098
@@ -108,9 +108,9 @@ def Con(z, M):
     return c
 	
 	
-def delta_NFW(z, rho_mean, M, r):
+def delta_NFW(z, rho_mean, f, M, r):
 	
-	c = Con(z, M)
+	c = Con(z, M, f)
 	r_vir = virial_radius(M, rho_mean, 200.0)
 	r_s = NFW_RS(c, r_vir)
 	d_c = NFW_Dc(200.0, c)
@@ -133,7 +133,7 @@ def delta_NFW(z, rho_mean, M, r):
 	return r_s * d_c * rho_mean * g
 	
 	
-def av_delta_NFW(mass_func, z, rho_mean, hod, M, r):
+def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 	
 	integ = np.ones((len(M), len(r)))
 	average = np.ones(len(r))
@@ -141,7 +141,7 @@ def av_delta_NFW(mass_func, z, rho_mean, hod, M, r):
 	
 	for i in range(len(M)):
 
-		integ[i,:] = delta_NFW(z, rho_mean, M[i], r)
+		integ[i,:] = delta_NFW(z, rho_mean, f, M[i], r)
 	
 	for i in range(len(r)):
 		
@@ -156,12 +156,12 @@ def av_delta_NFW(mass_func, z, rho_mean, hod, M, r):
 # Spectrum components for dark matter.
 """
 	
-def GM_cen_analy(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):
+def GM_cen_analy(mass_func, z, rho_dm, rho_mean, f, n, population, ngal, k_x, r_x, m_x, T, T_tot):
     
     spec = np.ones(len(k_x))
     integ = np.ones((len(k_x), len(m_x)))
     
-    u_k = NFW_f(z, rho_dm, m_x, r_x, k_x)
+    u_k = NFW_f(z, rho_dm, f, m_x, r_x, k_x)
     
     for i in range(len(k_x)):
         integ[i,:] = mass_func.dndlnm * population * u_k[i,:]/(u_k[0,:])
@@ -171,12 +171,12 @@ def GM_cen_analy(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, 
     return spec_out
 	
 	
-def GM_sat_analy(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):
+def GM_sat_analy(mass_func, z, rho_dm, rho_mean, f, n, population, ngal, k_x, r_x, m_x, T, T_tot):
     
     spec = np.ones(len(k_x))
     integ = np.ones((len(k_x), len(m_x)))
     
-    u_k = NFW_f(z, rho_dm, m_x, r_x, k_x)
+    u_k = NFW_f(z, rho_dm, f, m_x, r_x, k_x)
     
     for i in range(len(k_x)):
         integ[i,:] = mass_func.dndlnm * population * (u_k[i,:]**2.0)/(u_k[0,:]**2.0)

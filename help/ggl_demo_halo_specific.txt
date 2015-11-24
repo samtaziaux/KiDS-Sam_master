@@ -47,12 +47,23 @@ model             halo.model
 # First are parameters used in for conditional luminosity/mass function and derived quantities (HOD, baryonic fractions ...).
 # See Cacciato, 2009 (http://arxiv.org/abs/0807.4932) and 2013 (http://arxiv.org/abs/1207.0503) for details. Shown here are fiducial values from the later paper.
 
+
+# Redshift and effective concentration for NFW (f_c in most Marcello's papers)
+
+hm_param          z               fixed     0.0
+hm_param          f_c             fixed     1.0
+
+# Parameters for HOD - centrals
+
 hm_param          sigma_c         fixed     0.157
-hm_param          alpha_s         fixed     -1.18
-hm_param          A               fixed     9.95
+hm_param          M_0             fixed     9.95
 hm_param          M_1             fixed     11.24
 hm_param          gamma_1         fixed     3.18
 hm_param          gamma_2         fixed     0.254
+
+# Parameters for HOD - satellites
+
+hm_param          alpha_s         fixed     -1.18
 hm_param          b_0             fixed     -1.17
 hm_param          b_1             fixed     1.53
 hm_param          b_2             fixed     -0.217
@@ -64,9 +75,6 @@ hm_param          beta_gas        fixed     0.666666
 hm_param          r_t0            fixed     0.03
 hm_param          r_c0            fixed     0.05
 
-# Redshift
-
-hm_param          z               fixed     0.0
 
 # Luminosity or stellar mass bins. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
 # !!! Number of bins can be changed, but that also needs to be reflected in halo.model and in halo model output below !!!

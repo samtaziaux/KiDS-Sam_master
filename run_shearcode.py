@@ -7,14 +7,20 @@ sys.path.append('esd_production')
 import shearcode
 
 def create_config(replacefile, searchlist, replacelist):
-
+    
     config_files = np.array([])
 
     f = open(replacefile,'r')
     filedata = f.read()
     f.close()
 
-    for r in xrange(len(replacelist[0])):
+    shape = np.shape(replacelist)
+    if len(shape) == 1:
+        Nr = 1
+    else:
+        Nr = shape[1]
+    
+    for r in xrange(Nr):
 
         newdata = filedata
         fileout = '%s_%s'%(replacefile, r+1)
@@ -24,7 +30,10 @@ def create_config(replacefile, searchlist, replacelist):
         
         for s in xrange(len(searchlist)):
             search = '%s'%searchlist[s]
-            replace = '%s'%replacelist[s, r]
+            try:
+                replace = '%s'%replacelist[s, r]
+            except:
+                replace = '%s'%replacelist[s]
             
             print '     - replace %s with %s'%(search, replace)
         
@@ -72,9 +81,9 @@ config_files = create_config(replacefile, findlist, replacelist)
 
 # Edo's age bins
 #config_files = ['brouwer/configs_margot/Edo_logagebins_%i.config'%(i+1) for i in xrange(3)]
-config_files = ['brouwer/configs_margot/Edo_logagebins.config', 'brouwer/configs_margot/Edo_logmstarbins.config']
+#config_files = ['brouwer/configs_margot/Edo_logagebins.config']
 
-#config_files = ['brouwer/configs_margot/ggl_environments_all.config']
+config_files = ['brouwer/configs_margot/ggl_environments_all.config']
 #config_files = ['brouwer/configs_margot/ggl_environments_cen+iso.config']
 
 #config_files = ['brouwer/configs_margot/troughs.config']

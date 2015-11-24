@@ -310,3 +310,47 @@ def write_textfile(filename, datanames, data):
             print >>file, printline # ... and print it
     
     print 'Written:', filename
+    
+    return
+    
+
+def create_config(replacefile, searchlist, replacelist):
+    
+    config_files = np.array([])
+
+    f = open(replacefile,'r')
+    filedata = f.read()
+    f.close()
+
+    shape = np.shape(replacelist)
+    if len(shape) == 1:
+        Nr = 1
+    else:
+        Nr = shape[1]
+    
+    for r in xrange(Nr):
+
+        newdata = filedata
+        fileout = '%s_%s'%(replacefile, r+1)
+        
+        print
+        print 'For %s:'%fileout
+        
+        for s in xrange(len(searchlist)):
+            search = '%s'%searchlist[s]
+            try:
+                replace = '%s'%replacelist[s, r]
+            except:
+                replace = '%s'%replacelist[s]
+            
+            print '     - replace %s with %s'%(search, replace)
+        
+            newdata = newdata.replace(search, replace)
+        
+        f = open(fileout, 'w')
+        f.write(newdata)
+        f.close()
+    
+        config_files = np.append(config_files, [fileout])
+        
+    return config_files

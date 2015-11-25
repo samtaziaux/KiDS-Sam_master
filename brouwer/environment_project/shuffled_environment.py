@@ -57,12 +57,14 @@ for d in xrange(len(deltanames)):
     deltamask = deltalist > -999
     print 'Fraction deltamask:', np.float(sum(deltamask))/np.float(len(galIDlist))
 
+    plotname = 'results/environment_histogram_delta'
+
     envnames = ['Void', 'Sheet', 'Filament', 'Knot']
-#    envcolors = ['red', 'green', 'blue', 'gold']
+    envcolors = ['red', 'green', 'blue', 'orange']
 
     # Create the delta_r histogram for every environment
-    nbins = 100.
-    deltabins, deltahists, histcens = utils.create_histogram(r'Local overdensity $\delta_%i$'%(d+1), deltalist[deltamask], nbins, envnames, envlist[deltamask], 'lin', False, False)
+    nbins = 60.
+    deltabins, deltahists, histcens = utils.create_histogram(r'Local overdensity $\delta_%i$'%(d+1), deltalist[deltamask], nbins, envnames, envlist[deltamask], 'lin', False, False, '%s%i'%(plotname, d+1))
 
     # Create a dictionary with the IDs in each shuffled environment
     shuffled_IDs = dict()
@@ -116,8 +118,9 @@ for d in xrange(len(deltanames)):
     shuffle_results[d] = shuffled_env
 
     # Test plot
-    deltabins, deltahists, histcens = utils.create_histogram(r'Local overdensity $\delta_%i$'%(d+1), deltalist[deltamask], nbins, envnames, (shuffle_results[d])[deltamask], 'lin', False, False)
+    #deltabins, deltahists, histcens = utils.create_histogram(r'Local overdensity $\delta_%i$'%(d+1), deltalist[deltamask], nbins, envnames, (shuffle_results[d])[deltamask], 'lin', False, False, False)
 
+"""
 # Names of the shuffled environments
 shuffenvnames = ['shuffenvR%i'%r for r in np.arange(8)+1]
 
@@ -125,3 +128,4 @@ shuffenvnames = ['shuffenvR%i'%r for r in np.arange(8)+1]
 filename = '/data2/brouwer/MergedCatalogues/shuffled_environment_S4_deltaR.fits'
 
 utils.write_catalog(filename, galIDlist, shuffenvnames, shuffle_results)
+"""

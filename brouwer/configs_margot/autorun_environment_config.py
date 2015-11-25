@@ -9,6 +9,9 @@ import os
 from astropy import constants as const, units as u
 import glob
 import gc
+import subprocess as sub
+import shlex
+
 
 sys.path.insert(0, '../environment_project/')
 sys.path.insert(0, '../../')
@@ -21,6 +24,9 @@ import esd_utils
 import shearcode_modules as shear
 
 inf = np.inf
+sigma_8 = 0.829
+omegab_h2 = 0.02205
+n = 0.9603
 
 # Read the config file
 def read_config(dataname, blindcat, binnum):
@@ -59,8 +65,6 @@ def import_gamacat(gamacat, lens_binning, centering):
         shuffledcatname = lens_binning.values()[0] in lens_binning.keys()
         shuffledcat = pyfits.open(shuffledcatname)[1].data
         envlist = shuffledcat[lens_binning.keys()[0]]
-
-        print lens_binning.keys()
         
     obsmask = (fluxscalelist<500)&(logmstarlist>5) & (0 <= envlist)&(envlist < 4)
 
@@ -74,7 +78,7 @@ def calc_angsephist(angseplist, ranklist, galweightlist, binname, centering, ran
     angsepmask = ranklist>1
     path_results = '../environment_project/results'
     
-    filename = '%s/Angsephist_%s_rank%g-%g_test.txt'%(path_results, binname, rankmin, rankmax)
+    filename = '%s/Angsephist_%s_rank%g-%g.txt'%(path_results, binname, rankmin, rankmax)
     
     weight = galweightlist[angsepmask]
     
@@ -130,7 +134,7 @@ def main():
     filename_var = shear.define_filename_var(purpose, centering, binname, \
         '*', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     datafilename = shear.define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat)
-    filename_N1 = filename_var.replace('binnumof', 's')
+    filename_N1 = filename_var.replace('*of', 's')
     covfilename = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, filename_N1, filename_addition, blindcat)
 
     # Adding the filenames of the data to the config file
@@ -138,7 +142,7 @@ def main():
     replacelist = np.append(replacelist, [datafilename, covfilename])
     print 'Data filename:', datafilename
     print 'Covariance filename:', covfilename
-    
+    print
     
     # Calculating average redshift, log(M*) and satellite fraction of the lens samples (needed for halo model)
     zaverage, mstaraverage, fsatmin, fsatmax = envutils.calc_halomodel_input(envnames, envlist, ranklist, galZlist, mstarlist, galweightlist)
@@ -151,28 +155,48 @@ def main():
         printline = ''
         for e in xrange(len(envnames)):
             printline = '%s%s,'%(printline, obs[o, e])
+        printline = printline.rsplit(',', 1)[0]
         replacelist = np.append(replacelist, printline)
 
     # Creating the Angular Separation histogram for the halo model
     Rsatfilename = calc_angsephist(angseplist, ranklist, galweightlist, binname, centering, rankmin, rankmax, envnames, envlist)
-    
     findlist = np.append(findlist, 'Rsatfilename')
     replacelist = np.append(replacelist, Rsatfilename)
 
+    # Creating the two halo term
+    dsigmas = np.zeros([len(zaverage), nRbins])
+    for i in xrange(len(zaverage)):
+        
+        dsigma = twohalo_mm.dsigma_mm(sigma_8, h, omegab_h2, O_matter, O_lambda, n, zaverage[i], Rcenters/1.e3)[0]
+        print 'dSigma:', dsigma, 'at z =', zaverage[i]
+        dsigmas[i] = dsigma
+    
+    path_results = '../environment_project/results'
+    twohalofilename = '%s/twohalo_%s_rank%g-%g.txt'%(path_results, binname, rankmin, rankmax)
+    
+    envutils.write_textfile(twohalofilename, envnames, dsigmas)
+    findlist = np.append(findlist, 'twohalofilename')
+    replacelist = np.append(replacelist, twohalofilename)
+    
     # Adding the calculated input to the config file
-    config_files = envutils.create_config(config_file, findlist, replacelist)
+    newconfigname = '%s_rank%g-%g'%(binname, rankmin, rankmax)
+    
+    config_files = envutils.create_config(config_file, findlist, replacelist, newconfigname)
 
+    ps = []
+    codename = '../../kids-ggl.py'
+    runname = 'python %s'%codename
+    runname += ' -c %s --sampler'%config_files[0]
+    print
+    print 'Running: %s'%runname
+
+    p = sub.Popen(shlex.split(runname))
+    ps.append(p)
+    for p in ps:
+        p.wait()
     
     return
     
 main()
 
-"""
 
-# Calculate matter 2-halo term
-
-dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri[1:])[0]
-                                        for biasi, zi, Ri
-                                        in izip(bias, z, R)
-
-"""

@@ -168,7 +168,9 @@ def calc_esds_masses(inputparams, mcmc, esdnames, massnames, envnames):
 
 
 # Create any histogram for the four environments
-def create_histogram(obsname, obslist, bins, envnames, envlist, style, norm, weightlist):
+def create_histogram(obsname, obslist, bins, envnames, envlist, style, norm, weightlist, plotname):
+
+    envcolors = ['red', 'green', 'blue', 'orange']
 
     if (type(bins) == int) or (type(bins) == float):
         
@@ -188,6 +190,8 @@ def create_histogram(obsname, obslist, bins, envnames, envlist, style, norm, wei
         if 'lin' in style:
             bins = np.arange(obsmin, obsmax, abs(obsmax-obsmin)/nbins)
             bins = np.append(bins, obsmax)
+            
+    plt.yscale('log')
     nbins = len(bins)-1
     
     histvals, histbins = np.histogram(obslist, bins)
@@ -207,14 +211,23 @@ def create_histogram(obsname, obslist, bins, envnames, envlist, style, norm, wei
         hists[env] = histvals
  
         # Show results
-        plt.plot(histcens, histvals, '', ls='-', label=envnames[env])
+        plt.plot(histcens, histvals, '', ls='-', color=envcolors[env], label=envnames[env])
     
     plt.legend(fontsize=13, loc='best')
-    
     plt.xlabel(obsname, size=15)
     
-#    plt.show()
-    plt.clf()
+    if (type(norm) == int) or (type(norm) == float):
+        ylabel = 'Normalized number of galaxies'
+    else:
+        ylabel = 'Number of galaxies'
+    plt.ylabel(ylabel, size=15)
+
+    if type(plotname) == str:
+        plotname = '%s.png'%plotname
+
+        plt.savefig(plotname, format='png')
+        print 'Written: ESD profile plot:', plotname
+        plt.clf()
     
     return histbins, hists, histcens
 
@@ -314,7 +327,7 @@ def write_textfile(filename, datanames, data):
     return
     
 
-def create_config(replacefile, searchlist, replacelist):
+def create_config(replacefile, searchlist, replacelist, namelist):
     
     config_files = np.array([])
 
@@ -330,8 +343,13 @@ def create_config(replacefile, searchlist, replacelist):
     
     for r in xrange(Nr):
 
+        try:
+            filename_addition = namelist[r]
+        except:
+            filename_addition = namelist
+
         newdata = filedata
-        fileout = '%s_%s'%(replacefile, r+1)
+        fileout = '%s_%s'%(replacefile, filename_addition)
         
         print
         print 'For %s:'%fileout

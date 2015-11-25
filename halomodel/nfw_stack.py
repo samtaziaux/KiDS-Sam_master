@@ -189,7 +189,8 @@ def fiducial4_auto(theta, R, h=1, Om=0.315, Ol=0.685):
         fsat, fc_sat, logMsat1, logMsat2, logMsat3, logMsat4, \
         fc_central1, fc_central2, fc_central3, fc_central4, \
         logMcentral1, logMcentral2, logMcentral3, logMcentral4, \
-        z, Mstar, Rrange, angles = theta
+        z, Mstar, twohalo1, twohalo2, twohalo3, twohalo4, Rrange, \
+        angles = theta
         
     n_Rsat = (n_Rsat1, n_Rsat2, n_Rsat3, n_Rsat4)
     j = [(ni > 0) for ni in n_Rsat]
@@ -202,6 +203,10 @@ def fiducial4_auto(theta, R, h=1, Om=0.315, Ol=0.685):
                            fc_central3, fc_central4])
     csat = fc_sat * _cM_duffy08(Msat, z, h)
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
+    
+    dsigma_mm = (twohalo1, twohalo2, twohalo3, twohalo4)
+    j = [(ni > 0) for ni in dsigma_mm]
+    dsigma_mm = [n[i] for i, n in _izip(j, dsigma_mm)]
     
     # some auxiliaries
     rho_m = density_average(z, h, Om, Ol)
@@ -243,9 +248,8 @@ def fiducial4_auto(theta, R, h=1, Om=0.315, Ol=0.685):
     # 2-halo term signal
     sigma_8 = 0.829
     omegab_h2 = 0.02205
-    n = 0.9603
     bias = calc_bias.calc_bias(Mcentral, Om, omegab_h2, sigma_8, h)
-    esd_2halo = biasi * dsigma_mm
+    esd_2halo = [biasi * dsigma_mmi for biasi, dsigma_mmi in izip(bias, dsigma_mm)]
     esd_2halo = _array(esd_2halo)
 
     # Total signal

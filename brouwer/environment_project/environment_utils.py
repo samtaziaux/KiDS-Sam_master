@@ -342,11 +342,10 @@ def create_config(replacefile, searchlist, replacelist, namelist):
         Nr = shape[1]
     
     for r in xrange(Nr):
-
-        try:
-            filename_addition = namelist[r]
-        except:
+        if type(namelist) == str:
             filename_addition = namelist
+        else:
+            filename_addition = namelist[r]
 
         newdata = filedata
         fileout = '%s_%s'%(replacefile, filename_addition)

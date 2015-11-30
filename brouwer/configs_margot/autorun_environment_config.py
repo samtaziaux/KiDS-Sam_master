@@ -42,7 +42,7 @@ def read_config(dataname, blindcat, binnum):
     return data, R, lensIDname, lensIDs
 
 
-def import_gamacat(gamacat, lens_binning, centering):
+def import_gamacat(gamacat, lens_binning, binname, centering):
 
     # Importing angular seperation
     angseplist = gamacat['AngSep%s'%centering]
@@ -57,12 +57,14 @@ def import_gamacat(gamacat, lens_binning, centering):
 
     ranklist = gamacat['rank%s'%centering]
 
-    if ('envS4' in lens_binning.keys()):
+    if 'envS4' in binname:
         # Importing the real environment
         envlist = gamacat['envS4']
     else:
         # Importing the shuffled environment
-        shuffledcatname = lens_binning.values()[0] in lens_binning.keys()
+        shuffledcatname = lens_binning[binname][0]
+        print shuffledcatname
+        
         shuffledcat = pyfits.open(shuffledcatname)[1].data
         envlist = shuffledcat[lens_binning.keys()[0]]
         
@@ -79,16 +81,20 @@ def calc_angsephist(angseplist, ranklist, galweightlist, binname, centering, ran
     path_results = '../environment_project/results'
     
     filename = '%s/Angsephist_%s_rank%g-%g.txt'%(path_results, binname, rankmin, rankmax)
-    
-    weight = galweightlist[angsepmask]
-    
-    angsepbins, angsephists, angsephistcens = \
-    envutils.create_histogram('Angular separation (kpc)', \
-                              angseplist[angsepmask], nbins, envnames, envlist[angsepmask], 'log', False, weight)
-    
-    # Printing the angular separation histogram to a file
+
     datanames = ['AngSep%s center'%centering, 'Ngals (Voids)', 'Ngals (Sheets)', 'Ngals (Filaments)', 'Ngals (Knots)']
-    data = np.vstack([angsephistcens, angsephists])
+
+    if rankmax <= 2:
+        data = np.ones([5, nbins])
+    else:
+        weight = galweightlist[angsepmask]
+        
+        angsepbins, angsephists, angsephistcens = \
+        envutils.create_histogram('Angular separation (kpc)', \
+                                  angseplist[angsepmask], nbins, envnames, envlist[angsepmask], 'log', False, weight, False)
+        
+        # Printing the angular separation histogram to a file
+        data = np.vstack([angsephistcens, angsephists])
     
     envutils.write_textfile(filename, datanames, data)
     
@@ -117,8 +123,8 @@ def main():
         rankmin = -999
         rankmax = inf
     else:
-        rankmin = lens_selection['rank%s'%centering][0]
-        rankmax = lens_selection['rank%s'%centering][1]
+        rankmin = lens_selection['rank%s'%centering][1][0]
+        rankmax = lens_selection['rank%s'%centering][1][1]
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
@@ -127,7 +133,7 @@ def main():
     purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
 
     # Importing lists that are used for the halomodel input (mstar, z, AngSep, env, rank)
-    angseplist, mstarlist, ranklist, envlist, obsmask = import_gamacat(gamacat, lens_binning, centering)
+    angseplist, mstarlist, ranklist, envlist, obsmask = import_gamacat(gamacat, lens_binning, binname, centering)
 
 
     # Paths to the data files that should be fitted

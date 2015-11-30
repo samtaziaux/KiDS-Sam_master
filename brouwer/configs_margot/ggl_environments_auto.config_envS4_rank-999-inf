@@ -29,8 +29,8 @@ ncores                3                                # Any number of cores you
 # Lens selection
 lensID_file          None                                                                                 # Path to text file with chosen lens IDs (optional).
 
- lens_weights        mstarweight   ../environment_project/results/mstarweight_rank-999-inf.fits      # Weight name and path to fits file with lens weights (optional).
-#lens_weights        mstarweight   ../environment_project/results/mstarweight_rank-999-inf_shuffled.fits
+ lens_weights        mstarweight   /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/results/mstarweight_rank-999-inf.fits      # Weight name and path to fits file with lens weights (optional).
+#lens_weights        mstarweight   /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/results/mstarweight_rank-999-inf_shuffled.fits
 #lens_weights        None
 
 #lens_binning       None                                                                                  # Lens parameter for binning, path to fits file (choose "self" for same as lens catalog), and 

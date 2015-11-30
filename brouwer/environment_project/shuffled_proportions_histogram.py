@@ -33,7 +33,7 @@ galZlist = gamacat['Z'] # Central Z of the galaxy
 envlist = gamacat['envS4'] # Environment of the galaxy (0 void, 1 sheet, 2 filament, 3 knot)
 
 envnames = ['Void', 'Sheet', 'Filament', 'Knot']
-envcolors = ['red', 'green', 'blue', 'darkturquoise']
+envcolors = ['red', 'green', 'blue', 'orange']
 envnumbers = np.arange(4)
 envbins = np.append(envnumbers, 4)
 

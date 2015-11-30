@@ -81,12 +81,12 @@ def input_variables():
     centers = np.array(['Cen', 'IterCen', 'BCG'])
     centering = 'None'
     for cen in centers:
-        if ('Rank%s'%cen in binname) or \
-            ('Rank%s'%cen in lens_selection.keys()):
+        if ('rank%s'%cen in binname) or \
+            ('rank%s'%cen in lens_selection.keys()):
             centering = cen
             print 'Center definition = %s'%centering
     if centering == 'Cen':
-        lens_selection['Rank%s'%centering] = ['self', np.array([1])]
+        lens_selection['rank%s'%centering] = ['self', np.array([1])]
         msg = 'WARNING: With the Cen definition,'
         msg += ' you can only use Centrals (Rank = 1)'
         print msg

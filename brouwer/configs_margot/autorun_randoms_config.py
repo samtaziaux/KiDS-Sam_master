@@ -1,8 +1,8 @@
 ### General settings ###
 
 # Source and lens catalogues
-KiDS_path           /data2/brouwer/KidsCatalogues/LF_cat_DR2_v2             # Path to folder that contains the KiDS catalogs (optional - supersedes KiDS_version).
-GAMA_path           /data2/brouwer/MergedCatalogues/GAMACatalogue_1.0.fits  # Path the GAMA catalog (optional - supersedes GAMA_version).
+KiDS_path           ../../KidsCatalogues/LF_cat_DR2_v2             # Path to folder that contains the KiDS catalogs (optional - supersedes KiDS_version).
+GAMA_path           ../../brouwer/MergedCatalogues/GAMACatalogue_1.0.fits  # Path the GAMA catalog (optional - supersedes GAMA_version).
 # lens_catalog      /data2/brouwer/MergedCatalogues/troughs.fits            # Path to the fits file with your custom lens catalogue (supersedes GAMA catalog),
                                                                             #     containing columns for: 'ID', 'RA', 'DEC', optional: 'Z' (if Runit = *pc), used lens paramaters.
 
@@ -18,23 +18,23 @@ h                   1.0                                         # Reduced Hubble
 # Algorithm
 ESD_output_folder     /disks/shear10/brouwer_veersemeer/pipeline_results            # Path to ESD output folder.
 ESD_output_filename   None                             # This flag will be appended to the filenames (optional).
- ESD_purpose          shearcovariance                  # One of {'shearcatalog', 'shearcovariance', 'shearbootstrap',
-#ESD_purpose          shearcatalog                     #     'randomcatalog', 'randombootstrap'}.
+#ESD_purpose          shearcovariance                  # One of {'shearcatalog', 'shearcovariance', 'shearbootstrap',
+ ESD_purpose          randomcatalog                    #     'randomcatalog', 'randombootstrap'}.
 #Rbins                1                                # One of the standard options (1-5, see help file), (Not yet working) or
-#Rbins                Rbins.txt                        #     either a file with the radial binning or a
-Rbins                 10,20,2000                       #     comma-separated list with (Rmin,Rmax,Nbins).
+#Rbins                binlimits/16bins.txt             #     either a file with the radial binning or a
+ Rbins                10,20,2000                       #     comma-separated list with (Rmin,Rmax,Nbins).
 Runit                 kpc                              # One of these physical {pc, kpc, Mpc} or sky {arcsec, arcmin, deg} coordinates.
-ncores                3                                # Any number of cores your machine can use to run the code.
+ncores                5                                # Any number of cores your machine can use to run the code.
 
 # Lens selection
 lensID_file          None                                                                                 # Path to text file with chosen lens IDs (optional).
 
- lens_weights        mstarweight   /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/results/mstarweight_rank-999-inf.fits      # Weight name and path to fits file with lens weights (optional).
+ lens_weights        None
+#lens_weights        mstarweight   /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/results/mstarweight_rank-999-inf.fits      # Weight name and path to fits file with lens weights (optional).
 #lens_weights        mstarweight   /data2/brouwer/shearprofile/KiDS-GGL/brouwer/environment_project/results/mstarweight_rank-999-inf_shuffled.fits
-#lens_weights        None
 
-#lens_binning       None                                                                                  # Lens parameter for binning, path to fits file (choose "self" for same as lens catalog), and 
- lens_binning       envS4          self        0,1,2,3,4                                                  #     bin edges (at least 3 edges, bin[i-1] <= x < bin[i]), or the number of bins.
+ lens_binning       None                                                                                  # Lens parameter for binning, path to fits file (choose "self" for same as lens catalog), and 
+#lens_binning       envS4          self        0,1,2,3,4                                                  #     bin edges (at least 3 edges, bin[i-1] <= x < bin[i]), or the number of bins.
 #lens_binning       shuffenvR4      /data2/brouwer/MergedCatalogues/shuffled_environment_S4_deltaR.fits       0,1,2,3,4
 
 #lens_limits1      rankBCG        self                                                      -999,2           # Lens parameter for limits, path to fits file (choose "self" for same as lens catalog), and 
@@ -44,7 +44,7 @@ lensID_file          None                                                       
 # Source selection
  src_limits1             Z_B        0.005,1.2            # Source parameter for limits and one value, or
 #src_limits2                                             #     two comma separated limits between -inf and inf.
- kids_blinds             D
+#kids_blinds             D
 
 
 ### Halo Model ###
@@ -55,12 +55,12 @@ model             nfw_stack.fiducial4_auto        # the name of the halo model p
 hm_param          sat_profile     function    nfw.esd
 hm_param          host_profile    function    nfw.esd_offset
 hm_param          central_profile function    nfw.esd
-hm_param          Rsat            read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   0
-hm_param          n_Rsat1         read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   1
-hm_param          n_Rsat2         read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   2
-hm_param          n_Rsat3         read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   3
-hm_param          n_Rsat4         read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   4
-hm_params         fsat            fixed       0.138275762204,0.242233027816,0.366043740814,0.509063217255
+hm_param          Rsat            read        Rsatfilename   0
+hm_param          n_Rsat1         read        Rsatfilename   1
+hm_param          n_Rsat2         read        Rsatfilename   2
+hm_param          n_Rsat3         read        Rsatfilename   3
+hm_param          n_Rsat4         read        Rsatfilename   4
+hm_params         fsat            fixed       fsatvalues
 hm_param          fc_sat          fixed       1.0
 hm_param          Msat1           uniform     1e10     5e12      2e11
 hm_param          Msat2           uniform     1e10     5e12      2e11
@@ -82,12 +82,12 @@ hm_param          Mcen1           uniform     1e11   1e14      5e12
 hm_param          Mcen2           uniform     1e11   1e14      5e12
 hm_param          Mcen3           uniform     1e11   1e14      5e12
 hm_param          Mcen4           uniform     1e11   1e14      5e12
-hm_params         zgal            fixed       0.168752461672,0.168848857284,0.16305796802,0.154139265418
-hm_params         Mstar           fixed       34960986112.0,35372150784.0,35219423232.0,35036798976.0
-hm_param          twohalo1          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   0
-hm_param          twohalo2          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   1
-hm_param          twohalo3          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   2
-hm_param          twohalo4          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   3
+hm_params         zgal            fixed       zgalvalues
+hm_params         Mstar           fixed       Mstarvalues
+hm_param          twohalo1          read        twohalofilename   0
+hm_param          twohalo2          read        twohalofilename   1
+hm_param          twohalo3          read        twohalofilename   2
+hm_param          twohalo4          read        twohalofilename   3
 #hm_functions     abs,min
 #hm_functions     itertools izip
 #hm_functions     numpy     array,cumsum,digitize,log,all,transpose,zeros
@@ -105,10 +105,10 @@ hm_output         Mavg1,Mavg2,Mavg3,Mavg4                                E,E,E,E
 
 ### Parameter Sampling ###
 
-data                /disks/shear10/brouwer_veersemeer/pipeline_results/output_envS4bins/results_shearcovariance/shearcovariance_envS4bin*of4_lw-mstarweight_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt       0,1,4 # files containing the ESD profile.
+data                datafilename       0,1,4 # files containing the ESD profile.
                                               # Columns are (R,ESD_t[,1+K(R)]). Should be one file
                                               # per lens bin
-covariance          /disks/shear10/brouwer_veersemeer/pipeline_results/output_envS4bins/results_shearcovariance/shearcovariance_matrix_envS4bins4_lw-mstarweight_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt        4,6   # file containing the covariance.
+covariance          covfilename        4,6   # file containing the covariance.
                                               # Columns are (cov[,1+K(R)]).
 
 sampler_output      /disks/shear10/brouwer_veersemeer/mcmc_output/environment_mcmc_output_A2halo.fits            # output filename (FITS format)

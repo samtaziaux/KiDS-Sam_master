@@ -42,6 +42,8 @@ def read_header(headername):
     header = open(headername, 'r').read().split('\n')
     header = [header[i].split(' ') for i in xrange(len(header))]
 
+    acfrac = 0
+
     for line in header:
         if len(line)>1:
 #            print line

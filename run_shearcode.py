@@ -89,7 +89,7 @@ config_files = create_config(replacefile, findlist, replacelist)
 
 #config_files = ['brouwer/configs_margot/troughs.config']
 #config_files = ['brouwer/configs_margot/ggl_environments_%s.config'%x for x in ['all', 'cen+iso', 'all_shuffled', 'cen+iso_shuffled']]
-config_files = ['brouwer/configs_margot/gg_randoms.config']
+config_files = ['brouwer/configs_margot/ggl_randoms.config']
 
 
 

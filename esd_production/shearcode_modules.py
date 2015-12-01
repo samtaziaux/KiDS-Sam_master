@@ -150,7 +150,7 @@ def input_variables():
 
         # Defining the name of the output files
         filename_var = define_filename_var(purpose.replace('bootstrap', 'catalog'), centering, binname, \
-                        binnum, Nobsbins, lens_selection, src_selection, \
+                        binnum, Nobsbins, lens_selection, src_selection, lens_weights, \
                         name_Rbins, O_matter, O_lambda, Ok, h)
 
         for Ncat in xrange(100):

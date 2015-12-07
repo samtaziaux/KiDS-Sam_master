@@ -39,7 +39,7 @@ def input_variables():
         blindcat = 'D' # The number of this particular blind KiDS catalog
         config_file = str(sys.argv[1]) # The path to the configuration file
 
-    print 'Warning: Input not found!'
+        print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
     path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h, \

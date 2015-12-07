@@ -42,7 +42,7 @@ def read_config(dataname, blindcat, binnum):
     return data, R, lensIDname, lensIDs
 
 
-def import_gamacat(gamacat, lens_binning, binname, centering):
+def import_gamacat(gamacat, lens_binning, binname, centering, rankmin, rankmax):
 
     # Importing angular seperation
     angseplist = gamacat['AngSep%s'%centering]
@@ -54,6 +54,7 @@ def import_gamacat(gamacat, lens_binning, binname, centering):
     corr_list = np.log10(fluxscalelist)# - 2*np.log10(h/0.7)
     logmstarlist = logmstarlist + corr_list
     mstarlist = 10**logmstarlist
+    nQlist = gamacat['nQ']
 
     ranklist = gamacat['rank%s'%centering]
 
@@ -68,7 +69,9 @@ def import_gamacat(gamacat, lens_binning, binname, centering):
         shuffledcat = pyfits.open(shuffledcatname)[1].data
         envlist = shuffledcat[lens_binning.keys()[0]]
         
-    obsmask = (fluxscalelist<500)&(logmstarlist>5) & (0 <= envlist)&(envlist < 4)
+    # Applying a mask to the galaxies
+    obsmask = (fluxscalelist<500)&(logmstarlist>5) & (0 <= envlist)&(envlist < 4) & \
+                                                        (rankmin <= ranklist)&(ranklist < rankmax) & (nQlist >= 3.)
 
     return angseplist, mstarlist, ranklist, envlist, obsmask
     
@@ -133,7 +136,7 @@ def main():
     purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
 
     # Importing lists that are used for the halomodel input (mstar, z, AngSep, env, rank)
-    angseplist, mstarlist, ranklist, envlist, obsmask = import_gamacat(gamacat, lens_binning, binname, centering)
+    angseplist, mstarlist, ranklist, envlist, obsmask = import_gamacat(gamacat, lens_binning, binname, centering, rankmin, rankmax)
 
 
     # Paths to the data files that should be fitted

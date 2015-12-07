@@ -186,14 +186,16 @@ def create_histogram(obsname, obslist, bins, envnames, envlist, style, norm, wei
             bins = np.logspace(np.log10(obsmin), np.log10(obsmax), nbins)
             bins = np.append(bins, obsmax)
             
-            plt.xscale('log')
-            plt.yscale('log')
-
+            try:
+                plt.xscale('log')
+                plt.yscale('log')
+            except:
+                pass
+            
         if 'lin' in style:
             bins = np.arange(obsmin, obsmax, abs(obsmax-obsmin)/nbins)
             bins = np.append(bins, obsmax)
             
-    plt.yscale('log')
     nbins = len(bins)-1
     
     histvals, histbins = np.histogram(obslist, bins)
@@ -213,23 +215,30 @@ def create_histogram(obsname, obslist, bins, envnames, envlist, style, norm, wei
         hists[env] = histvals
  
         # Show results
-        plt.plot(histcens, histvals, '', ls='-', color=envcolors[env], label=envnames[env])
+        try:
+            plt.plot(histcens, histvals, '', ls='-', color=envcolors[env], label=envnames[env])
+        except:
+            pass
     
-    plt.legend(fontsize=13, loc='best')
-    plt.xlabel(obsname, size=15)
-    
-    if (type(norm) == int) or (type(norm) == float):
-        ylabel = 'Normalized number of galaxies'
-    else:
-        ylabel = 'Number of galaxies'
-    plt.ylabel(ylabel, size=15)
+    try:
+        plt.yscale('log')
+        plt.legend(fontsize=13, loc='best')
+        plt.xlabel(obsname, size=15)
+        
+        if (type(norm) == int) or (type(norm) == float):
+            ylabel = 'Normalized number of galaxies'
+        else:
+            ylabel = 'Number of galaxies'
+        plt.ylabel(ylabel, size=15)
 
-    if type(plotname) == str:
-        plotname = '%s.png'%plotname
+        if type(plotname) == str:
+            plotname = '%s.png'%plotname
 
-        plt.savefig(plotname, format='png')
-        print 'Written: ESD profile plot:', plotname
-        plt.clf()
+            plt.savefig(plotname, format='png')
+            print 'Written: ESD profile plot:', plotname
+            plt.clf()
+    except:
+        pass
     
     return histbins, hists, histcens
 

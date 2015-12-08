@@ -107,10 +107,9 @@ def read_esdfiles(esdfiles):
 # Taking the median result of all samples after the burn-in phase
 def calc_esds_masses(inputparams, mcmc, esdnames, massnames, envnames):
         
-    # Calculating the satellite fraction
+    # Import the satellite fraction, and calculate fractions of each component
     fsat = inputparams['fsat']
-    
-    esd_fracs = np.array([[1, 1-fsat[esd], fsat[esd], fsat[esd]] for esd in xrange(len(esdnames))])
+    esd_fracs = np.array([[1., 1.-fsat[esd], fsat[esd], fsat[esd], 1.] for esd in xrange(len(envnames))])
     
     print 'ESD fractions:'
     print esd_fracs
@@ -128,11 +127,11 @@ def calc_esds_masses(inputparams, mcmc, esdnames, massnames, envnames):
     
     
     #"""
-    # Calculating the median ESD fits
-    masslist = mcmc['Mavg1']
-    index = len(masslist)/2
-    sorts = np.argsort(masslist)
-
+    # Calculating the median ESD and mass fits, and the error
+    sigma = 68.2689492
+    percentiles = np.array([50-(sigma/2), 50, 50+(sigma/2)])
+    
+    print percentiles
     #"""
     
     """
@@ -143,30 +142,19 @@ def calc_esds_masses(inputparams, mcmc, esdnames, massnames, envnames):
                         for e in xrange(len(esdnames))] \
                         for i in xrange(len(envnames))])
     """
-        
-    esds_med = np.array((([[(mcmc[esds[e,i]][sorts])[index] \
+    # Calculating the median ESD profiles   
+    esds_med = np.array([[[np.percentile(mcmc[esds[e,i]], percentiles[p], axis=0) \
+                            for p in xrange(len(percentiles))] \
                             for e in xrange(len(esdnames))] \
-                            for i in xrange(len(envnames))])))
+                            for i in xrange(len(envnames))])
 
     # Calculating the median masses
-    masses_med = np.array([[(mcmc[masses[m, env]][sorts])[index] \
+    masses_med = np.array([[[np.percentile(mcmc[masses[m, env]], percentiles[p]) \
+                           for p in xrange(len(percentiles))] \
                            for env in xrange(len(envnames))] \
                            for m in xrange(len(massnames))])
-
-
-    r=1
-    print 'Median ESDs for radial bin %i:'%r
-    tot = esds_med[0,:,r]
-    print tot
-    print
-    print 'Weighted ESDs for radial bin %i:'%r
-    tot = esd_fracs[0]*esds_med[0,:,r]
-    print tot
-    print
-    print 'Total ESD:'
-    print np.sum(tot[1:])
-
-    return fsat, esd_fracs, esds_med, masses_med, esds, masses
+    
+    return fsat, esd_fracs, esds_med, masses_med, esds, masses, percentiles
 
 
 # Create any histogram for the four environments

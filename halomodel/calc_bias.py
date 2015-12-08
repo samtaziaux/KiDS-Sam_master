@@ -16,8 +16,6 @@ sys.path.insert(0, '../../halomodel/')
 import twohalo_mm
 
 # Van den Bosch 2002
-
-
 def calc_S(M, Omega_m, Omega_b, sigma_8, h):
     
     c0 = 3.904e-4

@@ -117,8 +117,7 @@ Will later try to
 
 """
 
-def esd_offset(x, xoff, n, sigma_s, x_range, angles,
-               interp_kind='slinear'):
+def esd_offset(x, xoff, n, sigma_s, x_range, angles, interp_kind='slinear'):
     """
     Remember that the first value of x *must* be zero for cumtrapz to
     give the right result; this value is discarded in the output. This is
@@ -129,12 +128,12 @@ def esd_offset(x, xoff, n, sigma_s, x_range, angles,
 
     """
     s = sigma_distribution(xoff, n, sigma_s, x_range, angles, interp_kind)
-    s_at_x = s(x[1:]) / (2*3.14159265)
+    s_at_x = s(x[1:]) / (2.0*3.14159265)
     s_within_x = cumtrapz(sigma_within(s, x), x, initial=0)
-    return 2 * array(s_within_x)[1:] / x[1:]**2 - s_at_x
+    return 2.0 * array(s_within_x)[1:] / x[1:]**2.0 - s_at_x
 
 def sigma_azimuthal(angles, x_range, xoff, sigma_s):
-    xo = (xoff**2 + x_range**2 + 2*x_range*xoff*cos(angles)) ** 0.5
+    xo = (xoff**2.0 + x_range**2.0 + 2.0*x_range*xoff*cos(angles)) ** 0.5
     return sigma(xo, sigma_s)
 
 def sigma_distribution(xoff, n, sigma_s, x_range, angles,
@@ -156,7 +155,7 @@ def sigma_integrate(x_range, xoff, sigma_s, angles):
     return s
 
 def sigma_within(s, x):
-    return s(x) * x / (2*3.14159265)
+    return s(x) * x / (2.0*3.14159265)
 
 #-----------------------------------#
 #--    Surface densities

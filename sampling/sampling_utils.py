@@ -33,6 +33,7 @@ def load_datapoints(datafile, datacols, exclude_bins):
             esd = numpy.array([[esdi[j] for j in xrange(len(esdi))
                                 if j not in exclude_bins] for esdi in esd])
     return R, esd
+    #return R, numpy.absolute(esd)
 
 def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins):
     cov = numpy.loadtxt(covfile, usecols=[covcols[0]])

@@ -155,12 +155,19 @@ def input_variables():
 
         for Ncat in xrange(100):
             outname = '%s/%s_%i_%s%s_split%iof*.fits'%(path_splits.replace('bootstrap', 'catalog'), purpose.replace('bootstrap', 'catalog'), Ncat+1, filename_var, filename_addition, Nsplit+1)
-        #    print outname
+            placeholder = outname.replace('*', '0')
+            if os.path.isfile(placeholder):
+                os.remove(placeholder)
+
             splitfiles = glob.glob(outname)
             splitslist = np.append(splitslist, splitfiles)
-
+            
             if len(splitfiles) == 0:
                 break
+
+        print outname
+        
+
     else:
         Ncat = 1
 

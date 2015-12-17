@@ -85,7 +85,8 @@ config_files = create_config(replacefile, findlist, replacelist)
 
 #config_files = ['brouwer/configs_margot/ggl_environments_all.config']
 #config_files = ['brouwer/configs_margot/ggl_environments_cen+iso.config']
-config_files = [ ['brouwer/configs_margot/ggl_environments_auto.config_%s_rank%s'%(e,r) for e in ['envS4', 'shuffenvR4']] for r in ['-999-inf', '-999-2'] ]
+#config_files = [ ['brouwer/configs_margot/ggl_environments_auto.config_%s_rank%s'%(e,r) for e in ['envS4', 'shuffenvR4']] for r in ['-999-inf', '-999-2'] ]
+config_files = [['brouwer/configs_margot/ggl_environments_auto.config_%s_rank%s'%(e,r) for e in ['envS4']] for r in ['1-2']]
 
 #config_files = ['brouwer/configs_margot/troughs.config']
 #config_files = ['brouwer/configs_margot/ggl_environments_%s.config'%x for x in ['all', 'cen+iso', 'all_shuffled', 'cen+iso_shuffled']]

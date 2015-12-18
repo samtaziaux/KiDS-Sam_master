@@ -200,7 +200,7 @@ def main():
     
     # Adding the mcmc output filename to the config file
     path_mcmc = '/disks/shear10/brouwer_veersemeer/mcmc_output'
-    mcmcname = '%s/environment_mcmc_output_%s_rank%g-%g.fits'%(path_mcmc, binname, rankmin, rankmax)
+    mcmcname = '%s/environment_mcmc_output_%s_rank%g-%g_fc-normal.fits'%(path_mcmc, binname, rankmin, rankmax)
     findlist = np.append(findlist, 'mcmcname')
     replacelist = np.append(replacelist, mcmcname)
     

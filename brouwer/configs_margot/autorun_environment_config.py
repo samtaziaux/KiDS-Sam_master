@@ -44,6 +44,8 @@ def read_config(dataname, blindcat, binnum):
 
 def import_gamacat(gamacat, lens_binning, binname, centering, rankmin, rankmax):
 
+    galIDlist = gamacat['ID']
+    
     # Importing angular seperation
     angseplist = gamacat['AngSep%s'%centering]
     angseplist[angseplist<=0] = 0.
@@ -72,7 +74,8 @@ def import_gamacat(gamacat, lens_binning, binname, centering, rankmin, rankmax):
     # Applying a mask to the galaxies
     obsmask = (fluxscalelist<500)&(logmstarlist>5) & (0 <= envlist)&(envlist < 4) & \
                                                         (rankmin <= ranklist)&(ranklist < rankmax) & (nQlist >= 3.)
-
+    print 'Imported: %i of %i galaxies (%g percent)'%(sum(obsmask), len(galIDlist), float(sum(obsmask)/float(len(galIDlist))*100.))
+    
     return angseplist, mstarlist, ranklist, envlist, obsmask
     
 def calc_angsephist(angseplist, ranklist, galweightlist, binname, centering, rankmin, rankmax, envnames, envlist):
@@ -138,6 +141,13 @@ def main():
     # Importing lists that are used for the halomodel input (mstar, z, AngSep, env, rank)
     angseplist, mstarlist, ranklist, envlist, obsmask = import_gamacat(gamacat, lens_binning, binname, centering, rankmin, rankmax)
 
+    # Applying the mask to the data
+    angseplist = angseplist[obsmask]
+    mstarlist = mstarlist[obsmask]
+    ranklist = ranklist[obsmask]
+    envlist = envlist[obsmask]
+    galZlist = galZlist[obsmask]
+    galweightlist = galweightlist[obsmask]
 
     # Paths to the data files that should be fitted
     filename_var = shear.define_filename_var(purpose, centering, binname, \
@@ -183,9 +193,16 @@ def main():
     path_results = '../environment_project/results'
     twohalofilename = '%s/twohalo_%s_rank%g-%g.txt'%(path_results, binname, rankmin, rankmax)
     
+    # Adding the two halo term filename to the config file
     envutils.write_textfile(twohalofilename, envnames, dsigmas)
     findlist = np.append(findlist, 'twohalofilename')
     replacelist = np.append(replacelist, twohalofilename)
+    
+    # Adding the mcmc output filename to the config file
+    path_mcmc = '/disks/shear10/brouwer_veersemeer/mcmc_output'
+    mcmcname = '%s/environment_mcmc_output_%s_rank%g-%g.fits'%(path_mcmc, binname, rankmin, rankmax)
+    findlist = np.append(findlist, 'mcmcname')
+    replacelist = np.append(replacelist, mcmcname)
     
     # Adding the calculated input to the config file
     newconfigname = '%s_rank%g-%g'%(binname, rankmin, rankmax)

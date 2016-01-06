@@ -70,28 +70,28 @@ hm_param          Msat1           uniform     1e10     5e12      2e11
 hm_param          Msat2           uniform     1e10     5e12      2e11
 hm_param          Msat3           uniform     1e10     5e12      2e11
 hm_param          Msat4           uniform     1e10     5e12      2e11
-hm_param          fc_cen1         uniform     0       2.         1.
-hm_param          fc_cen2         uniform     0       2.         1.
-hm_param          fc_cen3         uniform     0       2.         1.
-hm_param          fc_cen4         uniform     0       2.         1.
-#hm_param          fc_cen1         fixed     1.
-#hm_param          fc_cen2         fixed     1.
-#hm_param          fc_cen3         fixed     1.
-#hm_param          fc_cen4         fixed     1.
-hm_param          A_2halo1         uniform     0       10         1.0
-hm_param          A_2halo2         uniform     0       10         1.0
-hm_param          A_2halo3         uniform     0       10         1.0
-hm_param          A_2halo4         uniform     0       10         1.0
+hm_param          fc_cen1         normal      1.   0.3   0.   2.
+hm_param          fc_cen2         normal      1.   0.3   0.   2.
+hm_param          fc_cen3         normal      1.   0.3   0.   2.
+hm_param          fc_cen4         normal      1.   0.3   0.   2.
+#hm_param         fc_cen1         fixed       1.
+#hm_param         fc_cen2         fixed       1.
+#hm_param         fc_cen3         fixed       1.
+#hm_param         fc_cen4         fixed       1.
+hm_param          A_2halo1        uniform     0       10         1.0
+hm_param          A_2halo2        uniform     0       10         1.0
+hm_param          A_2halo3        uniform     0       10         1.0
+hm_param          A_2halo4        uniform     0       10         1.0
 hm_param          Mcen1           uniform     1e11   1e14      5e12
 hm_param          Mcen2           uniform     1e11   1e14      5e12
 hm_param          Mcen3           uniform     1e11   1e14      5e12
 hm_param          Mcen4           uniform     1e11   1e14      5e12
 hm_params         zgal            fixed       0.16878798604,0.168861433864,0.16308966279,0.154164925218
 hm_params         Mstar           fixed       34976493568.0,35389816832.0,35238117376.0,35055173632.0
-hm_param          twohalo1          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   0
-hm_param          twohalo2          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   1
-hm_param          twohalo3          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   2
-hm_param          twohalo4          read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   3
+hm_param          twohalo1        read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   0
+hm_param          twohalo2        read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   1
+hm_param          twohalo3        read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   2
+hm_param          twohalo4        read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   3
 #hm_functions     abs,min
 #hm_functions     itertools izip
 #hm_functions     numpy     array,cumsum,digitize,log,all,transpose,zeros
@@ -115,7 +115,7 @@ data                /disks/shear10/brouwer_veersemeer/pipeline_results/output_en
 covariance          /disks/shear10/brouwer_veersemeer/pipeline_results/output_envS4bins/results_shearcovariance/shearcovariance_matrix_envS4bins4_nQ3-inf_lw-mstarweight_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt        4,6    # file containing the covariance.
                                               # Columns are (cov[,1+K(R)]).
 
-sampler_output       /disks/shear10/brouwer_veersemeer/mcmc_output/environment_mcmc_output_envS4_rank-999-inf.fits                 # output filename (FITS format)
+sampler_output       /disks/shear10/brouwer_veersemeer/mcmc_output/environment_mcmc_output_envS4_rank-999-inf_fc-normal.fits                 # output filename (FITS format)
 sampler              emcee                    # MCMC sampler
 nwalkers	         100
 nsteps		         500

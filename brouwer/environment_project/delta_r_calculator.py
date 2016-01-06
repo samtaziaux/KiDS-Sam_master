@@ -300,7 +300,7 @@ compnames = ['comp_R%i'%i for i in Rmax.value]
 outputnames = np.hstack([deltanames, compnames])
 output = np.hstack([delta_r, comp_r]).T
 
-envutils.write_catalog(filename, galIDlist, outputnames, output)
+#envutils.write_catalog(filename, galIDlist, outputnames, output)
 
 # <codecell>
 

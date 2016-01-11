@@ -32,7 +32,7 @@ lensID_file          None                                                       
  lens_weights        mstarweight   ../environment_project/results/mstarweight_rank-999-inf.fits      # Weight name and path to fits file with lens weights (optional).
 #lens_weights        mstarweight   ../environment_project/results/mstarweight_rank-999-inf_shuffled.fits
 #lens_weights        mstarweight   ../environment_project/results/mstarweight_rank1-2.fits
-#lens_weights        mstarweight   ../environment_project/results/mstarweight_rank1-2_shuffled.fits
+#lens_weights        mstarweight   ../environment_project/results/mstarweight_rank1-inf.fits
 #lens_weights        None
 
 #lens_binning       None                                                                                  # Lens parameter for binning, path to fits file (choose "self" for same as lens catalog), and 
@@ -42,7 +42,7 @@ lensID_file          None                                                       
  lens_limits1       nQ             self                                                      3,inf
 #lens_limits1      rankBCG        self                                                      -999,2           # Lens parameter for limits, path to fits file (choose "self" for same as lens catalog), and 
 #lens_limits1      rankBCG        self                                                      1,2              # Lens parameter for limits, path to fits file (choose "self" for same as lens catalog), and 
-#lens_limits2      Nfof           self                                                      5,inf            #      one value (x=lim) or two comma separated limits (lim[min] <= x < lim[max]) between -inf and inf.
+#lens_limits1      rankBCG        self                                                      1,inf            #      one value (x=lim) or two comma separated limits (lim[min] <= x < lim[max]) between -inf and inf.
 
 
 # Source selection
@@ -64,7 +64,7 @@ hm_param          n_Rsat1         read        ../environment_project/results/Ang
 hm_param          n_Rsat2         read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   2
 hm_param          n_Rsat3         read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   3
 hm_param          n_Rsat4         read        ../environment_project/results/Angsephist_envS4_rank-999-inf.txt   4
-hm_params         fsat            fixed       0.13818503402,0.24203752274,0.366005499417,0.508862931922
+hm_params         fsat            fixed       0.138217471922,0.242073486916,0.366008027249,0.508988595418
 hm_param          fc_sat          fixed       1.0
 hm_param          Msat1           uniform     1e10     5e12      2e11
 hm_param          Msat2           uniform     1e10     5e12      2e11
@@ -86,8 +86,8 @@ hm_param          Mcen1           uniform     1e11   1e14      5e12
 hm_param          Mcen2           uniform     1e11   1e14      5e12
 hm_param          Mcen3           uniform     1e11   1e14      5e12
 hm_param          Mcen4           uniform     1e11   1e14      5e12
-hm_params         zgal            fixed       0.16878798604,0.168861433864,0.16308966279,0.154164925218
-hm_params         Mstar           fixed       34976493568.0,35389816832.0,35238117376.0,35055173632.0
+hm_params         zgal            fixed       0.168767958879,0.168844252825,0.163049906492,0.154133751988
+hm_params         Mstar           fixed       34973622272.0,35387191296.0,35234938880.0,35052068864.0
 hm_param          twohalo1        read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   0
 hm_param          twohalo2        read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   1
 hm_param          twohalo3        read        ../environment_project/results/twohalo_envS4_rank-999-inf.txt   2
@@ -115,10 +115,10 @@ data                /disks/shear10/brouwer_veersemeer/pipeline_results/output_en
 covariance          /disks/shear10/brouwer_veersemeer/pipeline_results/output_envS4bins/results_shearcovariance/shearcovariance_matrix_envS4bins4_nQ3-inf_lw-mstarweight_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt        4,6    # file containing the covariance.
                                               # Columns are (cov[,1+K(R)]).
 
-sampler_output       /disks/shear10/brouwer_veersemeer/mcmc_output/environment_mcmc_output_envS4_rank-999-inf_fc-normal.fits                 # output filename (FITS format)
+sampler_output       /disks/shear10/brouwer_veersemeer/mcmc_output/environment_mcmc_output_envS4_rank-999-inf_fc-normal_long.fits                 # output filename (FITS format)
 sampler              emcee                    # MCMC sampler
 nwalkers	         100
-nsteps		         500
+nsteps		         1000
 nburn		         0
 thin		         1
 k   		         7

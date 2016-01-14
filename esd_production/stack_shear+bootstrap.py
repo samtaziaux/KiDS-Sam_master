@@ -104,7 +104,7 @@ def main():
 
     # Defining the number of bootstrap samples ( = 1 for normal shear stack)
     if 'bootstrap' in purpose:
-        Nbootstraps = 1e3
+        Nbootstraps = 1e5
         
         # Selecting the random fields (must be the same for all observable bins)
         bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,[Nbootstraps, len(kidscats)]) # Select Nkidsfields random KiDS fields between 0 and Nkidsfields-1 (Nbootstraps times)
@@ -165,7 +165,7 @@ def main():
             
             # Write the results to a bootstrap catalog
             e1 = e2 = w = srcm = []
-            shear.write_catalog(splitname, np.arange(Nbootstraps), Rbins, Rcenters, nRbins, output_bootstrap, outputnames, variance, purpose, e1, e2, w, srcm)
+            shear.write_catalog(splitname, np.arange(Nbootstraps), Rbins, Rcenters, nRbins, Rconst, output_bootstrap, outputnames, variance, purpose, e1, e2, w, srcm)
 
             error_tot = np.zeros(nRbins)
             for r in xrange(nRbins):

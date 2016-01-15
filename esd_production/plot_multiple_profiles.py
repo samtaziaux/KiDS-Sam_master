@@ -17,17 +17,35 @@ from matplotlib import rc, rcParams
 
 # Plotting the data for the separate observable bins
 plotstyle = 'log' # What plotting style is used (lin, log, errorlin, errorlog)
-subplots = False # Are there subplots?
+subplots = True # Are there subplots?
 Nrows = 1 # If so, how into many rows will the subplots be devided?
 extra = '' # difference/ratio as an extra plot
 
 h = 1
-
-xlabel = r'radius R [h$^{-1}$ kpc]'
-ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h M$_{\odot}/pc^2$]'
+Runit = 'kpc'
 
 filenames = []
 #filenames = np.append(filenames, [''])
+
+# Redshift test for Koen
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-0p13_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-0p2_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-0p3_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_Nobins/results_shearcovariance/shearcovariance_Nfof5-inf_RankBCG1_Z0-inf_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_D.txt'])
+
+
+
+"""
+# Pipeline tests
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG-999--999_logmstarbin1of8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_logmstarbins_oldcatmatch/results_shearcatalog/shearcatalog_logmstarbin1of8_RankBCGm999_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_oldcatmatch_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_logmstarbins_oldcatmatch/results_shearcovariance/shearcovariance_logmstarbin1of8_RankBCGm999_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_oldcatmatch_D.txt'])
+
+
+
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_LumBbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG1-1_Nfof5-inf_LumBbin1of6_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_D.txt'])
+filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/pipeline_testresults/output_LumBbins_oldcatmatch/results_shearcatalog/shearcatalog_LumBbin1of6_Nfof5-inf_RankBCG1_Z_B0p005-1p2_Rbins10-20-2000kpc_Om0p315_Ol0p685_Ok0_h1_oldcatmatch_D.txt'])
+"""
 
 # Environment
 #filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_envS8bins/results_shearcatalog/shearcatalog_rankBCG-999-inf_envS8bin1of4_ZB0.005-1.2_16bins_Om0.315_h100_A.txt'])
@@ -76,29 +94,29 @@ filenames = []
 
 # Aaron
 
-filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_Nobins/results_shearcatalog/shearcatalog_rankBCG-999-inf_ZB0.005-1.2_16bins_Om0.315_h100_A.txt'])
-filenames = np.append(filenames, ['/disks/shear10/brouwer/Aaron/output_Nobins/results_shearcatalog/shearcatalog_rankBCG-999-inf_ZB0.005-1.2_16bins_Om0.315_h100_A.txt'])
+#filenames = np.append(filenames, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_Nobins/results_shearcatalog/shearcatalog_rankBCG-999-inf_ZB0.005-1.2_16bins_Om0.315_h100_A.txt'])
+#filenames = np.append(filenames, ['/disks/shear10/brouwer/Aaron/output_Nobins/results_shearcatalog/shearcatalog_rankBCG-999-inf_ZB0.005-1.2_16bins_Om0.315_h100_A.txt'])
 
 """
 filenames1 = []
 for i in np.arange(1,9):
-	filenames1 = np.append(filenames1, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_KiDSv0.5/results_shearcatalog/shearcatalog_rankBCG-999-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_KiDSv0.5_A.txt'%i])
+    filenames1 = np.append(filenames1, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_KiDSv0.5/results_shearcatalog/shearcatalog_rankBCG-999-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_KiDSv0.5_A.txt'%i])
 
 
 Nobsbins = 8
 
 filenames1 = []
 for i in np.arange(1, Nobsbins+1):
-	filenames1 = np.append(filenames1, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG2-inf_Nfof5-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_A.txt'%i])
+    filenames1 = np.append(filenames1, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG2-inf_Nfof5-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_A.txt'%i])
 
 filenames2 = []
 for i in np.arange(1, Nobsbins+1):
-	filenames2 = np.append(filenames2, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch/results_covariance/covariance_rankBCG2-inf_Nfof5-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_A.txt'%i])
+    filenames2 = np.append(filenames2, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch/results_covariance/covariance_rankBCG2-inf_Nfof5-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_A.txt'%i])
 
 
 filenames3 = []
 for i in np.arange(1, Nobsbins+1):
-	filenames3 = np.append(filenames3, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch_fluxscale+h-corr/results_shearcatalog/shearcatalog_rankBCG-999-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_fluxscale+h-corr_A.txt'%i])
+    filenames3 = np.append(filenames3, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_logmstarbins_oldcatmatch_fluxscale+h-corr/results_shearcatalog/shearcatalog_rankBCG-999-inf_logmstarbin%iof8_ZB0.005-1.2_logRbins10:20:2000kpc_Om0.315_h100_oldcatmatch_fluxscale+h-corr_A.txt'%i])
 
 
 
@@ -106,11 +124,11 @@ Nobsbins = 3
 
 filenames1 = []
 for i in np.arange(1, Nobsbins+1):
-	filenames1 = np.append(filenames1, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_corr-AngSepBCGbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG2-inf_Nfof5-inf_corr-AngSepBCGbin%iof3_ZB0.005-1.2_8bins_Om0.315_h100_oldcatmatch_A.txt'%i])
+    filenames1 = np.append(filenames1, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_corr-AngSepBCGbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG2-inf_Nfof5-inf_corr-AngSepBCGbin%iof3_ZB0.005-1.2_8bins_Om0.315_h100_oldcatmatch_A.txt'%i])
 
 filenames2 = []
 for i in np.arange(1, Nobsbins+1):
-	filenames2 = np.append(filenames2, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_corr-AngSepBCGbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG2-inf_Nfof5-inf_corr-AngSepBCGbin%iof3_ZB0.005-1.2_logRbins12:20:2000kpc_Om0.315_h100_oldcatmatch_A.txt'%i])
+    filenames2 = np.append(filenames2, ['/disks/shear10/brouwer_veersemeer/shearcode_output/output_corr-AngSepBCGbins_oldcatmatch/results_shearcatalog/shearcatalog_rankBCG2-inf_Nfof5-inf_corr-AngSepBCGbin%iof3_ZB0.005-1.2_logRbins12:20:2000kpc_Om0.315_h100_oldcatmatch_A.txt'%i])
 """
 
 filelists = np.vstack([filenames])
@@ -182,94 +200,84 @@ filelists = np.vstack([filenames])
 
 Nfilelists = len(filelists)
 Nfiles = len(filenames)
-
+print Nfiles
 
 if extra == 'difference' or extra == 'ratio':
-	for i in xrange(Nfiles/2):
+    for i in xrange(Nfiles/2):
 
-		filename1 = filenames[i*2+0]
-		filename2 = filenames[i*2+1]
-		filename3 = filenames[i*2+2]
-		
-		file_ext = filename1.split('.')[-1]
-		filename_difference = filename1.replace('.%s'%file_ext,'_%s.%s'%(extra, file_ext))
-		
-		# Load the text file containing the stacked profile
-		data1 = np.loadtxt(filename1).T
-		data2 = np.loadtxt(filename2).T
+        filename1 = filenames[i*2+0]
+        filename2 = filenames[i*2+1]
+        filename3 = filenames[i*2+2]
+        
+        file_ext = filename1.split('.')[-1]
+        filename_difference = filename1.replace('.%s'%file_ext,'_%s.%s'%(extra, file_ext))
+        
+        # Load the text file containing the stacked profile
+        data1 = np.loadtxt(filename1).T
+        data2 = np.loadtxt(filename2).T
 
-	# These values do not change
-		Rcenters = data1[0]
-		bias_tot = data1[4]
-		variance = [data1[5,0],0,0,0]
+    # These values do not change
+        Rcenters = data1[0]
+        bias_tot = data1[4]
+        variance = [data1[5,0],0,0,0]
 
-	# Change
-		data1_ESDt = data1[1]
-		data2_ESDt = data2[1]
-		
-		data1_ESDx = data1[2]
-		data2_ESDx = data2[2]
-		
-		data1_error = data1[3]
-		data2_error = data2[3]
+    # Change
+        data1_ESDt = data1[1]
+        data2_ESDt = data2[1]
+        
+        data1_ESDx = data1[2]
+        data2_ESDx = data2[2]
+        
+        data1_error = data1[3]
+        data2_error = data2[3]
 
-		if extra == 'difference':
-			ESDt_tot = abs((data1_ESDt - data2_ESDt)/((data1_ESDt + data2_ESDt)/2))
-			ESDx_tot = abs((data1_ESDx - data2_ESDx)/((data1_ESDx + data2_ESDx)/2))
-			error_tot = abs((data1_error - data2_error)/((data1_error + data2_error)/2))
+        if extra == 'difference':
+            ESDt_tot = abs((data1_ESDt - data2_ESDt)/((data1_ESDt + data2_ESDt)/2))
+            ESDx_tot = abs((data1_ESDx - data2_ESDx)/((data1_ESDx + data2_ESDx)/2))
+            error_tot = abs((data1_error - data2_error)/((data1_error + data2_error)/2))
 
-		if extra == 'ratio':
-			ESDt_tot = (data1_ESDt/data2_ESDt)
-			ESDx_tot = (data1_ESDx/data2_ESDx)
-			error_tot = (data1_error/data2_error)
+        if extra == 'ratio':
+            ESDt_tot = (data1_ESDt/data2_ESDt)
+            ESDx_tot = (data1_ESDx/data2_ESDx)
+            error_tot = (data1_error/data2_error)
 
-		ESDt_tot[data1_ESDt==-999.] = -999.
-		ESDt_tot[data2_ESDt==-999.] = -999.
-		
-		ESDx_tot[data1_ESDx==-999.] = -999.
-		ESDx_tot[data2_ESDx==-999.] = -999.
+        ESDt_tot[data1_ESDt==-999.] = -999.
+        ESDt_tot[data2_ESDt==-999.] = -999.
+        
+        ESDx_tot[data1_ESDx==-999.] = -999.
+        ESDx_tot[data2_ESDx==-999.] = -999.
 
-		error_tot[data1_error==-999.] = -999.
-		error_tot[data2_error==-999.] = -999.
+        error_tot[data1_error==-999.] = -999.
+        error_tot[data2_error==-999.] = -999.
 
-		shear.write_stack(filename_difference, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, 0, [], []) # Printing stacked shear profile to a file
+        shear.write_stack(filename_difference, Rcenters, ESDt_tot, ESDx_tot, error_tot, bias_tot, h, variance, 0, [], []) # Printing stacked shear profile to a file
 
-		filenames = np.append(filenames, [filename_difference])
+        filenames = np.append(filenames, [filename_difference])
 
-for j in xrange(Nfilelists):
+for i in xrange(Nfiles):
 
-	n = 0
-	Nfiles = len(filelists[j])
+    n = 0.
+    if subplots:
+        Nsubplots = Nfiles
+        n = i+1
+    
+#	n = n+1
+    filename = filenames[i]
 
-	for i in xrange(Nfiles):
+    lensIDs = ['(%i lenses)'%l for l in [543, 1142, 1843, 2142]]
 
-		if subplots:
-			subplots = Nfiles
-			n = i+1
-		
-	#	n = n+1
-		filename = filelists[j,i]
+    plotlabel = filename.split('/')[-1]
+    plotlabel = (plotlabel.rsplit('.',1)[-2])
+    plotlabel = np.array(plotlabel.split('_'))
+    plotlabel = ' '.join(np.hstack([plotlabel[1:4], lensIDs[i]])) # plotlabel[-2]]))
+    plotlabel = plotlabel.replace('p', '.')
+    plotlabel = plotlabel.replace('m', '-')
+    plotlabel = r'%s'%plotlabel
+    plottitle = ''
 
-		plotlabel = filename.split('/')[-1]
-		plotlabel = (plotlabel.rsplit('.',1)[-2])
-		plotlabel = np.array(plotlabel.split('_'))
-		plotlabel = ' '.join(np.hstack([plotlabel[0:4], plotlabel[-2]]))
-		plotlabel = r'%s'%plotlabel
-		plottitle = ''
+    print 
 
-		if i == 0:
-			plotlabel = 'Old GAMA catalogue (179199 lenses)'
-		if i == 1:
-			plotlabel = 'New GAMA catalogue (183625 lenses)'
-		
-#		if j ==0:
-#			plotlabel = 'corr-AngSepBCG: bin %i'%n
-#		if j == 1:
-#			plotlabel = 'corr-AngSepBCG, 8 bins'
-#		if j==2:
-#			plotlabel = 'logmstar-log(fluxscale)-2log(h/0.7)'
-
-		shear.define_plot(filename, plotlabel, plottitle, plotstyle, subplots, xlabel, ylabel, n)
+    shear.define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, h)
 
 # Plot the ESD profile into a file
 file_ext = filename.split('.')[-1]

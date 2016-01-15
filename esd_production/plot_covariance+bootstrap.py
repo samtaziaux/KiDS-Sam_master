@@ -54,10 +54,10 @@ def main():
     outname = shear.define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat)
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
-    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights)
+    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
     
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) \
@@ -90,7 +90,7 @@ def main():
         try:
             shear.write_plot(filenameESD, plotstyle)
         except:
-            pass
+            print "Failed to create ESD Plot of:", filenameESD
 
     # Creating the ueber-matrix plot
     filename_N1 = filename_var.replace('binnumof', 's')
@@ -106,16 +106,17 @@ def main():
     try:
         shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname, lens_binning, Rbins, Runit, h)
     except:
-        pass
+        print "Failed to create Matrix Plot of", filenamecov
 
-    """
+    
     # Remove the used splits
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-    """
+    
+    
     return
     
 main()

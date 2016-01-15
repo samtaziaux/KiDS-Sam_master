@@ -5,7 +5,6 @@ from numpy import ones, outer, sum as npsum, transpose, zeros
 from numpy.random import random, rayleigh
 from scipy.stats import rv_discrete
 from scipy.integrate import romberg
-from time import time
 
 # local
 from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7

@@ -1,1 +1,6 @@
 *.pyc
+._*
+*DS_Store*
+/.project
+./brouwer
+./cristobal

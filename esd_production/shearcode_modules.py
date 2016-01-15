@@ -26,11 +26,20 @@ inf = np.inf
 def input_variables():
 
     # Input for the codes
-    Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
-    Nsplits = int(sys.argv[2]) # The number cores/splits
-    binnum = int(sys.argv[3]) # The number of this particular observable bin
-    blindcat = str(sys.argv[4]) # The number of this particular blind KiDS catalog
-    config_file = str(sys.argv[5]) # The path to the configuration file
+    try:
+        Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
+        Nsplits = int(sys.argv[2]) # The number cores/splits
+        binnum = int(sys.argv[3]) # The number of this particular observable bin
+        blindcat = str(sys.argv[4]) # The number of this particular blind KiDS catalog
+        config_file = str(sys.argv[5]) # The path to the configuration file
+    except:
+        Nsplit = 1 # The number of this particular core/split
+        Nsplits = 1 # The number cores/splits
+        binnum = 1 # The number of this particular observable bin
+        blindcat = 'D' # The number of this particular blind KiDS catalog
+        config_file = str(sys.argv[1]) # The path to the configuration file
+
+        print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
     path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h, \
@@ -58,28 +67,28 @@ def input_variables():
     else:
         filename_addition = '_%s'%filename_addition
     
-    # Defining the lens-ID lens selection/binning
-    if 'None' not in lensid_file:
-        lens_selection = define_lensid_selection(lensid_file, lens_selection)
-        lens_selection, lens_binning, binname = lens_selection
-        #print lens_selection, lens_binning
     
     # Binnning information of the lenses
     obsbins = define_obsbins(1, lens_binning, [], [])
     binname, lens_binning, Nobsbins, binmin, binmax = obsbins
-
+    
+    # Defining the lens-ID lens selection/binning
+    if 'None' not in lensid_file:
+        selection = define_lensid_selection(lensid_file, lens_selection, lens_binning, binname)
+        lens_selection, lens_binning, binname = selection
+    
     # Defining the center definition
     centers = np.array(['Cen', 'IterCen', 'BCG'])
     centering = 'None'
     for cen in centers:
-        if ('rank%s' %cen in binname) or \
-            ('rank%s' %cen in lens_selection.keys()):
+        if ('rank%s'%cen in binname) or \
+            ('rank%s'%cen in lens_selection.keys()):
             centering = cen
             print 'Center definition = %s'%centering
     if centering == 'Cen':
         lens_selection['rank%s'%centering] = ['self', np.array([1])]
         msg = 'WARNING: With the Cen definition,'
-        msg += ' you can only use Centrals (rank = 1)'
+        msg += ' you can only use Centrals (Rank = 1)'
         print msg
 
     # Creating all necessary folders
@@ -93,7 +102,7 @@ def input_variables():
     path_splits = '%s/splits_%s' %(path_output, purpose)
     path_results = '%s/results_%s' %(path_output, purpose)
 
-    if (Nsplit == 0) and (blindcatnum==0) and (binnum == 1):
+    if (Nsplit == 0) and (blindcat==blindcats[0]) and (binnum == 1):
     
     #    print 'Nsplit:', Nsplit
     #    print 'blindcat:', blindcat
@@ -117,7 +126,7 @@ def input_variables():
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
-        if (Nsplit==0) and (blindcatnum==0) and (binnum == 1):
+        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == 1):
 
             for path in [path_splits, path_results]:
                 if not os.path.isdir(path):
@@ -141,17 +150,24 @@ def input_variables():
 
         # Defining the name of the output files
         filename_var = define_filename_var(purpose.replace('bootstrap', 'catalog'), centering, binname, \
-                        binnum, Nobsbins, lens_selection, src_selection, \
+                        binnum, Nobsbins, lens_selection, src_selection, lens_weights, \
                         name_Rbins, O_matter, O_lambda, Ok, h)
 
         for Ncat in xrange(100):
             outname = '%s/%s_%i_%s%s_split%iof*.fits'%(path_splits.replace('bootstrap', 'catalog'), purpose.replace('bootstrap', 'catalog'), Ncat+1, filename_var, filename_addition, Nsplit+1)
-        #    print outname
+            placeholder = outname.replace('*', '0')
+            if os.path.isfile(placeholder):
+                os.remove(placeholder)
+
             splitfiles = glob.glob(outname)
             splitslist = np.append(splitslist, splitfiles)
-
+            
             if len(splitfiles) == 0:
                 break
+
+        print outname
+        
+
     else:
         Ncat = 1
 
@@ -164,24 +180,20 @@ def input_variables():
 
 
 # Defining the lensID lens selection/binning
-def define_lensid_selection(lensid_file, lens_selection):
+def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname):
     
-    #binname = 'ID'
-    binname = 'CATAID'
+    IDname = 'ID'
     
-    # If there is only one lensID bin -> selection
-    lens_binning = {}
     lensid_files = lensid_file.split(',')
-    if len(lensid_files) == 1:
+
+    if len(lensid_files) == 1: # If there is only one lensID bin -> selection
         lensids = np.loadtxt(lensid_files[0])
-        #lens_selection['ID'] = ['self', lensids]
-        #lens_binning['ID'] = 'None'
-        lens_selection[binname] = ['self', lensids]
-        lens_binning[binname] = 'None'
+        lens_selection[IDname] = ['self', lensids]
     else: # If there are multiple lensID bins -> binning
+        binname = IDname
+        lens_binning = dict()
         for i, f in enumerate(lensid_files):
             lensids = np.loadtxt(f)
-            #lens_binning['IDbin%i' %i] = ['self', lensids]
             lens_binning['%sbin%i' %(binname, i)] = ['self', lensids]
 
     return lens_selection, lens_binning, binname
@@ -193,14 +205,20 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
     selnames = np.sort(selection.keys())
     for selname in selnames:
         sellims = (selection[selname])[1]
-        if len(sellims) == 1:
-            filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
-            var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
-            plottitle = '%s %s = %g,'%(plottitle, selname, sellims[0])
+
+        if 'ID' in selname:
+            filename_var = '%s_%ss%g'%(filename_var, selname, len(sellims))
+            var_print = '%s #%ss = %g,'%(var_print, selname, len(sellims))
+            plottitle = '%s $\#$ %ss = %g,'%(plottitle, selname, len(sellims))
         else:
-            filename_var = '%s_%s%g~%g'%(filename_var, selname, sellims[0], sellims[1])
-            var_print = '%s %s-limit: %g - %g,'%(var_print, selname, sellims[0], sellims[1])
-            plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, sellims[0], selname, sellims[1])
+            if len(sellims) == 1:
+                filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
+                var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
+                plottitle = '%s %s = %g,'%(plottitle, selname, sellims[0])
+            else:
+                filename_var = '%s_%s%g~%g'%(filename_var, selname, sellims[0], sellims[1])
+                var_print = '%s %s-limit: %g - %g,'%(var_print, selname, sellims[0], sellims[1])
+                plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, sellims[0], selname, sellims[1])
         
     return filename_var, var_print, plottitle
 
@@ -269,7 +287,7 @@ def define_filename_splits(path_splits, purpose, filename_var, Nsplit, Nsplits, 
 
 def define_filename_results(path_results, purpose, filename_var, filename_addition, Nsplit, blindcat): # Paths to the resulting files
 
-    if 'catalog' in path_results:
+    if 'catalogs' in path_results:
         resultname = '%s/%s_%s%s.fits'%(path_results, purpose, filename_var, filename_addition)
     else:
         resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, filename_addition, blindcat)
@@ -279,24 +297,24 @@ def define_filename_results(path_results, purpose, filename_var, filename_additi
 
 # Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
 def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpose, \
-                Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file):
+                Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition):
 
     # Import R-range
-    Rmin, Rmax, Rbins, Rcenters, nRbins = define_Rbins(path_Rbins, Runit)
+    Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst = define_Rbins(path_Rbins, Runit)
     
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     import_gamacat(path_gamacat, centering, purpose, Ncat, \
-    O_matter, O_lambda, Ok, h, Runit, lens_weights, lensid_file)
+    O_matter, O_lambda, Ok, h, Runit, lens_weights)
     
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats)
     
     # Match the KiDS field and GAMA galaxy coordinates
     catmatch, kidscats, galIDs_infield = \
-    run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose)
+    run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition)
 
-    return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist
 
 
@@ -331,19 +349,26 @@ def define_Rbins(path_Rbins, Runit):
             exit()
     
     # Translating from k/Mpc to pc, or from arcmin/sec to deg
-    const = 1.
+
+    Rconst = -999
     if 'pc' in Runit:
+        Rconst = 1.
         if 'k' in Runit:
-            const = 1e3
+            Rconst = 1e3
         if 'M' in Runit:
-            const = 1e6
-    else:
+            Rconst = 1e6
+    
+    if 'arc' in Runit:
         if 'sec' in Runit:
-            const = 1/(60.**2)
+            Rconst = 1/(60.**2)
         if 'min' in Runit:
-            const = 1/60.
-                
-    [Rmin, Rmax, Rbins] = [r*const for r in [Rmin, Rmax, Rbins]]
+            Rconst = 1/60.
+    
+    if Rconst == -999:
+        print '*** Unit of radial bins not recognized! ***'
+        quit()
+        
+    [Rmin, Rmax, Rbins] = [r*Rconst for r in [Rmin, Rmax, Rbins]]
 
     """
     print 'path_Rbins', path_Rbins
@@ -355,12 +380,12 @@ def define_Rbins(path_Rbins, Runit):
     print 'nRbins', nRbins
     """
 
-    return Rmin, Rmax, Rbins, Rcenters, nRbins
+    return Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst
 
 
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
 def import_gamacat(path_gamacat, centering, purpose, Ncat, \
-                    O_matter, O_lambda, Ok, h, Runit, lens_weights, lensid_file):
+                    O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
     randomcatname = '/disks/shear9/brouwer/shearprofile/shear_2.1/gen_ran_out.randoms.fits'
 
@@ -369,10 +394,10 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
     gamacat = pyfits.open(path_gamacat, ignore_missing_end=True)[1].data
 
-    try:
-        galIDlist = gamacat['ID'] # IDs of all galaxies
-    except KeyError:
-        galIDlist = gamacat['CATAID']
+
+    galIDlist = gamacat['ID'] # IDs of all galaxies
+#    except KeyError:
+#        galIDlist = gamacat['CATAID']
     
     if centering == 'Cen':
         galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)
@@ -394,7 +419,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
     #Defining the lens weights
     weightname = lens_weights.keys()[0]
-    if weightname != 'None':
+    if 'No' not in weightname:
         galweightlist = pyfits.open(lens_weights.values()[0])[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
@@ -406,26 +431,6 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
         Dcllist = np.degrees(np.ones(len(galIDlist))) # Distance in degree on the sky
-
-    if lensid_file is not 'None':
-        lensid = np.loadtxt(lensid_file)
-        match_idfile = np.in1d(galIDlist, lensid)
-        # I cannot modify the length of the pyfits arrays but creating a
-        # dictionary of numpy arrays should be the same
-        newgamacat = {}
-        for name in gamacat.names:
-            newgamacat[name] = gamacat[name][match_idfile]
-        galIDlist = galIDlist[match_idfile]
-        galRAlist = galRAlist[match_idfile]
-        galDEClist = galDEClist[match_idfile]
-        galZlist = galZlist[match_idfile]
-        Dcllist = Dcllist[match_idfile]
-        galweightlist = galweightlist[match_idfile]
-    else:
-        newgamacat = {}
-        for name in gamacat.names:
-            newgamacat[name] = gamacat[name]
-    gamacat = newgamacat
 
     Dallist = Dcllist/(1+galZlist) # The angular diameter distance to the galaxy center
 
@@ -468,10 +473,14 @@ def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS 
 
 
 # Create a dictionary of KiDS fields that contain the corresponding galaxies.
-def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose):
+def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition):
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
-    Rmax = Rmax + Rfield
+    if 'oldcatmatch' in filename_addition:
+        print "*** Using old lens-field matching procedure! ***"
+    else:
+        Rmax = Rmax + Rfield
+        print "*** Using new lens-field matching procedure *** (for 'early science' mode, put 'oldcatmatch' in 'ESD_output_filename')"
 
     catmatch = dict()
     totgalIDs = np.array([])
@@ -541,7 +550,6 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
             catmatch[kidscat] = np.append(catmatch[kidscat], galIDs, 0)
 
 
-    #			print kidscat, Rmax
     #			print 'Average(R):', np.average(catR[coordmask]), ', Max(R):', np.amax(catR[coordmask]), ', Average(RA):', np.average(galRAlist[coordmask]), ', Average(DEC):', np.average(galDEClist[coordmask])
 
     kidscats = catmatch.keys()
@@ -673,7 +681,7 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
 
 
 # Binnning information of the groups
-def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat): 
+def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
 
     # Check how the binning is given
     binname = lens_binning.keys()[0]
@@ -697,7 +705,15 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
             
             # Print the lens binning properties
             if len(lenssel_binning) > 0:
-                obslist = define_obslist(binname, gamacat)
+                
+                # Importing the binning file
+                if obsfile == 'self':
+                    obslist = define_obslist(binname, gamacat)
+                else:
+                    print 'Using %s from %s'%(binname, obsfile)
+                    obscat = pyfits.open(obsfile)[1].data
+                    obslist = obscat[binname]
+
                 
                 print
                 print 'Lens binning: Lenses divided in %i %s-bins'%(Nobsbins, binname)
@@ -750,20 +766,20 @@ def define_obslist(obsname, gamacat):
 def define_lenssel(gamacat, centering, lens_selection, lens_binning,
                    binname, binnum, binmin, binmax):
 
-    lenssel = np.ones(len(gamacat[gamacat.keys()[0]]), dtype=bool)
+    lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
     #binname = 'No'
     
     # Add the mask for each chosen lens parameter
     for param in lens_selection.keys():
         binlims = lens_selection[param][1]
-        binfile = lens_selection[param][0]
+        obsfile = lens_selection[param][0]
         # Importing the binning file
-        if binfile == 'self':
+        if obsfile == 'self':
             obslist = define_obslist(param, gamacat)
         else:
-            print 'Using %s from %s'%(param, binfile)
-            bincat = pyfits.open(binfile)[1].data
+            print 'Using %s from %s'%(param, obsfile)
+            bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[param]
         
         if 'ID' in param:
@@ -776,12 +792,12 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
 
     if 'No' not in binname: # If the galaxy selection depends on observable
         # Importing the binning file
-        binfile = lens_binning[binname][0]
-        if binfile == 'self':
+        obsfile = lens_binning[binname][0]
+        if obsfile == 'self':
             obslist = define_obslist(binname, gamacat)
         else:
-            print 'Using %s from %s'%(binname, binfile)
-            bincat = pyfits.open(binfile)[1].data
+            print 'Using %s from %s'%(binname, obsfile)
+            bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[binname]
         
         if 'ID' in binname:
@@ -832,7 +848,7 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
     galDEC, srcDEC = np.meshgrid(galDECs, srcDEC)
 
     # Defining the distance R and angle phi between the lens' center and its surrounding background sources
-    srcR = (Dals * np.arccos(np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*np.cos(np.radians(galRA-srcRA)) + np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC))))
+    srcR = Dals * np.arccos(np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*np.cos(np.radians(galRA-srcRA)) + np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC)))
 
     # Masking all lens-source pairs that have a relative distance beyond the maximum distance Rmax
     Rmask = np.logical_not((Rmin < srcR) & (srcR < Rmax))
@@ -911,12 +927,12 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
 
 # Write the shear or covariance catalog to a fits file
-def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, output, outputnames, variance, purpose, e1, e2, w, srcm):
+def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, output, outputnames, variance, purpose, e1, e2, w, srcm):
 
     fitscols = []
 
-    Rmin = Rbins[0:nRbins]
-    Rmax = Rbins[1:nRbins+1]
+    Rmin = Rbins[0:nRbins]/Rconst
+    Rmax = Rbins[1:nRbins+1]/Rconst
 
     # Adding the radial bins
     if 'bootstrap' in purpose:
@@ -998,7 +1014,7 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, bias_t
     print 'Written: ESD profile data:', filename
 
 
-    if len(galIDs_matched)>0 and blindcatnum == 0:
+    if len(galIDs_matched)>0 and blindcatnum == 3:
         # Writing galID's to another file
         galIDsname_split = filename.rsplit('_',1)
         galIDsname = '%s_lensIDs.txt'%galIDsname_split[0]
@@ -1102,6 +1118,10 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
     errorh[errorh==-999] = np.nan
     errorl[errorl==-999] = np.nan
 
+    if all([not(np.isfinite(x)) for x in data_y]):
+        data_y = np.ones(len(data_y))*1e10
+        errorh = np.zeros(len(data_y))
+        errorl = np.zeros(len(data_y))
 
     if type(Nsubplots) != int:
         data_x = data_x + n*0.1*data_x
@@ -1139,9 +1159,9 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
         plt.yscale('log')
         errorl[errorl>=data_y] = ((data_y[errorl>=data_y])*0.9999999999)
 
-#        plt.autoscale(enable=False, axis='both', tight=None)
- #       plt.axis([1e1,1e4,1e-1,1e4])
-        plt.ylim(1e-1,1e4)
+#       plt.autoscale(enable=False, axis='both', tight=None)
+#       plt.axis([1e1,1e4,1e-1,1e4])
+        plt.ylim(1e-1,1e3)
 
         if plotstyle == 'log':
             plt.errorbar(data_x, data_y, yerr=[errorl,errorh], ls='', marker='o', label=plotlabel)
@@ -1151,6 +1171,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, Nsubplots, n, Runit, 
             plt.plot(data_x, errorh, marker='o', label=plotlabel) # removed ls=''
             plt.ylabel(r'Error(%s)'%ylabel,fontsize=15)
 
+    plt.xlim(1e1,1e4)
     plt.xscale('log')
     
     plt.xlabel(r'%s'%xlabel,fontsize=15)

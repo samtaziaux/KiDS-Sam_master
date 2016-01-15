@@ -25,7 +25,7 @@ def run_emcee(hm_options, sampling_options, args):
         val1, val2, val3, val4, hm_functions, \
         starting, meta_names, fits_format = hm_options
     # load MCMC sampler setup
-    datafile, datacols, covfile, covcols, output, \
+    datafile, datacols, covfile, covcols, exclude_bins, output, \
         sampler, nwalkers, nsteps, nburn, \
         thin, k, threads, sampler_type = sampling_options
 
@@ -43,7 +43,7 @@ def run_emcee(hm_options, sampling_options, args):
         answer = raw_input(msg)
         if len(answer) == 0:
             exit()
-        if answer[0].lower() != 'y':
+        if answer.lower() not in ('y', 'yes'):
             exit()
     if not args.demo:
         print 'Started -', ctime()
@@ -158,7 +158,9 @@ def run_emcee(hm_options, sampling_options, args):
             if len(f) == 1:
                 metadata[j].append(zeros(nwalkers*nsteps/thin))
             else:
-                size = (nwalkers*nsteps/thin, int(f[:-1]))
+                size = [nwalkers*nsteps/thin, int(f[:-1])]
+                if exclude_bins is not None:
+                    size[1] -= len(exclude_bins)
                 metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     fail_value = []
@@ -193,10 +195,10 @@ def run_emcee(hm_options, sampling_options, args):
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
         # make sure that nwalkers is a factor of this number!
-        if i*nwalkers % 10000 == nwalkers:
+        if i*nwalkers % 1000 == nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
-                                params, jfree, metadata, meta_names,
-                                fits_format, i, nwritten, Nobsbins,
+                                params, jfree, metadata, meta_names, i,
+                                nwritten, Nobsbins,
                                 array, BinTableHDU, Column, ctime, enumerate,
                                 isfile, izip, transpose, xrange)
             metadata, nwriten = out
@@ -233,8 +235,8 @@ def run_emcee(hm_options, sampling_options, args):
     print 'Saving everything to {0}...'.format(output)
     print i, nwalkers, nwritten
     write_to_fits(output, chi2, sampler, nwalkers, thin,
-                  params, jfree, metadata, meta_names,
-                  fits_format, i+1, nwritten, Nobsbins,
+                  params, jfree, metadata, meta_names, i+1,
+                  nwritten, Nobsbins,
                   array, BinTableHDU, Column, ctime, enumerate,
                   isfile, izip, transpose, xrange)
     os.remove(output.replace('.fits', '.temp.fits'))
@@ -339,7 +341,7 @@ def lnprob(theta, R, esd, icov, function, params,
     return lnlike + model[-3] + lnprior_total, model
 
 def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
-                  metadata, meta_names, fits_format, iternum, nwritten,
+                  metadata, meta_names, iternum, nwritten,
                   Nobsbins, array, BinTableHDU, Column, ctime, enumerate,
                   isfile, izip, transpose, xrange):
     nexclude = len(chi2)
@@ -395,9 +397,14 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                               array=lnPderived))
         columns.append(Column(name='chi2', format='E', array=chi2))
         columns.append(Column(name='lnlike', format='E', array=lnlike))
-        for n, m, f in izip(meta_names, metadata, fits_format):
-            for ni, mi, fi in izip(n, m, f):
-                columns.append(Column(name=ni, format=fi, array=mi))
+        # this handles exclude_bins properly
+        for name, val in izip(meta_names, metadata):
+            for name_i, val_i in izip(name, val):
+                try:
+                    fmt = '{0}E'.format(val_i.shape[1])
+                except IndexError:
+                    fmt = 'E'
+                columns.append(Column(name=name_i, array=val_i, format=fmt))
         nwritten = iternum * nwalkers
     fitstbl = BinTableHDU.from_columns(columns)
     fitstbl.writeto(output)

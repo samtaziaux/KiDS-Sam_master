@@ -59,10 +59,10 @@ def main():
 
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
-    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights)
+    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
     galIDlist_matched = np.unique(np.hstack(catmatch.values()))
 
     # Binnning information of the groups
@@ -224,11 +224,13 @@ def main():
             ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = shear.calc_stack(gammat[N1], gammax[N1], wk2[N1], np.diagonal(cov[N1,N1,:,:]), srcm[N1], [1,1,1,1], blindcatnum)
             
             # Determine the stacked galIDs
-            binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
-            lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax)
+            binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, lenssel_binning, gamacat)
+            lenssel = shear.define_lenssel(gamacat, centering, lens_selection, lens_binning, binname, N1+1, binmin, binmax)
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
+
+            print 'galIDs_matched:', len(galIDs_matched)
 
             # Printing stacked shear profile to a text file
             shear.write_stack(filenameESD, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1], h, variance, blindcatnum, galIDs_matched, galIDs_matched_infield)
@@ -237,7 +239,7 @@ def main():
             for N2 in range(Nobsbins):
                 for R1 in range(nRbins):
                     for R2 in range(nRbins):
-                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/(wk2[N1,R1]*wk2[N2,R2])/(1e3)**4 # The covariance matrix
+                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/(wk2[N1,R1]*wk2[N2,R2]) # The covariance matrix
 
 
     with open(filenamecov, 'w') as file:

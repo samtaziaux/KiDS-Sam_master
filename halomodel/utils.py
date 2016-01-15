@@ -1,5 +1,6 @@
 """
-Auxiliary functions. This needs to be refactioned to use astropy.cosmology
+Auxiliary functions. This needs to be refactioned to use astropy.cosmology.
+This should also take input from the config file.
 
 """
 import os

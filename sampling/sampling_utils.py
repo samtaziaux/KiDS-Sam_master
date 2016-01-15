@@ -3,7 +3,7 @@ import os
 from glob import glob
 #from ConfigParser import SafeConfigParser
 
-def load_datapoints(datafile, datacols, exclude_bins=None):
+def load_datapoints(datafile, datacols, exclude_bins):
     if type(datafile) == str:
         R, esd = numpy.loadtxt(datafile, usecols=datacols[:2]).T
         # better in Mpc
@@ -21,7 +21,7 @@ def load_datapoints(datafile, datacols, exclude_bins=None):
         R, esd = numpy.transpose([numpy.loadtxt(df, usecols=datacols[:2])
                                   for df in datafile], axes=(2,0,1))
         if len(datacols) == 3:
-            oneplusk = array([numpy.loadtxt(df, usecols=[datacols[2]])
+            oneplusk = numpy.array([numpy.loadtxt(df, usecols=[datacols[2]])
                               for df in datafile])
             esd /= oneplusk
         for i in xrange(len(R)):
@@ -33,8 +33,9 @@ def load_datapoints(datafile, datacols, exclude_bins=None):
             esd = numpy.array([[esdi[j] for j in xrange(len(esdi))
                                 if j not in exclude_bins] for esdi in esd])
     return R, esd
+    #return R, numpy.absolute(esd)
 
-def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
+def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins):
     cov = numpy.loadtxt(covfile, usecols=[covcols[0]])
     if len(covcols) == 2:
         cov /= numpy.loadtxt(covfile, usecols=[covcols[1]])
@@ -90,16 +91,7 @@ def read_config(config_file, version='0.5.7',
                 path_data='', path_covariance=''):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
                    'fixed', 'read', 'function')
-    params = []
-    param_types = []
-    prior_types = []
-    val1 = []
-    val2 = []
-    val3 = []
-    val4 = []
-    starting = []
-    meta_names = []
-    fits_format = []
+    exclude_bins = None
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -115,6 +107,8 @@ def read_config(config_file, version='0.5.7',
             if len(datacols) not in (2,3):
                 msg = 'datacols must have either two or three elements'
                 raise ValueError(msg)
+        elif line[0] == 'exclude_bins':
+            exclude_bins = [int(i) for i in line[1].split(',')]
         if line[0] == 'path_covariance':
             path_covariance = line[1]
         elif line[0] == 'covariance':
@@ -159,7 +153,7 @@ def read_config(config_file, version='0.5.7',
         raise ValueError(msg)
     covfile = covfile[0]
 
-    out = (datafiles, datacols, covfile, covcols, output,
+    out = (datafiles, datacols, covfile, covcols, exclude_bins, output,
            sampler, nwalkers, nsteps, nburn, thin, k, threads,
            sampler_type)
     return out

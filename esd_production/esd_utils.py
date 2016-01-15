@@ -85,10 +85,11 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             
         elif line[0] == 'lens_binning':
             binname = line[1]
-            paramfile = line[2]
             if 'No' in binname:
                 bins = np.array([])
+                paramfile = 'self'
             else:
+                paramfile = line[2]
                 bins = np.array([float(i) for i in line[3].split(',')])
             lens_binning = {binname: [paramfile, bins]}
             
@@ -122,11 +123,12 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             pass
         """
         
-    #try: # If a custom lens catalog was given
-        #gama_path = lensid_file
-        #print 'Lens catalog:', lensid_file
-    #except:
-        #pass
+    try: # If a custom lens catalog was given
+        if 'None' not in lens_catalog:
+            gama_path = lens_catalog
+            print 'Lens catalog:', lens_catalog
+    except:
+        pass
         
         
     out = (kids_path, gama_path,

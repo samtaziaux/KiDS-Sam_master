@@ -28,7 +28,7 @@ def define_runparams(purpose, lens_binning, ncores, blindcats):
     # The number of catalogues that will be ran
     if 'random' in purpose:
         nruns = 100
-        if 'combine' in purpose:
+        if ncores == 0:
             nruns = 0
     else:
         nruns = 1
@@ -56,10 +56,12 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
     # The shear calculation starts here
     directory = os.getcwd()
-    path_shearcodes = 'esd_production/'
+    indirectory = os.listdir('.')
+    path_shearcodes = '../../esd_production/'
     if 'esd_production' in directory:
         path_shearcodes = ''
-        
+    if 'esd_production' in indirectory:
+        path_shearcodes = 'esd_production'
     
     # Creating the splits
     for n in xrange(nruns):

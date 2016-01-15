@@ -96,14 +96,14 @@ def main():
 
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
-    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, \
+    catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, lensid_file)
+    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
 
 
     # Calculate the source variance
-    """
+#    """
     w_varlist = np.array([])
     e1_varlist = np.array([[]]*4) # These lists will contain all used ellipticities for the variance calculation
     e2_varlist = np.array([[]]*4)
@@ -124,9 +124,9 @@ def main():
         e2_varlist = np.hstack([e2_varlist, e2.T])
 
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist) # Calculating the variance of the ellipticity for this source selection
-    """
+#    """
     # !!!!!!! This is temporary, to speed up the code !!!!!!
-    variance = np.array([0.06423509, 0.08734607, 0.07392235, 0.07810604])
+#    variance = np.array([0.06423509, 0.08734607, 0.07392235, 0.07810604])
 
 
     # Binnning information of the groups
@@ -257,7 +257,7 @@ def main():
         # Write the final output of this split to a fits file
         if 'covariance' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, filename_var, kidscatname, 0, filename_addition, blindcat)
-            shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, output, outputnames, variance, purpose, e1, e2, w, srcm)
+            shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, Rconst, output, outputnames, variance, purpose, e1, e2, w, srcm)
 
     if ('random' in purpose):
         if os.path.isfile(filename):
@@ -266,7 +266,7 @@ def main():
 
     if 'catalog' in purpose:
         filename = shear.define_filename_splits(path_splits, purpose, filename_var, Nsplit+1, Nsplits, filename_addition, blindcat)
-        shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, output, outputnames, variance, purpose, e1, e2, w, srcm)
+        shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, output, outputnames, variance, purpose, e1, e2, w, srcm)
         print 'Written:', filename
 
     end_tot = time.time()-start_tot

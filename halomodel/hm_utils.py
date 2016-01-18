@@ -24,6 +24,8 @@ def read_config(config_file, version='0.5.7'):
     hm_functions = []
     meta_names = []
     fits_format = []
+    njoin = 1
+    join = [[]]
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -71,6 +73,15 @@ def read_config(config_file, version='0.5.7'):
                 val4.append(inf)
             if line[2] == 'uniform':
                 starting.append(float(line[-1]))
+            # these are to enable automatic handling of the number of bins
+            if line[-1] == 'join{0}'.format(njoin):
+                join[-1].append(nparams)
+            elif line[-1] == 'join{0}'.format(njoin+1):
+                join[-1] = array(join[-1])
+                join.append([])
+                join[-1].append(nparams)
+                njoin += 1
+            nparams += 1
         elif line[0] == 'hm_params':
             if line[2] != 'fixed':
                 msg = 'ERROR: Arrays can only contain fixed values.'
@@ -102,9 +113,11 @@ def read_config(config_file, version='0.5.7'):
             fits_format.append(line[2].split(','))
     if len(hm_functions) > 0:
         hm_functions = (func for func in hm_functions)
+    if njoin == 1 and len(join[0]) == 0:
+        join = None
     out = (model, array(params), array(param_types), array(prior_types),
-           array(val1), array(val2), array(val3), array(val4), hm_functions,
-           array(starting), array(meta_names), fits_format)
+           array(val1), array(val2), array(val3), array(val4), join,
+           hm_functions, array(starting), array(meta_names), fits_format)
     return out
 
 def read_function(module, function):

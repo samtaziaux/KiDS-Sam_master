@@ -101,13 +101,14 @@ def input_variables():
     # Path to the output splits and results
     path_splits = '%s/splits_%s' %(path_output, purpose)
     path_results = '%s/results_%s' %(path_output, purpose)
+    print path_splits
 
-    if (Nsplit == 0) and (blindcat==blindcats[0]) and (binnum == 1):
-    
-    #    print 'Nsplit:', Nsplit
-    #    print 'blindcat:', blindcat
-    #    print 'binnum:', binnum
-    #    print 'Nobsbins:', Nobsbins
+    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
+
+        #print 'Nsplit:', Nsplit
+        #print 'blindcat:', blindcat
+        #print 'binnum:', binnum
+        #print 'Nobsbins:', Nobsbins
 
         for path in [path_output, path_catalogs, path_splits, path_results]:
             if not os.path.isdir(path):

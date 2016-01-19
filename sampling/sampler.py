@@ -26,7 +26,7 @@ def run_emcee(hm_options, sampling_options, args):
     # load MCMC sampler setup
     datafile, datacols, covfile, covcols, exclude_bins, output, \
         sampler, nwalkers, nsteps, nburn, \
-        thin, k, threads, sampler_type = sampling_options
+        thin, k, threads, sampler_type, update_freq = sampling_options
 
     #function = cloud.serialization.cloudpickle.dumps(model)
     #del model
@@ -205,7 +205,7 @@ def run_emcee(hm_options, sampling_options, args):
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
         # make sure that nwalkers is a factor of this number!
-        if i*nwalkers % 1000 == nwalkers:
+        if i*nwalkers % update_freq == nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names, i,
                                 nwritten, Nobsbins,

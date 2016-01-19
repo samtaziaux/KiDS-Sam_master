@@ -142,6 +142,8 @@ def read_config(config_file, version='0.5.7',
             threads = int(line[1])
         elif line[0] == 'sampler_type':
             sampler_type = line[1]
+        elif line[0] == 'update_freq':
+            update_freq = int(line[1])
     if path_data:
         datafiles = os.path.join(path_data, datafiles)
     datafiles = sorted(glob(datafiles))
@@ -155,7 +157,7 @@ def read_config(config_file, version='0.5.7',
 
     out = (datafiles, datacols, covfile, covcols, exclude_bins, output,
            sampler, nwalkers, nsteps, nburn, thin, k, threads,
-           sampler_type)
+           sampler_type, update_freq)
     return out
 
 def read_function(function):

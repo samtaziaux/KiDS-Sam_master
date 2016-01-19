@@ -88,13 +88,13 @@ config_files = create_config(replacefile, findlist, replacelist)
 #config_files = ['ggl_environments_all.config']
 #config_files = ['ggl_environments_cen+iso.config']
 
-#config_files = ['ggl_environments_auto.config']
+config_files = ['ggl_environments_auto.config']
 #config_files = [ ['ggl_environments_auto.config_%s_rank%s'%(e,r) for e in ['envS4', 'shuffenvR4']] for r in ['-999-inf', '-999-2'] ]
 #config_files = [['ggl_environments_auto.config_%s_rank%s'%(e,r) for e in ['envS4', 'shuffenvR4']] for r in ['1-2']]
 
 #config_files = ['troughs.config']
 #config_files = ['ggl_environments_%s.config'%x for x in ['all', 'cen+iso', 'all_shuffled', 'cen+iso_shuffled']]
-config_files = ['ggl_randoms.config']
+#config_files = ['ggl_randoms.config']
 
 
 

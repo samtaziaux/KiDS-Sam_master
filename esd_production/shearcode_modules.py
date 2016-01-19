@@ -152,9 +152,10 @@ def input_variables():
         filename_var = define_filename_var(purpose.replace('bootstrap', 'catalog'), centering, binname, \
                         binnum, Nobsbins, lens_selection, src_selection, lens_weights, \
                         name_Rbins, O_matter, O_lambda, Ok, h)
+        path_randomsplits = '%s/splits_%s'%(path_catalogs, purpose)
 
         for Ncat in xrange(100):
-            outname = '%s/%s_%i_%s%s_split%iof*.fits'%(path_splits.replace('bootstrap', 'catalog'), purpose.replace('bootstrap', 'catalog'), Ncat+1, filename_var, filename_addition, Nsplit+1)
+            outname = '%s/%s_%i_%s%s_split%iof*.fits'%(path_randomsplits.replace('bootstrap', 'catalog'), purpose.replace('bootstrap', 'catalog'), Ncat+1, filename_var, filename_addition, Nsplit+1)
             placeholder = outname.replace('*', '0')
             if os.path.isfile(placeholder):
                 os.remove(placeholder)
@@ -229,7 +230,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                         name_Rbins, O_matter, O_lambda, Ok, h): # Define the list of variables for the output filename
 
     filename_var = ''
-    var_print = 'Chosen %s-configuration: '%purpose
+    var_print = ''
 
     if 'catalog' in purpose:
         if centering == 'Cen':
@@ -265,6 +266,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
     filename_var = filename_var.split('_', 1)[1]
 
     if 'covariance' not in purpose:
+        print 'Chosen %s-configuration: '%purpose
         print var_print
         print cosmo_print
         print

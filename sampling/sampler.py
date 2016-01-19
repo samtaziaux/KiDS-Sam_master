@@ -11,7 +11,6 @@ from astropy.io.fits import BinTableHDU, Column, Header, PrimaryHDU
 from itertools import count, izip
 from numpy import all as npall, array, append, concatenate, dot, inf, isnan
 from numpy import isfinite, log, log10, outer, pi, sqrt, transpose, zeros
-from numpy.linalg import det
 from os import remove
 from os.path import isfile
 from time import ctime
@@ -22,7 +21,7 @@ import sampling_utils
 def run_emcee(hm_options, sampling_options, args):
     # load halo model setup
     function, params, param_types, prior_types, \
-        val1, val2, val3, val4, hm_functions, \
+        val1, val2, val3, val4, params_join, hm_functions, \
         starting, meta_names, fits_format = hm_options
     # load MCMC sampler setup
     datafile, datacols, covfile, covcols, exclude_bins, output, \
@@ -38,7 +37,7 @@ def run_emcee(hm_options, sampling_options, args):
 
     if args.demo:
         print ' ** Running demo only **'
-    elif os.path.isfile(output):
+    elif isfile(output):
         msg = 'Warning: output file %s exists. Overwrite? [y/N] ' %output
         answer = raw_input(msg)
         if len(answer) == 0:
@@ -113,11 +112,22 @@ def run_emcee(hm_options, sampling_options, args):
     if args.demo:
         import pylab
         from matplotlib import cm
-        v1 = val1.copy()
-        v1[jfree] = starting
-        model = function(v1, R)
+        val1[jfree] = starting
+        if params_join is not None:
+            v1 = list(val1)
+            for p in params_join:
+                # without this list comprehension numpy can't keep track of the
+                # data type. I believe this is because there are elements of
+                # different types in val1 and therefore its type is not 
+                # well defined (so it gets "object")
+                v1[p[0]] = array([val1[pi] for pi in p])
+            # need to delete elements backwards to preserve indices
+            aux = [[v1.pop(pi) for pi in p[1:][::-1]]
+                   for p in params_join[::-1]]
+            val1 = array(v1)
+        model = function(val1, R)
         residuals = esd - model[0]
-        dof = esd.size - len(v1[jfree])
+        dof = esd.size - starting.size - 1
         chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                       for m in rng_obsbins for n in rng_obsbins]).sum()
         print ' ** chi2 = %.2f/%d **' %(chi2, dof)
@@ -322,6 +332,18 @@ def lnprob(theta, R, esd, icov, function, params,
     # run the given model
     v1 = val1.copy()
     v1[jfree] = theta
+    if params_join is not None:
+        v1j = list(v1)
+        for p in params_join:
+            # without this list comprehension numpy can't keep track of the
+            # data type. I believe this is because there are elements of
+            # different types in val1 and therefore its type is not 
+            # well defined (so it gets "object")
+            v1j[p[0]] = array([val1[pi] for pi in p])
+        # need to delete elements backwards to preserve indices
+        aux = [[v1j.pop(pi) for pi in p[1:][::-1]]
+                for p in params_join[::-1]]
+        v1 = array(v1j)
 
     model = function(v1, R)
     # no covariance

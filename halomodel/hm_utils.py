@@ -25,6 +25,7 @@ def read_config(config_file, version='0.5.7'):
     meta_names = []
     fits_format = []
     njoin = 1
+    nparams = 0
     join = [[]]
     config = open(config_file)
     for line in config:
@@ -57,7 +58,10 @@ def read_config(config_file, version='0.5.7'):
             else:
                 val1.append(float(line[3]))
                 if len(line) > 4:
-                    val2.append(float(line[4]))
+                    try:
+                        val2.append(float(line[4]))
+                    except:
+                        val2.append(-1)
                 else:
                     val2.append(-1)
             if line[2] in ('normal', 'lognormal'):
@@ -72,7 +76,10 @@ def read_config(config_file, version='0.5.7'):
                 val3.append(-inf)
                 val4.append(inf)
             if line[2] == 'uniform':
-                starting.append(float(line[-1]))
+                try:
+                    starting.append(float(line[-1]))
+                except:
+                    starting.append(float(line[-2]))
             # these are to enable automatic handling of the number of bins
             if line[-1] == 'join{0}'.format(njoin):
                 join[-1].append(nparams)

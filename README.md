@@ -33,7 +33,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
             python setup.py install
 
-    If you don't have administrator privileges or simply want to install it in a non-standard place (e.g., your home directory, then type
+    If you don't have administrator privileges, or simply want to install it in a non-standard place (e.g., your home directory), then type
 
             python setup.py install --prefix=path/to/installation/
 
@@ -41,7 +41,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
     After the setup script has finished, you should have a copy of the `kids_ggl` executable somewhere in your `$PATH`, which means you can run it out-of-the-box from anywhere in your computer.
 
-2. Set up your configuration file. See `help/ggl_demo.config` for guidance.
+2. Set up your configuration file. See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_demo_halo_specific.txt` for guidance.
 
 3. Run! There are two major things the pipeline can do for you:
 

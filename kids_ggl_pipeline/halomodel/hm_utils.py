@@ -7,7 +7,7 @@ from numpy import array, inf, loadtxt
 #sys.path.append('halomodel')
 
 # local
-from halomodel import nfw, nfw_stack, satellites, halo
+import nfw, nfw_stack, satellites, halo
 
 
 def read_config(config_file, version='0.5.7'):

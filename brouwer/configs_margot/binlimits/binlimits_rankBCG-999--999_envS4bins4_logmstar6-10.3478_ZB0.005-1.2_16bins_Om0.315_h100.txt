@@ -1,6 +1,0 @@
-# Limits of 4 envS4 bins:
-1.0
-1.0
-2.0
-3.0
-nan

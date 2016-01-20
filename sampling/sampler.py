@@ -26,7 +26,7 @@ def run_emcee(hm_options, sampling_options, args):
     # load MCMC sampler setup
     datafile, datacols, covfile, covcols, exclude_bins, output, \
         sampler, nwalkers, nsteps, nburn, \
-        thin, k, threads, sampler_type = sampling_options
+        thin, k, threads, sampler_type, update_freq = sampling_options
 
     #function = cloud.serialization.cloudpickle.dumps(model)
     #del model
@@ -124,7 +124,7 @@ def run_emcee(hm_options, sampling_options, args):
             # need to delete elements backwards to preserve indices
             aux = [[v1.pop(pi) for pi in p[1:][::-1]]
                    for p in params_join[::-1]]
-            val1 = array(v1)
+            val1 = v1 #array(v1) ??
         model = function(val1, R)
         residuals = esd - model[0]
         dof = esd.size - starting.size - 1
@@ -186,10 +186,10 @@ def run_emcee(hm_options, sampling_options, args):
                                     threads=threads,
                                     args=(R,esd,icov,function,
                                           params,prior_types[jfree],
-                                          val1,val2,val3,val4,
+                                          val1,val2,val3,val4,params_join,
                                           jfree,lnprior,likenorm,
                                           rng_obsbins,fail_value,
-                                          array,dot,inf,izip,outer,pi))
+                                          array,dot,inf,izip,outer,numpy.pi))
                                           #isfinite,log,log10
                                           #outer,sqrt,zeros))
     # burn-in
@@ -205,7 +205,7 @@ def run_emcee(hm_options, sampling_options, args):
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
         # make sure that nwalkers is a factor of this number!
-        if i*nwalkers % 1000 == nwalkers:
+        if i*nwalkers % update_freq == nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names, i,
                                 nwritten, Nobsbins,
@@ -254,7 +254,7 @@ def run_emcee(hm_options, sampling_options, args):
     return
 
 def lnprob(theta, R, esd, icov, function, params,
-           prior_types, val1, val2, val3, val4, jfree, lnprior, likenorm,
+           prior_types, val1, val2, val3, val4, params_join, jfree, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, izip, outer, pi):
            #array, dot, inf, izip, isfinite, log, log10, sqrt):
     """
@@ -343,7 +343,7 @@ def lnprob(theta, R, esd, icov, function, params,
         # need to delete elements backwards to preserve indices
         aux = [[v1j.pop(pi) for pi in p[1:][::-1]]
                 for p in params_join[::-1]]
-        v1 = array(v1j)
+    v1 = v1j #array(v1j) ??
 
     model = function(v1, R)
     # no covariance

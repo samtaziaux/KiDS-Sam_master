@@ -275,16 +275,16 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     _izip = izip
     
     #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
-    central_profile, fc_central1, fc_central2, logMcentral1, logMcentral2, b_in1, b_in2, z, Mstar, Rrange, angles = theta
+    central_profile, fc_central, logMcentral, b_in, z, Mstar, Rrange, angles = theta
     
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
-    Mcentral = 10.0**_array([logMcentral1, logMcentral2])
-    b = _array([b_in1, b_in2])
+    Mcentral = 10.0**logMcentral #_array([logMcentral1, logMcentral2])
+    b = b_in #_array([b_in1, b_in2])
     
     Mstar = 10.0**Mstar
     
-    fc_central = _array([fc_central1, fc_central2])
+    #fc_central = _array([fc_central1, fc_central2])
 
     #csat = fc_sat * _cM_duffy08(Msat, z, h)
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
@@ -329,7 +329,7 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_2halo, Mavg, 0]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
-    print fc_central1, fc_central2, logMcentral1, logMcentral2, b_in1, b_in2
+    print fc_central, logMcentral, b_in
     return out
     
     
@@ -343,18 +343,18 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     _linspace = linspace
     
     #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
-    central_profile, host_profile, fc_central1, fc_central2, logMcentral1, logMcentral2, alpha_in1, alpha_in2, f_off_in1, f_off_in2, b_in1, b_in2, z, Mstar, Rrange, angles = theta
+    central_profile, host_profile, fc_central, logMcentral, alpha_in1, f_off_in, b_in, z, Mstar, Rrange, angles = theta
     
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
-    Mcentral = 10.0**_array([logMcentral1, logMcentral2])
-    b = _array([b_in1, b_in2])
-    alpha = _array([alpha_in1, alpha_in2])
-    f_off = _array([f_off_in1, f_off_in2])
+    Mcentral = 10.0**logMcentral #_array([logMcentral1, logMcentral2])
+    b = b_in #_array([b_in1, b_in2])
+    alpha = alpha_in #_array([alpha_in1, alpha_in2])
+    f_off = f_off_in #_array([f_off_in1, f_off_in2])
     
     Mstar = 10.0**Mstar
     
-    fc_central = _array([fc_central1, fc_central2])
+    #fc_central = _array([fc_central1, fc_central2])
 
     #csat = fc_sat * _cM_duffy08(Msat, z, h)
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
@@ -413,7 +413,7 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, 0]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
-    print fc_central1, fc_central2, logMcentral1, logMcentral2, alpha_in1, alpha_in2, f_off_in1, f_off_in2, b_in1, b_in2
+    print fc_central, logMcentral, alpha_in, f_off_in, b_in
     return out
 
 
@@ -426,16 +426,16 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     _izip = izip
     
     #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
-    central_profile, fc_central1, fc_central2, fc_central3, fc_central4, logMcentral1, logMcentral2, logMcentral3, logMcentral4, b_in1, b_in2, b_in3, b_in4, z, Mstar, Rrange, angles = theta
+    central_profile, fc_central, logMcentral, b_in, z, Mstar, Rrange, angles = theta
     
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
-    Mcentral = 10.0**_array([logMcentral1, logMcentral2, logMcentral3, logMcentral4])
-    b = _array([b_in1, b_in2, b_in3, b_in4])
+    Mcentral = 10.0**logMcentral #_array([logMcentral1, logMcentral2, logMcentral3, logMcentral4])
+    b = b_in #_array([b_in1, b_in2, b_in3, b_in4])
     
     Mstar = 10.0**Mstar
     
-    fc_central = _array([fc_central1, fc_central2, fc_central3, fc_central4])
+    #fc_central = _array([fc_central1, fc_central2, fc_central3, fc_central4])
     
     #csat = fc_sat * _cM_duffy08(Msat, z, h)
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
@@ -481,5 +481,5 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_2halo, Mavg, 0]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
-    print fc_central1, fc_central2, fc_central3, fc_central4, logMcentral1, logMcentral2, logMcentral3, logMcentral4, b_in1, b_in2, b_in3, b_in4
+    print fc_central, logMcentral, b_in
     return out

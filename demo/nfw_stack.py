@@ -4,7 +4,7 @@ from numpy import array
 # local
 from utils import cM_duffy08, delta, density_average
 
-def fiducial(theta, R, h=1, Om=0.315, Ol=0.685):
+def fiducial(theta, R):
     # local variables are accessed much faster than global ones
     _array = array
     _cM_duffy08 = cM_duffy08

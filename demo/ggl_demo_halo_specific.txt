@@ -77,20 +77,21 @@ hm_param          r_c0            fixed     0.05
 
 
 # Luminosity or stellar mass bins. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
-# !!! Number of bins can be changed, but that also needs to be reflected in halo.model and in halo model output below !!!
+# !!! Number of bins can be changed, but that also needs to be in the halo model output below as well they should be joined together as presented (for details see the main config file) !!!
 
-hm_param          M_bin_min1      fixed       1.6e12
-hm_param          M_bin_min2      fixed       2.5685e13
-hm_param          M_bin_min3      fixed       4.1453e14
-hm_param          M_bin_min4      fixed       5.5987e13
-hm_param          M_bin_min5      fixed       1.073921e14
-hm_param          M_bin_min6      fixed       2.13363e14
-hm_param          M_bin_max1      fixed       2.5685e13
-hm_param          M_bin_max2      fixed       4.1453e14
-hm_param          M_bin_max3      fixed       5.5987e13
-hm_param          M_bin_max4      fixed       1.073921e14
-hm_param          M_bin_max5      fixed       2.13363e14
-hm_param          M_bin_max6      fixed       6.755309e14
+hm_param          M_bin_min1      fixed       1.6e12            join1
+hm_param          M_bin_min2      fixed       2.5685e13         join1
+hm_param          M_bin_min3      fixed       4.1453e14         join1
+hm_param          M_bin_min4      fixed       5.5987e13         join1
+hm_param          M_bin_min5      fixed       1.073921e14       join1
+hm_param          M_bin_min6      fixed       2.13363e14        join1
+
+hm_param          M_bin_max1      fixed       2.5685e13         join2
+hm_param          M_bin_max2      fixed       4.1453e14         join2
+hm_param          M_bin_max3      fixed       5.5987e13         join2
+hm_param          M_bin_max4      fixed       1.073921e14       join2
+hm_param          M_bin_max5      fixed       2.13363e14        join2
+hm_param          M_bin_max6      fixed       6.755309e14       join2
 
 # Extra boolean parameters that either switch calculation of halo model between analytical evaluation or using the Taylor series expansion (Mohammed & Seljak, 2014 - http://arxiv.org/abs/1407.0060),
 # and incorporation of baryons in the calculation. This works, but the outputs are still dark matter only using analytic prescription. That will be made more general, until then

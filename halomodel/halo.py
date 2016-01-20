@@ -297,11 +297,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685, rmax=2):
     # Setting parameters from config file
     
     
-    z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, alpha_star, beta_gas, r_t0, r_c0, M_bin_min1, M_bin_min2, M_bin_min3, M_bin_min4, M_bin_min5, M_bin_min6, M_bin_max1, M_bin_max2, M_bin_max3, M_bin_max4, M_bin_max5, M_bin_max6, taylor_procedure, include_baryons, smth1, smth2 = theta
+    z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, alpha_star, beta_gas, r_t0, r_c0, M_bin_min, M_bin_max, taylor_procedure, include_baryons, smth1, smth2 = theta
     
-    
-    M_bin_min = np.log10([M_bin_min1, M_bin_min2, M_bin_min3, M_bin_min4, M_bin_min5, M_bin_min6]) # Expanded according to the number of bins!
-    M_bin_max = np.log10([M_bin_max1, M_bin_max2, M_bin_max3, M_bin_max4, M_bin_max5, M_bin_max6]) # Expanded according to the number of bins!
+    M_bin_min = np.log10(M_bin_min)
+    M_bin_max = np.log10(M_bin_max)
+    #M_bin_min = np.log10([M_bin_min1, M_bin_min2, M_bin_min3, M_bin_min4, M_bin_min5, M_bin_min6]) # Expanded according to the number of bins!
+    #M_bin_max = np.log10([M_bin_max1, M_bin_max2, M_bin_max3, M_bin_max4, M_bin_max5, M_bin_max6]) # Expanded according to the number of bins!
     
     hod_mass = np.array([(10.0**(np.linspace(Mi, Mx, 100, endpoint=False, dtype=np.longdouble))) for Mi, Mx in izip(M_bin_min, M_bin_max)])
     

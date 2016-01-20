@@ -36,6 +36,10 @@ fitting module (i.e., halo model) with a given sampling technique.*
     If you don't have administrator privileges, or simply want to install it in a non-standard place (e.g., your home directory), then type
 
             python setup.py install --prefix=path/to/installation/
+    
+    or
+    
+            python setup.py install --user
 
     Either of these will install some additional packages required by the pipeline: `emcee>=2.1.0` for MCMC, `hmf==1.7.0` for halo mass function utilities, `mpmath` for mathematical utilities, and `numpy>=1.5.0`.
 

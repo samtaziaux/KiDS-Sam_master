@@ -33,7 +33,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
             python setup.py install
 
-    If you don't have administrator privileges or simply want to install it in a non-standard place (e.g., your home directory, then type
+    If you don't have administrator privileges, or simply want to install it in a non-standard place (e.g., your home directory), then type
 
             python setup.py install --prefix=path/to/installation/
 

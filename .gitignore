@@ -5,3 +5,6 @@
 brouwer/
 cristobal/
 configs_andrej/
+build/
+dist/
+kids_ggl_pipeline.egg-info/

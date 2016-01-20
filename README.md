@@ -4,6 +4,8 @@ Galaxy-Galaxy Lensing pipeline production
 ---
 Update log:
 
+2016 Jan 20 - Added easy_install utilities (Cristóbal Sifón)
+
 2015 Nov 3 - Added detail on how to install hmf (Andrej Dvornik)
 
 2015 Sep 25 - Finished a first complete version (Cristóbal Sifón)
@@ -27,18 +29,17 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
             git clone git@github.com:KiDS-WL/KiDS-GGL.git
 
-    c) In order to run the halo model (halo.py) and the sampler there are some additional Python packages needed. You will need hmf v1.7.0 and emcee. Running
-            
-            pip install hmf==1.7.0
-            
-    should install both, as hmf requires emcee in the first place (The latest version of hmf is 1.8.0, but the halo model has not been tested against it). If not
-    
-            pip install emcee
-            
-    will do. hmf specific documentation and source can be found at: https://github.com/steven-murray/hmf.
-    Another less common package needed for running the halo model is mpmath. Installation follows the same precision as for others above:
-    
-            pip install mpmath
+    c) From within the same folder, run
+
+            python setup.py install
+
+    If you don't have administrator privileges or simply want to install it in a non-standard place (e.g., your home directory, then type
+
+            python setup.py install --prefix=path/to/installation/
+
+    Either of these will install some additional packages required by the pipeline: `emcee>=2.1.0` for MCMC, `hmf==1.7.0` for halo mass function utilities, `mpmath` for mathematical utilities, and `numpy>=1.5.0`.
+
+    After the setup script has finished, you should have a copy of the `kids_ggl` executable somewhere in your $PATH.
 
 2. Set up your configuration file. See `help/ggl_demo.config` for guidance.
 
@@ -46,15 +47,15 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
     a) Measure the lensing signal. To do this, type:
 
-        python kids-ggl.py -c <config_file> --esd
+        kids_ggl -c <config_file> --esd
 
     b) Estimate halo model parameters from the lensing signal. To do this, type:
 
-        python kids-ggl.py -c <config_file> --sampler
+        kids_ggl -c <config_file> --sampler
 
     The sampler module has a demo option which you should always try before running a particular model on the data. To this end, type
 
-        python kids-ggl.py -c <config_file> --sampler --demo
+        kids_ggl -c <config_file> --sampler --demo
 
     This option will generate the ESD(s) for your chosen set of initial parameters, print the chi2/dof on screen, overplot the model to the data points and, once you close this plot, will display the full covariance matrix.
 

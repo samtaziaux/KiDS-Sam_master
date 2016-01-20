@@ -57,7 +57,6 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     # The shear calculation starts here
     directory = os.path.dirname(os.path.realpath(__file__)) #os.getcwd()
     indirectory = os.listdir('.')
-    print directory, indirectory
     #path_shearcodes = 'esd_production'
     if 'esd_production' in directory:
         path_shearcodes = directory + '/'

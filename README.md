@@ -4,7 +4,7 @@ Galaxy-Galaxy Lensing pipeline production
 ---
 Update log:
 
-2016 Jan 20 - Added easy_install utilities (Cristóbal Sifón)
+2016 Jan 20 - Added easy_install capability (Cristóbal Sifón)
 
 2015 Nov 3 - Added detail on how to install hmf (Andrej Dvornik)
 

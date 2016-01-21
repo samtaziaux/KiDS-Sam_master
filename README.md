@@ -19,7 +19,7 @@ the KiDS galaxy-galaxy lensing pipeline, which takes current KiDS and GAMA
 catalogs and produces (or reads) an ESD and a covariance matrix and runs a
 fitting module (i.e., halo model) with a given sampling technique.*
 
-1. Installation
+**1. Installation**
 
     a) Contact Cristóbal Sifón (sifon@strw.leidenuniv.nl) to become a member
        of the KiDS-WL repository and join the KiDS-GGL team
@@ -57,9 +57,11 @@ fitting module (i.e., halo model) with a given sampling technique.*
 
     where, in my case, `<path_to_kids_ggl_folder>=/Library/Frameworks/Python.framework/Versions/2.7/bin`.
 
-2. Set up your configuration file. See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_demo_halo_specific.txt` for guidance.
 
-3. Run! There are two major things the pipeline can do for you:
+**2. Set up your configuration file.** See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_demo_halo_specific.txt` for guidance.
+
+
+**3. Run!** There are two major things the pipeline can do for you:
 
     a) Measure the lensing signal. To do this, type:
 

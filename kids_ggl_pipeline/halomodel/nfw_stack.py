@@ -569,3 +569,48 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
     print fc_central, logMcentral, b_in
     return out
+
+def satellites(theta, R):
+    """
+    sat_profile must be nfw.esd() for things to work
+
+    """
+    _array = array
+    _cM_duffy08 = cM_duffy08
+    _delta = delta
+    _izip = izip
+
+    sat_profile, host_profile, \
+        Rsat, n_Rsat, fc_sat, Msat, fc_host, Mhost, \
+        z, Mstar, Om, Ol, h, Rranges, angles = theta
+
+    j = [(ni > 0) for ni in n_Rsat]
+    Rsat = [Rsat[i] for i in j]
+    n_Rsat = [n[i] for i, n in izip(j, n_Rsat)]
+    Msat -= Mstar
+    csat = fc_sat * _cM_duffy08(Msat, z, h=h)
+    chost = fc_host * _cM_duffy08(Mhost, z, h=h)
+    rho_m = density_average(z, h, Om, Ol)
+    aux = 200*rho_m * 4*3.14159265/3
+
+    # satellite signals
+    #r200_sat = (Msat / aux) ** (1./3)
+    rs_sat = (Msat / aux) ** (1./3) / csat
+    sigma_sat = rs_sat * _delta(csat) * rho_m
+    piR2 = 3.14159265*(1e6*R)**2
+    pointmass = [Mi / piR2i[1:] for Mi, piR2i in _izip(Mstar, piR2)]
+    esd_sat = _array([pm + sat_profile(Ri[1:]/rsi, si)
+                      for pm, Ri, rsi, si in _izip(pointmass, R,
+                                                   rs_sat, sigma_sat)])
+    # host signals
+    #r200_host = (Mhost / aux) ** (1./3)
+    rs_host = (Mhost / aux) ** (1./3) / chost
+    sigma_host = rs_host * _delta(chost) * rho_m
+    esd_host = _array([host_profile(x[0]/x[1], x[2]/x[1], x[3], x[4],
+                                      x[5]/x[1], angles)
+                        for x in _izip(R, rs_host, Rsat,
+                                       n_Rsat, sigma_host, Rranges)])
+
+    out = [esd_sat + esd_host, esd_sat, esd_host, 0]
+    return out
+

@@ -89,6 +89,12 @@ def read_config(config_file, version='0.5.7'):
                 join[-1].append(nparams)
                 njoin += 1
             nparams += 1
+            # to be able to handle comma-separated hm_params
+            if not hasattr(val1[-1], '__iter__'):
+                val1[-1] = [val1[-1]]
+            val2[-1] = [val2[-1]]
+            val3[-1] = [val3[-1]]
+            val4[-1] = [val4[-1]]
         elif line[0] == 'hm_params':
             if line[2] != 'fixed':
                 msg = 'ERROR: Arrays can only contain fixed values.'
@@ -98,9 +104,9 @@ def read_config(config_file, version='0.5.7'):
             params.append(line[1])
             prior_types.append(line[2])
             val1.append(array(line[3].split(','), dtype=float))
-            val2.append(-1)
-            val3.append(-inf)
-            val4.append(inf)
+            val2.append([-1])
+            val3.append([-inf])
+            val4.append([inf])
         elif line[0] == 'hm_functions':
             # check if there are comments at the end first
             if '#' in line:
@@ -123,8 +129,9 @@ def read_config(config_file, version='0.5.7'):
     if njoin == 1 and len(join[0]) == 0:
         join = None
     out = (model, array(params), array(param_types), array(prior_types),
-           array(val1), array(val2), array(val3), array(val4), join,
-           hm_functions, array(starting), array(meta_names), fits_format)
+           make_array(val1), make_array(val2), make_array(val3),
+           make_array(val4), join, hm_functions, array(starting),
+           array(meta_names), fits_format)
     return out
 
 def read_function(module, function):
@@ -146,3 +153,14 @@ def read_function(module, function):
     #pickle.dumps(function)
     #print 'Pickled!'
     return function
+
+def depth(iterable):
+    return sum(1 + depth(item) if hasattr(item, '__iter__') else 1
+               for item in iterable)
+
+def make_array(val):
+    val = array(val)
+    for i, v in enumerate(val):
+        if len(v) == 1 and depth(v) == 1:
+            val[i] = v[0]
+    return val

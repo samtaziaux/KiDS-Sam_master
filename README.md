@@ -57,6 +57,11 @@ or the following in your `~/.cshrc` or `~/.tcshrc` if your shell is set to `csh`
 
 where, in my case, `<path_to_kids_ggl_folder>=/Library/Frameworks/Python.framework/Versions/2.7/bin`.
 
+**e)** You can run an example by typing (see below for details)
+
+    kids_ggl -c demo/ggl_demo_nfw_stack.txt --sampler --demo
+
+This should show three panels with data points and lines resembling the Early Science satellite galaxy-galaxy lensing results of Sifon et al. (2015) and, after closing it, show the 3x3x14 covariance matrix.
 
 ####2. Set up your configuration file.
     

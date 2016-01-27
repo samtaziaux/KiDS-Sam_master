@@ -191,13 +191,12 @@ model             nfw_stack.satellites
 # There is one exception to all of the above. A list of comma-separated values can be given only if:
 #       1) the flag is set to hm_params instead of hm_param, and
 #       2) <param_type> is set to 'fixed'.
-hm_param          central_profile function    nfw.esd
 hm_param          sat_profile     function    nfw.esd
 hm_param          host_profile    function    nfw.esd_offset
-hm_param          Rsat            read        earlyscience_satellites/logAngSepBCG_fine.dat 0
-hm_param          n_Rsat1         read        earlyscience_satellites/logAngSepBCG_fine.dat 1        join1
-hm_param          n_Rsat2         read        earlyscience_satellites/logAngSepBCG_fine.dat 2        join1
-hm_param          n_Rsat3         read        earlyscience_satellites/logAngSepBCG_fine.dat 3        join1
+hm_param          Rsat            read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 0
+hm_param          n_Rsat1         read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 1        join1
+hm_param          n_Rsat2         read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 2        join1
+hm_param          n_Rsat3         read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 3        join1
 hm_param          fc_sat          fixed       1.0
 hm_param          Msat1           uniform     1e7     1e13     6.9e11        join2
 hm_param          Msat2           uniform     1e7     1e13     6.9e11        join2
@@ -237,7 +236,7 @@ hm_output         esd_host1,esd_host2,esd_host3               14E,14E,14E
 ##########################
 
 # Path to ESD file (folders only; optional. Insert './' if local directory)
-path_data           earlyscience_satellites/
+path_data           demo/earlyscience_satellites/
 
 # Name of the file containing the ESDs and the columns to be read. Columns are (R,ESD_t[,1+K(R)]),
 # where K(R) is the noise bias correction as per Equation 12 of Viola et al. (2015).
@@ -253,7 +252,7 @@ data                esd_*.txt       0,1,4
 exclude_bins        0,1
 
 # Path to covariance file. Same notes as path_data.
-path_covariance     earlyscience_satellites/
+path_covariance     demo/earlyscience_satellites/
 
 # This file should have the same format as those the pipeline produces; that is, it should be
 # a single file with columns should be sorted by mnij where m,n are observable (e.g., logmstar)

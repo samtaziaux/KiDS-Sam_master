@@ -2,6 +2,10 @@
 import argparse
 import os
 
+# for testing purposes only
+import sys
+sys.path.append('./')
+
 # KiDS-GGL modules
 from kids_ggl_pipeline.esd_production import shearcode
 from kids_ggl_pipeline.sampling import sampler, sampling_utils

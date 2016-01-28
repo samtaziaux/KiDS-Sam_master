@@ -339,11 +339,11 @@ def lnprob(theta, R, esd, icov, function, params,
             # data type. I believe this is because there are elements of
             # different types in val1 and therefore its type is not 
             # well defined (so it gets "object")
-            v1j[p[0]] = array([val1[pi] for pi in p])
+            v1j[p[0]] = array([v1[pi] for pi in p])
         # need to delete elements backwards to preserve indices
         aux = [[v1j.pop(pi) for pi in p[1:][::-1]]
                 for p in params_join[::-1]]
-    v1 = v1j #array(v1j) ??
+        v1 = v1j #array(v1j) ??
 
     model = function(v1, R)
     # no covariance

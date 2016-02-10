@@ -60,7 +60,7 @@ def run_emcee(hm_options, sampling_options, args):
 
     # needed for offset central profile
     R, Rrange = sampling_utils.setup_integrand(R, k)
-    angles = numpy.linspace(0, 2*numpy.pi, 540)
+    angles = numpy.linspace(0, 2*pi, 540)
     val1 = numpy.append(val1, [Rrange, angles])
 
     # identify fixed and free parameters
@@ -112,6 +112,18 @@ def run_emcee(hm_options, sampling_options, args):
     if args.demo:
         import pylab
         from matplotlib import cm
+        def plot_demo(ax, Ri, gt, gt_err, f, fsat, fhost):
+            Ri = Ri[1:]
+            ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
+            ax.plot(Ri, f, 'r-', lw=3)
+            ax.plot(Ri, fsat, 'b--', lw=2)
+            ax.plot(Ri, fhost, 'g-.', lw=2)
+            ax.set_xscale('log')
+            for x, fi, gti, gei in izip(Ri, f, gt, gt_err):
+                ax.annotate('{0:.2f}'.format((fi-gti)/gei),
+                            xy=(x,gti+20), ha='center', va='bottom',
+                            color='r')
+            return
         val1[jfree] = starting
         if params_join is not None:
             v1 = list(val1)
@@ -120,9 +132,9 @@ def run_emcee(hm_options, sampling_options, args):
                 # data type. I believe this is because there are elements of
                 # different types in val1 and therefore its type is not 
                 # well defined (so it gets "object")
-                v1[p[0]] = array([val1[pi] for pi in p])
+                v1[p[0]] = array([val1[pj] for pj in p])
             # need to delete elements backwards to preserve indices
-            aux = [[v1.pop(pi) for pi in p[1:][::-1]]
+            aux = [[v1.pop(pj) for pj in p[1:][::-1]]
                    for p in params_join[::-1]]
             val1 = v1 #array(v1) ??
         model = function(val1, R)
@@ -132,15 +144,11 @@ def run_emcee(hm_options, sampling_options, args):
                       for m in rng_obsbins for n in rng_obsbins]).sum()
         print ' ** chi2 = %.2f/%d **' %(chi2, dof)
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
-        #if exclude_bins is not None:
-            #alldata = sampling_utils.load_datapoints(datafile, datacols,
-                                                     #exclude_bins)
-            #Rall, esdall = alldata
-            #for ax, Ri
-        for ax, Ri, gt, gt_err, f in izip(axes, R, esd, esd_err, model[0]):
-            ax.errorbar(Ri[1:], gt, yerr=gt_err, fmt='ko', ms=10)
-            ax.plot(Ri[1:], f, 'r-', lw=3)
-            ax.set_xscale('log')
+        if Ndatafiles == 1:
+            plot_demo(axes, R, esd, esd_err, model[0], model[1], model[2])
+        else:
+            for i in izip(axes, R, esd, esd_err, model[0], model[1], model[2]):
+                plot_demo(*i)
         if npall(esd - esd_err > 0):
             for ax in axes:
                 ax.set_yscale('log')
@@ -169,7 +177,11 @@ def run_emcee(hm_options, sampling_options, args):
                 metadata[j].append(zeros(nwalkers*nsteps/thin))
             else:
                 size = [nwalkers*nsteps/thin, int(f[:-1])]
-                if exclude_bins is not None:
+                # only for ESDs. Note that there will be trouble if outputs
+                # other than the ESD have the same length, so avoid them at
+                # all cost.
+                if exclude_bins is not None \
+                    and size[1] == esd.shape[-1]+len(exclude_bins):
                     size[1] -= len(exclude_bins)
                 metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
@@ -189,12 +201,12 @@ def run_emcee(hm_options, sampling_options, args):
                                           val1,val2,val3,val4,params_join,
                                           jfree,lnprior,likenorm,
                                           rng_obsbins,fail_value,
-                                          array,dot,inf,izip,outer,numpy.pi))
+                                          array,dot,inf,izip,outer,pi))
                                           #isfinite,log,log10
                                           #outer,sqrt,zeros))
     # burn-in
     if nburn > 0:
-        pos, prob, state = sampler.run_mcmc(po, nburn)
+        pos, prob, state, blobs = sampler.run_mcmc(po, nburn)
         sampler.reset()
         print '{0} Burn-in steps finished ({1})'.format(nburn, ctime())
     else:
@@ -253,8 +265,8 @@ def run_emcee(hm_options, sampling_options, args):
     print 'Everything saved to {0}!'.format(output)
     return
 
-def lnprob(theta, R, esd, icov, function, params,
-           prior_types, val1, val2, val3, val4, params_join, jfree, lnprior, likenorm,
+def lnprob(theta, R, esd, icov, function, params, prior_types,
+           val1, val2, val3, val4, params_join, jfree, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, izip, outer, pi):
            #array, dot, inf, izip, isfinite, log, log10, sqrt):
     """
@@ -382,33 +394,22 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
         # same format as fiducial()
         for j, blob in izip(xrange(nwritten, iternum),
                             sampler.blobs[nwritten:]):
+            data = [transpose([b[i] for b in blob])
+                    for i in xrange(len(blob[0])-nexclude)]
+            # re-arrange blobs
             if Nobsbins == 1:
-                data = [transpose([b[i] for b in blob])
-                        for i in xrange(len(blob[0])-nexclude)]
                 for i in xrange(len(data)):
                     if len(data[i].shape) == 2:
                         data[i] = array([b[i] for b in blob])
             else:
-                data = [transpose([b[i] for b in blob])
-                        for i in xrange(len(blob[0])-nexclude)]
                 for i in xrange(len(data)):
                     if len(data[i].shape) == 3:
                         data[i] = transpose([b[i] for b in blob],
                                             axes=(1,0,2))
-            # each k is one satellite radial bin
-            #if len(data) == 1:
-                ## not working but not sure will ever use it
-                #metadata[0][0][j*nwalkers:(j+1)*nwalkers] = data[0]
-                #if shape[1] == 4:
-                    #metadata[0][1][j*nwalkers:(j+1)*nwalkers] = data[1]
-                    #metadata[0][2][j*nwalkers:(j+1)*nwalkers] = data[2]
-                    #metadata[0][3][j*nwalkers:(j+1)*nwalkers] = data[3]
-            ## this is the fiducial case with the three bins
-            ## note that all values have three bins!
-            #else:
-            for k, datum in enumerate(data):
-                for i in xrange(len(datum)):
-                    metadata[k][i][j*nwalkers:(j+1)*nwalkers] = datum[i]
+            # store data
+            for k in xrange(len(data)):
+                for i in xrange(len(data[k])):
+                    metadata[k][i][j*nwalkers:(j+1)*nwalkers] = data[k][i]
             lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
                                                            for b in blob])
             lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])

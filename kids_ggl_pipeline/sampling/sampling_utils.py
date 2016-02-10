@@ -4,7 +4,7 @@ from glob import glob
 #from ConfigParser import SafeConfigParser
 
 def load_datapoints(datafile, datacols, exclude_bins):
-    if type(datafile) == str:
+    if isinstance(datafile, basestring):
         R, esd = numpy.loadtxt(datafile, usecols=datacols[:2]).T
         # better in Mpc
         if R[-1] > 500:
@@ -12,11 +12,8 @@ def load_datapoints(datafile, datacols, exclude_bins):
         if len(datacols) == 3:
             oneplusk = numpy.loadtxt(datafile, usecols=[datacols[2]]).T
             esd /= oneplusk
-        if exclude_bins is not None:
-            R = numpy.array([R[i] for i in xrange(len(R))
-                             if i not in exclude_bins])
-            esd = numpy.array([esd[i] for i in xrange(len(R))
-                               if i not in exclude_bins])
+        R = numpy.array([R])
+        esd = numpy.array([esd])
     else:
         R, esd = numpy.transpose([numpy.loadtxt(df, usecols=datacols[:2])
                                   for df in datafile], axes=(2,0,1))
@@ -27,11 +24,11 @@ def load_datapoints(datafile, datacols, exclude_bins):
         for i in xrange(len(R)):
             if R[i][-1] > 500:
                 R[i] /= 1000
-        if exclude_bins is not None:
-            R = numpy.array([[Ri[j] for j in xrange(len(Ri))
-                              if j not in exclude_bins] for Ri in R])
-            esd = numpy.array([[esdi[j] for j in xrange(len(esdi))
-                                if j not in exclude_bins] for esdi in esd])
+    if exclude_bins is not None:
+        R = numpy.array([[Ri[j] for j in xrange(len(Ri))
+                          if j not in exclude_bins] for Ri in R])
+        esd = numpy.array([[esdi[j] for j in xrange(len(esdi))
+                            if j not in exclude_bins] for esdi in esd])
     return R, esd
     #return R, numpy.absolute(esd)
 
@@ -185,7 +182,7 @@ def setup_integrand(R, k=7):
                                 numpy.log10(1.01*R.max()), 2**k)
         # this assumes that a value at R=0 will never be provided, which is
         # obviously true in real observations
-        R = numpy.append(0, R)
+        R = numpy.array([numpy.append(0, R)])
         Rrange = numpy.append(0, Rrange)
     else:
         Rrange = [numpy.logspace(numpy.log10(0.99*Ri.min()),

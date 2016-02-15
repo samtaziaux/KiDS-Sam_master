@@ -130,7 +130,7 @@ def run_emcee(hm_options, sampling_options, args):
             for p in params_join:
                 # without this list comprehension numpy can't keep track of the
                 # data type. I believe this is because there are elements of
-                # different types in val1 and therefore its type is not 
+                # different types in val1 and therefore its type is not
                 # well defined (so it gets "object")
                 v1[p[0]] = array([val1[pj] for pj in p])
             # need to delete elements backwards to preserve indices
@@ -312,10 +312,6 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     v4free = val4[jfree]
     if not isfinite(v1free.sum()):
         return -inf, fail_value
-    # satellites cannot be more massive than the group!
-    #if theta[params[jfree] == 'Msat'] >= theta[params[jfree] == 'Mgroup']:
-        #return -inf, fail_value
-    # not normalized yet
     j = (prior_types == 'normal')
     lnprior[j] = array([-(v-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
@@ -349,7 +345,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
         for p in params_join:
             # without this list comprehension numpy can't keep track of the
             # data type. I believe this is because there are elements of
-            # different types in val1 and therefore its type is not 
+            # different types in val1 and therefore its type is not
             # well defined (so it gets "object")
             v1j[p[0]] = array([v1[pi] for pi in p])
         # need to delete elements backwards to preserve indices

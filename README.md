@@ -41,7 +41,7 @@ or
     
         python setup.py install --user
 
-Either of these will install some additional packages required by the pipeline: `emcee>=2.1.0` for MCMC, `hmf==1.7.0` for halo mass function utilities, `mpmath` for mathematical utilities, and `numpy>=1.5.0`.
+Either of these will install some additional packages required by the pipeline: `astrpy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf==1.7.0` for halo mass function utilities, `mpmath` for mathematical utilities, and `numpy>=1.5.0`.
 
 **d)** After the setup script has finished, you should have a copy of the `kids_ggl` executable somewhere in your `$PATH`, which means you can run it out-of-the-box from anywhere in your computer. To make sure, type
 

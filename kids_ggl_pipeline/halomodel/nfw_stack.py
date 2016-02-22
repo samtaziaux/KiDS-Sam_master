@@ -614,4 +614,4 @@ def satellites(theta, R):
                         n_Rsat, sigma_host, Rranges)])
     
     out = [esd_sat + esd_host, esd_sat, esd_host, 0]
- return out
+    return out

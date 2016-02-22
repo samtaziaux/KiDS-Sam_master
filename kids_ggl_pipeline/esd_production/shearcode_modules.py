@@ -994,27 +994,32 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, Nsrclist, srcm):
+    
+    wlist = wlist.T
+    klist_t = np.array([klist, klist, klist, klist]).T
 
     # Calculating the needed errors
-    wk2list = wlist*klist**2
+    wk2list = wlist*klist_t**2
 
-    w_tot = np.sum(wlist, 1)
-    w2_tot = np.sum(wlist**2, 1)
+    w_tot = np.sum(wlist, 0)
+    w2_tot = np.sum(wlist**2, 0)
 
     k_tot = np.sum(klist, 1)
     k2_tot = np.sum(klist**2, 1)
 
-    wk2_tot = np.sum(wk2list, 1)
-    w2k4_tot = np.sum(wk2list**2, 1)
-    w2k2_tot = np.sum(wlist**2 * klist**2, 1)
+    wk2_tot = np.sum(wk2list, 0)
+    w2k4_tot = np.sum(wk2list**2, 0)
+    w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
     wlist = []
 
     Nsrc_tot = np.sum(Nsrclist, 1)
-
-    srcm, foo = np.meshgrid(srcm,np.zeros(len(klist)))
+    
+    srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
+    srcm = np.array([srcm, srcm, srcm, srcm]).T
     foo = [] # Empty unused lists
-    srcm_tot = np.sum(srcm*wk2list, 1) # the weighted sum of the bias m
+    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
     srcm = []
+    klist_t = []
 
     gc.collect()
 
@@ -1023,15 +1028,27 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, N
     gammaxlists = np.zeros([4, len(incosphilist), len(incosphilist[0])])
 
     klist = np.ma.filled(np.ma.array(klist, mask = Rmask, fill_value = inf))
+    klist = np.array([klist, klist, klist, klist]).T
 
     for g in xrange(4):
-        gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * insinphilist) * wk2list / klist)
-        gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * incosphilist) * wk2list / klist)
+        gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * insinphilist) * wk2list[:,:,g].T / klist[:,:,g].T)
+        gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * incosphilist) * wk2list[:,:,g].T / klist[:,:,g].T)
 
     [gammat_tot_A, gammat_tot_B, gammat_tot_C, gammat_tot_D] = [np.sum(gammatlists[g], 1) for g in xrange(4)]
     [gammax_tot_A, gammax_tot_B, gammax_tot_C, gammax_tot_D] = [np.sum(gammaxlists[g], 1) for g in xrange(4)]
+    
+    w_tot_A, w_tot_B, w_tot_C, w_tot_D = w_tot.T[0], w_tot.T[1], w_tot.T[2], w_tot.T[3]
+    w2_tot_A, w2_tot_B, w2_tot_C, w2_tot_D = w2_tot.T[0], w2_tot.T[1], w2_tot.T[2], w2_tot.T[3]
+    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
+    w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D = w2k4_tot.T[0], w2k4_tot.T[1], w2k4_tot.T[2], w2k4_tot.T[3]
+    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
+    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
 
-    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, w_tot, w2_tot, k_tot, k2_tot, wk2_tot, w2k4_tot, w2k2_tot, Nsrc_tot, srcm_tot
+    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
+        w_tot_A, w_tot_B, w_tot_C, w_tot_D, w2_tot_A, w2_tot_B, w2_tot_C, w2_tot_D, \
+        k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
+        w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D, \
+        w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
 
 # For each radial bin of each lens we calculate the output shears and weights
@@ -1071,7 +1088,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, output, 
     if 'covariance' in purpose:
         fitscols.append(pyfits.Column(name = 'e1', format='4D', array= e1))
         fitscols.append(pyfits.Column(name = 'e2', format='4D', array= e2))
-        fitscols.append(pyfits.Column(name = 'lfweight', format='1D', array= w))
+        fitscols.append(pyfits.Column(name = 'lfweight', format='4D', array= w))
         fitscols.append(pyfits.Column(name = 'bias_m', format='1D', array= srcm))
 
     # Adding the variance for the 4 blind catalogs

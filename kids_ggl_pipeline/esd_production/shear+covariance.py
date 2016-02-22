@@ -50,7 +50,11 @@ def loop(Nsplit, output, outputnames):
 
     if 'catalog' in purpose:
         # These lists will contain the final output
-        outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', 'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', 'lfweight', 'lfweight^2', 'k', 'k^2', 'lfweight*k^2', 'lfweight^2*k^4', 'lfweight^2*k^2', 'Nsources', 'bias_m']
+        outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', 'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', 'lfweight_A', 'lfweight_B', 'lfweight_C', 'lfweight_D', \
+                       'lfweight_A^2', 'lfweight_B^2', 'lfweight_C^2', 'lfweight_D^2', 'k', 'k^2', \
+                       'lfweight_A*k^2', 'lfweight_B*k^2', 'lfweight_C*k^2', 'lfweight_D*k^2', \
+                       'lfweight_A^2*k^4', 'lfweight_B^2*k^4', 'lfweight_C^2*k^4', 'lfweight_D^2*k^4', \
+                       'lfweight_A^2*k^2', 'lfweight_B^2*k^2', 'lfweight_C^2*k^2', 'lfweight_D^2*k^2', 'Nsources', 'bias_m_A', 'bias_m_B', 'bias_m_C', 'bias_m_D']
         output = np.zeros([len(outputnames), len(galIDlist), nRbins])
 
     # Start of the reduction of one KiDS field
@@ -87,7 +91,7 @@ def loop(Nsplit, output, outputnames):
             if 'covariance' in purpose:
                 # These lists will contain the final covariance output [Noutput, Nsrc, NRbins]
                 outputnames = ['Cs', 'Ss', 'Zs']
-                output = [Cs_out, Ss_out, Zs_out] = np.zeros([len(outputnames), len(w), nRbins])
+                output = [Cs_out, Ss_out, Zs_out] = np.zeros([len(outputnames), len(w.T[0]), nRbins])
             
             
             for l in xrange(len(lenssplits)-1):
@@ -109,26 +113,40 @@ def loop(Nsplit, output, outputnames):
                 k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, Dcsbins, srcPZ, cat_version)
                 Nsrc = np.ones(np.shape(k))
                 srcR = np.ma.filled(np.ma.array(srcR, mask = kmask, fill_value = 0)) # Mask all invalid lens-source pairs using the value of the radius
-                w_meshed, foo = np.meshgrid(w.T[0],np.zeros(len(k))) # Create an lfweight matrix that can be masked according to lens-source distance
+                #w_meshed, foo = np.meshgrid(w.T,np.zeros(len(k))) # Create an lfweight matrix that can be masked according to lens-source distance
+                w_meshed_A, foo = np.meshgrid(w.T[0],np.zeros(len(k)))
+                w_meshed_B, foo = np.meshgrid(w.T[1],np.zeros(len(k)))
+                w_meshed_C, foo = np.meshgrid(w.T[2],np.zeros(len(k)))
+                w_meshed_D, foo = np.meshgrid(w.T[3],np.zeros(len(k)))
+                w_meshed = [w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D]
+                w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D = [], [], [], []
                 foo = [] # Remove unused lists
                 
                 # Start the reduction of one radial bin
                 for r in xrange(nRbins):
-                    #					print 'Rbin', r+1, Rbins[r], '-', Rbins[r+1]
                     
                     # Masking the data of all lens-source pairs according to the radial binning
                     Rmask = np.logical_not((Rbins[r] < srcR) & (srcR < Rbins[r+1]))
                     kmask = [] # Remove unused lists
                     
                     if np.sum(Rmask) != np.size(Rmask):
-                        #					print 'fullness:', (float(np.size(Rmask)) - float(np.sum(Rmask)))/float(np.size(Rmask))
                         
-                        unmasked = [incosphi, insinphi, k, w_meshed, Nsrc]
-                        masked = [incosphilist, insinphilist, klist, wlist, Nsrclist] = [np.ma.filled(np.ma.array(u, mask = Rmask, fill_value = 0)) for u in unmasked]
+                        #unmasked = [incosphi, insinphi, k, w_meshed, Nsrc]
+                        #masked = [incosphilist, insinphilist, klist, wlist, Nsrclist] = [np.ma.filled(np.ma.array(u, mask = Rmask, fill_value = 0)) for u in unmasked]
+                        
+                        incosphilist = np.ma.filled(np.ma.array(incosphi, mask = Rmask, fill_value = 0))
+                        insinphilist = np.ma.filled(np.ma.array(insinphi, mask = Rmask, fill_value = 0))
+                        klist = np.ma.filled(np.ma.array(k, mask = Rmask, fill_value = 0))
+                        Nsrclist = np.ma.filled(np.ma.array(Nsrc, mask = Rmask, fill_value = 0))
+                        wlist = np.array([np.ma.filled(np.ma.array(u, mask = Rmask, fill_value = 0)) for u in w_meshed])
                         
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate the weights and weighted shears
-                            output_onebin = [gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, w_tot, w2_tot, k_tot, k2_tot, wk2_tot, w2k4_tot, w2k2_tot, Nsrc_tot, srcm_tot] = shear.calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, Nsrclist, srcm)
+                            output_onebin = [gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
+                                             w_tot_A, w_tot_B, w_tot_C, w_tot_D, w2_tot_A, w2_tot_B, w2_tot_C, w2_tot_D, \
+                                             k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
+                                             w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D, \
+                                             w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D] = shear.calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, Nsrclist, srcm)
                             #							print 'Bin', r+1, 'gammat_A', gammat_tot_A
                             
                             # Writing the lenssplit list to the complete output lists: [galIDs, Rbins] for every variable
@@ -164,7 +182,7 @@ def loop(Nsplit, output, outputnames):
         
             #kidscatname = catmatch[kidscatname][1]
             #index = np.array(np.where(tile_varlist == kidscatname))[0]
-	    index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
+            index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
             
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 90: # If it is too high...
@@ -199,12 +217,11 @@ def loop(Nsplit, output, outputnames):
             tile = tile_varlist[(index)]
             
             srcPZ = np.array([srcPZ_a,]  *len(srcNr))
-
+            
             if 'covariance' in purpose:
                 # These lists will contain the final covariance output [Noutput, Nsrc, NRbins]
                 outputnames = ['Cs', 'Ss', 'Zs']
-                output = [Cs_out, Ss_out, Zs_out] = np.zeros([len(outputnames), len(w), nRbins])
-        
+                output = [Cs_out, Ss_out, Zs_out] = np.zeros([len(outputnames), len(w.T[0]), nRbins])
         
             for l in xrange(len(lenssplits)-1):
                 print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
@@ -223,11 +240,16 @@ def loop(Nsplit, output, outputnames):
                                                
                 # Calculate k (=1/Sigma_crit) and the weight-mask of every lens-source pair
                 k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, Dcsbins, srcPZ, cat_version)
-                #k, kmask = k[1], kmask[1]
                 Nsrc = np.ones(np.shape(k))
                 srcR = np.ma.filled(np.ma.array(srcR, mask = kmask, fill_value = 0)) # Mask all invalid lens-source pairs using the value of the radius
                 
-                w_meshed, foo = np.meshgrid(w.T[0],np.zeros(len(k))) # Create an lfweight matrix that can be masked according to lens-source distance
+                #w_meshed, foo = np.meshgrid(w.T,np.zeros(len(k))) # Create an lfweight matrix that can be masked according to lens-source distance
+                w_meshed_A, foo = np.meshgrid(w.T[0],np.zeros(len(k)))
+                w_meshed_B, foo = np.meshgrid(w.T[1],np.zeros(len(k)))
+                w_meshed_C, foo = np.meshgrid(w.T[2],np.zeros(len(k)))
+                w_meshed_D, foo = np.meshgrid(w.T[3],np.zeros(len(k)))
+                w_meshed = [w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D]
+                w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D = [], [], [], []
                 foo = [] # Remove unused lists
                 
                 # Start the reduction of one radial bin
@@ -238,14 +260,23 @@ def loop(Nsplit, output, outputnames):
                     
                     if np.sum(Rmask) != np.size(Rmask):
                         
-                        unmasked = [incosphi, insinphi, k, w_meshed, Nsrc]
-                        masked = [incosphilist, insinphilist, klist, wlist, Nsrclist] = [np.ma.filled(np.ma.array(u, mask = Rmask, fill_value = 0)) for u in unmasked]
+                        #unmasked = [incosphi, insinphi, k, w_meshed, Nsrc]
+                        #masked = [incosphilist, insinphilist, klist, wlist, Nsrclist] = [np.ma.filled(np.ma.array(u, mask = Rmask, fill_value = 0)) for u in unmasked]
+                        
+                        incosphilist = np.ma.filled(np.ma.array(incosphi, mask = Rmask, fill_value = 0))
+                        insinphilist = np.ma.filled(np.ma.array(insinphi, mask = Rmask, fill_value = 0))
+                        klist = np.ma.filled(np.ma.array(k, mask = Rmask, fill_value = 0))
+                        Nsrclist = np.ma.filled(np.ma.array(Nsrc, mask = Rmask, fill_value = 0))
+                        wlist = np.array([np.ma.filled(np.ma.array(u, mask = Rmask, fill_value = 0)) for u in w_meshed])
                         
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate the weights and weighted shears
-                            output_onebin = [gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, w_tot, w2_tot, k_tot, k2_tot, wk2_tot, w2k4_tot, w2k2_tot, Nsrc_tot, srcm_tot] = shear.calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, Nsrclist, srcm)
+                            output_onebin = [gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
+                                             w_tot_A, w_tot_B, w_tot_C, w_tot_D, w2_tot_A, w2_tot_B, w2_tot_C, w2_tot_D, \
+                                             k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
+                                             w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D, \
+                                             w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D] = shear.calc_shear_output(incosphilist, insinphilist, e1, e2, Rmask, klist, wlist, Nsrclist, srcm)
                             #							print 'Bin', r+1, 'gammat_A', gammat_tot_A
-                            
                             # Writing the lenssplit list to the complete output lists: [galIDs, Rbins] for every variable
                             for o in xrange(len(output)):
                                 output[o, : ,r][galIDmask_split] = output[o, : ,r][galIDmask_split] + output_onebin[o]
@@ -253,11 +284,11 @@ def loop(Nsplit, output, outputnames):
                         if 'covariance' in purpose:
                             #For each radial bin of each lens we calculate the weighted Cs, Ss and Zs
                             output_onebin = [C_tot, S_tot, Z_tot] = shear.calc_covariance_output(incosphilist, insinphilist, klist, galweights_split)
-                            
+                    
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
                                 output[o, : ,r] = output[o, : ,r] + output_onebin[o]
-	    
+        
             # Write the final output of this split to a fits file
             if 'covariance' in purpose:
                 filename = shear.define_filename_splits(path_splits, purpose, filename_var, kidscatname, 0, filename_addition, blindcat)
@@ -339,7 +370,7 @@ if __name__ == '__main__':
         print 'This output already exists:', outname
         print
         quit()
-
+    
 
     # Printing a placeholder file, that tells other codes that this catalog is being written.
     if ('random' in purpose):

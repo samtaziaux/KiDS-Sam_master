@@ -182,7 +182,7 @@ def main():
                     
                     e1 = sheardat_N1['e1'][:,blindcatnum]
                     e2 = sheardat_N1['e2'][:,blindcatnum]
-                    lfweight = sheardat_N1['lfweight']
+                    lfweight = sheardat_N1['lfweight'][:,blindcatnum]
                     srcmlist = sheardat_N1['bias_m']
                     variance = sheardat_N1['variance(e[A,B,C,D])'][0]
 

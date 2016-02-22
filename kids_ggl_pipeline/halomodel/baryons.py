@@ -196,7 +196,7 @@ def gas_f(z, rho_mean, m_x, r_x, k_x, r_c0):
     if len(m_x.shape) == 0:
         m_x = np.array([m_x])
         r_x = np.array([r_x])
-    u_k = np.zeros(k_x.size, m_x.size))
+    u_k = np.zeros((k_x.size, m_x.size))
     beta = 2./3
     for i in xrange(m_x.size):
         r_c = r_c0[i] * r_x[i]
@@ -206,8 +206,8 @@ def gas_f(z, rho_mean, m_x, r_x, k_x, r_c0):
         rho_c = (3.0 * m_x[i] * \
                 f_gas(0.0455, 0.226, m_x[i])) / \
                 (4 * np.pi * (r_c**3.0) * \
-                 (3 * x_delta - 3 * np.arctan(x_delta)))
-        u_k[:,i] = (4 * (np.pi**2) * (r_c**3) * rho_c * np.exp(-K)) /
+                (3 * x_delta - 3 * np.arctan(x_delta)))
+        u_k[:,i] = (4 * (np.pi**2) * (r_c**3) * rho_c * np.exp(-K)) / \
                    (2 * m_x[i] * K)
     return u_k
 
@@ -215,7 +215,7 @@ def gas_f(z, rho_mean, m_x, r_x, k_x, r_c0):
 def GS_cen_analy(mass_func, z, rho_stars, rho_mean, n, population, ngal,
                  k_x, r_x, m_x, T_stars, T_tot, r_t):
     spec = np.ones(k_x.size)
-    integ = np.ones(k_x.size, m_x.size))
+    integ = np.ones((k_x.size, m_x.size))
     u_k = star_f(z, rho_mean, m_x, r_x, k_x, r_t)
     for i in xrange(k_x.size):
         integ[i,:] = mass_func.dndlnm * population * u_k[i,:]

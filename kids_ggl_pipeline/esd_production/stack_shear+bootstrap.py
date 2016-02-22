@@ -91,9 +91,9 @@ def main():
     galIDlist = sheardat['ID'] # ID of all galaxies in the shear catalog
     gammatlist = sheardat['gammat_%s'%blindcat] # Shear profile of each galaxy
     gammaxlist = sheardat['gammax_%s'%blindcat] # Cross profile of each galaxy
-    wk2list = sheardat['lfweight*k^2'] # Weight profile of each galaxy
-    w2k2list = sheardat['lfweight^2*k^2'] # Squared lensfit weight times squared lensing efficiency
-    srcmlist = sheardat['bias_m'] # Bias profile of each galaxy
+    wk2list = sheardat['lfweight_%s*k^2'%blindcat] # Weight profile of each galaxy
+    w2k2list = sheardat['lfweight_%s^2*k^2'%blindcat] # Squared lensfit weight times squared lensing efficiency
+    srcmlist = sheardat['bias_m_%s'%blindcat] # Bias profile of each galaxy
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
 
     # Adding the lens weights

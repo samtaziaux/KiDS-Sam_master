@@ -90,7 +90,6 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         for p in ps:
             p.wait()
 
-
     # Combine the splits according to the purpose
 
     # Combining the catalog splits to a single output

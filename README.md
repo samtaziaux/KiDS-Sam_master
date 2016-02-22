@@ -4,7 +4,7 @@ Galaxy-Galaxy Lensing pipeline production
 ---
 Update log:
 
-2016 Feb 22 - Added compatibility with KiDS-450 catalogue (Andrej Dvornik)
+2016 Feb 22 - Added compatibility with KiDS-450 catalogue and proper multiprocessing (Andrej Dvornik)
 
 2016 Jan 20 - Added easy_install capability (Cristóbal Sifón)
 

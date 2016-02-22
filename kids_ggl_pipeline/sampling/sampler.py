@@ -72,7 +72,7 @@ def run_emcee(hm_options, sampling_options, args):
         msg = 'ERROR: Not all starting points defined for free parameters.'
         print msg
         exit()
-    print 'starting =', starting
+    print 'starting values =', starting
 
     # identify the function. Raises an AttributeError if not found
     #function = model.model()
@@ -112,17 +112,15 @@ def run_emcee(hm_options, sampling_options, args):
     if args.demo:
         import pylab
         from matplotlib import cm
-        def plot_demo(ax, Ri, gt, gt_err, f, fsat, fhost):
+        def plot_demo(ax, Ri, gt, gt_err, f):
             Ri = Ri[1:]
             ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
             ax.plot(Ri, f, 'r-', lw=3)
-            ax.plot(Ri, fsat, 'b--', lw=2)
-            ax.plot(Ri, fhost, 'g-.', lw=2)
             ax.set_xscale('log')
-            for x, fi, gti, gei in izip(Ri, f, gt, gt_err):
-                ax.annotate('{0:.2f}'.format((fi-gti)/gei),
-                            xy=(x,gti+20), ha='center', va='bottom',
-                            color='r')
+            #for x, fi, gti, gei in izip(Ri, f, gt, gt_err):
+                #ax.annotate('{0:.2f}'.format((fi-gti)/gei),
+                            #xy=(x,gti+20), ha='center', va='bottom',
+                            #color='r')
             return
         val1[jfree] = starting
         if params_join is not None:
@@ -145,21 +143,22 @@ def run_emcee(hm_options, sampling_options, args):
         print ' ** chi2 = %.2f/%d **' %(chi2, dof)
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:
-            plot_demo(axes, R, esd, esd_err, model[0], model[1], model[2])
+            plot_demo(axes, R, esd, esd_err, model[0])
         else:
-            for i in izip(axes, R, esd, esd_err, model[0], model[1], model[2]):
+            for i in izip(axes, R, esd, esd_err, model[0]):
                 plot_demo(*i)
         if npall(esd - esd_err > 0):
             for ax in axes:
                 ax.set_yscale('log')
         fig.tight_layout(w_pad=0.01)
         pylab.show()
-        fig, axes = pylab.subplots(figsize=(8,8), nrows=cov.shape[0],
+        fig, axes = pylab.subplots(figsize=(10,8), nrows=cov.shape[0],
                                    ncols=cov.shape[0])
+        vmin, vmax = numpy.percentile(cov, [1,99])
         for m, axm in enumerate(axes):
             for n, axmn in enumerate(axm):
                 axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
-                            cmap=cm.CMRmap_r)
+                            cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
         fig.tight_layout()
         pylab.show()
         exit()

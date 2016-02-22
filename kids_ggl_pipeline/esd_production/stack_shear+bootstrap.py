@@ -1,4 +1,4 @@
-#!/usr/bin/python
+	#!/usr/bin/python
 
 "Part of the module to determine the shear as a function of radius from a galaxy."
 
@@ -23,7 +23,7 @@ def main():
 
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
-            lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
+            lens_weights, binname, Nobsbins, src_selection, cat_version, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacat = shear.input_variables()
@@ -72,11 +72,15 @@ def main():
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
+    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition, cat_version)
     # The bootstrap lens-field matching is used to prevent duplicated lenses.
-
-    galIDlist_matched = np.unique(np.hstack(catmatch.values()))
-
+    
+    galIDlist_matched = np.array([], dtype=np.int32)
+    for kidscatname in kidscats:
+        galIDlist_matched = np.append(galIDlist_matched, catmatch[kidscatname][0])
+    galIDlist_matched = np.unique(galIDlist_matched)
+    
+    # The ID's of the galaxies that lie in this field
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose.replace('catalog',''), centering, binname, \
     'binnum', Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
@@ -143,10 +147,11 @@ def main():
         outputnames = ['ESDt', 'ESDx', 'ESD(error)', 'bias']
 
         # Stack one shearprofile per KiDS field
-        for k in xrange(len(kidscats)):
-            
+        for k in xrange(len(kidscats)):    
             # Mask all objects that are not in this field
-            matched_galIDs = np.array(catmatch[kidscats[k]]) # The ID's of the galaxies that lie in this field
+
+            matched_galIDs = np.array(catmatch[kidscats[k]])[0]
+            
             field_mask = np.in1d(galIDs, matched_galIDs) # Define the mask
             [galID, gammat, gammax, wk2, w2k2, srcm] = [gallist[field_mask] for gallist in [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms]] # Mask all quantities
 

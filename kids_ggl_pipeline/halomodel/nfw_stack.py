@@ -473,7 +473,7 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     Roff = _linspace(Rrange[0][1], Rrange[0][-1], 100)
     n_Roff = lambda x: (Roff/(x)**2.0) * np.exp(-0.5 * (Roff/x)**2.0)
     #n_Roff = lambda x: np.exp(-0.5 * (Roff/x)**2.0)
-    n_Roff = (n_Roff(alpha[0]*r_vir[0]), n_Roff(alpha[1]*r_vir[1]))
+    n_Roff = [n_Roff(alp*r_vi), for alp, r_vi in izip(alpha_in, R_vir)]
    
     j = [(ni > 0) for ni in n_Roff]
     Roff = [Roff[i] for i in j]

@@ -21,6 +21,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
     src_selection = {}
     model_params = []
     sampler_params = []
+    cat_version = []
     kids_path = 'None'
     gama_path = 'None'
     filename = 'None'
@@ -34,7 +35,8 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
 
         ## General settings
         if line[0] == 'KiDS_version':
-            kidsversion = line[1]
+            #kidsversion = line[1]
+            cat_version = np.int(line[1])
         elif line[0] == 'GAMA_version':
             gamaversion = line[1]
         elif line[0] == 'KiDS_path':
@@ -135,6 +137,6 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,
-            src_selection, blindcats)
+            src_selection, cat_version, blindcats)
 
     return out

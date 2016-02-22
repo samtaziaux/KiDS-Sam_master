@@ -21,7 +21,7 @@ def main():
 
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, lens_selection, \
-            lens_weights, binname, Nobsbins, src_selection, path_Rbins, name_Rbins, Runit, \
+            lens_weights, binname, Nobsbins, src_selection, cat_version, path_Rbins, name_Rbins, Runit, \
             path_output, path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
             path_kidscats, path_gamacat = shear.input_variables()
@@ -62,8 +62,12 @@ def main():
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist = \
     shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition)
-    galIDlist_matched = np.unique(np.hstack(catmatch.values()))
+    purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition, cat_version)
+
+    galIDlist_matched = np.array([], dtype=np.int32)
+    for kidscatname in kidscats:
+        galIDlist_matched = np.append(galIDlist_matched, catmatch[kidscatname][0])
+    galIDlist_matched = np.unique(galIDlist_matched)
 
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf) # Mask the galaxies in the shear catalog, WITHOUT binning (for the bin creation)

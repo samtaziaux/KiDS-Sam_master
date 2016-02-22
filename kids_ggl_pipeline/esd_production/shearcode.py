@@ -39,7 +39,7 @@ def define_runparams(purpose, lens_binning, ncores, blindcats):
     nobsbin = nobsbins # Starting value
 
     # Prepare the values for nsplits and nobsbins
-    nsplits = ncores/nobsbins
+    nsplits = ncores#/nobsbins
 
     if nsplits == 0:
         nsplits = 1
@@ -63,6 +63,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     if 'esd_production' in indirectory:
         path_shearcodes = 'esd_production'
     
+    """
     # Creating the splits
     for n in xrange(nruns):
         ps = []
@@ -79,7 +80,16 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                 ps.append(p)
         for p in ps:
             p.wait()
-    
+    """
+    for n in xrange(nruns):
+        ps = []
+        splitsname = 'python -W ignore %sshear+covariance.py'%(path_shearcodes)
+        splitsname += ' %i %i %i %s %s &'%(nsplit, nsplits, nobsbin, blindcat, config_file)
+        p = sub.Popen(shlex.split(splitsname))
+        ps.append(p)
+        for p in ps:
+            p.wait()
+
 
     # Combine the splits according to the purpose
 
@@ -138,7 +148,7 @@ def run_esd(config_file):
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,
-            src_selection, blindcats] = esd_utils.read_config(config_file)
+            src_selection, cat_version, blindcats] = esd_utils.read_config(config_file)
 
     print '\n \n \n \n \n \n \n \n \n \n'
     print 'Running:', purpose

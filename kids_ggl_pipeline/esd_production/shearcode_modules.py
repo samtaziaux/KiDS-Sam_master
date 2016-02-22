@@ -45,7 +45,7 @@ def input_variables():
     path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h, \
         path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
         lensid_file, lens_weights, lens_binning, lens_selection, \
-        src_selection, blindcats = esd_utils.read_config(config_file)
+        src_selection, cat_version, blindcats = esd_utils.read_config(config_file)
 
     print
     print 'Running:', purpose
@@ -174,7 +174,7 @@ def input_variables():
         Ncat = 1
 
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
-        lens_selection, lens_weights, binname, Nobsbins, src_selection, \
+        lens_selection, lens_weights, binname, Nobsbins, src_selection, cat_version, \
         path_Rbins, name_Rbins, Runit, path_output, path_splits, \
         path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
@@ -300,7 +300,7 @@ def define_filename_results(path_results, purpose, filename_var, filename_additi
 
 # Importing all GAMA and KiDS data, and information on radial bins and lens-field matching.
 def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpose, \
-                Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition):
+                Ncat, O_matter, O_lambda, Ok, h, lens_weights, filename_addition, cat_version):
 
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst = define_Rbins(path_Rbins, Runit)
@@ -311,11 +311,11 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, purpo
     O_matter, O_lambda, Ok, h, Runit, lens_weights)
     
     # Determine the coordinates of the KiDS catalogues
-    kidscoord, kidscat_end = run_kidscoord(path_kidscats)
+    kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
     
     # Match the KiDS field and GAMA galaxy coordinates
     catmatch, kidscats, galIDs_infield = \
-    run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition)
+    run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition, cat_version)
 
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -440,43 +440,71 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
     return gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist
 
 
-def run_kidscoord(path_kidscats): # Finding the central coordinates of the KiDS fields
+def run_kidscoord(path_kidscats, cat_version): # Finding the central coordinates of the KiDS fields
 
     # Load the names of all KiDS catalogues from the specified folder
     kidscatlist = os.listdir(path_kidscats)
 
-    # Remove all files from the list that are not KiDS catalogues
-    for x in kidscatlist:
-        if 'KIDS_' not in x:
-            kidscatlist.remove(x)
 
-    # Create the dictionary that will hold the names of the KiDS catalogues with their RA and DEC
-    kidscoord = dict()
+    if cat_version == 2:
+        # Remove all files from the list that are not KiDS catalogues
+        for x in kidscatlist:
+            if 'KIDS_' not in x:
+                kidscatlist.remove(x)
 
-    for i in range(len(kidscatlist)):
-        # Of the KiDS file names, keep only "KIDS_RA_DEC"
 
-        kidscatstring = kidscatlist[i].split('_',3)
-        kidscatname = '_'.join(kidscatstring[0:3])
+        # Create the dictionary that will hold the names of the KiDS catalogues with their RA and DEC
+        kidscoord = dict()
 
-        # Extract the central coordinates of the field from the file name
-        coords = '_'.join(kidscatstring[1:3])
-        coords = ((coords.replace('p','.')).replace('m','-')).split('_')
+        for i in range(len(kidscatlist)):
+            # Of the KiDS file names, keep only "KIDS_RA_DEC"
 
-        # Fill the dictionary with the catalog's central RA and DEC: {"KIDS_RA_DEC": [RA, DEC]}
-        kidscoord[kidscatname] = [float(coords[0]),float(coords[1])]
+            kidscatstring = kidscatlist[i].split('_',3)
+            kidscatname = '_'.join(kidscatstring[0:3])
 
-        kidscat_end = kidscatstring[-1]
+            # Extract the central coordinates of the field from the file name
+            coords = '_'.join(kidscatstring[1:3])
+            coords = ((coords.replace('p','.')).replace('m','-')).split('_')
 
-    #		print kidscatname, kidscoord[kidscatname]
-    #	print
-    #	print 'Total:', len(kidscatlist), 'KiDS fields'
+            # Fill the dictionary with the catalog's central RA and DEC: {"KIDS_RA_DEC": [RA, DEC]}
+            kidscoord[kidscatname] = [float(coords[0]),float(coords[1]), 0]
+
+            kidscat_end = kidscatstring[-1]
+
+
+    if cat_version == 3:
+        kidscoord = dict()
+
+        for x in kidscatlist:
+            kidscatfile = '%s/%s'%(path_kidscats, x) # Full directory & name of the corresponding KiDS catalogue
+            kidscat = pyfits.open(kidscatfile)[2].data
+            #print kidscat['THELI_NAME']
+            
+            kidscatlist2 = np.unique(np.array(kidscat['THELI_NAME']))
+            #kidscatname = np.full(kidscatlist2.shape, x, dtype=np.str)
+            #print x
+            #print kidscatname
+
+            for i in range(len(kidscatlist2)):
+                # Of the KiDS file names, keep only "KIDS_RA_DEC"
+    
+                kidscatstring = kidscatlist2[i].split('_',3)
+                kidscatname2 = '_'.join(kidscatstring[0:3])
+            
+                # Extract the central coordinates of the field from the file name
+                coords = '_'.join(kidscatstring[1:3])
+                coords = ((coords.replace('p','.')).replace('m','-')).split('_')
+            
+                # Fill the dictionary with the catalog's central RA and DEC: {"KIDS_RA_DEC": [RA, DEC]}
+                kidscoord[x+'-'+str(i)] = [float(coords[0]), float(coords[1]), kidscatlist2[i]]
+            
+                kidscat_end = ''#kidscatstring[-1]
 
     return kidscoord, kidscat_end
 
 
 # Create a dictionary of KiDS fields that contain the corresponding galaxies.
-def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition):
+def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose, filename_addition, cat_version):
 
     Rfield = np.radians(np.sqrt(2)/2) * Dallist
     if 'oldcatmatch' in filename_addition:
@@ -485,9 +513,9 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
         Rmax = Rmax + Rfield
         print "*** Using new lens-field matching procedure *** (for 'early science' mode, put 'oldcatmatch' in 'ESD_output_filename')"
 
-    catmatch = dict()
     totgalIDs = np.array([])
 
+    catmatch = dict()
     # Adding the lenses to the list that are inside each field
     for kidscat in kidscoord.keys():
 
@@ -502,6 +530,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
         # Masking the lenses that are outside the field
         coordmask = (abs(dRA) < 0.5) & (abs(dDEC) < 0.5)
         galIDs = (galIDlist[coordmask])
+        name = kidscoord[kidscat][2]
 
         # Add the proper lenses to the list with all matched lenses
         totgalIDs = np.append(totgalIDs, galIDs)
@@ -510,7 +539,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
         if len(galIDs)>0:
 
             catmatch[kidscat] = np.array([])
-            catmatch[kidscat] = np.append(catmatch[kidscat], galIDs, 0) # Creating a dictionary that contains the corresponding Gama galaxies for each KiDS field.
+            catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0) # Creating a dictionary that contains the corresponding Gama galaxies for each KiDS field.
 
 
     kidscats = catmatch.keys() # The list of fields with lens centers in them
@@ -530,11 +559,8 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
         coordmask = (catR < Rmax)
 
         galIDs = np.array(galIDlist[coordmask])
+        name = kidscoord[kidscat][2]
 
-#		galRs = catR[coordmask]
-#		galRAs = galRAlist[coordmask]
-#		galDECs = galDEClist[coordmask]
-#		Dals = Dallist[coordmask]
 
         if 'bootstrap' in purpose:
             lensmask = np.logical_not(np.in1d(galIDs, totgalIDs))
@@ -550,16 +576,14 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, pur
             if kidscat not in kidscats:
                 catmatch[kidscat] = []
 
-            catmatch[kidscat] = np.append(catmatch[kidscat], galIDs, 0)
-
-
-    #			print 'Average(R):', np.average(catR[coordmask]), ', Max(R):', np.amax(catR[coordmask]), ', Average(RA):', np.average(galRAlist[coordmask]), ', Average(DEC):', np.average(galDEClist[coordmask])
-
+            catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
+                    
     kidscats = catmatch.keys()
+    
 
     print 'Matched fields:', len(kidscats), ', Matched field-galaxy pairs:', len(totgalIDs), ', Matched galaxies:', len(np.unique(totgalIDs)), ', Percentage(Matched galaxies):',  float(len(np.unique(totgalIDs)))/float(len(galIDlist))*100, '%'
     print
-
+    
     return catmatch, kidscats, galIDs_infield
 
 
@@ -575,45 +599,121 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
     return newseq
 
 
-# Import and mask all used data from the sources in this KiDS field
-def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection):
+def import_spec_cat(path_kidscats, kidscatname, kidscat_end, src_selection, cat_version):
+    import fnmatch
+    
+    pattern = '*specweight.cat'
 
-    kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end) # Full directory & name of the corresponding KiDS catalogue
-    kidscat = pyfits.open(kidscatfile)[1].data
-#    print 'Importing KiDS catalogue:', kidscatfile
+    files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
+    
+    filename = str(fnmatch.filter(files, pattern)[0])
+    
+    spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
+    spec_cat = pyfits.open(spec_cat_file)[1].data
+
+    Z_B = spec_cat['z_spec']
+    spec_weight = spec_cat['spec_weight']
+    manmask = spec_cat['MASK']
+    
+    srcmask = (manmask==0)
+    
+    # We apply any other cuts specified by the user for Z_B
+    srclims = src_selection['Z_B'][1]
+    if len(srclims) == 1:
+        srcmask *= (spec_cat['Z_B'] == binlims[0])
+    else:
+        srcmask *= (srclims[0] <= spec_cat['Z_B']) & (spec_cat['Z_B'] < srclims[1])
+
+    return Z_B[srcmask], spec_weight[srcmask]
+
+
+# Import and mask all used data from the sources in this KiDS field
+def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection, cat_version):
+    
+    if cat_version == 2:
+        kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end) # Full directory & name of the corresponding KiDS catalogue
+        kidscat = pyfits.open(kidscatfile)[1].data
+    #print 'Importing KiDS catalogue:', kidscatfile
+    
+    if cat_version == 3:
+        kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
+        kidscat = pyfits.open(kidscatfile)[2].data
 
     srcNr = kidscat['SeqNr'] # List of the ID's of all sources in the KiDS catalogue
     srcRA = kidscat['ALPHA_J2000'] # List of the RA's of all sources in the KiDS catalogue
     srcDEC = kidscat['DELTA_J2000'] # List of the DEC's of all sources in the KiDS catalogue
-    w = kidscat['weight'] # The weight of the sources in the stacking
-    srcPZ = kidscat['PZ_full'] # Full P(z) probability function
-    SN = kidscat['SNratio'] # The Signal to Noise of the sources (needed for bias)
-    srcm = kidscat['m_cor'] # The multiplicative bias m
-    manmask = kidscat['MAN_MASK'] # The manual masking of bad sources (0=good, 1=bad)
+    
+
+    if cat_version == 3:
+        w = np.transpose(np.array([kidscat['weight_A'], kidscat['weight_B'], kidscat['weight_C'], kidscat['weight_C']]))
+        Z_B = kidscat['Z_B']
+        SN = kidscat['model_SNratio']
+        manmask = kidscat['MASK']
+        tile = kidscat['THELI_NAME']
+        
+    elif cat_version == 2:
+        Z_B = kidscat['PZ_full'] # Full P(z) probability function
+        w = np.transpose(np.array([kidscat['weight'], kidscat['weight'], kidscat['weight'], kidscat['weight']])) # The weight of the sources in the stacking
+        SN = kidscat['SNratio'] # The Signal to Noise of the sources (needed for bias)
+        manmask = kidscat['MAN_MASK'] # The manual masking of bad sources (0=good, 1=bad)
+        tile = np.zeros(srcNr.size, dtype=np.float64)
+    
+    try:
+        srcm = kidscat['m_cor'] # The multiplicative bias m
+    except:
+        srcm = np.zeros(srcNr.size, dtype=np.float64)
 
     e1_A = kidscat['e1_A'] # The ellipticity of the sources in the X-direction
     e1_B = kidscat['e1_B']
     e1_C = kidscat['e1_C']
-    e1_D = kidscat['e1_D']
+    try:
+        e1_D = kidscat['e1_D']
+    except:
+        e1_D = kidscat['e1_C']
+
     e2_A = kidscat['e2_A']
     e2_B = kidscat['e2_B']
     e2_C = kidscat['e2_C']
-    e2_D = kidscat['e2_D']
+    try:
+        e2_D = kidscat['e2_D']
+    except:
+        e2_D = kidscat['e2_C']
 
-    c1_A = kidscat['c1_A'] # The ellipticity correction of the sources in the X-direction
-    c1_B = kidscat['c1_B']
-    c1_C = kidscat['c1_C']
-    c1_D = kidscat['c1_D']
-    c2_A = kidscat['c2_A']
-    c2_B = kidscat['c2_B']
-    c2_C = kidscat['c2_C']
-    c2_D = kidscat['c2_D']
+    try:
+        c1_A = kidscat['c1_A'] # The ellipticity correction of the sources in the X-direction
+        c1_B = kidscat['c1_B']
+        c1_C = kidscat['c1_C']
+        try:
+            c1_D = kidscat['c1_D']
+        except:
+            c1_D = kidscat['c1_C']
+
+        c2_A = kidscat['c2_A']
+        c2_B = kidscat['c2_B']
+        c2_C = kidscat['c2_C']
+        try:
+            c2_D = kidscat['c2_D']
+        except:
+            c2_D = kidscat['c2_C']
+                
+    except:
+        c1_A = np.zeros(srcNr.size, dtype=np.float64)
+        c1_B = np.zeros(srcNr.size, dtype=np.float64)
+        c1_C = np.zeros(srcNr.size, dtype=np.float64)
+        c1_D = np.zeros(srcNr.size, dtype=np.float64)
+        c2_A = np.zeros(srcNr.size, dtype=np.float64)
+        c2_B = np.zeros(srcNr.size, dtype=np.float64)
+        c2_C = np.zeros(srcNr.size, dtype=np.float64)
+        c2_D = np.zeros(srcNr.size, dtype=np.float64)
 
     e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D])) # The corrected e1 for all blind catalogs
     e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D])) # The corrected e2 for all blind catalogs
 
     # Masking: We remove sources with weight=0 and those masked by the catalog
-    srcmask = (w > 0.) & (SN > 0) & (srcm < 0) & (manmask==0) & (-1 < c1_A)
+    if cat_version == 2:
+        srcmask = (w.T[0] > 0.0) & (SN > 0.0) & (srcm < 0.0) & (manmask==0) & (-1 < c1_A)
+    if cat_version == 3:
+        srcmask = (w.T[0] > 0.0) & (SN > 0.0) & (manmask==0)
 
     # We apply any other cuts specified by the user
     for param in src_selection.keys():
@@ -629,24 +729,25 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, src_selection):
     srcRA = srcRA[srcmask]
     srcDEC = srcDEC[srcmask]
     w = w[srcmask]
-    srcPZ = srcPZ[srcmask]
+    Z_B = Z_B[srcmask]
     srcm = srcm[srcmask]
     e1 = e1[srcmask]
     e2 = e2[srcmask]
+    tile = tile[srcmask]
 
-    return srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm
+    return srcNr, srcRA, srcDEC, w, Z_B, e1, e2, srcm, tile
 
 
 # Calculating the variance of the ellipticity for this source selection
 def calc_variance(e1_varlist, e2_varlist, w_varlist):
 
-    e1_mean = np.sum(w_varlist*e1_varlist, 1)/np.sum(w_varlist)
-    e2_mean = np.sum(w_varlist*e2_varlist, 1)/np.sum(w_varlist)
+    e1_mean = np.sum(w_varlist*e1_varlist, 1)/np.sum(w_varlist, 1)
+    e2_mean = np.sum(w_varlist*e2_varlist, 1)/np.sum(w_varlist, 1)
 
     e1_mean = np.reshape(e1_mean, [len(e1_mean), 1])
     e2_mean = np.reshape(e1_mean, [len(e2_mean), 1])
 
-    weight = np.sum(w_varlist)/(np.sum(w_varlist)**2 - np.sum(w_varlist**2))
+    weight = np.sum(w_varlist, 1)/(np.sum(w_varlist, 1)**2 - np.sum(w_varlist**2, 1))
 
     var_e1 = weight * np.sum(w_varlist*(e1_varlist-e1_mean)**2, 1)
     var_e2 = weight * np.sum(w_varlist*(e2_varlist-e2_mean)**2, 1)
@@ -813,7 +914,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
 
 
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
-def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ):
+def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
 
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
@@ -822,8 +923,25 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ):
     Dcsbins = []
 
     # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
-    DlsoDsmask = np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))
-    DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask = DlsoDsmask, fill_value = 0))
+    #DlsoDsmask = np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))
+    #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask = DlsoDsmask, fill_value = 0))
+    DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    
+    if cat_version == 3:
+        cond = np.array(np.where(DlsoDs == 0.0))
+        
+        cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), np.zeros(cond[1].size, dtype=np.int32)))
+        cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), np.zeros(cond[1].size, dtype=np.int32)))
+        
+        cond[cond >= DlsoDs[0].size-1] = DlsoDs[0].size-1
+        cond2[cond2 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
+        
+        cond[cond >= DlsoDs[1].size-1] = DlsoDs[1].size-1
+        cond2[cond2 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
+        
+        DlsoDs[(cond[0], cond[1])] = 0.0
+        DlsoDs[(cond2[0], cond2[1])] = 0.0
+    
     DlsoDsmask = [] # Empty unused lists
 
     # Matrix multiplication that sums over P(z), to calculate <Dls/Ds> for each lens-source pair

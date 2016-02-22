@@ -32,6 +32,9 @@
 # Full path to the folder containing the KiDS catalogues to be used.
 KiDS_path           /disks/shear10/KiDS/LF_cat_DR2_v2/
 
+# Version of the KiDS catalogue being used. Options are 2 or 3. If you are using version 3 (i.e. KiDS-450) then you *HAVE* to have spec-z catalogue in the same location as the parent folder of individual patched!
+KiDS_version      2
+
 # Full path to the GAMA catalogue fits file.
 GAMA_path           /disks/shear10/sifon/kids/gama/G3CGalv06.fits
 

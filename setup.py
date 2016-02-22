@@ -15,7 +15,7 @@ def read(fname):
 setup(name='kids_ggl_pipeline',
       version='1.0.0',
       description='KiDS Galaxy-Galaxy Lensing Pipeline',
-      author='MargotBrouwer, Andrej Dvornik, Cristobal Sifon',
+      author='Margot Brouwer, Andrej Dvornik, Cristobal Sifon',
       author_email='dvornik@strw.leidenuniv.nl',
       long_description=read('README.md'),
       url='https://github.com/KiDS-WL/KiDS-GGL',

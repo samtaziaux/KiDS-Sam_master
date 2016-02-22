@@ -371,13 +371,13 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     Mstar = 10.0**Mstar
     
     #fc_central = _array([fc_central1, fc_central2])
-
+    
     #csat = fc_sat * _cM_duffy08(Msat, z, h)
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
     
     # some auxiliaries
     rho_m = density_average(z, h, Om, Ol)
-    aux = 200.0 * rho_m * 4*3.14159265/3
+    aux = 200.0 * rho_m * 4.0*3.14159265/3
     
     # more parameters
     #r200_sat = (Msat / aux) ** (1./3.)
@@ -391,8 +391,8 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     # satellite signal
     #esd_sat = [sat_profile(Ri[1:]/rs, sigma) for Ri, rs, sigma in izip(R, rs_sat, sigma_sat)]
     #esd_sat = _array(esd_sat)
-                 
-                 
+    
+    
     # central signal
     esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri, rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
@@ -405,20 +405,20 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     bias = calc_bias.calc_bias(Mcentral, Om, omegab_h2, sigma_8, h)
     esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri[1:])[0] for b_i, biasi, zi, Ri in izip(b, bias, z, R)]
     esd_2halo = _array(esd_2halo)
-                 
+    
     # Total signal
     #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo for f, esat, ecentral, e2halo in izip(fsat, esd_sat, esd_central, esd_2halo)])
     esd_total = _array([ecentral + e2halo for ecentral, e2halo in izip(esd_central, esd_2halo)])
     
     Mavg = Mcentral#( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
-
+    
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_2halo, Mavg, 0]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
     print fc_central, logMcentral, b_in
     return out
-    
-    
+
+
 def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     # local variables are accessed much faster than global ones
     _array = array
@@ -429,7 +429,7 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     _linspace = linspace
     
     #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
-    central_profile, host_profile, fc_central, logMcentral, alpha_in1, f_off_in, b_in, z, Mstar, Rrange, angles = theta
+    central_profile, host_profile, fc_central, logMcentral, alpha_in, f_off_in, b_in, z, Mstar, Rrange, angles = theta
     
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
@@ -441,7 +441,8 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     Mstar = 10.0**Mstar
     
     #fc_central = _array([fc_central1, fc_central2])
-
+    fc_central = fc_central
+    
     #csat = fc_sat * _cM_duffy08(Msat, z, h)
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
     
@@ -462,8 +463,8 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     # satellite signal
     #esd_sat = [sat_profile(Ri[1:]/rs, sigma) for Ri, rs, sigma in izip(R, rs_sat, sigma_sat)]
     #esd_sat = _array(esd_sat)
-                 
-                 
+    
+    
     # central signal
     esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri, rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
@@ -473,8 +474,10 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     Roff = _linspace(Rrange[0][1], Rrange[0][-1], 100)
     n_Roff = lambda x: (Roff/(x)**2.0) * np.exp(-0.5 * (Roff/x)**2.0)
     #n_Roff = lambda x: np.exp(-0.5 * (Roff/x)**2.0)
-    n_Roff = [n_Roff(alp*r_vi), for alp, r_vi in izip(alpha_in, R_vir)]
-   
+    
+    #n_Roff = (n_Roff(alpha[0]*r_vir[0]), n_Roff(alpha[1]*r_vir[1]))
+    n_Roff = [n_Roff(alpha_i * r_vi) for alpha_i, r_vi in izip(alpha, r_vir)]
+    
     j = [(ni > 0) for ni in n_Roff]
     Roff = [Roff[i] for i in j]
     n_Roff = [n[i] for i, n in _izip(j, n_Roff)]
@@ -489,13 +492,13 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     bias = calc_bias.calc_bias(Mcentral, Om, omegab_h2, sigma_8, h)
     esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri[1:])[0] for b_i, biasi, zi, Ri in izip(b, bias, z, R)]
     esd_2halo = _array(esd_2halo)
-                 
+    
     # Total signal
     #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo for f, esat, ecentral, e2halo in izip(fsat, esd_sat, esd_central, esd_2halo)])
     esd_total = _array([fo * ecentral + (1.0 - fo)*eoff + e2halo for ecentral, eoff, e2halo, fo in izip(esd_central, esd_host, esd_2halo, f_off)])
     
-    Mavg = Mcentral#( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
-
+    Mavg = Mcentral #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
+    
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, 0]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
@@ -548,7 +551,7 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri, rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
     
-
+    
     
     # 2-halo term signal
     sigma_8 = 0.829
@@ -569,48 +572,3 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
     print fc_central, logMcentral, b_in
     return out
-
-def satellites(theta, R):
-    """
-    sat_profile must be nfw.esd() for things to work
-
-    """
-    _array = array
-    _cM_duffy08 = cM_duffy08
-    _delta = delta
-    _izip = izip
-
-    sat_profile, host_profile, \
-        Rsat, n_Rsat, fc_sat, Msat, fc_host, Mhost, \
-        z, Mstar, Om, Ol, h, Rranges, angles = theta
-
-    j = [(ni > 0) for ni in n_Rsat]
-    Rsat = [Rsat[i] for i in j]
-    n_Rsat = [n[i] for i, n in izip(j, n_Rsat)]
-    Msat -= Mstar
-    csat = fc_sat * _cM_duffy08(Msat, z, h=h)
-    chost = fc_host * _cM_duffy08(Mhost, z, h=h)
-    rho_m = density_average(z, h, Om, Ol)
-    aux = 200*rho_m * 4*3.14159265/3
-
-    # satellite signals
-    #r200_sat = (Msat / aux) ** (1./3)
-    rs_sat = (Msat / aux) ** (1./3) / csat
-    sigma_sat = rs_sat * _delta(csat) * rho_m
-    piR2 = 3.14159265*(1e6*R)**2
-    pointmass = [Mi / piR2i[1:] for Mi, piR2i in _izip(Mstar, piR2)]
-    esd_sat = _array([pm + sat_profile(Ri[1:]/rsi, si)
-                      for pm, Ri, rsi, si in _izip(pointmass, R,
-                                                   rs_sat, sigma_sat)])
-    # host signals
-    #r200_host = (Mhost / aux) ** (1./3)
-    rs_host = (Mhost / aux) ** (1./3) / chost
-    sigma_host = rs_host * _delta(chost) * rho_m
-    esd_host = _array([host_profile(x[0]/x[1], x[2]/x[1], x[3], x[4],
-                                      x[5]/x[1], angles)
-                        for x in _izip(R, rs_host, Rsat,
-                                       n_Rsat, sigma_host, Rranges)])
-
-    out = [esd_sat + esd_host, esd_sat, esd_host, 0]
-    return out
-

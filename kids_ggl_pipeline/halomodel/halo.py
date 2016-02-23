@@ -295,8 +295,6 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         alpha_star, beta_gas, r_t0, r_c0, M_bin_min, M_bin_max, \
         taylor_procedure, include_baryons, smth1, smth2 = theta
 
-    M_bin_min = np.log10(M_bin_min)
-    M_bin_max = np.log10(M_bin_max)
     hod_mass = np.array([np.logspace(Mi, Mx, 100, endpoint=False,
                                      dtype=np.longdouble)
                          for Mi, Mx in izip(M_bin_min, M_bin_max)])

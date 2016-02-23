@@ -170,7 +170,7 @@ def main():
 
                # Loading the covariance data file of each KiDS field
                 shearcatname_N1 = shear.define_filename_splits(path_splits, purpose, filename_N1, kidscats[x], 0, filename_addition, blindcat)
-                
+               
                 if os.path.isfile(shearcatname_N1):
                     print '	Combining field', x+1, '/', len(kidscats), ':', kidscats[x]
 

@@ -24,29 +24,22 @@ inf = np.inf # Infinity
 nan = np.nan # Not a number
 
 
-def multi_proc(Nsplit, output, outputnames):
-       
-    run = loop(Nsplit, output, outputnames)
-        
-    return
-
-
-def loop_multi(Nsplit, output, outputnames):
+def loop_multi(Nsplit, output, outputnames, gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax, filename_var):
     
-    nprocs = multi.cpu_count() # Number of to be used!
     q1 = multi.Queue()
     procs = []
     #chunk = int(np.ceil(len(R)/float(nprocs)))
         
     for j in xrange(Nsplit):
             
-        work = multi.Process(target=multi_proc, args=(j, output, outputnames))
+        work = multi.Process(target=loop, args=(j, output, outputnames, gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax, filename_var))
         procs.append(work)
         work.start()
+        #work.join()
    
     return
 
-def loop(Nsplit, output, outputnames):
+def loop(Nsplit, output, outputnames, gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax, filename_var):
 
     if 'catalog' in purpose:
         # These lists will contain the final output
@@ -74,7 +67,10 @@ def loop(Nsplit, output, outputnames):
             matched_galIDs = np.array(catmatch[kidscatname][0]) # The ID's of the galaxies that lie in this field
             
             # Find the selected lenses that lie in this KiDS field
-            galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
+            if 'catalog' in purpose:
+                galIDmask = np.in1d(galIDlist, matched_galIDs)
+            if 'covariance' in purpose:
+                galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
             [galIDs, galRAs, galDECs, galweights, galZs, Dcls, Dals] = [gallist[galIDmask] for gallist in [galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist]]
             
             print 'Analysing part %i/%i, process %i: %s (contains %i objects)'%(kidscatN, len(splitkidscats[Nsplit]), Nsplit+1, kidscatname, len(galIDs))
@@ -195,7 +191,10 @@ def loop(Nsplit, output, outputnames):
             matched_galIDs = np.array(catmatch[kidscatname][0])#np.array([val[0] for key,val in catmatch.items() if val[1]==kidscatname])[0] # The ID's of the galaxies that lie in this field
             
             # Find the selected lenses that lie in this KiDS field
-            galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
+            if 'catalog' in purpose:
+                galIDmask = np.in1d(galIDlist, matched_galIDs)
+            if 'covariance' in purpose:
+                galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
             [galIDs, galRAs, galDECs, galweights, galZs, Dcls, Dals] = [gallist[galIDmask] for gallist in [galIDlist, galRAlist, galDEClist, galweightlist, galZlist, Dcllist, Dallist]]
             
             print 'Analysing part %i/%i, process %i: %s (contains %i objects)'%(kidscatN, len(splitkidscats[Nsplit]), Nsplit+1, kidscatname, len(galIDs))
@@ -339,9 +338,9 @@ if __name__ == '__main__':
 
         binname = 'None'
         lens_binning = {'None': ['self', np.array([])]}
-        if Nsplits < Nobsbins:
-            Nsplits = Nobsbins
-            Nsplit = binnum-1
+        #if Nsplits < Nobsbins:
+        #    Nsplits = Nobsbins
+        #    Nsplit = binnum-1
         Nobsbins = 1
         binnum = 1
 
@@ -371,14 +370,14 @@ if __name__ == '__main__':
         print
         quit()
     
-
+    """
     # Printing a placeholder file, that tells other codes that this catalog is being written.
     if ('random' in purpose):
-        filename = shear.define_filename_splits(path_splits, purpose, filename_var, Nsplit+1, 0, filename_addition, blindcat)
+        filename = shear.define_filename_splits(path_splits, purpose, filename_var, Nsplit+1, Nsplits, filename_addition, blindcat)
         with open(filename, 'w') as file:
             print >>file, ''
         print 'Placeholder:', filename, 'is written.'
-
+    """
 
     # Importing all GAMA data, and the information on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst, \
@@ -466,25 +465,24 @@ if __name__ == '__main__':
     #print '%s split'%purpose, Nsplit+1, '/', Nsplits, ', Center definition = %s'%centering
     print 'Using %s cores to create split catalogues'%Nsplits, ', - Center definition = %s'%centering
     print
-    """	
-    if 'catalog' in purpose:
-        # These lists will contain the final output
-        outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', 'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', 'lfweight', 'lfweight^2', 'k', 'k^2', 'lfweight*k^2', 'lfweight^2*k^4', 'lfweight^2*k^2', 'Nsources', 'bias_m']
-        output = np.zeros([len(outputnames), len(galIDlist), nRbins])
-    """
+
+
     output = 0
     outputnames = 0
+    
     # Split up the list of KiDS fields, for parallel obsbins
     splitkidscats = np.array(shear.split(kidscats, Nsplits))
-    #start_tot = time.time()
-
-    calculation = loop_multi(Nsplits, output, outputnames)
-
     
+    if 'catalog' in purpose:
+        calculation = loop_multi(Nsplits, output, outputnames, gamacat, centering, lens_selection, lens_binning, binname, binnum, binmin, binmax, filename_var)
+    if 'covariance' in purpose:
+        for i in xrange(Nobsbins):
+            filename_var = shear.define_filename_var(purpose, centering, binname, \
+                                                     i+1, Nobsbins, lens_selection, src_selection, lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
+                                                     
+            binname, lens_binning, Nobsbins, binmin, binmax = shear.define_obsbins(i+1, lens_binning, lenssel_binning, gamacat)
+            calculation = loop_multi(Nsplits, output, outputnames, gamacat, centering, lens_selection, lens_binning, binname, i, binmin, binmax, filename_var)
 
-    #end_tot = time.time()-start_tot
-    #print 'Split finished in', end_tot/60., 'minutes'
-    #print
 
 #    return
 

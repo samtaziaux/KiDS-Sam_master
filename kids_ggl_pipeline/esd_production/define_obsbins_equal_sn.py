@@ -33,14 +33,10 @@ print 'Importing:', shearcatname
 
 # Importing all GAMA data, and the information on radial bins and lens-field matching.
 catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, nRbins, galIDlist, groupIDlist, galRAlist, galDEClist, galZlist, Dcllist, Dallist, Nfoflist, galranklist, obslist, obslimlist = shear.import_data(path_Rbins, path_kidscats, centering, 'bootstrap', Ncat, rankmin, rankmax, O_matter, O_lambda, h, binname, obslim, cat_version)
-if cat_version == 2:
-    galIDlist_matched = np.unique(np.hstack(catmatch.values()))
-if cat_version == 3:
-    galIDlist_matched = np.array([])
-    for kidscatname in kidscats:
-        kidscatname = catmatch[kidscatname][1]
-        galIDlist_matched = np.append(galIDlist_matched, np.array([val[0] for key,val in catmatch.items() if val[1]==kidscatname])[0])
-    galIDlist_matched = np.unique(galIDlist_matched)
+galIDlist_matched = np.array([], dtype=np.int32)
+for kidscatname in kidscats:
+    galIDlist_matched = np.append(galIDlist_matched, catmatch[kidscatname][0])
+galIDlist_matched = np.unique(galIDlist_matched)
 
 purpose = 'binlimits'
 

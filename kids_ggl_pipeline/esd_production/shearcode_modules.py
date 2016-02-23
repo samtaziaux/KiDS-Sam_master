@@ -840,7 +840,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
     except:
         binmin = -999
         binmax = -999
-    
+
     return binname, lens_binning, Nobsbins, binmin, binmax
 
 

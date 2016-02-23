@@ -390,8 +390,10 @@ def define_Rbins(path_Rbins, Runit):
 def import_gamacat(path_gamacat, centering, purpose, Ncat, \
                     O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
-    randomcatname = '/disks/shear9/brouwer/shearprofile/shear_2.1/gen_ran_out.randoms.fits'
-
+    randomcatname = 'gen_ran_out.randoms.fits'
+    directory = os.path.dirname(os.path.realpath(path_gamacat))
+    randomcatname = directory + '/' + randomcatname
+    
     # Importing the GAMA catalogues
     print 'Importing GAMA catalogue:', path_gamacat
 
@@ -414,8 +416,11 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         # Determine RA and DEC for the random/star catalogs
         Ncatmin = Ncat * len(galIDlist) # The first item that will be chosen from the catalog
         Ncatmax = (Ncat+1) * len(galIDlist) # The last item that will be chosen from the catalog
-        
-        randomcat = pyfits.open(randomcatname)[1].data
+        try:
+            randomcat = pyfits.open(randomcatname)[1].data
+        except:
+            print 'Could not import random catalogue: ', randomcatname
+            quit()
 
         galRAlist = randomcat['ra'][Ncatmin : Ncatmax]
         galDEClist = randomcat['dec'][Ncatmin : Ncatmax]

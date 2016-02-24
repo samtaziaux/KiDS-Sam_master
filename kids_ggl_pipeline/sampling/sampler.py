@@ -13,7 +13,7 @@ from numpy import all as npall, array, append, concatenate, dot, inf, isnan
 from numpy import isfinite, log, log10, outer, pi, sqrt, transpose, zeros
 from os import remove
 from os.path import isfile
-from time import ctime
+from time import ctime, time
 import pickle
 
 import sampling_utils
@@ -135,7 +135,9 @@ def run_emcee(hm_options, sampling_options, args):
             aux = [[v1.pop(pj) for pj in p[1:][::-1]]
                    for p in params_join[::-1]]
             val1 = v1 #array(v1) ??
+        to = time()
         model = function(val1, R)
+        print 'Model evaluated in {0:.2e} seconds'.format(time() - to)
         residuals = esd - model[0]
         dof = esd.size - starting.size - 1
         chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))

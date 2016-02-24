@@ -283,17 +283,19 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     np.seterr(divide='ignore', over='ignore', under='ignore',
               invalid='ignore')
 
+    # Setting parameters from config file
+    z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, \
+        alpha_star, beta_gas, r_t0, r_c0, M_bin_min, M_bin_max, \
+        centrals, satellites, taylor_procedure, include_baryons, \
+        smth1, smth2 = theta
+
     # HMF set up parameters - for now fixed and not setable from config file.
     step = (M_max - M_min) / M_bins
     k_step = (lnk_max-lnk_min)/n_bins
     k_range = np.arange(lnk_min, lnk_max, k_step)
     k_range_lin = np.exp(k_range)
     mass_range = np.logspace(M_min, M_max, M_bins)
-
-    # Setting parameters from config file
-    z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, \
-        alpha_star, beta_gas, r_t0, r_c0, M_bin_min, M_bin_max, \
-        taylor_procedure, include_baryons, smth1, smth2 = theta
+    n_bins_obs = len(M_bin_min)
 
     hod_mass = np.array([np.logspace(Mi, Mx, 100, endpoint=False,
                                      dtype=np.longdouble)
@@ -325,16 +327,6 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                                sigma_c, alpha_s, A, M_1,
                                                gamma_1, gamma_2, b_0, b_1, b_2)
                               for i in izip(hod_mass)])
-        #rho_gas = np.array([baryons.rhoGAS(hmf, rho_crit, omegab, omegac,
-                                           #i[0], mass_range, sigma_c,
-                                           #alpha_s, A, M_1, gamma_1, gamma_2,
-                                           #b_0, b_1, b_2)
-                            #for i in izip(hod_mass)])[:,0]
-        #F = np.array([baryons.rhoGAS(hmf, rho_crit, omegab, omegac, i[0],
-                                     #mass_range, sigma_c, alpha_s, A, M_1,
-                                     #gamma_1, gamma_2, b_0, b_1, b_2)
-                      #for i in izip(hod_mass)])[:,1]
-        # this should be the same as the two calls above
         rho_gas, F = np.transpose([baryons.rhoGAS(hmf, rho_crit, omegab,
                                                   omegac, i[0],
                                                   mass_range, sigma_c,
@@ -342,30 +334,35 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                                   gamma_2, b_0, b_1, b_2)
                                    for i in izip(hod_mass)])
 
-    radius_range_lin = virial_radius(mass_range, rho_mean, 200.0)
-    radius_range = np.log10(radius_range_lin)
-    radius_range_3d = np.logspace(-3.2, 4, 200, endpoint=True)
-    radius_range_3d_i = np.logspace(-2.5, 1.2, 25, endpoint=True)
-    radius_range_2d_i = R[0][1:]
+    rvir_range_lin = virial_radius(mass_range, rho_mean, 200.0)
+    rvir_range = np.log10(rvir_range_lin)
+    rvir_range_3d = np.logspace(-3.2, 4, 200, endpoint=True)
+    rvir_range_3d_i = np.logspace(-2.5, 1.2, 25, endpoint=True)
+    rvir_range_2d_i = R[0][1:]
 
     # Calculating halo model
 
-    pop_c = np.array([ncm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
-                          gamma_1, gamma_2, b_0, b_1, b_2)
-                      for i in izip(hod_mass)])
-    pop_s = np.array([nsm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
-                          gamma_1, gamma_2, b_0, b_1, b_2)
-                      for i in izip(hod_mass)])
-    #pop_g = np.array([ngm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
-                          #gamma_1, gamma_2, b_0, b_1, b_2)
-                      #for i in izip(hod_mass)])
+    if centrals:
+        pop_c = np.array([ncm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
+                              gamma_1, gamma_2, b_0, b_1, b_2)
+                          for i in izip(hod_mass)])
+    else:
+        pop_c = np.zeros(hod_mass.shape)
+    if satellites:
+        pop_s = np.array([nsm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
+                              gamma_1, gamma_2, b_0, b_1, b_2)
+                          for i in izip(hod_mass)])
+    else:
+        pop_c = np.zeros(hod_mass.shape)
     pop_g = pop_c + pop_s
 
-    ngal = np.array([n_gal(z, hmf, pop_g_i , mass_range, radius_range_lin)
+    ngal = np.array([n_gal(z, hmf, pop_g_i , mass_range, rvir_range_lin)
                      for pop_g_i in izip(pop_g)])
 
     effective_mass = np.array([eff_mass(z, hmf, pop_g_i, mass_range)
                                for pop_g_i in izip(pop_g)])
+    # Why does this only have pop_c and not pop_g?
+    # Do we need it? It's not used anywhere in the code
     effective_mass_bar = np.array([eff_mass(z, hmf, pop_c_i,
                                             mass_range) * \
                                    (1.0 - baryons.f_dm(omegab, omegac))
@@ -383,7 +380,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     """
     if taylor_procedure:
         T_dm = np.array([T_table(expansion, rho_dm, z, mass_range,
-                                 radius_range_lin, i[0], "dm", f, omegab,
+                                 rvir_range_lin, i[0], "dm", f, omegab,
                                  omegac, 0, 0, sigma_c, alpha_s, A, M_1,
                                  gamma_1, gamma_2, b_0, b_1, b_2)
                          for i in izip(hod_mass)])
@@ -394,18 +391,18 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     if include_baryons:
         T_dm = np.array([T_table(expansion, rho_dm, z, mass_range,
-                                 radius_range_lin, i[0], "dm", f, omegab,
+                                 rvir_range_lin, i[0], "dm", f, omegab,
                                  omegac, 0, 0, sigma_c, alpha_s, A, M_1,
                                  gamma_1, gamma_2, b_0, b_1, b_2)
                          for i in izip(hod_mass)])
         T_stars = np.array([T_table(expansion_stars, rho_mean, z,
-                                    mass_range, radius_range_lin, i[0],
+                                    mass_range, rvir_range_lin, i[0],
                                     "stars", f, omegab, omegac, alpha_star,
                                     r_t0, sigma_c, alpha_s, A, M_1, gamma_1,
                                     gamma_2, b_0, b_1, b_2)
                             for i in izip(hod_mass)])
         T_gas = np.array([T_table(expansion, rho_mean, z, mass_range,
-                                  radius_range_lin, i[0], "gas", f, omegab,
+                                  rvir_range_lin, i[0], "gas", f, omegab,
                                   omegac, beta_gas, r_c0, sigma_c, alpha_s,
                                   A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
                           for i in izip(hod_mass)])
@@ -418,93 +415,123 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     # Galaxy - dark matter spectra
     Pg_2h = np.array([TwoHalo(hmf, ngal_i, pop_g_i, k_range_lin,
-                              radius_range_lin, mass_range)
+                              rvir_range_lin, mass_range)
                       for ngal_i, pop_g_i in izip(ngal, pop_g)])
     if taylor_procedure or include_baryons:
-        Pg_c = F_k1 * np.array([GM_cen_spectrum(hmf, z, rho_dm, rho_mean,
-                                                expansion, pop_c_i, ngal_i,
-                                                k_range_lin, radius_range_lin,
-                                                mass_range,
-                                                T_dm_i, T_tot_i)
-                                for pop_c_i, ngal_i, T_dm_i, T_tot_i
-                                in izip(pop_c, ngal, T_dm, T_tot)])
-        Pg_s = F_k1 * np.array([GM_sat_spectrum(hmf, z, rho_dm, rho_mean,
-                                                expansion, pop_s_i, ngal_i,
-                                                k_range_lin, radius_range_lin,
-                                                mass_range,
-                                                T_dm_i, T_tot_i)
-                                for pop_s_i, ngal_i, T_dm_i, T_tot_i
-                                in izip(pop_s, ngal, T_dm, T_tot)])
+        if centrals:
+            Pg_c = F_k1 * np.array([GM_cen_spectrum(hmf, z, rho_dm, rho_mean,
+                                                    expansion, pop_c_i,
+                                                    ngal_i, k_range_lin,
+                                                    rvir_range_lin,
+                                                    mass_range,
+                                                    T_dm_i, T_tot_i)
+                                    for pop_c_i, ngal_i, T_dm_i, T_tot_i
+                                    in izip(pop_c, ngal, T_dm, T_tot)])
+        else:
+            Pg_c = np.zeros((n_bins_obs,n_bins))
+        if satellites:
+            Pg_s = F_k1 * np.array([GM_sat_spectrum(hmf, z, rho_dm, rho_mean,
+                                                    expansion, pop_s_i,
+                                                    ngal_i, k_range_lin,
+                                                    rvir_range_lin,
+                                                    mass_range,
+                                                    T_dm_i, T_tot_i)
+                                    for pop_s_i, ngal_i, T_dm_i, T_tot_i
+                                    in izip(pop_s, ngal, T_dm, T_tot)])
+        else:
+            Pg_s = np.zeros((n_bins_obs,n_bins))
     else:
-        Pg_c = F_k1 * np.array([GM_cen_analy(hmf, z, rho_dm, rho_mean, f,
-                                             expansion, pop_c_i, ngal_i,
-                                             k_range_lin, radius_range_lin,
-                                             mass_range, T_dm_i, T_tot_i)
-                                for pop_c_i, ngal_i, T_dm_i, T_tot_i
-                                in izip(pop_c, ngal, T_dm, T_tot)])
-        Pg_s = F_k1 * np.array([GM_sat_analy(hmf, z, rho_dm, rho_mean, f,
-                                             expansion, pop_s_i, ngal_i,
-                                             k_range_lin, radius_range_lin,
-                                             mass_range, T_dm_i, T_tot_i)
-                                for pop_s_i, ngal_i, T_dm_i, T_tot_i
-                                in izip(pop_s, ngal, T_dm, T_tot)])
+        if centrals:
+            Pg_c = F_k1 * np.array([GM_cen_analy(hmf, z, rho_dm, rho_mean, f,
+                                                expansion, pop_c_i, ngal_i,
+                                                k_range_lin, rvir_range_lin,
+                                                mass_range, T_dm_i, T_tot_i)
+                                    for pop_c_i, ngal_i, T_dm_i, T_tot_i
+                                    in izip(pop_c, ngal, T_dm, T_tot)])
+        else:
+            Pg_c = np.zeros((n_bins_obs,n_bins))
+        if satellites:
+            Pg_s = F_k1 * np.array([GM_sat_analy(hmf, z, rho_dm, rho_mean, f,
+                                                expansion, pop_s_i, ngal_i,
+                                                k_range_lin, rvir_range_lin,
+                                                mass_range, T_dm_i, T_tot_i)
+                                    for pop_s_i, ngal_i, T_dm_i, T_tot_i
+                                    in izip(pop_s, ngal, T_dm, T_tot)])
+        else:
+            Pg_s = np.zeros((n_bins_obs,n_bins))
 
     # Galaxy - stars/gas spectra
     if include_baryons:
-        Ps_c = F_k1 * np.array([baryons.GS_cen_spectrum(hmf, z, rho_stars_i,
-                                                        rho_mean,
-                                                        expansion_stars,
-                                                        pop_c_i, ngal_i,
-                                                        k_range_lin,
-                                                        radius_range_lin,
-                                                        mass_range,
-                                                        T_stars_i, T_tot_i)
-                                 for rho_stars_i, pop_c_i, ngal_i, \
-                                     T_stars_i, T_tot_i
-                                 in izip(rho_stars, pop_c, ngal, T_stars,
-                                         T_tot)])
-        Ps_s = F_k1 * np.array([baryons.GS_sat_spectrum(hmf, z, rho_stars_i,
-                                                        rho_mean, expansion,
-                                                        pop_s_i, ngal_i,
-                                                        k_range_lin,
-                                                        radius_range_lin,
-                                                        mass_range,
-                                                        T_dm_i, T_stars_i,
-                                                        T_tot_i)
-                                for rho_stars_i, pop_s_i, ngal_i, \
-                                    T_dm_i, T_stars_i, T_tot_i
-                                in izip(rho_stars, pop_s, ngal, T_dm,
-                                        T_stars, T_tot)])
-        Pgas_c = F_k1 * np.array([baryons.GGas_cen_spectrum(hmf, z, F_i,
-                                                            rho_gas_i,
+        if centrals:
+            Ps_c = F_k1 * np.array([baryons.GS_cen_spectrum(hmf, z,
+                                                            rho_stars_i,
                                                             rho_mean,
-                                                            expansion,
+                                                            expansion_stars,
                                                             pop_c_i, ngal_i,
                                                             k_range_lin,
-                                                            radius_range_lin,
+                                                            rvir_range_lin,
                                                             mass_range,
-                                                            T_gas_i, T_tot_i)
-                                  for F_i, rho_gas_i, pop_c_i, ngal_i, \
-                                      T_gas_i, T_tot_i
-                                  in izip(F, rho_gas, pop_c, ngal, T_gas,
-                                          T_tot)])
-        Pgas_s = F_k1 * np.array([baryons.GGas_sat_spectrum(hmf, z, F_i,
-                                                            rho_gas_i,
+                                                            T_stars_i, T_tot_i)
+                                    for rho_stars_i, pop_c_i, ngal_i, \
+                                        T_stars_i, T_tot_i
+                                    in izip(rho_stars, pop_c, ngal, T_stars,
+                                            T_tot)])
+            Pgas_c = F_k1 * np.array([baryons.GGas_cen_spectrum(hmf, z, F_i,
+                                                                rho_gas_i,
+                                                                rho_mean,
+                                                                expansion,
+                                                                pop_c_i,
+                                                                ngal_i,
+                                                                k_range_lin,
+                                                                rvir_range_lin,
+                                                                mass_range,
+                                                                T_gas_i,
+                                                                T_tot_i)
+                                    for F_i, rho_gas_i, pop_c_i, ngal_i, \
+                                        T_gas_i, T_tot_i
+                                    in izip(F, rho_gas, pop_c, ngal, T_gas,
+                                            T_tot)])
+        else:
+            # In this case Pg_c is an array of zeros with the right shape
+            Ps_c = Pg_c
+            Pgas_c = Pg_c
+        if satellites:
+            Ps_s = F_k1 * np.array([baryons.GS_sat_spectrum(hmf, z,
+                                                            rho_stars_i,
                                                             rho_mean,
                                                             expansion,
                                                             pop_s_i, ngal_i,
                                                             k_range_lin,
-                                                            radius_range_lin,
+                                                            rvir_range_lin,
                                                             mass_range,
-                                                            T_dm_i, T_gas_i,
+                                                            T_dm_i, T_stars_i,
                                                             T_tot_i)
-                                   for F_i, rho_gas_i, pop_s_i, ngal_i, \
-                                       T_dm_i, T_gas_i, T_tot_i
-                                   in izip(F, rho_gas, pop_s, ngal, T_dm,
-                                           T_gas, T_tot)])
+                                    for rho_stars_i, pop_s_i, ngal_i, \
+                                        T_dm_i, T_stars_i, T_tot_i
+                                    in izip(rho_stars, pop_s, ngal, T_dm,
+                                            T_stars, T_tot)])
+            Pgas_s = F_k1 * np.array([baryons.GGas_sat_spectrum(hmf, z, F_i,
+                                                                rho_gas_i,
+                                                                rho_mean,
+                                                                expansion,
+                                                                pop_s_i,
+                                                                ngal_i,
+                                                                k_range_lin,
+                                                                rvir_range_lin,
+                                                                mass_range,
+                                                                T_dm_i,
+                                                                T_gas_i,
+                                                                T_tot_i)
+                                    for F_i, rho_gas_i, pop_s_i, ngal_i, \
+                                        T_dm_i, T_gas_i, T_tot_i
+                                    in izip(F, rho_gas, pop_s, ngal, T_dm,
+                                            T_gas, T_tot)])
+        else:
+            # In this case Pg_s is an array of zeros with the right shape
+            Ps_s = Pg_s
+            Pgas_s = Pg_s
 
     # Combined (all) by type
-
     #Pg_k_s = np.array([(rho_stars_i * (Ps_c_i + Ps_s_i)) / (rho_mean)
                        #for rho_stars_i, Ps_c_i, Ps_s_i
                        #in izip(rho_stars, Ps_c, Ps_s)])
@@ -550,9 +577,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # Correlation functions
     """
 
-    xi2 = np.zeros((M_bin_min.size, radius_range_3d.size))
+    xi2 = np.zeros((M_bin_min.size, rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
-        xi2[i] = power_to_corr_ogata(P_inter[i], radius_range_3d)
+        xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
         #xi2[xi2 <= 0.0] = np.nan
         #xi2[i,:] = fill_nan(xi2[i,:])
 
@@ -560,8 +587,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # Projected surface density
     """
 
-    sur_den2 = np.array([sigma(xi2_i, rho_mean, radius_range_3d,
-                               radius_range_3d_i)
+    sur_den2 = np.array([sigma(xi2_i, rho_mean, rvir_range_3d,
+                               rvir_range_3d_i)
                          for xi2_i in izip(xi2)])
     for i in xrange(M_bin_min.size):
         sur_den2[i][sur_den2[i] <= 0.0] = np.nan
@@ -576,24 +603,24 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #NFW_d_sigma_av = (rho_dm/rho_mean) * \
                       #np.array([av_delta_NFW(hmf.dndm, z, rho_mean, pop_c_i,
                                              #mass_range,
-                                             #radius_range_2d_i) / 1e12
+                                             #rvir_range_2d_i) / 1e12
                                 #for pop_c_i in izip(pop_c)])
 
     d_sur_den2 = np.array([np.nan_to_num(d_sigma(sur_den2_i,
-                                                 radius_range_3d_i,
-                                                 radius_range_2d_i))
+                                                 rvir_range_3d_i,
+                                                 rvir_range_2d_i))
                            for sur_den2_i in izip(sur_den2)]) / 1e12
     #for i in xrange(len(M_bin_min)):
         #d_sur_den2[i][d_sur_den2[i] <= 0.0] = np.nan
         #d_sur_den2[i][d_sur_den2[i] >= 10.0**20.0] = np.nan
         #d_sur_den2[i] = fill_nan(d_sur_den2[i])
 
-    out_esd_tot =np.array([UnivariateSpline(radius_range_2d_i,
+    out_esd_tot =np.array([UnivariateSpline(rvir_range_2d_i,
                                             np.nan_to_num(d_sur_den2_i), s=0)
                            for d_sur_den2_i in izip(d_sur_den2)])
-    out_esd_tot_inter = np.zeros((M_bin_min.size, radius_range_2d_i.size))
+    out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
     for i in xrange(M_bin_min.size):
-        out_esd_tot_inter[i] = out_esd_tot[i](radius_range_2d_i)
+        out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
 
     #print np.nan_to_num(out_esd_tot_inter)
     #print effective_mass

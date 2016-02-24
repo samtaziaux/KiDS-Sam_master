@@ -446,6 +446,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
+    # FT of the NFW profile
+    u_k = NFW_f(z, rho_dm, f, mass_range, rvir_range_lin, k_range_lin)
+    u_k = u_k / u_k[0]
 
     # Galaxy - dark matter spectra
     to = time()
@@ -454,6 +457,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for ngal_i, pop_g_i in _izip(ngal, pop_g)])
     print 'TwoHalo =', time() - to
     if taylor_procedure or include_baryons:
+        print 'spectrum'
         if centrals:
             to = time()
             Pg_c = F_k1 * _array([GM_cen_spectrum(hmf, z, rho_dm, rho_mean,
@@ -481,25 +485,20 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         else:
             Pg_s = np.zeros((n_bins_obs,n_bins))
     else:
+        print 'analytic'
         if centrals:
             to = time()
-            Pg_c = F_k1 * _array([GM_cen_analy(hmf, z, rho_dm, rho_mean, f,
-                                               expansion, pop_c_i, ngal_i,
-                                               k_range_lin, rvir_range_lin,
-                                               mass_range, T_dm_i, T_tot_i)
-                                  for pop_c_i, ngal_i, T_dm_i, T_tot_i
-                                  in _izip(pop_c, ngal, T_dm, T_tot)])
+            Pg_c = F_k1 * _array([GM_cen_analy(hmf, u_k, rho_dm, pop_c_i,
+                                               ngal_i, mass_range)
+                                  for pop_c_i, ngal_i in _izip(pop_c, ngal)])
             print 'Pg_c =', time() - to
         else:
             Pg_c = np.zeros((n_bins_obs,n_bins))
         if satellites:
             to = time()
-            Pg_s = F_k1 * _array([GM_sat_analy(hmf, z, rho_dm, rho_mean, f,
-                                               expansion, pop_s_i, ngal_i,
-                                               k_range_lin, rvir_range_lin,
-                                               mass_range, T_dm_i, T_tot_i)
-                                  for pop_s_i, ngal_i, T_dm_i, T_tot_i
-                                  in _izip(pop_s, ngal, T_dm, T_tot)])
+            Pg_s = F_k1 * _array([GM_sat_analy(hmf, u_k, rho_dm, pop_s_i,
+                                               ngal_i, mass_range)
+                                  for pop_s_i, ngal_i in _izip(pop_s, ngal)])
             print 'Pg_s =', time() - to
         else:
             Pg_s = np.zeros((n_bins_obs,n_bins))

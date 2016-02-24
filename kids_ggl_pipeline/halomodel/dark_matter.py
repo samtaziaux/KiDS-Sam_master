@@ -156,31 +156,23 @@ def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 # Spectrum components for dark matter.
 """
 
-def GM_cen_analy(mass_func, z, rho_dm, rho_mean, f, n, population, ngal, k_x, r_x, m_x, T, T_tot):
-
+def GM_cen_analy(mass_func, u_k, rho_dm, population, ngal, k_x, m_x):
     spec = np.ones(k_x.size)
-    integ = np.ones((k_x.size,m_x.size))
-    u_k = NFW_f(z, rho_dm, f, m_x, r_x, k_x)
-    for i in xrange(k_x.size):
-        integ[i,:] = mass_func.dndlnm * population * u_k[i,:]/(u_k[0,:])
-        spec[i] = Integrate(integ[i,:], m_x)
-
-    spec_out = spec/(rho_dm*ngal)
-    return spec_out
+    integrand = mass_func.dndlnm * population * u_k
+    for i, integ in enumerate(integrand):
+        #spec[i] = Integrate(integ, m_x)
+        spec[i] = trapz(integ, m_x)
+    return spec / (rho_dm*ngal)
 
 
-def GM_sat_analy(mass_func, z, rho_dm, rho_mean, f, n, population, ngal, k_x, r_x, m_x, T, T_tot):
-
+def GM_sat_analy(mass_func, u_k, rho_dm, population, ngal, k_x, m_x):
+    print population.shape, k_x.shape, u_k.shape
     spec = np.ones(k_x.size)
-    integ = np.ones((k_x.size,m_x.size))
-    u_k = NFW_f(z, rho_dm, f, m_x, r_x, k_x)
-    for i in xrange(k_x.size):
-        integ[i,:] = mass_func.dndlnm * population * (u_k[i,:]**2.0)/(u_k[0,:]**2.0)
-        spec[i] = Integrate(integ[i,:], m_x)
-
-    spec_out = spec/(rho_dm*ngal)
-
-    return spec_out
+    integrand = mass_func.dndlnm * population * u_k**2
+    for i, integ in enumerate(integrand):
+        #spec[i] = Integrate(integ, m_x)
+        spec[i] = trapz(integ, m_x)
+    return spec / (rho_dm*ngal)
 
 
 def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):

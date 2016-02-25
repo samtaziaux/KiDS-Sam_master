@@ -24,10 +24,12 @@
 import time
 import numpy as np
 import matplotlib.pyplot as pl
+from numpy import cos, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
-from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, virial_mass, virial_radius
+from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, \
+                  virial_mass, virial_radius
 
 
 """
@@ -62,27 +64,24 @@ def NFW_Dc(delta_h, c):
 
 # Fourier transform of NFW profile - analytic!
 
-def NFW_f(z, rho_mean, f, m_x, r_x, k_x):
-
-    if len(m_x.shape) == 0:
-        m_x = np.array([m_x])
-        r_x = np.array([r_x])
-
-    u_k = np.zeros((len(k_x), len(m_x)))
-
-
-    for i in range(len(m_x)):
-        c = Con(z, m_x[i], f)
-        r_s = NFW_RS(c, r_x[i])
-
+def NFW_f(z, rho_mean, f, m_x, r_x, k_x, c=None):
+    #if len(m_x.shape) == 0:
+        #m_x = np.array([m_x])
+        #r_x = np.array([r_x])
+    u_k = np.zeros((k_x.size,m_x.size))
+    if c is None:
+        c = Con(z, m_x, f)
+    else:
+        c = c * np.ones(m_x.size)
+    for i in xrange(m_x.size):
+        r_s = NFW_RS(c[i], r_x[i])
         K = k_x*r_s
-
         bs, bc = sp.sici(K)
-        asi, ac = sp.sici((1.0 + c) * K)
-
-        u_k[:,i] = 4.0*np.pi*rho_mean*NFW_Dc(200.0, c)*(r_s**3.0) * ((np.sin(K) * (asi - bs)) - (np.sin(c * K) / ((1.0 + c) * K)) + (np.cos(K) * (ac - bc)))/m_x[i]
-
-
+        asi, ac = sp.sici((1+c[i]) * K)
+        u_k[:,i] = 4 * pi * rho_mean * NFW_Dc(200.0, c[i]) * r_s**3 * \
+                   ((sin(K) * (asi - bs)) - \
+                    (sin(c[i]*K) / ((1.0 + c[i]) * K)) + \
+                    (cos(K) * (ac - bc))) / m_x[i]
     return u_k
 
 
@@ -160,8 +159,8 @@ def GM_cen_analy(mass_func, u_k, rho_dm, population, ngal, m_x):
     return trapz(mass_func.dndlnm * population * u_k,
                  m_x, axis=1) / (rho_dm*ngal)
 
-def GM_sat_analy(mass_func, u_k, rho_dm, population, ngal, m_x):
-    return trapz(mass_func.dndlnm * population * u_k**2,
+def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
+    return trapz(mass_func.dndlnm * population * uk_m * uk_s,
                  m_x, axis=1) / (rho_dm*ngal)
 
 
@@ -237,19 +236,13 @@ def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_
         T[i,:] = T_n(i, rho_mean, z, m_x, r_x)
     """
     norm = 1.0/(T_tot[0,:])
-
-    for k in range(0, n/2, 1):
-
+    for k in xrange(n/2):
         integ[k,:] = norm*(population*mass_func.dndlnm*T[k,:])/(rho_dm*ngal)
         comp[k,:] = Integrate(integ[k,:], m_x) * (k_x**(k*2.0)) * (-1.0)**(k)
-
     spec = np.sum(comp, axis=0)
     spec[spec >= 10.0**10.0] = np.nan
     spec[spec <= 0.0] = np.nan
-
     spec_ext = extrap1d(np.float64(k_x), np.float64(spec), 0.001, 3)#0.001,3
-
-
     return spec_ext
 
 

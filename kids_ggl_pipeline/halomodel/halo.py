@@ -31,7 +31,7 @@ import mpmath as mp
 import longdouble_utils as ld
 import matplotlib.pyplot as pl
 import scipy
-from numpy import arange, array, exp, logspace
+from numpy import arange, array, exp, logspace, ones
 from scipy import special as sp
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -182,8 +182,8 @@ def T_table_multi(n, rho_mean, z, m_x, r_x, h_mass, profile, f,
         work = multi.Process(target=multi_proc_T, args=((j*chunk),
                                 ((j+1)*chunk), q1, n, rho_mean, z, m_x, r_x,
                                 h_mass, profile, f, omegab, omegac, slope,
-                                r_char, sigma, alpha, A, M_1, gamma_1, gamma_2,
-                                b_0, b_1, b_2))
+                                r_char, sigma, alpha, A, M_1,
+                                gamma_1, gamma_2, b_0, b_1, b_2))
         procs.append(work)
         work.start()
     result = array([]).reshape(0, len(m_x)+1)
@@ -292,6 +292,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
           M_min=5., M_max=16., M_bins=100, lnk_min=-13., lnk_max=17.):
     np.seterr(divide='ignore', over='ignore', under='ignore',
               invalid='ignore')
+    # making them local doesn't seem to make any difference
+    # but keeping for now
     _array = array
     _izip = izip
     _logspace = logspace
@@ -309,16 +311,17 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     k_range = arange(lnk_min, lnk_max, k_step)
     k_range_lin = exp(k_range)
     mass_range = _logspace(M_min, M_max, M_bins)
+    concentration = Con(z, mass_range, f)
     n_bins_obs = len(M_bin_min)
     print 'mass_range =', time() - to
 
     to = time()
     hod_mass = _array([_logspace(Mi, Mx, 100, endpoint=False,
-                                     dtype=np.longdouble)
-                         for Mi, Mx in _izip(M_bin_min, M_bin_max)])
+                                 dtype=np.longdouble)
+                       for Mi, Mx in _izip(M_bin_min, M_bin_max)])
     print 'hod_mass =', time() - to
-    r_t0 = r_t0*np.ones(100)
-    r_c0 = r_c0*np.ones(100)
+    r_t0 = r_t0 * ones(100)
+    r_c0 = r_c0 * ones(100)
 
     cosmology_params = {"sigma_8": 0.80, "H0": 70.0,"omegab_h2": 0.022,
                         "omegam": 0.3, "omegav": 0.7, "n": 0.96,
@@ -447,8 +450,13 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
     # Fourier Transform of the NFW profile
-    u_k = NFW_f(z, rho_dm, f, mass_range, rvir_range_lin, k_range_lin)
+    u_k = NFW_f(z, rho_dm, f, mass_range, rvir_range_lin, k_range_lin,
+                c=concentration)
     u_k = u_k/u_k[0]
+    # and of the NFW profile of the satellites
+    #uk_s = NFW_f(z, rho_dm, 1, mass_range, rvir_range_lin, k_range_lin, c=2)
+    #uk_s = uk_s/uk_s[0]
+    uk_s = u_k
 
     # Galaxy - dark matter spectra
     to = time()
@@ -496,8 +504,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
             Pg_c = np.zeros((n_bins_obs,n_bins))
         if satellites:
             to = time()
-            Pg_s = F_k1 * _array([GM_sat_analy(hmf, u_k, rho_dm, pop_s_i,
-                                               ngal_i, mass_range)
+            Pg_s = F_k1 * _array([GM_sat_analy(hmf, u_k, uk_s, rho_dm,
+                                               pop_s_i, ngal_i, mass_range)
                                   for pop_s_i, ngal_i in _izip(pop_s, ngal)])
             print 'Pg_s =', time() - to
         else:

@@ -46,7 +46,8 @@ def comoving(z,Om,Ol,h):
 
     return Dc
 
-def Da_Edo(z_low,z_high, POmega_L=0.73, POmega_M=0.27, POmega_R=0., POmega_K=0., Ph=0.7, Pw=-1., Niter=10000):
+def Da_Edo(z_low,z_high, POmega_L=0.73, POmega_M=0.27, POmega_R=0., \
+           POmega_K=0., Ph=0.7, Pw=-1., Niter=10000):
 
     Pc = 299792.458
 

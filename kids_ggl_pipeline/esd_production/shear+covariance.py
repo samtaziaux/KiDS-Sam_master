@@ -13,6 +13,7 @@ import sys
 import os
 import time
 import multiprocessing as multi
+import sharedmem
 
 from astropy import constants as const, units as u
 import memory_test as memory
@@ -34,9 +35,9 @@ def loop_multi(Nsplit, output, outputnames, gamacat, centering, \
     q1 = multi.Queue()
     procs = []
     #chunk = int(np.ceil(len(R)/float(nprocs)))
-        
+    
     for j in xrange(Nsplit):
-            
+    
         work = multi.Process(target=loop, args=(j, output, outputnames, \
                                                 gamacat, centering, \
                                                 lens_selection, lens_binning, \
@@ -44,13 +45,13 @@ def loop_multi(Nsplit, output, outputnames, gamacat, centering, \
                                                 binmax, filename_var))
         procs.append(work)
         work.start()
-   
+
     return
 
 def loop(Nsplit, output, outputnames, gamacat, centering, \
          lens_selection, lens_binning, binname, binnum, \
          binmin, binmax, filename_var):
-
+    
     if 'catalog' in purpose:
         # These lists will contain the final output
         outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', \
@@ -67,7 +68,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                        'bias_m_A', 'bias_m_B', 'bias_m_C', 'bias_m_D']
                        
         output = np.zeros([len(outputnames), len(galIDlist), nRbins])
-
+    
     # Start of the reduction of one KiDS field
     kidscatN = 0
     

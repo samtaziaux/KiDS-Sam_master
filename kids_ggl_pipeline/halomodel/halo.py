@@ -332,7 +332,6 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #to = time()
     hmf = Mass_Function(M_min, M_max, M_step, "Tinker10", **cosmology_params)
     #print 'mass function =', time() - to
-    print fc_nsat, alpha_s, b_0, b_1, M_min, M_max, hmf.dndm.shape
 
     omegab = hmf.omegab
     omegac = hmf.omegac

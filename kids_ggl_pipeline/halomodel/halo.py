@@ -217,7 +217,7 @@ def T_table(n, rho_mean, z, m_x, r_x, h_mass, profile, f, omegab, omegac,
     return T
 
 
-def n_gal(z, mass_func, population, m_x, r_x):
+def n_gal(mass_func, population, m_x):
     """
     Calculates average number of galaxies!
 
@@ -225,6 +225,7 @@ def n_gal(z, mass_func, population, m_x, r_x):
     #integrand = mass_func.dndm*population
     #n =  Integrate(integrand, m_x)
     #return n
+    print mass_func.dndm.shape, population.shape, m_x.shape
     return trapz(mass_func.dndm * population, m_x)
 
 
@@ -389,8 +390,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     pop_g = pop_c + pop_s
 
     #to = time()
-    ngal = _array([n_gal(z, hmf, pop_g_i , mass_range, rvir_range_lin)
-                   for pop_g_i in _izip(pop_g)])
+    ngal = _array([n_gal(hmf, pop_g_i , mass_range)
+                   for pop_g_i in pop_g])
     #print 'ngal =', time() - to
 
     #to = time()

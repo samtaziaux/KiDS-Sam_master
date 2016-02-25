@@ -297,7 +297,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     _logspace = logspace
 
     # Setting parameters from config file
-    z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, \
+    z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, Ac2s, \
         alpha_star, beta_gas, r_t0, r_c0, M_bin_min, M_bin_max, \
         centrals, satellites, taylor_procedure, include_baryons, \
         smth1, smth2 = theta
@@ -376,7 +376,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     to = time()
     if satellites:
         pop_s = _array([nsm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
-                            gamma_1, gamma_2, b_0, b_1, b_2)
+                            gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
                         for i in _izip(hod_mass)])
     else:
         pop_s = np.zeros(hod_mass.shape)
@@ -446,9 +446,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
-    # FT of the NFW profile
+    # Fourier Transform of the NFW profile
     u_k = NFW_f(z, rho_dm, f, mass_range, rvir_range_lin, k_range_lin)
-    u_k = u_k / u_k[0]
+    u_k = u_k/u_k[0]
 
     # Galaxy - dark matter spectra
     to = time()

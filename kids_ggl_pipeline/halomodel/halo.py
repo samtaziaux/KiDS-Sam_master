@@ -300,8 +300,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     # Setting parameters from config file
     z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
-        alpha_s, b_0, b_1, b_2, Ac2s, \
-        fc_sat, alpha_star, beta_gas, r_t0, r_c0, \
+        fc_sat, alpha_s, b_0, b_1, b_2, Ac2s, \
+        alpha_star, beta_gas, r_t0, r_c0, \
         M_min, M_max, M_bins, M_bin_min, M_bin_max, \
         centrals, satellites, taylor_procedure, include_baryons, \
         smth1, smth2 = theta

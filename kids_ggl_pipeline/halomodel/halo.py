@@ -51,6 +51,8 @@ from dark_matter import NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, \
                         GM_cen_analy, GM_sat_analy
 from cmf import *
 
+import pylab
+
 
 """
 #-------- Declaring functions ----------
@@ -294,13 +296,11 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     _izip = izip
     _logspace = logspace
 
-    to = time()
     # Setting parameters from config file
     z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, \
         alpha_star, beta_gas, r_t0, r_c0, M_bin_min, M_bin_max, \
         centrals, satellites, taylor_procedure, include_baryons, \
         smth1, smth2 = theta
-    print 'theta =', time() - to
 
     to = time()
     # HMF set up parameters - for now fixed and not setable from config file.
@@ -609,21 +609,26 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     """
 
     to = time()
-    xi2 = np.zeros((M_bin_min.size, rvir_range_3d.size))
+    xi2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
         #xi2[xi2 <= 0.0] = np.nan
         #xi2[i,:] = fill_nan(xi2[i,:])
     print 'xi2 =', time() - to
+    #for i in xrange(len(xi2)):
+        #pylab.plot(rvir_range_3d, xi2[i], '-', label=i)
+    ##pylab.legend()
+    #pylab.xscale('log')
+    #pylab.yscale('log')
+    #pylab.show()
 
     """
     # Projected surface density
     """
 
     to = time()
-    sur_den2 = _array([sigma(xi2_i, rho_mean, rvir_range_3d,
-                               rvir_range_3d_i)
-                         for xi2_i in _izip(xi2)])
+    sur_den2 = _array([sigma(xi2_i, rho_mean, rvir_range_3d, rvir_range_3d_i)
+                       for xi2_i in xi2])
     for i in xrange(M_bin_min.size):
         #sur_den2[i][sur_den2[i] <= 0.0] = np.nan
         #sur_den2[i][sur_den2[i] >= 1e20] = np.nan

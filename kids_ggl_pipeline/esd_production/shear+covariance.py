@@ -657,7 +657,7 @@ if __name__ == '__main__':
 
     output = 0
     outputnames = 0
-    
+                          
     # Split up the list of KiDS fields, for parallel obsbins
     splitkidscats = np.array(shear.split(kidscats, Nsplits))
     

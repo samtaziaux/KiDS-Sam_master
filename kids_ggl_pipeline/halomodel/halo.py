@@ -456,7 +456,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                 c=concentration)
     u_k = u_k/u_k[0]
     # and of the NFW profile of the satellites
-    print fc_nsat
+    #print fc_nsat
     uk_s = NFW_f(z, rho_dm, fc_nsat, mass_range, rvir_range_lin, k_range_lin)
     uk_s = uk_s/uk_s[0]
     #uk_s = u_k

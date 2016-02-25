@@ -299,8 +299,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     _logspace = logspace
 
     # Setting parameters from config file
-    z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2, Ac2s, \
-        alpha_star, beta_gas, r_t0, r_c0, \
+    z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
+        alpha_s, b_0, b_1, b_2, Ac2s, \
+        fc_sat, alpha_star, beta_gas, r_t0, r_c0, \
         M_min, M_max, M_bins, M_bin_min, M_bin_max, \
         centrals, satellites, taylor_procedure, include_baryons, \
         smth1, smth2 = theta
@@ -455,7 +456,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                 c=concentration)
     u_k = u_k/u_k[0]
     # and of the NFW profile of the satellites
-    uk_s = NFW_f(z, rho_dm, 1, mass_range, rvir_range_lin, k_range_lin, c=2)
+    print fc_sat
+    uk_s = NFW_f(z, rho_dm, fc_sat, mass_range, rvir_range_lin, k_range_lin)
     uk_s = uk_s/uk_s[0]
     #uk_s = u_k
 

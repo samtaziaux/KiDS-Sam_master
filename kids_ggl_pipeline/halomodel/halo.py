@@ -204,14 +204,14 @@ def T_table(n, rho_mean, z, m_x, r_x, h_mass, profile, f, omegab, omegac,
 
     """
     n = n+2
-    T = np.ones((n/2, len(m_x)))
+    T = np.ones((n/2,m_x.size))
     #widgets = ['Calculating T: ', Percentage(), ' ',
                 #Bar(marker='-',left='[',right=']'), ' ', ETA()]
     #pbar = ProgressBar(widgets=widgets, maxval=n/2).start()
-    for i in xrange(0, n/2, 1):
-        T[i,:] = T_n(i, rho_mean, z, m_x, r_x, h_mass, profile, f, omegab,
-                     omegac, slope, r_char, sigma, alpha, A, M_1, gamma_1,
-                     gamma_2, b_0, b_1, b_2)
+    for i in xrange(n/2):
+        T[i] = T_n(i, rho_mean, z, m_x, r_x, h_mass, profile, f, omegab,
+                   omegac, slope, r_char, sigma, alpha, A, M_1, gamma_1,
+                   gamma_2, b_0, b_1, b_2)
         #pbar.update(i+1)
     #pbar.finish()
     return T
@@ -222,10 +222,7 @@ def n_gal(mass_func, population, m_x):
     Calculates average number of galaxies!
 
     """
-    #integrand = mass_func.dndm*population
-    #n =  Integrate(integrand, m_x)
-    #return n
-    print mass_func.dndm.shape, population.shape, m_x.shape
+    #print mass_func.dndm.shape, population.shape, m_x.shape
     return trapz(mass_func.dndm * population, m_x)
 
 
@@ -265,7 +262,7 @@ def Bias_Tinker10(hmf, r_x):
     b = 1.5
     C = 0.019 + 0.107 * y + 0.19 * exp(-(4 / y) ** 4)
     c = 2.4
-    # print y, A, a, B, b, C, c
+    #print y, A, a, B, b, C, c
     return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
 
 
@@ -303,17 +300,16 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
         fc_nsat, alpha_s, b_0, b_1, b_2, Ac2s, \
         alpha_star, beta_gas, r_t0, r_c0, \
-        M_min, M_max, M_bins, M_bin_min, M_bin_max, \
+        M_min, M_max, M_step, M_bin_min, M_bin_max, \
         centrals, satellites, taylor_procedure, include_baryons, \
         smth1, smth2 = theta
 
     #to = time()
-    # HMF set up parameters - for now fixed and not setable from config file.
-    step = (M_max - M_min) / M_bins
-    k_step = (lnk_max-lnk_min)/n_bins
+    # HMF set up parameters
+    k_step = (lnk_max-lnk_min) / n_bins
     k_range = arange(lnk_min, lnk_max, k_step)
     k_range_lin = exp(k_range)
-    mass_range = _logspace(M_min, M_max, M_bins)
+    mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step)+1)
     concentration = Con(z, mass_range, f)
     n_bins_obs = len(M_bin_min)
     #print 'mass_range =', time() - to
@@ -334,8 +330,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # Calculation
     # Tinker10 should also be read from theta!
     #to = time()
-    hmf = Mass_Function(M_min, M_max, step, "Tinker10", **cosmology_params)
+    hmf = Mass_Function(M_min, M_max, M_step, "Tinker10", **cosmology_params)
     #print 'mass function =', time() - to
+    print fc_nsat, alpha_s, b_0, b_1, M_min, M_max, hmf.dndm.shape
 
     omegab = hmf.omegab
     omegac = hmf.omegac

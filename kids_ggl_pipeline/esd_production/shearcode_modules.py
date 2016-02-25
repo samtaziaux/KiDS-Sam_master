@@ -444,8 +444,6 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
 
     galIDlist = gamacat['ID'] # IDs of all galaxies
-#    except KeyError:
-#        galIDlist = gamacat['CATAID']
     
     if centering == 'Cen':
         galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)
@@ -512,7 +510,7 @@ def run_kidscoord(path_kidscats, cat_version):
         # of the KiDS catalogues with their RA and DEC
         kidscoord = dict()
 
-        for i in range(len(kidscatlist)):
+        for i in xrange(len(kidscatlist)):
             # Of the KiDS file names, keep only "KIDS_RA_DEC"
 
             kidscatstring = kidscatlist[i].split('_',3)
@@ -543,7 +541,7 @@ def run_kidscoord(path_kidscats, cat_version):
             #print x
             #print kidscatname
 
-            for i in range(len(kidscatlist2)):
+            for i in xrange(len(kidscatlist2)):
                 # Of the KiDS file names, keep only "KIDS_RA_DEC"
     
                 kidscatstring = kidscatlist2[i].split('_',3)
@@ -666,7 +664,7 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
     newseq = []
     splitsize = len(seq)/size
 
-    for i in range(size-1):
+    for i in xrange(size-1):
         newseq.append(seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
     newseq.append(seq[int(round((size-1)*splitsize)):len(seq)])
 

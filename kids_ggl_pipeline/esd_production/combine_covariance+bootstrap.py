@@ -346,10 +346,10 @@ def main():
                               variance, blindcatnum, \
                               galIDs_matched, galIDs_matched_infield)
 
-        for N1 in range(Nobsbins):
-            for N2 in range(Nobsbins):
-                for R1 in range(nRbins):
-                    for R2 in range(nRbins):
+        for N1 in xrange(Nobsbins):
+            for N2 in xrange(Nobsbins):
+                for R1 in xrange(nRbins):
+                    for R2 in xrange(nRbins):
                         cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/(wk2[N1,R1]*wk2[N2,R2])
                         # The covariance matrix
 
@@ -364,10 +364,10 @@ def main():
     with open(filenamecov, 'a') as file:
 
         # Calculating the correlation
-        for N1 in range(Nobsbins):
-            for N2 in range(Nobsbins):
-                for R1 in range(nRbins):
-                    for R2 in range(nRbins):
+        for N1 in xrange(Nobsbins):
+            for N2 in xrange(Nobsbins):
+                for R1 in xrange(nRbins):
+                    for R2 in xrange(nRbins):
                         
                         radius1[N1,N2,R1,R2] = Rcenters[R1]
                         radius2[N1,N2,R1,R2] = Rcenters[R2]

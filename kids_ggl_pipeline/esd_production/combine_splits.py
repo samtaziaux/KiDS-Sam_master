@@ -134,7 +134,7 @@ def main():
 
     # Adding all the columns that need to be stacked
 
-    for col in range(len(columns)):
+    for col in xrange(len(columns)):
         sumcol = 0
         print 'Combining:', columns[col]
 

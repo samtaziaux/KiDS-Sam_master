@@ -63,10 +63,14 @@ hm_param          gamma_2         fixed     0.254
 
 # Parameters for HOD - satellites
 
+# normalization of the mass-concentration relation for the radial distribution of satellites
+hm_param          fc_nsat         uniform    0.2   5.0      0.5
 hm_param          alpha_s         fixed     -1.18
 hm_param          b_0             fixed     -1.17
 hm_param          b_1             fixed     1.53
 hm_param          b_2             fixed     -0.217
+# conversion from the characteristic stellar mass of centrals to that of satellites
+hm_param          Ac2s            fixed     0.56
 
 # Parameters used when incorporating baryons in halo model. Values and usage as in paper from Fedeli, 2014 (http://arxiv.org/abs/1401.2997).
 
@@ -77,18 +81,22 @@ hm_param          r_c0            fixed     0.05
 
 
 # Luminosity or stellar mass bins. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
-# !!! Number of bins can be changed, but that also needs to be in the halo model output below as well they should be joined together as presented (for details see the main config file) !!!
 
+hm_param          logM_min           uniform   13.5     14.5    14.0
+hm_param          logM_max           uniform   14.5     16.0    15.5
+hm_param          logM_step          fixed     0.01
 hm_params         logM_bin_min       fixed     9.0,9.5,10.0,10.5
 hm_params         logM_bin_max       fixed     9.5,10.0,10.5,11.0
 
 
-# Extra boolean parameters that either switch calculation of halo model between analytical evaluation or using the Taylor series expansion (Mohammed & Seljak, 2014 - http://arxiv.org/abs/1407.0060),
-# and incorporation of baryons in the calculation. This works, but the outputs are still dark matter only using analytic prescription. That will be made more general, until then
-# the code needs to be changed manually.
-# Values are either 0 or 1.
+# Extra boolean parameters. Values are either 0 or 1.
 
+# whether to use centrals and/or satellites
+hm_param          centrals           fixed     1
+hm_param          satellites         fixed     1
+# Switch calculation of halo model between analytical evaluation or using the Taylor series expansion (Mohammed & Seljak, 2014 - http://arxiv.org/abs/1407.0060),
 hm_param          taylor_procedure fixed      0
+# and incorporation of baryons in the calculation. This works, but the outputs are still dark matter only using analytic prescription. That will be made more general, until then code needs to be changed manually
 hm_param          include_baryons  fixed      0
 
 

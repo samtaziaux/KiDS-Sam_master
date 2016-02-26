@@ -320,8 +320,6 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                  dtype=np.longdouble)
                        for Mi, Mx in _izip(M_bin_min, M_bin_max)])
     #print 'hod_mass =', time() - to
-    r_t0 = r_t0 * ones(100)
-    r_c0 = r_c0 * ones(100)
 
     cosmology_params = {"sigma_8": 0.80, "H0": 70.0,"omegab_h2": 0.022,
                         "omegam": 0.3, "omegav": 0.7, "n": 0.96,
@@ -345,6 +343,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     rho_dm = rho_mean * baryons.f_dm(omegab, omegac)
 
     if include_baryons:
+        r_t0 = r_t0 * ones(mass_range.size)
+        r_c0 = r_c0 * ones(mass_range.size)
         #to = time()
         #rho_dm = baryons.rhoDM(hmf, mass_range, omegab, omegac)
         rho_stars = _array([baryons.rhoSTARS(hmf, i[0], mass_range,

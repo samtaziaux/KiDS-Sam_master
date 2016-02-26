@@ -155,8 +155,8 @@ def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 # Spectrum components for dark matter.
 """
 
-def GM_cen_analy(mass_func, u_k, rho_dm, population, ngal, m_x):
-    return trapz(mass_func.dndlnm * population * u_k,
+def GM_cen_analy(mass_func, uk, rho_dm, population, ngal, m_x):
+    return trapz(mass_func.dndlnm * population * uk,
                  m_x, axis=1) / (rho_dm*ngal)
 
 def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
@@ -240,8 +240,7 @@ def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_
         integ[k,:] = norm*(population*mass_func.dndlnm*T[k,:])/(rho_dm*ngal)
         comp[k,:] = Integrate(integ[k,:], m_x) * (k_x**(k*2.0)) * (-1.0)**(k)
     spec = np.sum(comp, axis=0)
-    spec[spec >= 10.0**10.0] = np.nan
-    spec[spec <= 0.0] = np.nan
+    spec[(spec >= 1e10) | (spec <= 0.0)] = np.nan
     spec_ext = extrap1d(np.float64(k_x), np.float64(spec), 0.001, 3)#0.001,3
     return spec_ext
 

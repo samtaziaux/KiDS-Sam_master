@@ -309,9 +309,10 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     k_step = (lnk_max-lnk_min) / n_bins
     k_range = arange(lnk_min, lnk_max, k_step)
     k_range_lin = exp(k_range)
-    mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step)+1)
+    #mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step))
+    mass_range = 10**arange(M_min, M_max, M_step)
     concentration = Con(z, mass_range, f)
-    n_bins_obs = len(M_bin_min)
+    n_bins_obs = M_bin_min.size
     #print 'mass_range =', time() - to
 
     #to = time()
@@ -332,7 +333,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #to = time()
     hmf = Mass_Function(M_min, M_max, M_step, "Tinker10", **cosmology_params)
     #print 'mass function =', time() - to
-    print fc_nsat, alpha_s, b_0, b_1, M_min, M_max, hmf.dndm.shape
+    #print fc_nsat, alpha_s, b_0, b_1, M_min, M_max, mass_range.shape, hmf.dndm.shape
 
     omegab = hmf.omegab
     omegac = hmf.omegac

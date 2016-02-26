@@ -55,14 +55,13 @@ from tools import Integrate
 def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
     # Conditional stellar mass function - centrals
     # m - stellar mass, M - halo mass
-
     # FROM OWLS HOD FIT: sigma = 4.192393813649759049e-01
     #sigma = 0.125
-    #if not np.iterable(M):
-        #M = np.array([M])
-        #phi = np.zeros((1,m.size))
-    #else:
-    phi = np.zeros((M.size,m.size))
+    if np.iterable(M):
+        phi = np.zeros((M.size,m.size))
+    else:
+        M = np.array([M])
+        phi = np.zeros((1,m.size))
     Mo = m_0(M, A, M_1, gamma_1, gamma_2)
     for i in xrange(M.size):
         phi[i] = log10(np.e) * exp(-(log10(m/Mo[i])**2) / (2*(sigma**2))) / \
@@ -73,14 +72,12 @@ def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
 def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     # Conditional stellar mass function - satellites
     # m - stellar mass, M - halo mass
-
     #alpha = -2.060096789583814925e+00
-
-    #if not np.iterable(M):
-        #M = np.array([M])
-        #phi = np.zeros((1, len(m)))
-    #else:
-    phi = np.zeros((M.size,m.size))
+    if np.iterable(M):
+        phi = np.zeros((M.size,m.size))
+    else:
+        M = np.array([M])
+        phi = np.zeros((1,m.size))
     Mo = Ac2s * m_0(M, A, M_1, gamma_1, gamma_2)
     for i in xrange(M.size):
         phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * \
@@ -125,19 +122,16 @@ def av_cen(m, M, sigma, A, M_1, gamma_1, gamma_2):
     return phi
 
 
-def av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
-
-    if not np.iterable(M):
-        M = np.array([M])
-
+def av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
+    #if not np.iterable(M):
+        #M = np.array([M])
     phi = np.ones(M.size)
-
-    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
-#Satelites!
+    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2,
+                    b_0, b_1, b_2, Ac2s)
     for i in xrange(M.size):
-        integ = phi_int[i,:]*m
-        phi[i] = Integrate(integ, m)
-
+        #integ = phi_int[i,:]*m
+        #phi[i] = Integrate(integ, m)
+        phi[i] = trapz(phi_int[i] * m, m)
     return phi
 
 

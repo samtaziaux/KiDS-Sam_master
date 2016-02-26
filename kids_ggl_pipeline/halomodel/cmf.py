@@ -84,32 +84,29 @@ def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     Mo = Ac2s * m_0(M, A, M_1, gamma_1, gamma_2)
     for i in xrange(M.size):
         phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * \
-                 np.exp(-(m/Mo[i])**2) / m
+                 exp(-(m/Mo[i])**2) / m
     return phi
 
 
 def phi_t(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     # Sum of phi_c and phi_s
     # m - stellar mass, M - halo mass
-
     phi = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2) + \
           phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
-
     return phi
 
 
-def phi_i(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
+def phi_i(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+          b_0, b_1, b_2):
     # Integrated phi_t!
     # m - stellar mass, M - halo mass
 
-    phi = np.ones(len(m))
-
-    phi_int = phi_t(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2).T
-
-    for i in range(len(m)):
-        integ = phi_int[i,:]*mass_func.dndm
+    phi = np.ones(m.size)
+    phi_int = phi_t(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+                    b_0, b_1, b_2).T
+    for i in xrange(m.size):
+        integ = phi_int[i] * mass_func.dndm
         phi[i] = Integrate(integ, M)
-
     return phi.T
 
 
@@ -118,10 +115,10 @@ def av_cen(m, M, sigma, A, M_1, gamma_1, gamma_2):
     if not np.iterable(M):
         M = np.array([M])
 
-    phi = np.ones(len(M))
+    phi = np.ones(M.size)
 
     phi_int = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2) #Centrals!
-    for i in range(len(M)):
+    for i in xrange(M.size):
         integ = phi_int[i,:]*m
         phi[i] = Integrate(integ, m)
 
@@ -133,10 +130,11 @@ def av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
     if not np.iterable(M):
         M = np.array([M])
 
-    phi = np.ones(len(M))
+    phi = np.ones(M.size)
 
-    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) #Satelites!
-    for i in range(len(M)):
+    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
+#Satelites!
+    for i in xrange(M.size):
         integ = phi_int[i,:]*m
         phi[i] = Integrate(integ, m)
 
@@ -144,19 +142,12 @@ def av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
 
 
 def m_0(M, A, M_1, gamma_1, gamma_2):
-    # Stellar mass as a function of halo mass parametrisation!
-    # Fit as a result in my thesis!
+    """
+    Stellar mass as a function of halo mass
 
-    A = 10.0**A#10.0**(9.125473164494394496e+00)
-    M_1 = 10.0**M_1#10.0**(1.044861151548183820e+01)
-    #gamma_1 = 2.619106875140703838e+00
-    #gamma_2 = 8.256965648888969778e-01
-    # Above values taken from Cacciato 2009, may not be ok!
-
-
-    m_0 = A * ((M/M_1)**(gamma_1))/((1.0 + (M/M_1))**(gamma_1 - gamma_2))
-
-    return m_0
+    """
+    return 10**A * ((M/10**M_1)**(gamma_1)) / \
+          ((1.0 + (M/10**M_1))**(gamma_1 - gamma_2))
 
 
 def phi_0(M, b_0, b_1, b_2):

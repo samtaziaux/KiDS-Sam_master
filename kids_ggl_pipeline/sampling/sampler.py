@@ -49,6 +49,9 @@ def run_emcee(hm_options, sampling_options, args):
 
     #load data files
     Ndatafiles = len(datafile)
+    # need to run this without exclude_bins to throw out invalid values in it
+    R, esd = sampling_utils.load_datapoints(datafile, datacols)
+    exclude_bins = exclude_bins[exclude_bins < esd.shape[1]]
     R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins)
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = xrange(Nobsbins)
@@ -72,6 +75,7 @@ def run_emcee(hm_options, sampling_options, args):
         msg = 'ERROR: Not all starting points defined for free parameters.'
         print msg
         exit()
+    starting[starting == 0] = 1e-3
     print 'starting values =', starting
 
     # identify the function. Raises an AttributeError if not found
@@ -218,6 +222,7 @@ def run_emcee(hm_options, sampling_options, args):
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
         # make sure that nwalkers is a factor of this number!
+        print i, '\n'
         if i*nwalkers % update_freq == nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names, i,
@@ -412,11 +417,6 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])
             chi2[j*nwalkers:(j+1)*nwalkers] = array([b[-2] for b in blob])
             lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
-        columns.append(Column(name='lnprior', format='E', array=lnprior))
-        columns.append(Column(name='lnPderived', format='E',
-                              array=lnPderived))
-        columns.append(Column(name='chi2', format='E', array=chi2))
-        columns.append(Column(name='lnlike', format='E', array=lnlike))
         # this handles exclude_bins properly
         for name, val in izip(meta_names, metadata):
             for name_i, val_i in izip(name, val):
@@ -425,7 +425,12 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                 except IndexError:
                     fmt = 'E'
                 columns.append(Column(name=name_i, array=val_i, format=fmt))
-        nwritten = iternum * nwalkers
+    columns.append(Column(name='lnprior', format='E', array=lnprior))
+    columns.append(Column(name='lnPderived', format='E',
+                            array=lnPderived))
+    columns.append(Column(name='chi2', format='E', array=chi2))
+    columns.append(Column(name='lnlike', format='E', array=lnlike))
+    nwritten = iternum * nwalkers
     fitstbl = BinTableHDU.from_columns(columns)
     fitstbl.writeto(output)
     print 'Saved to {0} with {1} samples'.format(output, iternum*nwalkers),

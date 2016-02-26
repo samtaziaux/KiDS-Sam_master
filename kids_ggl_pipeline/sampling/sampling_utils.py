@@ -3,7 +3,7 @@ import os
 from glob import glob
 #from ConfigParser import SafeConfigParser
 
-def load_datapoints(datafile, datacols, exclude_bins):
+def load_datapoints(datafile, datacols, exclude_bins=None):
     if isinstance(datafile, basestring):
         R, esd = numpy.loadtxt(datafile, usecols=datacols[:2]).T
         # better in Mpc
@@ -32,7 +32,7 @@ def load_datapoints(datafile, datacols, exclude_bins):
     return R, esd
     #return R, numpy.absolute(esd)
 
-def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins):
+def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     cov = numpy.loadtxt(covfile, usecols=[covcols[0]])
     if len(covcols) == 2:
         cov /= numpy.loadtxt(covfile, usecols=[covcols[1]])
@@ -105,7 +105,7 @@ def read_config(config_file, version='0.5.7',
                 msg = 'datacols must have either two or three elements'
                 raise ValueError(msg)
         elif line[0] == 'exclude_bins':
-            exclude_bins = [int(i) for i in line[1].split(',')]
+            exclude_bins = numpy.array([int(i) for i in line[1].split(',')])
         if line[0] == 'path_covariance':
             path_covariance = line[1]
         elif line[0] == 'covariance':

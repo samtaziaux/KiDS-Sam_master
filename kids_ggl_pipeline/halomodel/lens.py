@@ -141,7 +141,7 @@ def power_to_corr_ogata(power_func, R):
     
     h = hankel.SphericalHankelTransform(0,10000,0.00001)
     
-    for i in range(len(result)):
+    for i in xrange(result.size):
         integ = lambda x: np.exp(power_func(np.log(x/R[i]))) * (x**2.0) / (2.0*np.pi**2.0)
         result[i] = h.transform(integ)[0]
     return result/(R**3.0)

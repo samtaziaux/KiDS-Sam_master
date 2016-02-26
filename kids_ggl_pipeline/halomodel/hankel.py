@@ -1,8 +1,8 @@
 '''
 General quadrature method for Hankel transformations.
-Based on the algorithm provided in 
+Based on the algorithm provided in
 H. Ogata, A Numerical Integration Formula Based on the Bessel Functions,
-Publications of the Research Institute for Mathematical Sciences, 
+Publications of the Research Institute for Mathematical Sciences,
 vol. 41, no. 4, pp. 949-970, 2005.
 '''
 
@@ -17,24 +17,24 @@ from scipy.special import j0, j1, jn_zeros, jn, yv, jv
 class HankelTransform(object):
     """
     The basis of the Hankel Transformation algorithm by Ogata 2005.
-    
+
     This algorithm is used to solve the equation :math:`\int_0^\infty f(x) J_\nu(x) dx`
-    where :math:`J_\nu(x)` is a Bessel function of the first kind of order 
+    where :math:`J_\nu(x)` is a Bessel function of the first kind of order
     :math:`nu`, and :math:`f(x)` is an arbitrary (slowly-decaying) function.
-    
-    The algorithm is presented in 
+
+    The algorithm is presented in
     H. Ogata, A Numerical Integration Formula Based on the Bessel Functions,
     Publications of the Research Institute for Mathematical Sciences, vol. 41, no. 4, pp. 949-970, 2005.
-    
+
     Parameters
     ----------
     nu : int or 0.5, optional, default = 0
         The order of the bessel function (of the first kind) J_nu(x)
-    
+
     N : int, optional, default = 100
         The number of nodes in the calculation. Generally this must increase
-        for a smaller value of the step-size h.     
-    
+        for a smaller value of the step-size h.
+
     h : float, optional, default = 0.1
         The step-size of the integration.
     """
@@ -96,35 +96,34 @@ class HankelTransform(object):
     def transform(self, f, ret_err=True, ret_cumsum=False):
         """
         Perform the transform of the function f
-        
+
         Parameters
         ----------
         f : callable
             A function of one variable, representing :math:`f(x)`
-            
+
         ret_err : boolean, optional, default = True
             Whether to return the estimated error
-            
+
         ret_cumsum : boolean, optional, default = False
             Whether to return the cumulative sum
         """
-        fres = self._f(f, self.x)
-        summation = np.pi * self.w * fres * self.j * self.dpsi
-        ret = [np.sum(summation)]
+        #fres = self._f(f, self.x)
+        #summation = np.pi * self.w * fres * self.j * self.dpsi
+        summation = np.pi * self.w * self.j * self.dpsi * self._f(f, self.x)
         if ret_err:
-            ret.append(summation[-1])
+            return [summation.sum(), summation[-1]]
         if ret_cumsum:
-            ret.append(np.cumsum(summation))
-
-        return ret
+            return [summation.sum(), summation.cumsum()]
+        return [summation.sum()]
 
 
 class SphericalHankelTransform(HankelTransform):
     """
     Perform spherical hankel transforms.
-    
+
     Defined as :math:`\int_0^\infty f(x) j_\nu(x) dx
-    
+
     .. Note :: Only does 0th-order transforms currently.
     """
     def __init__(self, nu=0, *args, **kwargs):

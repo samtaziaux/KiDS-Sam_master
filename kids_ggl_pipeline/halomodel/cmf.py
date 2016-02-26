@@ -1,7 +1,9 @@
 import numpy as np
-from tools import Integrate
+from numpy import array, exp, log10, pi
+from scipy.integrate import simps, trapz
 import scipy.special as sp
 
+from tools import Integrate
 
 """
 # Population functions - average number of galaxies (central or satelites or all) in a halo of mass M - from HOD or CLF!
@@ -55,68 +57,56 @@ def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
     # m - stellar mass, M - halo mass
 
     # FROM OWLS HOD FIT: sigma = 4.192393813649759049e-01
-
     #sigma = 0.125
-
-    if not np.iterable(M):
-        M = np.array([M])
-        phi = np.zeros((1, len(m)))
-    else:
-        phi = np.zeros((len(M), len(m)))
-
-    for i in range(len(M)):
-
-        M_0 = m_0(M[i], A, M_1, gamma_1, gamma_2)
-        x = m/M_0
-        phi[i,:] = np.log10(np.e) * np.exp(-(np.log10(x)*np.log10(x))/(2.0*(sigma**2.0)))/(((2.0*np.pi)**0.5)*sigma*m)
-
-
+    #if not np.iterable(M):
+        #M = np.array([M])
+        #phi = np.zeros((1,m.size))
+    #else:
+    phi = np.zeros((M.size,m.size))
+    Mo = m_0(M, A, M_1, gamma_1, gamma_2)
+    for i in xrange(M.size):
+        phi[i] = log10(np.e) * exp(-(log10(m/Mo[i])**2) / (2*(sigma**2))) / \
+                 ((2*pi)**0.5 * sigma * m)
     return phi
 
 
-def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
+def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     # Conditional stellar mass function - satellites
     # m - stellar mass, M - halo mass
 
     #alpha = -2.060096789583814925e+00
 
-    if not np.iterable(M):
-        M = np.array([M])
-        phi = np.zeros((1, len(m)))
-    else:
-        phi = np.zeros((len(M), len(m)))
-
-    for i in range(len(M)):
-
-        M_0 = 0.562 * m_0(M[i], A, M_1, gamma_1, gamma_2)
-        x = m/M_0
-        y = -(x**2.0)
-        phi[i,:] = phi_0(M[i], b_0, b_1, b_2) * ((x)**(alpha + 1.0)) * np.exp(y) / m
-
+    #if not np.iterable(M):
+        #M = np.array([M])
+        #phi = np.zeros((1, len(m)))
+    #else:
+    phi = np.zeros((M.size,m.size))
+    Mo = Ac2s * m_0(M, A, M_1, gamma_1, gamma_2)
+    for i in xrange(M.size):
+        phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * \
+                 exp(-(m/Mo[i])**2) / m
     return phi
 
 
-def phi_t(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
+def phi_t(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     # Sum of phi_c and phi_s
     # m - stellar mass, M - halo mass
-
-    phi = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2) + phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
-
+    phi = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2) + \
+          phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
     return phi
 
 
-def phi_i(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
+def phi_i(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+          b_0, b_1, b_2):
     # Integrated phi_t!
     # m - stellar mass, M - halo mass
-    
-    phi = np.ones(len(m))
-    
-    phi_int = phi_t(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2).T
 
-    for i in range(len(m)):
-        integ = phi_int[i,:]*mass_func.dndm
+    phi = np.ones(m.size)
+    phi_int = phi_t(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+                    b_0, b_1, b_2).T
+    for i in xrange(m.size):
+        integ = phi_int[i] * mass_func.dndm
         phi[i] = Integrate(integ, M)
-
     return phi.T
 
 
@@ -125,10 +115,10 @@ def av_cen(m, M, sigma, A, M_1, gamma_1, gamma_2):
     if not np.iterable(M):
         M = np.array([M])
 
-    phi = np.ones(len(M))
+    phi = np.ones(M.size)
 
     phi_int = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2) #Centrals!
-    for i in range(len(M)):
+    for i in xrange(M.size):
         integ = phi_int[i,:]*m
         phi[i] = Integrate(integ, m)
 
@@ -140,10 +130,11 @@ def av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
     if not np.iterable(M):
         M = np.array([M])
 
-    phi = np.ones(len(M))
+    phi = np.ones(M.size)
 
-    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) #Satelites!
-    for i in range(len(M)):
+    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
+#Satelites!
+    for i in xrange(M.size):
         integ = phi_int[i,:]*m
         phi[i] = Integrate(integ, m)
 
@@ -151,19 +142,12 @@ def av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
 
 
 def m_0(M, A, M_1, gamma_1, gamma_2):
-    # Stellar mass as a function of halo mass parametrisation!
-    # Fit as a result in my thesis!
+    """
+    Stellar mass as a function of halo mass
 
-    A = 10.0**A#10.0**(9.125473164494394496e+00)
-    M_1 = 10.0**M_1#10.0**(1.044861151548183820e+01)
-    #gamma_1 = 2.619106875140703838e+00
-    #gamma_2 = 8.256965648888969778e-01
-    # Above values taken from Cacciato 2009, may not be ok!
-
-
-    m_0 = A * ((M/M_1)**(gamma_1))/((1.0 + (M/M_1))**(gamma_1 - gamma_2))
-
-    return m_0
+    """
+    return 10**A * ((M/10**M_1)**(gamma_1)) / \
+          ((1.0 + (M/10**M_1))**(gamma_1 - gamma_2))
 
 
 def phi_0(M, b_0, b_1, b_2):
@@ -182,46 +166,46 @@ def phi_0(M, b_0, b_1, b_2):
     return phi
 
 
-def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
-    
-    nc = np.ones(len(M))
-    import scipy.integrate as intg
-        
+def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+        b_0, b_1, b_2):
+    nc = np.ones(M.size)
     phi_int = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2)
-        
-    for i in range(len(M)):
-        integ = phi_int[i,:]
-        nc[i] = Integrate(integ, m)
-    
-    # This works, but above more general, for different definition of CLF/CMF.
-    #func = lambda x: 0.5 * (sp.erf((np.log10(x/m_0(M, A, M_1, gamma_1, gamma_2)))/(sigma * (2.0**0.5))))
+    for i in xrange(M.size):
+        nc[i] = Integrate(phi_int[i], m)
+    # This works, but above more general, for different definition of
+    # CLF/CMF.
+    #func = lambda x: 0.5 * (sp.erf((np.log10(x/m_0(M, A, M_1, gamma_1,
+                                                   #gamma_2))) / \
+                                   #(sigma * (2.0**0.5))))
     #nc = (func(m[-1]) - func(m[0]))
-    
     return nc
 
-def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
-    
-    ns = np.ones(len(M))
-        
-    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
-        
-    for i in range(len(M)):
-        integ = phi_int[i,:]
-        ns[i] = Integrate(integ, m)
+def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+        b_0, b_1, b_2, Ac2s):
+    ns = np.ones(M.size)
+    phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2,
+                    b_0, b_1, b_2, Ac2s)
+    for i in xrange(M.size):
+        ns[i] = Integrate(phi_int[i], m)
     #p = phi_0(M, b_0, b_1, b_2)
     #y = 0.562 * m_0(M, A, M_1, gamma_1, gamma_2)
-    
-    # This does not work yet, as gamma function is not propery defined in scipy. It needs some additional lines...
-    #func = lambda x: (-0.5) * p * ((x/y)**(alpha-1.0)) * ((x/y)**(1.0-alpha)) * (sp.gammaincc(np.abs((alpha+1.0)/2.0),((x/y)**2.0))) * sp.gamma(np.abs((alpha+1.0)/2.0))
+
+    # This does not work yet, as gamma function is not propery
+    # defined in scipy. It needs some additional lines...
+    #func = lambda x: (-0.5) * p * ((x/y)**(alpha-1.0)) * \
+                     #((x/y)**(1.0-alpha)) * \
+                     #(sp.gammaincc(np.abs((alpha+1.0)/2.0),((x/y)**2.0))) * \
+                     #sp.gamma(np.abs((alpha+1.0)/2.0))
     #ns = func(m[-1]) - func(m[0])
-    
     return ns
 
 
-def ngm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
-    
-    ng = ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2) + nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
-        
+def ngm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+        b_0, b_1, b_2):
+    ng = ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+             b_0, b_1, b_2) + \
+         nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+             b_0, b_1, b_2)
     return ng
 
 if __name__ == '__main__':

@@ -92,7 +92,7 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 ---
 Update log:
 
-2016 Feb 23 - First release v1.0.0. Features:
+**2016 Feb 23** - First release v1.0.0. Features:
 - Installed with a single command-line, including all dependencies
 - User interaction through a single configuration file
 - ESD production:

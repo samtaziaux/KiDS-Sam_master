@@ -32,9 +32,11 @@ def main():
 
 
     if 'bootstrap' in purpose:
-        print 'Step 4: Combine the bootstrap samples into the ESD profiles and bootstrap covariance matrix'
+        print('Step 4: Combine the bootstrap samples into the ESD '\
+              'profiles and bootstrap covariance matrix')
     else:
-        print 'Step 2: Combine the splits into the ESD profiles and analytical covariance matrix'
+        print('Step 2: Combine the splits into the ESD profiles '\
+              'and analytical covariance matrix')
     print
 
     # Define the list of variables for the output filename
@@ -79,7 +81,8 @@ def main():
 
     galIDlist_matched = np.array([], dtype=np.int32)
     for kidscatname in kidscats:
-        galIDlist_matched = np.append(galIDlist_matched, catmatch[kidscatname][0])
+        galIDlist_matched = np.append(galIDlist_matched, \
+                                      catmatch[kidscatname][0])
     galIDlist_matched = np.unique(galIDlist_matched)
 
     # Binnning information of the groups
@@ -265,9 +268,11 @@ def main():
                     # Calculating the relevant quantities for each field
                     
                     # The tangential shear
-                    gammat[N1] = gammat[N1] + sum(lfweights*(Cs_N1*e1+Ss_N1*e2),0)
+                    gammat[N1] = gammat[N1] + \
+                                    sum(lfweights*(Cs_N1*e1+Ss_N1*e2),0)
                      # The cross shear
-                    gammax[N1] = gammax[N1] + sum(lfweights*(-Ss_N1*e1+Cs_N1*e2),0)
+                    gammax[N1] = gammax[N1] + \
+                                    sum(lfweights*(-Ss_N1*e1+Cs_N1*e2),0)
                     wk2[N1] = wk2[N1] + sum(lfweights*Zs_N1,0)
                     # The total weight (lensfit weight + lensing efficiency)
                     srcm[N1] = srcm[N1] + sum(lfweights*Zs_N1*srcmlists,0)
@@ -313,7 +318,8 @@ def main():
                                     (Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]* \
                                      Ss_N2[:,R2])) # The new covariance matrix
                 else:
-                    print colored('ERROR: Not all fields are analysed! Please restart shear code!', 'red')
+                    print colored('ERROR: Not all fields are analysed! '\
+                                  'Please restart shear code!', 'red')
                     quit()
             
             # Calculating the final output values of the accompanying shear data
@@ -350,7 +356,8 @@ def main():
             for N2 in xrange(Nobsbins):
                 for R1 in xrange(nRbins):
                     for R2 in xrange(nRbins):
-                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/(wk2[N1,R1]*wk2[N2,R2])
+                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/ \
+                                            (wk2[N1,R1]*wk2[N2,R2])
                         # The covariance matrix
 
 

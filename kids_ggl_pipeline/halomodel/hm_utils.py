@@ -1,10 +1,15 @@
 import imp
 import os
 from glob import glob
-from numpy import array, inf, loadtxt
+from numpy import array, inf, iterable, loadtxt
 
-#import sys
-#sys.path.append('halomodel')
+import sys
+sys.path.append(os.getcwd())
+# in the working directory, for custom functions
+try:
+    import models
+except ImportError:
+    pass
 
 # local
 import nfw, nfw_stack, satellites, halo
@@ -13,6 +18,7 @@ import nfw, nfw_stack, satellites, halo
 def read_config(config_file, version='0.5.7'):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
                    'fixed', 'read', 'function')
+    path = ''
     params = []
     param_types = []
     prior_types = []
@@ -37,7 +43,12 @@ def read_config(config_file, version='0.5.7'):
         if line[0] == 'model':
             model = line[1].split('.')
             model = read_function(*model)
-        # also read param names - follow the satellites Early Science function
+        elif line[0] == 'path':
+            if len(line) > 1:
+                path = line[1]
+            else:
+                path = ''
+        # also read param names
         elif line[0] == 'hm_param':
             if line[2] not in valid_types:
                 msg = 'ERROR: Please provide only valid prior types in the'
@@ -53,7 +64,12 @@ def read_config(config_file, version='0.5.7'):
                 val2.append(-1)
             elif line[2] == 'read':
                 filename = line[3]
-                val1.append(loadtxt(filename, usecols=(int(line[4]),)))
+                if path:
+                    filename = filename.replace('<path>', path)
+                v = loadtxt(filename, usecols=(int(line[4]),))
+                if not iterable(v):
+                    v = array([v])
+                val1.append(v)
                 val2.append(-1)
             else:
                 val1.append(float(line[3]))
@@ -149,6 +165,8 @@ def read_function(module, function):
         function = getattr(nfw_stack, function)
     elif module == 'halo':
         function = getattr(halo, function)
+    elif module == 'models':
+        function = getattr(models, function)
     print function
     #pickle.dumps(function)
     #print 'Pickled!'
@@ -159,6 +177,9 @@ def depth(iterable):
                for item in iterable)
 
 def make_array(val):
+    #if numpy.iterable(val):
+        #val = array(val)
+    #else:
     val = array(val)
     for i, v in enumerate(val):
         if len(v) == 1 and depth(v) == 1:

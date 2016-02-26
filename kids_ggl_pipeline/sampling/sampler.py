@@ -417,11 +417,6 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])
             chi2[j*nwalkers:(j+1)*nwalkers] = array([b[-2] for b in blob])
             lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
-        columns.append(Column(name='lnprior', format='E', array=lnprior))
-        columns.append(Column(name='lnPderived', format='E',
-                              array=lnPderived))
-        columns.append(Column(name='chi2', format='E', array=chi2))
-        columns.append(Column(name='lnlike', format='E', array=lnlike))
         # this handles exclude_bins properly
         for name, val in izip(meta_names, metadata):
             for name_i, val_i in izip(name, val):
@@ -430,7 +425,12 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                 except IndexError:
                     fmt = 'E'
                 columns.append(Column(name=name_i, array=val_i, format=fmt))
-        nwritten = iternum * nwalkers
+    columns.append(Column(name='lnprior', format='E', array=lnprior))
+    columns.append(Column(name='lnPderived', format='E',
+                            array=lnPderived))
+    columns.append(Column(name='chi2', format='E', array=chi2))
+    columns.append(Column(name='lnlike', format='E', array=lnlike))
+    nwritten = iternum * nwalkers
     fitstbl = BinTableHDU.from_columns(columns)
     fitstbl.writeto(output)
     print 'Saved to {0} with {1} samples'.format(output, iternum*nwalkers),

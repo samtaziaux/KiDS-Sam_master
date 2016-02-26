@@ -98,7 +98,7 @@ Update log:
 - ESD production:
     - Compatible with both KiDS-450 (Feb 2016) and KiDS-DR2 (Mar 2015)
 - Halo model:
-    - Both an NFW stack and a full halo model (relies on implemented
+    - Both an NFW stack and a full halo model (relies on [hmf](https://github.com/steven-murray/hmf) module for the mass function)
 - MCMC sampling:
     - Uses `emcee` to sample parameters
 

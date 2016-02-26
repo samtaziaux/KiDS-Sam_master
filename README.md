@@ -1,21 +1,6 @@
 # KiDS-GGL
 Galaxy-Galaxy Lensing pipeline production
 
----
-Update log:
-
-2016 Feb 22 - Added compatibility with KiDS-450 catalogue and proper multiprocessing (Andrej Dvornik)
-
-2016 Jan 20 - Added easy_install capability (Cristóbal Sifón)
-
-2015 Nov 3 - Added detail on how to install hmf (Andrej Dvornik)
-
-2015 Sep 25 - Finished a first complete version (Cristóbal Sifón)
-
-2015 Aug 11 - Created but left incomplete (Cristóbal Sifón)
-
----
-
 *This Readme contains all the instructions needed to install, set up and run
 the KiDS galaxy-galaxy lensing pipeline, which takes current KiDS and GAMA
 catalogs and produces (or reads) an ESD and a covariance matrix and runs a
@@ -27,13 +12,20 @@ fitting module (i.e., halo model) with a given sampling technique.*
 **a)** Contact Cristóbal Sifón (sifon@strw.leidenuniv.nl) to become a member
        of the KiDS-WL repository and join the KiDS-GGL team
 
-**b)** From the folder where you want the package to be located, run:
+**b)** Download [the latest stable version of the KiDS-GGL pipeline](https://github.com/KiDS-WL/KiDS-GGL/releases/latest) and unpack,
 
-        git clone git@github.com:KiDS-WL/KiDS-GGL.git
+       cd path/to/kids_ggl_folder
+       tar xvf KiDS-GGL-<version>.tar.gz
 
-**c)** From within the same folder, run
+or, if you chose to download the `.zip` file,
 
-       python setup.py install
+        unzip KiDS-GGL-<version>.zip
+
+where for instance `<version>=1.0.0`.
+
+**c)**From within the same folder, run
+
+        python setup.py install
 
 If you don't have administrator privileges, or simply want to install it in a non-standard place (e.g., your home directory), then type
 
@@ -43,7 +35,7 @@ or
     
         python setup.py install --user
 
-Either of these will install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf==1.7.0` for halo mass function utilities, `mpmath` for mathematical utilities, and `numpy>=1.5.0`.
+Either of these will install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf==1.7.0` for halo mass function utilities, `mpmath>=0.19` for mathematical utilities, and `numpy>=1.5.0`.
 
 **d)** After the setup script has finished, you should have a copy of the `kids_ggl` executable somewhere in your `$PATH`, which means you can run it out-of-the-box from anywhere in your computer. To make sure, type
 
@@ -94,3 +86,20 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 - After running a demo, run an MCMC chain of your model with as few steps as possible to make sure that the output looks the way you want it to look. Fix anything that you can and report any possible bugs.
 - Always check how many cores are available in your machine before running in parallel.
 - **Contribute!**
+ 
+
+
+---
+Update log:
+
+**2016 Feb 23** - First release v1.0.0. Features:
+- Installed with a single command-line, including all dependencies
+- User interaction through a single configuration file
+- ESD production:
+    - Compatible with both KiDS-450 (Feb 2016) and KiDS-DR2 (Mar 2015)
+- Halo model:
+    - Both an NFW stack and a full halo model (relies on [hmf](https://github.com/steven-murray/hmf) module for the mass function)
+- MCMC sampling:
+    - Uses `emcee` to sample parameters
+
+---

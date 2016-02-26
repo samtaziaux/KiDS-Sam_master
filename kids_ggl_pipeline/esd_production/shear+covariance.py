@@ -54,6 +54,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
     
     if 'catalog' in purpose:
         # These lists will contain the final output
+        """
         outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', \
                        'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', \
                        'lfweight_A', 'lfweight_B', 'lfweight_C', 'lfweight_D', \
@@ -66,7 +67,16 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                        'lfweight_A^2*k^2', 'lfweight_B^2*k^2', \
                        'lfweight_C^2*k^2', 'lfweight_D^2*k^2', 'Nsources', \
                        'bias_m_A', 'bias_m_B', 'bias_m_C', 'bias_m_D']
-                       
+        """
+        outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', \
+            'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', \
+            'k', 'k^2', \
+            'lfweight_A*k^2', 'lfweight_B*k^2', 'lfweight_C*k^2', \
+            'lfweight_D*k^2', \
+            'lfweight_A^2*k^2', 'lfweight_B^2*k^2', \
+            'lfweight_C^2*k^2', 'lfweight_D^2*k^2', 'Nsources', \
+            'bias_m_A', 'bias_m_B', 'bias_m_C', 'bias_m_D']
+            
         output = np.zeros([len(outputnames), len(galIDlist), nRbins])
     
     # Start of the reduction of one KiDS field
@@ -199,6 +209,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
+                            """
                             output_onebin = [gammat_tot_A, gammax_tot_A, \
                                              gammat_tot_B, gammax_tot_B, \
                                              gammat_tot_C, gammax_tot_C, \
@@ -219,7 +230,21 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                             shear.calc_shear_output(incosphilist, insinphilist,\
                                                     e1, e2, Rmask, klist, \
                                                     wlist, Nsrclist, srcm)
-                            
+                            """
+                            output_onebin = [gammat_tot_A, gammax_tot_A, \
+                                             gammat_tot_B, gammax_tot_B, \
+                                             gammat_tot_C, gammax_tot_C, \
+                                             gammat_tot_D, gammax_tot_D, \
+                                             k_tot, k2_tot, \
+                                             wk2_tot_A, wk2_tot_B, \
+                                             wk2_tot_C, wk2_tot_D, \
+                                             w2k2_tot_A, w2k2_tot_B, \
+                                             w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
+                                             srcm_tot_A, srcm_tot_B, \
+                                             srcm_tot_C, srcm_tot_D] = \
+                            shear.calc_shear_output(incosphilist, insinphilist,\
+                                                    e1, e2, Rmask, klist,\
+                                                    wlist, Nsrclist, srcm)
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
                             for o in xrange(len(output)):
@@ -268,9 +293,9 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
 
 
     if cat_version == 3:
-    
-        for kidscatname in splitkidscats[Nsplit]:
         
+        for kidscatname in splitkidscats[Nsplit]:
+    
             index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
             
             memfrac = memory.test() # Check which fraction of the memory is full
@@ -400,6 +425,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
+                            """
                             output_onebin = [gammat_tot_A, gammax_tot_A, \
                                              gammat_tot_B, gammax_tot_B, \
                                              gammat_tot_C, gammax_tot_C, \
@@ -420,6 +446,21 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                             shear.calc_shear_output(incosphilist, insinphilist,\
                                                     e1, e2, Rmask, klist,\
                                                     wlist, Nsrclist, srcm)
+                            """
+                            output_onebin = [gammat_tot_A, gammax_tot_A, \
+                                            gammat_tot_B, gammax_tot_B, \
+                                            gammat_tot_C, gammax_tot_C, \
+                                            gammat_tot_D, gammax_tot_D, \
+                                            k_tot, k2_tot, \
+                                            wk2_tot_A, wk2_tot_B, \
+                                            wk2_tot_C, wk2_tot_D, \
+                                            w2k2_tot_A, w2k2_tot_B, \
+                                            w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
+                                            srcm_tot_A, srcm_tot_B, \
+                                            srcm_tot_C, srcm_tot_D] = \
+                            shear.calc_shear_output(incosphilist, insinphilist,\
+                                                    e1, e2, Rmask, klist,\
+                                                     wlist, Nsrclist, srcm)
 
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
@@ -561,7 +602,7 @@ if __name__ == '__main__':
 
     # Calculate the source variance
 
-    # These lists will contain all used ellipticities for the variance calculation
+    # These lists will contain all ellipticities for the variance calculation
     w_varlist = np.array([[]]*4)
     e1_varlist = np.array([[]]*4)
     e2_varlist = np.array([[]]*4)
@@ -592,7 +633,8 @@ if __name__ == '__main__':
         
         kidscatname2 = np.array([])
         for i in xrange(len(kidscats)):
-            kidscatname2 = np.append(kidscatname2, kidscats[i].rsplit('-', 1)[0])
+            kidscatname2 = np.append(kidscatname2, \
+                                     kidscats[i].rsplit('-', 1)[0])
         
         kidscatname2 = np.unique(kidscatname2)
 

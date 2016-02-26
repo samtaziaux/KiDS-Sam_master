@@ -78,8 +78,11 @@ def main():
         # Ncat is the number of existing randoms
 
     # Importing the relevant data from the shear catalog
-    shearcatname = shear.define_filename_results(path_catalog_results.replace('bootstrap', 'catalog'), \
-                                                 purpose.replace('bootstrap', 'catalog'), \
+    shearcatname = \
+        shear.define_filename_results(path_catalog_results.replace('bootstrap',\
+                                                                   'catalog'), \
+                                                 purpose.replace('bootstrap',\
+                                                                 'catalog'), \
                                                  filename_var, \
                                                  filename_addition, \
                                                  Nsplit, blindcat)
@@ -102,7 +105,8 @@ def main():
     
     galIDlist_matched = np.array([], dtype=np.int32)
     for kidscatname in kidscats:
-        galIDlist_matched = np.append(galIDlist_matched, catmatch[kidscatname][0])
+        galIDlist_matched = np.append(galIDlist_matched, \
+                                      catmatch[kidscatname][0])
     galIDlist_matched = np.unique(galIDlist_matched)
     
     # The ID's of the galaxies that lie in this field
@@ -122,8 +126,10 @@ def main():
     galIDlist = sheardat['ID'] # ID of all galaxies in the shear catalog
     gammatlist = sheardat['gammat_%s'%blindcat] # Shear profile of each galaxy
     gammaxlist = sheardat['gammax_%s'%blindcat] # Cross profile of each galaxy
-    wk2list = sheardat['lfweight_%s*k^2'%blindcat] # Weight profile of each galaxy
-    w2k2list = sheardat['lfweight_%s^2*k^2'%blindcat] # Squared lensfit weight times squared lensing efficiency
+    # Weight profile of each galaxy
+    wk2list = sheardat['lfweight_%s*k^2'%blindcat]
+    # Squared lensfit weight times squared lensing efficiency
+    w2k2list = sheardat['lfweight_%s^2*k^2'%blindcat]
     srcmlist = sheardat['bias_m_%s'%blindcat] # Bias profile of each galaxy
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
 
@@ -189,7 +195,8 @@ def main():
         galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
         galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
-        print 'Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), 'of which overlap with KiDS.'
+        print 'Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), \
+                'of which overlap with KiDS.'
         print
 
         # Paths to the resulting files

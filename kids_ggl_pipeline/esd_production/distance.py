@@ -19,7 +19,8 @@ def angular(z,Om,Ol):
 
     # Important constants
     c = const.c.value # Speed of light (in m/s)
-    Hdim = h*1e-1 # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
+    Hdim = h*1e-1
+    # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
 
     n = 1000.
 
@@ -37,7 +38,8 @@ def comoving(z,Om,Ol,h):
 
     # Important constants
     c = const.c.value # Speed of light (in m/s)
-    Hdim = h*1e-1 # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
+    Hdim = h*1e-1
+    # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
 
     f = lambda zp: 1/(Om*(1+zp)**3 + Ol)**0.5
     integral = integrate.quad(f,0.,z)#, epsrel=1./n, epsabs=0)

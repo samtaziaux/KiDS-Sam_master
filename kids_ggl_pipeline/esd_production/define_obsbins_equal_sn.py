@@ -46,7 +46,8 @@ sheardat = pyfits.open(shearcatname)[1].data
 
 print 'Importing:', shearcatname
 
-# Importing all GAMA data, and the information on radial bins and lens-field matching.
+# Importing all GAMA data, and the information
+# on radial bins and lens-field matching.
 catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, Rcenters, \
 nRbins, galIDlist, groupIDlist, galRAlist, galDEClist, galZlist, Dcllist, \
 Dallist, Nfoflist, galranklist, obslist, obslimlist = \

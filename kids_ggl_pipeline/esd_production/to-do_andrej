@@ -1,2 +1,0 @@
-[ ] Remove combine_splits.py and do everything what is done there in multiprocessed shear+covariance code. Urgent, to free memory needed to perform calculations now!
-[ ] 

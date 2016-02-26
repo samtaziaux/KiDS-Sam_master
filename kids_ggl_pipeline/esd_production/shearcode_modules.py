@@ -32,7 +32,7 @@ def input_variables():
         Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
         Nsplits = int(sys.argv[2]) # The number cores/splits
         binnum = int(sys.argv[3]) # The number of this particular observable bin
-        blindcat = str(sys.argv[4]) # The number of this particular blind KiDS catalog
+        blindcat = str(sys.argv[4]) # The number of this blind KiDS catalog
         config_file = str(sys.argv[5]) # The path to the configuration file
     except:
         Nsplit = 1 # The number of this particular core/split
@@ -341,7 +341,8 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
                 lens_weights, filename_addition, cat_version):
 
     # Import R-range
-    Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst = define_Rbins(path_Rbins, Runit)
+    Rmin, Rmax, Rbins, Rcenters, \
+        nRbins, Rconst = define_Rbins(path_Rbins, Runit)
     
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, \
@@ -357,7 +358,8 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
                                                       Dallist, Rmax, purpose, \
                                                       filename_addition, \
                                                       cat_version)
-
+    gc.collect()
+    
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
     Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
     galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -388,7 +390,8 @@ def define_Rbins(path_Rbins, Runit):
             Rstep = (np.log10(Rmax)-np.log10(Rmin))/(nRbins)
             Rbins = 10.**np.arange(np.log10(Rmin), np.log10(Rmax), Rstep)
             Rbins = np.append(Rbins,Rmax)
-            Rcenters = np.array([(Rbins[r]+Rbins[r+1])/2 for r in xrange(nRbins)])
+            Rcenters = np.array([(Rbins[r]+Rbins[r+1])/2 \
+                                 for r in xrange(nRbins)])
 
         except:
             print 'Observable bin file does not exist:', path_Rbins
@@ -455,8 +458,10 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
     if 'random' in purpose:
         # Determine RA and DEC for the random/star catalogs
-        Ncatmin = Ncat * len(galIDlist) # The first item that will be chosen from the catalog
-        Ncatmax = (Ncat+1) * len(galIDlist) # The last item that will be chosen from the catalog
+        # The first item that will be chosen from the catalog
+        Ncatmin = Ncat * len(galIDlist)
+        # The last item that will be chosen from the catalog
+        Ncatmax = (Ncat+1) * len(galIDlist)
         try:
             randomcat = pyfits.open(randomcatname)[1].data
         except:
@@ -533,7 +538,7 @@ def run_kidscoord(path_kidscats, cat_version):
         for x in kidscatlist:
             # Full directory & name of the corresponding KiDS catalogue
             kidscatfile = '%s/%s'%(path_kidscats, x)
-            kidscat = pyfits.open(kidscatfile)[2].data
+            kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
             #print kidscat['THELI_NAME']
             
             kidscatlist2 = np.unique(np.array(kidscat['THELI_NAME']))
@@ -558,6 +563,7 @@ def run_kidscoord(path_kidscats, cat_version):
             
                 kidscat_end = ''
 
+    gc.collect()
     return kidscoord, kidscat_end
 
 
@@ -571,7 +577,8 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
     else:
         Rmax = Rmax + Rfield
         print "*** Using new lens-field matching procedure ***"
-        print "(for 'early science' mode, put 'oldcatmatch' in 'ESD_output_filename')"
+        print "(for 'early science' mode, put"\
+                " 'oldcatmatch' in 'ESD_output_filename')"
 
     totgalIDs = np.array([])
 
@@ -681,7 +688,7 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
     filename = str(fnmatch.filter(files, pattern)[0])
     
     spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
-    spec_cat = pyfits.open(spec_cat_file)[1].data
+    spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
 
     Z_B = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
@@ -694,7 +701,8 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
     if len(srclims) == 1:
         srcmask *= (spec_cat['Z_B'] == binlims[0])
     else:
-        srcmask *= (srclims[0] <= spec_cat['Z_B']) & (spec_cat['Z_B'] < srclims[1])
+        srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
+            (spec_cat['Z_B'] < srclims[1])
 
     return Z_B[srcmask], spec_weight[srcmask]
 
@@ -706,15 +714,18 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     # Full directory & name of the corresponding KiDS catalogue
     if cat_version == 2:
         kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end)
-        kidscat = pyfits.open(kidscatfile)[1].data
+        kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
     
     if cat_version == 3:
         kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
-        kidscat = pyfits.open(kidscatfile)[2].data
-
-    srcNr = kidscat['SeqNr'] # List of the ID's of all sources in the KiDS catalogue
-    srcRA = kidscat['ALPHA_J2000'] # List of the RA's of all sources in the KiDS catalogue
-    srcDEC = kidscat['DELTA_J2000'] # List of the DEC's of all sources in the KiDS catalogue
+        kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
+    
+    # List of the ID's of all sources in the KiDS catalogue
+    srcNr = kidscat['SeqNr']
+    # List of the RA's of all sources in the KiDS catalogue
+    srcRA = kidscat['ALPHA_J2000']
+    # List of the DEC's of all sources in the KiDS catalogue
+    srcDEC = kidscat['DELTA_J2000']
     
 
     if cat_version == 3:
@@ -729,8 +740,11 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         Z_B = kidscat['PZ_full'] # Full P(z) probability function
         w = np.transpose(np.array([kidscat['weight'], kidscat['weight'], \
                                    kidscat['weight'], kidscat['weight']]))
-        SN = kidscat['SNratio'] # The Signal to Noise of the sources (needed for bias)
-        manmask = kidscat['MAN_MASK'] # The manual masking of bad sources (0=good, 1=bad)
+                                   
+        # The Signal to Noise of the sources (needed for bias)
+        SN = kidscat['SNratio']
+        # The manual masking of bad sources (0=good, 1=bad)
+        manmask = kidscat['MAN_MASK']
         tile = np.zeros(srcNr.size, dtype=np.float64)
     
     try:
@@ -798,7 +812,8 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
             srcmask *= (kidscat[param] == binlims[0])
 
         else:
-            srcmask *= (srclims[0] <= kidscat[param]) & (kidscat[param] < srclims[1])
+            srcmask *= (srclims[0] <= kidscat[param]) & \
+                        (kidscat[param] < srclims[1])
 
 
     srcNr = srcNr[srcmask]
@@ -1015,8 +1030,8 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
     Dcsbins = []
 
     # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
-    #DlsoDsmask = np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))
-    #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask = DlsoDsmask, fill_value = 0))
+    #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
+    #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
     DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
     if cat_version == 3:
@@ -1151,20 +1166,26 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
      gammat_tot_D] = [np.sum(gammatlists[g], 1) for g in xrange(4)]
     [gammax_tot_A, gammax_tot_B, gammax_tot_C, \
      gammax_tot_D] = [np.sum(gammaxlists[g], 1) for g in xrange(4)]
-    
+
+    """
     w_tot_A, w_tot_B, w_tot_C, w_tot_D = \
     w_tot.T[0], w_tot.T[1], w_tot.T[2], w_tot.T[3]
     w2_tot_A, w2_tot_B, w2_tot_C, w2_tot_D = \
     w2_tot.T[0], w2_tot.T[1], w2_tot.T[2], w2_tot.T[3]
+    """
     wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
     wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
+    """
     w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D = \
     w2k4_tot.T[0], w2k4_tot.T[1], w2k4_tot.T[2], w2k4_tot.T[3]
+    """
     w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
     w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
     srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
     srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
 
+    gc.collect()
+    """
     return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, \
         gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
         w_tot_A, w_tot_B, w_tot_C, w_tot_D, \
@@ -1173,7 +1194,12 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D, \
         w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
         srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
-
+    """
+    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, \
+        gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
+        k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
+        w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
+        srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
@@ -1269,9 +1295,12 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)	ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)	variance(e_s)'%(Runit, h*100, h*100, h*100)
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   '\
+        'ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)'\
+        'variance(e_s)'%(Runit, h*100, h*100, h*100)
     else:
-        filehead = '# Radius(%s)	gamma_t gamma_x	error	bias(1+K)	variance(e_s)'%(Runit)
+        filehead = '# Radius(%s)	gamma_t gamma_x	error   '\
+        'bias(1+K)	variance(e_s)'%(Runit)
 
     with open(filename, 'w') as file:
         print >>file, filehead
@@ -1285,7 +1314,8 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
                 error_tot[R] = int(-999)
                 bias_tot[R] = int(-999)
 
-            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g'%(Rcenters[R], \
+            print >>file, '%.12g	%.12g	%.12g	%.12g'\
+                '%.12g	%.12g'%(Rcenters[R], \
                 ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance)
 
     print 'Written: ESD profile data:', filename
@@ -1312,8 +1342,10 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
             for i in xrange(len(galIDs_matched_infield)):
                 print >>file, galIDs_matched_infield[i]
 
-        print "Written: List of all stacked lens ID's that contribute to the signal:", galIDsname
-        print "Written: List of stacked lens ID's with their center within a KiDS field:", kidsgalIDsname
+        print "Written: List of all stacked lens ID's"\
+                " that contribute to the signal:", galIDsname
+        print "Written: List of stacked lens ID's"\
+                " with their center within a KiDS field:", kidsgalIDsname
 
     return
 

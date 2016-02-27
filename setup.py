@@ -13,7 +13,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='kids_ggl_pipeline',
-      version='1.1.0',
+      version='1.1.0b',
       description='KiDS Galaxy-Galaxy Lensing Pipeline',
       author='Margot Brouwer, Andrej Dvornik, Cristobal Sifon',
       author_email='dvornik@strw.leidenuniv.nl',

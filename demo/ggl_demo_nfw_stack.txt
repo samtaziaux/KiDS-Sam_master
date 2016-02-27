@@ -49,13 +49,10 @@ GAMA_path           /disks/shear10/sifon/kids/gama/G3CGalv06.fits
 
 # Matter density at z=0.
 Om                  0.315           # 0 < Om <= 1
-
 # Dark energy density at z=0.
 Ol                  0.685           # must be Ol = 1 - Om
-
 # Curvature energy density. (NOT IMPLEMENTED)
 Ok                  0               # must be Ok = 0
-
 # Reduced Hubble constant.
 h                   1.0             # h = H_0/100 km/s/Mpc
 
@@ -152,8 +149,15 @@ src_limits1           Z_B        0.005,1.2
 ## The setup below reproduces that used for the Early Science satellites project,
 ## Sifon et al. (2015, MNRAS, 454, 3938). All files are located in this demo folder,
 ## such that the results should be reproducible by running
-## python kids-ggl.py -c ggl_demo_nfw_stack.config --sampler --demo
+##
+##      python kids-ggl.py -c ggl_demo_nfw_stack.config --sampler --demo
+##
 ## (the initial values have been set to the best fits reported in the paper).
+
+# A path to some files that may be located elsewhere, or whose path is very lengthy,
+# making it convenient not having to include it in every line. This entry is the only
+# optional entry
+path              demo/earlyscience_satellites
 
 # Name of the function containing the desired model (several fiducial models
 # will be implemented)
@@ -180,7 +184,10 @@ model             nfw_stack.satellites
 #                   a) 'function': <param_value(s)> should have the name of the python function,
 #                                  including the parent module (e.g., 'nfw.esd')
 #                   b) 'read': <param_value(s)> has two entries, the name of the file and the
-#                              column to read from said file.
+#                              column to read from said file. These parameters can make use of the
+#                              <path> if defined above; the syntax is shown below. If the file
+#                              is not in that directory or <path> has not been defined, simply write
+#                              the relative path to the file in the usual way
 #                   c) 'fixed': <param_value(s)> is a single value, that to which this parameter
 #                               is fixed.
 #                   d) 'uniform': <param_value(s)> has three entries, namely the lower limit, upper limit
@@ -197,10 +204,12 @@ model             nfw_stack.satellites
 #       2) <param_type> is set to 'fixed'.
 hm_param          sat_profile     function    nfw.esd
 hm_param          host_profile    function    nfw.esd_offset
-hm_param          Rsat            read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 0
-hm_param          n_Rsat1         read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 1        join1
-hm_param          n_Rsat2         read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 2        join1
-hm_param          n_Rsat3         read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 3        join1
+hm_param          Rsat            read        <path>/logAngSepBCG_fine.dat 0
+# the line above is equivalent to
+# hm_param          Rsat            read        demo/earlyscience_satellites/logAngSepBCG_fine.dat 0
+hm_param          n_Rsat1         read        <path>/logAngSepBCG_fine.dat 1        join1
+hm_param          n_Rsat2         read        <path>/logAngSepBCG_fine.dat 2        join1
+hm_param          n_Rsat3         read        <path>/logAngSepBCG_fine.dat 3        join1
 hm_param          fc_sat          fixed       1.0
 hm_param          Msat1           uniform     1e7     1e13     6.9e11        join2
 hm_param          Msat2           uniform     1e7     1e13     6.9e11        join2
@@ -218,21 +227,39 @@ hm_param          h               fixed       1
 
 ## Halo model output
 # These are any values other than the free parameters, that the model returns. This
-# includes the signal itself!
+# includes the ESD signal itself. Note that the total signal *must* be the first 
+# output - the pipeline assumes this when calculating the chi2.
 # Format: hm_output     <value(s)>      <fits_format(s)>, where
 #       hm_output is a fixed flag
-#       <value(s)> is a comma-separated list of names. The number of names should
-#                  match the number of columns the output value contains (e.g.,
-#                  if it is an ESD with shape (3,10) -- three bins and ten data points
-#                  per bin -- there should be three names)
-#       <fits_format(s)> is the fits format of each name. These will almost always be
+#       <value(s)> is the name of the entry. If the model returns more than one value,
+#                  for instance an array of ESD measurements for each observable bin (as in
+#                  the example below), the output FITS file will contain one column per
+#                  value, with an index appended to the specified name starting from 1.
+#       <fits_format(s)> is the FITS format of the column. These will almost always be
 #                        floats (format 'E'). If each name contains an array then the 'E'
 #                        should be preceded by the number of values (e.g., '10E' in the
 #                        example above). Note that this is the total number of data points,
 #                        without accounting for bins discarded by <exclude_bins> (see below).
-hm_output         esd_total1,esd_total2,esd_total3            14E,14E,14E
-hm_output         esd_sat1,esd_sat2,esd_sat3                  14E,14E,14E
-hm_output         esd_host1,esd_host2,esd_host3               14E,14E,14E
+#                        If the given name will correspond to more than one column (e.g.,
+#                        several ESDs of the same type, as in the example below) then
+#                        <fits_format> should contain two comma-separated values: first the
+#                        number of entries the value corresponds to, and second the FITS
+#                        format of each of them.
+#                 NOTE : if one of the entries is an array of scalars (say, the total mass
+#                        in each bin), then there are two options (assume 3 bins):
+#
+#                              hm_output         Mtot            3E
+#
+#                        which would produce a single column in the FITS file, with three
+#                        values per row (as in fits['Mtot'][0] == (3e14,4e14,5e14)), or
+#
+#                              hm_output         Mtot            3,E
+#
+#                        which would produce three separate columns in the FITS file (Mtot1,
+#                        Mtot2 and Mtot3).
+hm_output         esd            3,14E
+hm_output         esd_sat        3,14E
+hm_output         esd_host       3,14E
 
 
 ##########################
@@ -252,8 +279,8 @@ data                esd_*.txt       0,1,4
 # Note that they will be excluded from all observable bins (and consistently from the
 # covariance matrix). Note that these are handled automatically by the code in terms of
 # the fits format of hm_output's (i.e., if you have 14 radial bins but want to exclude
-# two of them from your analysis, you should still give a fits format '14E', *not* '12E').
-exclude_bins        0,1
+# three of them from your analysis, you should still give a fits format '14E', *not* '11E').
+exclude_bins        0,12,13
 
 # Path to covariance file. Same notes as path_data.
 path_covariance     demo/earlyscience_satellites/
@@ -274,10 +301,14 @@ sampler_type	     ensemble
 
 # Number of walkers. Must be at least twice the number of free parameters, and the
 # recommendation from the technical paper is to use a large number for faster convergence.
-nwalkers	         500
+# Here we have set it to a small number simply to allow for a short chain to be run 
+# out-of-the box for testing purposes.
+nwalkers	         20
 
 # Number of steps *per walker*. Total number of MCMC samples will be nwalkers*nsteps.
-nsteps		         600 
+# Again we have set this to a small value so you can run a short chain without having
+# to make any changes.
+nsteps		         10 
 
 # Number of burn-in steps. Not sure but should also be per walker.
 nburn		         0 
@@ -286,7 +317,8 @@ nburn		         0
 # thin!=1 will store the results properly.
 thin		         1 
 
-# Number of iterations after which progress will be saved to the output file
+# Number of iterations after which progress will be saved to the output file. If this number is too
+# small it may represent a significant overhead.
 update_freq          10000
 
 # Apologies for the criptic name. This sets the number of bins used to sample the offset 1-halo term
@@ -295,6 +327,6 @@ update_freq          10000
 k   		         7 
 
 # Number of cores, or threads, to be used to sample the MCMC.
-threads		         6
+threads		         1
 
 

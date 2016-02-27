@@ -46,6 +46,8 @@ def read_config(config_file, version='0.5.7'):
         elif line[0] == 'path':
             if len(line) > 1:
                 path = line[1]
+                if path[-1] == '/':
+                    path = path[:-1]
             else:
                 path = ''
         # also read param names
@@ -138,8 +140,16 @@ def read_config(config_file, version='0.5.7'):
             for i in f:
                 hm_functions.append(i)
         elif line[0] == 'hm_output':
-            meta_names.append(line[1].split(','))
-            fits_format.append(line[2].split(','))
+            fmt = line[2].split(',')
+            n = int(fmt[0]) if len(fmt) == 2 else 1
+            fmt = fmt[-1]
+            if n == 1:
+                meta_names.append(line[1])
+                fits_format.append(line[2])
+            else:
+                for i in xrange(1, n+1):
+                    meta_names.append('{0}{1}'.format(line[1], i))
+                    fits_format.append(fmt)
     if len(hm_functions) > 0:
         hm_functions = (func for func in hm_functions)
     if njoin == 1 and len(join[0]) == 0:
@@ -167,7 +177,7 @@ def read_function(module, function):
         function = getattr(halo, function)
     elif module == 'models':
         function = getattr(models, function)
-    print function
+    print 'Successfully imported {0}'.format(function)
     #pickle.dumps(function)
     #print 'Pickled!'
     return function

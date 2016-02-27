@@ -9,8 +9,9 @@ import os
 import sys
 from astropy.io.fits import BinTableHDU, Column, Header, PrimaryHDU
 from itertools import count, izip
-from numpy import all as npall, array, append, concatenate, dot, inf, isnan
-from numpy import isfinite, log, log10, outer, pi, sqrt, transpose, zeros
+from numpy import all as npall, array, append, concatenate, dot, inf, isnan, \
+                  isfinite, log, log10, outer, pi, sqrt, squeeze, transpose, \
+                  zeros
 from os import remove
 from os.path import isfile
 from time import ctime, time
@@ -45,7 +46,7 @@ def run_emcee(hm_options, sampling_options, args):
         if answer.lower() not in ('y', 'yes'):
             exit()
     if not args.demo:
-        print 'Started -', ctime()
+        print '\nStarted - {0}\n'.format(ctime())
 
     #load data files
     Ndatafiles = len(datafile)
@@ -175,21 +176,35 @@ def run_emcee(hm_options, sampling_options, args):
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
     # different scenario
+    print meta_names
     metadata = [[] for m in meta_names]
-    for j in xrange(len(metadata)):
-        for f in fits_format[j]:
-            if len(f) == 1:
-                metadata[j].append(zeros(nwalkers*nsteps/thin))
-            else:
-                size = [nwalkers*nsteps/thin, int(f[:-1])]
-                # only for ESDs. Note that there will be trouble if outputs
-                # other than the ESD have the same length, so avoid them at
-                # all cost.
-                if exclude_bins is not None \
+    # this counter
+    i = 0
+    print fits_format
+    for j, fmt in enumerate(fits_format):
+        n = 1 if len(fmt) == 1 else int(fmt[0])
+        if len(fmt) == 1:
+            size = nwalkers * nsteps / thin
+        else:
+            size = [nwalkers*nsteps/thin, int(fmt[:-1])]
+            # only for ESDs. Note that there will be trouble if outputs
+            # other than the ESD have the same length, so avoid them at
+            # all cost.
+            if exclude_bins is not None \
                     and size[1] == esd.shape[-1]+len(exclude_bins):
-                    size[1] -= len(exclude_bins)
-                metadata[j].append(zeros(size))
+                size[1] -= len(exclude_bins)
+        #if len(fmt) == 2:
+            ## numpy.append will flatten the array
+            #size = append(int(fmt[0]), size)
+        print fmt, n, size
+        #for k in xrange(i, i+n):
+            #metadata[k].append(zeros(size))
+        #i += n
+        metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
+    metadata = [m[0] if m.shape[0] == 1 else m for m in metadata]
+    #print meta_names
+    #print [m.shape for m in metadata]
     fail_value = []
     for m in metadata:
         shape = list(m.shape)
@@ -224,10 +239,10 @@ def run_emcee(hm_options, sampling_options, args):
         # make sure that nwalkers is a factor of this number!
         if i*nwalkers % update_freq == nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
-                                params, jfree, metadata, meta_names, i,
-                                nwritten, Nobsbins,
-                                array, BinTableHDU, Column, ctime, enumerate,
-                                isfile, izip, transpose, xrange)
+                                params, jfree, metadata, meta_names,
+                                fits_format, update_freq, i, nwritten,
+                                Nobsbins, array, BinTableHDU, Column, ctime,
+                                enumerate, isfile, izip, transpose, xrange)
             metadata, nwriten = out
 
     hdr = open(hdrfile, 'a')
@@ -256,17 +271,18 @@ def run_emcee(hm_options, sampling_options, args):
     hdr.close()
     print 'Saved to', hdrfile
 
-    cmd = 'mv {0} {1}'.format(output, output.replace('.fits', '.temp.fits'))
+    tmp = output.replace('.fits', '.temp.fits')
+    cmd = 'mv {0} {1}'.format(output, tmp)
     print cmd
     os.system(cmd)
     print 'Saving everything to {0}...'.format(output)
     print i, nwalkers, nwritten
-    write_to_fits(output, chi2, sampler, nwalkers, thin,
-                  params, jfree, metadata, meta_names, i+1,
-                  nwritten, Nobsbins,
-                  array, BinTableHDU, Column, ctime, enumerate,
-                  isfile, izip, transpose, xrange)
-    os.remove(output.replace('.fits', '.temp.fits'))
+    write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
+                  metadata, meta_names, fits_format, update_freq, i+1,
+                  nwritten, Nobsbins, array, BinTableHDU, Column, ctime,
+                  enumerate, isfile, izip, transpose, xrange)
+    if os.path.isfile(tmp):
+        os.remove(tmp)
     print 'Everything saved to {0}!'.format(output)
     return
 
@@ -376,9 +392,9 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     return lnlike + model[-3] + lnprior_total, model
 
 def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
-                  metadata, meta_names, iternum, nwritten,
-                  Nobsbins, array, BinTableHDU, Column, ctime, enumerate,
-                  isfile, izip, transpose, xrange):
+                  metadata, meta_names, fits_format, update_freq, iternum,
+                  nwritten, Nobsbins, array, BinTableHDU, Column, ctime,
+                  enumerate, isfile, izip, transpose, xrange):
     nexclude = len(chi2)
     lnprior, lnPderived, chi2, lnlike = chi2
     if isfile(output):
@@ -388,6 +404,8 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                for param, data in izip(params[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',
                           array=sampler.lnprobability.T[:iternum].flatten()))
+    print [m.shape for m in metadata]
+    print meta_names
     if len(meta_names) > 0:
         # save only the last chunk (starting from t),
         # all others are already in metadata.
@@ -398,32 +416,43 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             data = [transpose([b[i] for b in blob])
                     for i in xrange(len(blob[0])-nexclude)]
             # re-arrange blobs
-            if Nobsbins == 1:
-                for i in xrange(len(data)):
-                    if len(data[i].shape) == 2:
-                        data[i] = array([b[i] for b in blob])
-            else:
-                for i in xrange(len(data)):
-                    if len(data[i].shape) == 3:
-                        data[i] = transpose([b[i] for b in blob],
-                                            axes=(1,0,2))
+            for i in xrange(len(data)):
+                if len(data[i].shape) == 2:
+                    data[i] = array([b[i] for b in blob])
+                elif len(data[i].shape) == 3:
+                    data[i] = transpose([b[i] for b in blob], axes=(1,0,2))
             # store data
+            n = 0
             for k in xrange(len(data)):
-                for i in xrange(len(data[k])):
-                    metadata[k][i][j*nwalkers:(j+1)*nwalkers] = data[k][i]
+                print i, k, n, data[k].shape, fits_format[n]
+                if len(data[k].shape) == 3:
+                    for i in xrange(len(data[k])):
+                        metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k][i]
+                        n += 1
+                elif len(data[k].shape) == 2 and len(fits_format[n]) == 1:
+                    datum = data[k].T
+                    for i in xrange(len(datum)):
+                        print datum
+                        #for m in xrange(len(datum)):
+                        metadata[n][j*nwalkers:(j+1)*nwalkers] = \
+                            datum[i]
+                        n += 1
+                else:
+                    metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
+                    n += 1
             lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
                                                            for b in blob])
             lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])
             chi2[j*nwalkers:(j+1)*nwalkers] = array([b[-2] for b in blob])
             lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
         # this handles exclude_bins properly
-        for name, val in izip(meta_names, metadata):
-            for name_i, val_i in izip(name, val):
-                try:
-                    fmt = '{0}E'.format(val_i.shape[1])
-                except IndexError:
-                    fmt = 'E'
-                columns.append(Column(name=name_i, array=val_i, format=fmt))
+        for name, val, fmt in izip(meta_names, metadata, fits_format):
+            print name, fmt
+            try:
+                fmt = '{0}{1}'.format(val.shape[1], fmt[-1])
+            except IndexError:
+                fmt = fmt[-1]
+            columns.append(Column(name=name, array=val, format=fmt))
     columns.append(Column(name='lnprior', format='E', array=lnprior))
     columns.append(Column(name='lnPderived', format='E',
                             array=lnPderived))

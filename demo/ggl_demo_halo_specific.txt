@@ -82,8 +82,8 @@ hm_param          r_c0            fixed     0.05
 
 # Luminosity or stellar mass bins. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
 
-hm_param          logM_min           uniform   13.5     14.5    14.0
-hm_param          logM_max           uniform   14.5     16.0    15.5
+hm_param          logM_min           fixed     5.0
+hm_param          logM_max           fixed    16.0
 hm_param          logM_step          fixed     0.01
 hm_params         logM_bin_min       fixed     9.0,9.5,10.0,10.5
 hm_params         logM_bin_max       fixed     9.5,10.0,10.5,11.0
@@ -114,6 +114,7 @@ hm_param          include_baryons  fixed      0
 #                        should be preceded by the number of values (e.g., '10E' in the
 #                        example above). Note that this is the total number of data points,
 #                        without accounting for bins discarded by <exclude_bins> (see below).
+
 hm_output         esd_total1,esd_total2,esd_total3,esd_total4,esd_total5,esd_total6            10E,10E,10E,10E,10E,10E
 hm_output         Mavg1,Mavg2,Mavg3,Mavg4,Mavg5,Mavg6                                E,E,E,E,E,E
 

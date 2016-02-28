@@ -230,8 +230,9 @@ def run_emcee(hm_options, sampling_options, args):
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
                                 fits_format, update_freq, i, nwritten,
-                                Nobsbins, array, BinTableHDU, Column, ctime,
-                                enumerate, isfile, izip, transpose, xrange)
+                                Nobsbins, fail_value, array, BinTableHDU,
+                                Column, ctime, enumerate, isfile, izip,
+                                transpose, xrange)
             metadata, nwriten = out
 
     hdr = open(hdrfile, 'a')
@@ -268,8 +269,8 @@ def run_emcee(hm_options, sampling_options, args):
     print i, nwalkers, nwritten
     write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                   metadata, meta_names, fits_format, update_freq, i+1,
-                  nwritten, Nobsbins, array, BinTableHDU, Column, ctime,
-                  enumerate, isfile, izip, transpose, xrange)
+                  nwritten, Nobsbins, fail_value, array, BinTableHDU,
+                  Column, ctime, enumerate, isfile, izip, transpose, xrange)
     if os.path.isfile(tmp):
         os.remove(tmp)
     print 'Everything saved to {0}!'.format(output)
@@ -382,9 +383,11 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
 
 def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                   metadata, meta_names, fits_format, update_freq, iternum,
-                  nwritten, Nobsbins, array, BinTableHDU, Column, ctime,
-                  enumerate, isfile, izip, transpose, xrange):
-    nexclude = len(chi2)
+                  nwritten, Nobsbins, fail_value, array, BinTableHDU,
+                  Column, ctime, enumerate, isfile, izip, transpose, xrange):
+    nchi2 = len(chi2)
+    # the two following lines should remain consistent if modified
+    chi2_loc = -2
     lnprior, lnPderived, chi2, lnlike = chi2
     if isfile(output):
         remove(output)
@@ -398,48 +401,60 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
         # all others are already in metadata.
         # j iterates over MCMC samples. Then each blob is a list of length
         # nwalkers containing the metadata
+        #print [m.shape for m in metadata]
+        nparams = len(metadata)
         for j, blob in izip(xrange(nwritten, iternum),
                             sampler.blobs[nwritten:]):
-            print 'j =', j
-            #data = [transpose([b[i] for b in blob])
-                    #for i in xrange(len(blob[0])-nexclude)]
-            nparams = sum([len(b) if hasattr(b, '__iter__') else 1
-                           for b in blob[0]])
-            print len(blob), len(blob[0]),
-            print [len(b) if hasattr(b, '__iter__') else 1 for b in blob[0]],
-            print nparams
-            #data = [transpose([b[i] for b in blob])
-                    #for i in xrange(len(blob[0]))]
-            data = [[] for i in xrange(nparams)]
+            data = [zeros((nwalkers,m.shape[1]))
+                    if len(m.shape) == 2 else zeros(nwalkers)
+                    for m in metadata]
+            #print [d.shape for d in data]
             # this loops over the walkers. In each iteration we then access
             # a list corresponding to the number of hm_output's
-            for i in xrange(len(blob[0])):
-                print 'i =', i
-                for b in blob:
-                    data[i].append(b[i])
-                print [len(d) if hasattr(d, '__iter__') else 1
-                       for d in data[i]]
-                try:
-                    data[i] = transpose(data[i])
-                except ValueError:
-                    print data[i]
-                    exit()
+            for i, walker in enumerate(blob):
+                n = 0
+                #print 'walker =', len(walker)
+                if walker[chi2_loc] == fail_value[-1]:
+                    #data[
+                    continue
+                for k, entry in enumerate(walker[:-nchi2]):
+                    #eshape = entry.shape
+                    #print 'k =', k, eshape
+                    #if len(eshape) == 2:
+                    for val in entry:
+                        #print val.shape
+                        data[k][n] = val
+                        #print 'n =', n
+                        n += 1
+                    #elif len(eshape) == 1:
+                        ##if data[k].shape
+                        #data[k][n] = entry
+                        #print '    n =', n
+                        #n += 1
+                    #data[k][i] = entry[i]
+            #data = [array(d) for d in data]
+            #print data[0]
+            #print data[-2]
             # re-arrange blobs
-            for i in xrange(len(data)):
-                #for i
-                print data[i]
-                if len(data[i].shape) == 2:
-                    data[i] = array([b[i] for b in blob])
-                elif len(data[i].shape) == 3:
-                    data[i] = transpose([b[i] for b in blob], axes=(1,0,2))
+            #for i in xrange(len(data)):
+                ##for i
+                #print data[i]
+                #if len(data[i].shape) == 2:
+                    #data[i] = array([b[i] for b in blob])
+                #elif len(data[i].shape) == 3:
+                    #data[i] = transpose([b[i] for b in blob], axes=(1,0,2))
             # store data
             n = 0
             for k in xrange(len(data)):
-                if len(data[k].shape) == 3:
+                shape = data[k].shape
+                #print 'k =', k, shape
+                if len(shape) == 3:
                     for i, datum in enumerate(data[k]):
-                        metadata[n][j*nwalkers:(j+1)*nwalkers] = datum
-                        n += 1
-                elif len(data[k].shape) == 2 and len(fits_format[n]) == 1:
+                        #print '    i =', i, n
+                        for m, val in enumerate(datum):
+                            metadata[n][j*nwalkers:(j+1)*nwalkers] = val
+                            n += 1
+                elif len(shape) == 2 and len(fits_format[n]) == 1:
                     datum = data[k].T
                     for i in xrange(len(datum)):
                         metadata[n][j*nwalkers:(j+1)*nwalkers] = datum[i]

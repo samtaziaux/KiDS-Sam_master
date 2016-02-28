@@ -408,7 +408,7 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             data = [zeros((nwalkers,m.shape[1]))
                     if len(m.shape) == 2 else zeros(nwalkers)
                     for m in metadata]
-            print [d.shape for d in data]
+            #print [d.shape for d in data]
             # this loops over the walkers. In each iteration we then access
             # a list corresponding to the number of hm_output's
             for i, walker in enumerate(blob):
@@ -422,8 +422,8 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                     #if len(pshape) == 2:
                     for entry in param:
                         #print entry.shape
-                        print j, i, k, param.shape, n, entry.shape,
-                        print data[n].shape
+                        #print j, i, k, param.shape, n, entry.shape,
+                        #print data[n].shape
                         data[n][i] = entry
                         #print 'n =', n
                         n += 1

@@ -176,11 +176,7 @@ def run_emcee(hm_options, sampling_options, args):
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
     # different scenario
-    print meta_names
     metadata = [[] for m in meta_names]
-    # this counter
-    i = 0
-    print fits_format
     for j, fmt in enumerate(fits_format):
         n = 1 if len(fmt) == 1 else int(fmt[0])
         if len(fmt) == 1:
@@ -193,13 +189,6 @@ def run_emcee(hm_options, sampling_options, args):
             if exclude_bins is not None \
                     and size[1] == esd.shape[-1]+len(exclude_bins):
                 size[1] -= len(exclude_bins)
-        #if len(fmt) == 2:
-            ## numpy.append will flatten the array
-            #size = append(int(fmt[0]), size)
-        print fmt, n, size
-        #for k in xrange(i, i+n):
-            #metadata[k].append(zeros(size))
-        #i += n
         metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     metadata = [m[0] if m.shape[0] == 1 else m for m in metadata]
@@ -404,19 +393,41 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                for param, data in izip(params[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',
                           array=sampler.lnprobability.T[:iternum].flatten()))
-    print [m.shape for m in metadata]
-    print meta_names
     if len(meta_names) > 0:
         # save only the last chunk (starting from t),
         # all others are already in metadata.
-        # NOTE that this is only implemented for a model with the
-        # same format as fiducial()
+        # j iterates over MCMC samples. Then each blob is a list of length
+        # nwalkers containing the metadata
         for j, blob in izip(xrange(nwritten, iternum),
                             sampler.blobs[nwritten:]):
-            data = [transpose([b[i] for b in blob])
-                    for i in xrange(len(blob[0])-nexclude)]
+            print 'j =', j
+            #data = [transpose([b[i] for b in blob])
+                    #for i in xrange(len(blob[0])-nexclude)]
+            nparams = sum([len(b) if hasattr(b, '__iter__') else 1
+                           for b in blob[0]])
+            print len(blob), len(blob[0]),
+            print [len(b) if hasattr(b, '__iter__') else 1 for b in blob[0]],
+            print nparams
+            #data = [transpose([b[i] for b in blob])
+                    #for i in xrange(len(blob[0]))]
+            data = [[] for i in xrange(nparams)]
+            # this loops over the walkers. In each iteration we then access
+            # a list corresponding to the number of hm_output's
+            for i in xrange(len(blob[0])):
+                print 'i =', i
+                for b in blob:
+                    data[i].append(b[i])
+                print [len(d) if hasattr(d, '__iter__') else 1
+                       for d in data[i]]
+                try:
+                    data[i] = transpose(data[i])
+                except ValueError:
+                    print data[i]
+                    exit()
             # re-arrange blobs
             for i in xrange(len(data)):
+                #for i
+                print data[i]
                 if len(data[i].shape) == 2:
                     data[i] = array([b[i] for b in blob])
                 elif len(data[i].shape) == 3:
@@ -424,18 +435,14 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             # store data
             n = 0
             for k in xrange(len(data)):
-                print i, k, n, data[k].shape, fits_format[n]
                 if len(data[k].shape) == 3:
-                    for i in xrange(len(data[k])):
-                        metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k][i]
+                    for i, datum in enumerate(data[k]):
+                        metadata[n][j*nwalkers:(j+1)*nwalkers] = datum
                         n += 1
                 elif len(data[k].shape) == 2 and len(fits_format[n]) == 1:
                     datum = data[k].T
                     for i in xrange(len(datum)):
-                        print datum
-                        #for m in xrange(len(datum)):
-                        metadata[n][j*nwalkers:(j+1)*nwalkers] = \
-                            datum[i]
+                        metadata[n][j*nwalkers:(j+1)*nwalkers] = datum[i]
                         n += 1
                 else:
                     metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
@@ -447,15 +454,13 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
         # this handles exclude_bins properly
         for name, val, fmt in izip(meta_names, metadata, fits_format):
-            print name, fmt
             try:
                 fmt = '{0}{1}'.format(val.shape[1], fmt[-1])
             except IndexError:
                 fmt = fmt[-1]
             columns.append(Column(name=name, array=val, format=fmt))
     columns.append(Column(name='lnprior', format='E', array=lnprior))
-    columns.append(Column(name='lnPderived', format='E',
-                            array=lnPderived))
+    columns.append(Column(name='lnPderived', format='E', array=lnPderived))
     columns.append(Column(name='chi2', format='E', array=chi2))
     columns.append(Column(name='lnlike', format='E', array=lnlike))
     nwritten = iternum * nwalkers

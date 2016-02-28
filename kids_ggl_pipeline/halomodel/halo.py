@@ -297,12 +297,26 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     _logspace = logspace
 
     # Setting parameters from config file
+    # this is the way theta will look in v1.2.0
+    #z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
+        #fc_nsat, alpha_s, b_0, b_1, b_2, Ac2s, \
+        #alpha_star, beta_gas, r_t0, r_c0, \
+        #M_min, M_max, M_step, M_bin_min, M_bin_max, \
+        #centrals, satellites, taylor_procedure, include_baryons, \
+        #smth1, smth2 = theta
     z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
-        fc_nsat, alpha_s, b_0, b_1, b_2, Ac2s, \
+        fc_nsat, alpha_s, b_0, b_1, b_2, \
         alpha_star, beta_gas, r_t0, r_c0, \
-        M_min, M_max, M_step, M_bin_min, M_bin_max, \
-        centrals, satellites, taylor_procedure, include_baryons, \
+        M_bin_min, M_bin_max, \
+        taylor_procedure, include_baryons, \
         smth1, smth2 = theta
+    # hard-coded in the current version
+    Ac2s = 0.56
+    M_min = 5.
+    M_max = 16.
+    M_step = 0.01
+    centrals = 1
+    satellites = 1
 
     #to = time()
     # HMF set up parameters

@@ -401,57 +401,34 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
         # all others are already in metadata.
         # j iterates over MCMC samples. Then each blob is a list of length
         # nwalkers containing the metadata
-        #print [m.shape for m in metadata]
         nparams = len(metadata)
         for j, blob in izip(xrange(nwritten, iternum),
                             sampler.blobs[nwritten:]):
             data = [zeros((nwalkers,m.shape[1]))
                     if len(m.shape) == 2 else zeros(nwalkers)
                     for m in metadata]
-            #print [d.shape for d in data]
             # this loops over the walkers. In each iteration we then access
             # a list corresponding to the number of hm_output's
             for i, walker in enumerate(blob):
-                #print 'walker =', i, len(walker)
-                # apparently the format is different when the sample failed
+                # apparently the format is different when the sample failed;
+                # we are skipping those
                 if walker[chi2_loc] == fail_value[-1]:
                     continue
                 n = 0
-                for k, param in enumerate(walker[:-nchi2]):
-                    #pshape = param.shape
-                    #if len(pshape) == 2:
-                    for entry in param:
-                        #print entry.shape
-                        #print j, i, k, param.shape, n, entry.shape,
-                        #print data[n].shape
-                        data[n][i] = entry
-                        #print 'n =', n
+                for param in walker[:-nchi2]:
+                    if len(data[n].shape) == 2 and len(param.shape) == 1:
+                        data[n][i] = param
                         n += 1
-                    #elif len(eshape) == 1:
-                        ##if data[k].shape
-                        #data[k][n] = param
-                        #print '    n =', n
-                        #n += 1
-                    #data[k][i] = param[i]
-            #data = [array(d) for d in data]
-            #print data[0]
-            #print data[-2]
-            # re-arrange blobs
-            #for i in xrange(len(data)):
-                ##for i
-                #print data[i]
-                #if len(data[i].shape) == 2:
-                    #data[i] = array([b[i] for b in blob])
-                #elif len(data[i].shape) == 3:
-                    #data[i] = transpose([b[i] for b in blob], axes=(1,0,2))
+                        continue
+                    for entry in param:
+                        data[n][i] = entry
+                        n += 1
             # store data
             n = 0
             for k in xrange(len(data)):
                 shape = data[k].shape
-                #print 'k =', k, shape
                 if len(shape) == 3:
                     for i, datum in enumerate(data[k]):
-                        #print '    i =', i, n
                         for m, val in enumerate(datum):
                             metadata[n][j*nwalkers:(j+1)*nwalkers] = val
                             n += 1
@@ -479,10 +456,10 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     columns.append(Column(name='lnPderived', format='E', array=lnPderived))
     columns.append(Column(name='chi2', format='E', array=chi2))
     columns.append(Column(name='lnlike', format='E', array=lnlike))
-    nwritten = iternum * nwalkers
     fitstbl = BinTableHDU.from_columns(columns)
     fitstbl.writeto(output)
-    print 'Saved to {0} with {1} samples'.format(output, iternum*nwalkers),
+    nwritten = iternum * nwalkers
+    print 'Saved to {0} with {1} samples'.format(output, nwritten),
     if thin > 1:
         print '(printing every {0}th sample)'.format(thin),
     print '- {0}'.format(ctime())

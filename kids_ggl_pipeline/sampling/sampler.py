@@ -99,13 +99,23 @@ def run_emcee(hm_options, sampling_options, args):
                                                    for c in exclude_bins])
         print >>hdr, 'model %s' %function
         for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
-                                        val1, val2, val3, val4):
+                                          val1, val2, val3, val4):
             try:
                 line = '%s  %s  ' %(p, pt)
                 line += ','.join(numpy.array(v1, dtype=str))
             except TypeError:
-                line = '%s  %s  %s  %s  %s  %s' \
-                    %(p, pt, str(v1), str(v2), str(v3), str(v4))
+                line = '%s  %s  %s' %(p, pt, str(v1))
+                if pt not in ('fixed', 'function', 'read'):
+                    # I don't know why v2, v3 and v4 are single-element
+                    # arrays instead of floats but who cares if all the rest
+                    # works... I'm leaving the try statement just in case they
+                    # might be floats at some point
+                    try:
+                        line += '  %s  %s  %s' \
+                                %tuple([str(v[0]) for v in (v2,v3,v4)])
+                    except TypeError:
+                        line += '  %s  %s  %s' \
+                                %tuple([str(v) for v in (v2,v3,v4)])
             print >>hdr, line
         print >>hdr, 'nwalkers  {0:5d}'.format(nwalkers)
         print >>hdr, 'nsteps    {0:5d}'.format(nsteps)

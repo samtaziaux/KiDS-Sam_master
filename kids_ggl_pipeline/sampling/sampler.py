@@ -408,30 +408,31 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             data = [zeros((nwalkers,m.shape[1]))
                     if len(m.shape) == 2 else zeros(nwalkers)
                     for m in metadata]
-            #print [d.shape for d in data]
+            print [d.shape for d in data]
             # this loops over the walkers. In each iteration we then access
             # a list corresponding to the number of hm_output's
             for i, walker in enumerate(blob):
-                n = 0
-                #print 'walker =', len(walker)
+                #print 'walker =', i, len(walker)
+                # apparently the format is different when the sample failed
                 if walker[chi2_loc] == fail_value[-1]:
-                    #data[
                     continue
-                for k, entry in enumerate(walker[:-nchi2]):
-                    #eshape = entry.shape
-                    #print 'k =', k, eshape
-                    #if len(eshape) == 2:
-                    for val in entry:
-                        #print val.shape
-                        data[k][n] = val
+                n = 0
+                for k, param in enumerate(walker[:-nchi2]):
+                    #pshape = param.shape
+                    #if len(pshape) == 2:
+                    for entry in param:
+                        #print entry.shape
+                        print j, i, k, param.shape, n, entry.shape,
+                        print data[n].shape
+                        data[n][i] = entry
                         #print 'n =', n
                         n += 1
                     #elif len(eshape) == 1:
                         ##if data[k].shape
-                        #data[k][n] = entry
+                        #data[k][n] = param
                         #print '    n =', n
                         #n += 1
-                    #data[k][i] = entry[i]
+                    #data[k][i] = param[i]
             #data = [array(d) for d in data]
             #print data[0]
             #print data[-2]

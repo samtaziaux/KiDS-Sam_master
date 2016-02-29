@@ -69,8 +69,8 @@ hm_param          r_c0            fixed     0.05
 
 # Luminosity or stellar mass bins. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
 
-hm_params         logM_bin_min       fixed     9.0,9.5,10.0,10.5
-hm_params         logM_bin_max       fixed     9.5,10.0,10.5,11.0
+hm_params         logM_bin_min       fixed     9.0,9.5,10.0
+hm_params         logM_bin_max       fixed     9.5,10.0,10.5
 
 
 # Extra boolean parameters. Values are either 0 or 1.
@@ -85,10 +85,10 @@ hm_param          include_baryons  fixed      0
 
 
 ## Halo model output
-hm_output         esd_total         6,10E
-hm_output         Mavg              6,E
+hm_output         esd_total         3,10E
+hm_output         Mavg              3,E
 # alternative:
-# hm_output         Mavg              6E
+# hm_output         Mavg              3E
 
 
 #######################

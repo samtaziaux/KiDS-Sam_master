@@ -44,7 +44,6 @@ hm_param          gamma_1         fixed     3.18
 hm_param          gamma_2         fixed     0.254
 
 # normalization of the mass-concentration relation for the radial distribution of satellites
-# TO BE IMPLEMENTED IN A LATER VERSION
 hm_param          fc_nsat         uniform    0.2   5.0      0.5
 
 # Parameters for HOD - satellites

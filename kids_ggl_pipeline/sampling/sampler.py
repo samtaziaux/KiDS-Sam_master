@@ -52,7 +52,8 @@ def run_emcee(hm_options, sampling_options, args):
     Ndatafiles = len(datafile)
     # need to run this without exclude_bins to throw out invalid values in it
     R, esd = sampling_utils.load_datapoints(datafile, datacols)
-    exclude_bins = exclude_bins[exclude_bins < esd.shape[1]]
+    if exclude_bins is not None:
+        exclude_bins = exclude_bins[exclude_bins < esd.shape[1]]
     R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins)
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = xrange(Nobsbins)

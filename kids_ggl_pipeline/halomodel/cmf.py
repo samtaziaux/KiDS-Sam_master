@@ -6,7 +6,8 @@ import scipy.special as sp
 from tools import Integrate
 
 """
-# Population functions - average number of galaxies (central or satelites or all) in a halo of mass M - from HOD or CLF!
+# Population functions - average number of galaxies 
+# (central or satelites or all) in a halo of mass M - from HOD or CLF!
 """
 
 

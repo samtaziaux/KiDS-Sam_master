@@ -49,7 +49,8 @@ def Integrate1(func_in, x_array): # Gauss - Legendre quadrature!
 
     #func_in = np.nan_to_num(func_in)
 
-	c = interp1d(np.log(x_array), np.log(func_in), kind='slinear', bounds_error=False, fill_value=0.0)
+	c = interp1d(np.log(x_array), np.log(func_in), kind='slinear', \
+                 bounds_error=False, fill_value=0.0)
 
 	integ = lambda x: np.exp(c(np.log(x)))
 	result = intg.fixed_quad(integ, x_array[0], x_array[-1])
@@ -60,79 +61,77 @@ def Integrate1(func_in, x_array): # Gauss - Legendre quadrature!
 
 def extrap1d(x, y, step_size, method):
 
-	y_out = np.ones(len(x))
+    y_out = np.ones(len(x))
 
 
-	# Step for stars at n = 76 = 0.006, for DM 0.003 and for gas same as for stars
-	#~ step = len(x)*0.005#len(x)*0.0035#0.005!
-	step = len(x)*step_size
+    # Step for stars at n = 76 = 0.006, for DM 0.003 and for gas same as for stars
+    #~ step = len(x)*0.005#len(x)*0.0035#0.005!
+    step = len(x)*step_size
 
-	xi = np.log10(x)
-	yi = np.log10(y)
+    xi = np.log10(x)
+    yi = np.log10(y)
 
-	xs = xi
-	ys = yi
+    xs = xi
+    ys = yi
 
-	minarg = np.argmin(np.nan_to_num(np.gradient(yi)))
-	grad = np.min(np.nan_to_num(np.gradient(yi)))
-	#~ step = minarg - np.where(xi == min(xi, key=lambda x:abs(x - (xi[minarg] - 0.9) )))[0]
+    minarg = np.argmin(np.nan_to_num(np.gradient(yi)))
+    grad = np.min(np.nan_to_num(np.gradient(yi)))
 
-	if step < 3:
-		step = 3
+    if step < 3:
+        step = 3
 
-	#~ print np.exp(xi[minarg])
-	#~ print np.exp(xi[minarg] - 0.04)
+    #~ print np.exp(xi[minarg])
+    #~ print np.exp(xi[minarg] - 0.04)
 
-	if method == 1:
-		yslice = ys[(minarg-step):(minarg):1]
-		xslice = np.array([xs[(minarg-step):(minarg):1], np.ones(step)])
+    if method == 1:
+        yslice = ys[(minarg-step):(minarg):1]
+        xslice = np.array([xs[(minarg-step):(minarg):1], np.ones(step)])
 
-		w = np.linalg.lstsq(xslice.T, yslice)[0]
+        w = np.linalg.lstsq(xslice.T, yslice)[0]
 
-	elif method == 2:
-		yslice = ys[(minarg-step):(minarg):1]
-		xslice = xs[(minarg-step):(minarg):1]
+    elif method == 2:
+        yslice = ys[(minarg-step):(minarg):1]
+        xslice = xs[(minarg-step):(minarg):1]
 
-		w = np.polyfit(xslice, yslice, 2)
+        w = np.polyfit(xslice, yslice, 2)
 
-	elif method == 3:
-		#~ yslice = y[(minarg-20):(minarg):1] #60
-		#~ xslice = x[(minarg-20):(minarg):1]
-		yslice = y[(minarg-20):(minarg):1] #60
-		xslice = x[(minarg-20):(minarg):1]
+    elif method == 3:
+        #~ yslice = y[(minarg-20):(minarg):1] #60
+        #~ xslice = x[(minarg-20):(minarg):1]
+        yslice = y[(minarg-20):(minarg):1] #60
+        xslice = x[(minarg-20):(minarg):1]
 
-		from scipy.optimize import curve_fit
-		def func(x, a, b, c):
-			return a * (1.0+(x/b))**(-2.0)
+        from scipy.optimize import curve_fit
+        def func(x, a, b, c):
+            return a * (1.0+(x/b))**(-2.0)
 
-		popt, pcov = curve_fit(func, xslice, yslice, p0=(y[0], x[minarg], 0.0))
-		#print popt
+        popt, pcov = curve_fit(func, xslice, yslice, p0=(y[0], x[minarg], 0.0))
+        #print popt
 
-	for i in range(len(x)):
+    for i in range(len(x)):
 
-		if i > minarg: #100! #65, 125
-		#~ if i+start > minarg: #100! #65, 125
-		#if i+50 > (np.where(grad < grad_val)[0][0]):
+        if i > minarg: #100! #65, 125
+        #~ if i+start > minarg: #100! #65, 125
+        #if i+50 > (np.where(grad < grad_val)[0][0]):
 
-			"""
-			# Both procedures work via same reasoning, second one actually fits the slope from all the points, so more precise!
-			"""
+            """
+            # Both procedures work via same reasoning, second one actually
+            # fits the slope from all the points, so more precise!
+            """
 
-			#~ y_out[i] = np.exp(ys[np.argmin(yi)-50] + (xi[i] - xi[np.argmin(yi)-50])*(ys[np.argmin(yi)-50] - ys[np.argmin(yi)-100])/(xs[np.argmin(yi)-50] - xs[np.argmin(yi)-100])) #ys[0]+(x-xs[0])*(ys[1]-ys[0])/(xs[1]-xs[0])
+            if method == 1:
+                y_out[i] = 10.0**(ys[minarg] + (xi[i] - xi[minarg])*(w[0]))
 
-			if method == 1:
-				y_out[i] = 10.0**(ys[minarg] + (xi[i] - xi[minarg])*(w[0]))
+            elif method == 2:
+                y_out[i] = 10.0**(w[2] + (xi[i])*(w[1]) + ((xi[i])**2.0)*(w[0]))
 
-			elif method == 2:
-				y_out[i] = 10.0**(w[2] + (xi[i])*(w[1]) + ((xi[i])**2.0)*(w[0]))
+            elif method == 3:
+                y_out[i] = (func(x[i], popt[0], popt[1], popt[2]))
 
-			elif method == 3:
-				y_out[i] = (func(x[i], popt[0], popt[1], popt[2]))
+        else:
+            y_out[i] = 10.0**(yi[i])
 
-		else:
-			y_out[i] = 10.0**(yi[i])
-
-	return y_out
+    return y_out
 
 
 def extrap2d(interpolator):
@@ -155,7 +154,8 @@ def extrap2d(interpolator):
 
 #~ def fill_nan(a):
 	#~
-	#~ # Replaces nan with closest value, so we are not left with 0 or 10^308-something!
+	#~ # Replaces nan with closest value,
+    #~ so we are not left with 0 or 10^308-something!
 	#~
 	#~ ind = np.where(~np.isnan(a))[0]
 	#~ first, last = ind[0], ind[-1]

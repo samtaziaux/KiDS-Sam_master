@@ -70,7 +70,8 @@ def power_to_corr_multi(power_func, R):
 
 	for j in range(nprocs):
 
-		work = multi.Process(target=multi_proc, args=((j*chunk), ((j+1)*chunk), q1, power_func, R))
+		work = multi.Process(target=multi_proc, args=((j*chunk), \
+                                            ((j+1)*chunk), q1, power_func, R))
 		procs.append(work)
 		work.start()
 
@@ -109,7 +110,8 @@ def power_to_corr(power_func, R):
 
     corr = np.zeros_like(R)
 
-    # the number of steps to fit into a half-period at high-k. 6 is better than 1e-4.
+    # the number of steps to fit into a half-period at high-k.
+    # 6 is better than 1e-4.
     minsteps = 8
 
     # set min_k, 1e-6 should be good enough
@@ -148,7 +150,8 @@ def power_to_corr_ogata(power_func, R):
 
 
 """
-# Lensing calculations from correlation function, i.e. surface density, excess surface density, tangential shear ...
+# Lensing calculations from correlation function, i.e. surface density, 
+# excess surface density, tangential shear ...
 """
 
 
@@ -181,17 +184,19 @@ def d_sigma(sigma, r_i, r_x):
     s = np.zeros(len(r_x))
     err = np.zeros(len(r_x))
 
-    c = scipy.interpolate.UnivariateSpline(np.log10(r_i), np.log10(sigma),s=0, ext=0)
+    c = UnivariateSpline(np.log10(r_i), np.log10(sigma),s=0, ext=0)
     x_int = np.linspace(0.0, 1.0, 10)
 
-    for i in range(len(r_x)):
+    for i in xrange(len(r_x)):
 
         integ = lambda x: 10.0**(c(np.log10(x*r_x[i])))*x # for int from 0 to 1
 
         #s[i], err[i] = intg.quad(integ, 0.0, 1.0)
         s[i] = intg.cumtrapz(np.nan_to_num(integ(x_int)), x_int, initial=None)[-1]
-
-    d_sig = ((2.0)*s - 10.0**(c(np.log10(r_x)))) # Not subtracting sigma because the range is different! Subtracting interpolated function!
+    
+    # Not subtracting sigma because the range is different!
+    # Subtracting interpolated function!
+    d_sig = ((2.0)*s - 10.0**(c(np.log10(r_x)))) 
 
     return d_sig
 

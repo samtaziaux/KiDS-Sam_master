@@ -120,13 +120,19 @@ def delta_NFW(z, rho_mean, f, M, r):
 
 	for i in range(len(x)):
 		if x[i]<1.0:
-			g[i] = (8.0*np.arctanh(np.sqrt((1.0 - x[i])/(1.0 + x[i]))))/((x[i]**2.0)*np.sqrt(1.0 - x[i]**2.0)) + (4.0*np.log(x[i]/2.0))/(x[i]**2.0) - 2.0/(x[i]**2.0 - 1.0) + (4.0*np.arctanh(np.sqrt((1.0 - x[i])/(1.0 + x[i]))))/((x[i]**2.0 - 1.0)*np.sqrt(1.0 - x[i]**2.0))
+			g[i] = (8.0*np.arctanh(np.sqrt((1.0 - x[i])/(1.0 + x[i]))))/ \
+            ((x[i]**2.0)*np.sqrt(1.0 - x[i]**2.0)) + (4.0*np.log(x[i]/2.0))/ \
+            (x[i]**2.0) - 2.0/(x[i]**2.0 - 1.0) + (4.0*np.arctanh(np.sqrt((1.0- \
+            x[i])/(1.0 + x[i]))))/((x[i]**2.0 - 1.0)*np.sqrt(1.0 - x[i]**2.0))
 
 		elif x[i]==1.0:
 			g[i] = 10.0/3.0 + 4.0*np.log(0.5)
 
 		elif x[i]>=1.0:
-			g[i] = (8.0*np.arctan(np.sqrt((x[i] - 1.0)/(1.0 + x[i]))))/((x[i]**2.0)*np.sqrt(x[i]**2.0 - 1.0)) + (4.0*np.log(x[i]/2.0))/(x[i]**2.0) - 2.0/(x[i]**2.0 - 1.0) + (4.0*np.arctan(np.sqrt((x[i] - 1.0)/(1.0 + x[i]))))/((x[i]**2.0 - 1.0)**(3.0/2.0))
+			g[i] = (8.0*np.arctan(np.sqrt((x[i] - 1.0)/(1.0 + x[i]))))/ \
+            ((x[i]**2.0)*np.sqrt(x[i]**2.0 - 1.0)) + (4.0*np.log(x[i]/2.0))/ \
+            (x[i]**2.0) - 2.0/(x[i]**2.0 - 1.0) + (4.0*np.arctan(np.sqrt((x[i]- \
+            1.0)/(1.0 + x[i]))))/((x[i]**2.0 - 1.0)**(3.0/2.0))
 
 
 	return r_s * d_c * rho_mean * g
@@ -167,9 +173,12 @@ def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
 def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
 
 	"""
-	Calculates the power spectrum for the component given in the name. Following the construction from Mohammed, but to general power of k!
-	In practice the contributions from k > 50 are so small it is not worth doing it.
-	Extrapolates the power spectrum to get rid of the knee, which is a Taylor series artifact.
+	Calculates the power spectrum for the component given in the name. 
+    Following the construction from Mohammed, but to general power of k!
+	In practice the contributions from k > 50 are so small 
+    it is not worth doing it.
+	Extrapolates the power spectrum to get rid of the knee, 
+    which is a Taylor series artifact.
 	"""
 
 	n = n + 2
@@ -212,12 +221,16 @@ def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
 	return spec_ext
 
 
-def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):
+def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
+                    ngal, k_x, r_x, m_x, T, T_tot):
 
     """
-    Calculates the power spectrum for the component given in the name. Following the construction from Mohammed, but to general power of k!
-    In practice the contributions from k > 50 are so small it is not worth doing it.
-    Extrapolates the power spectrum to get rid of the knee, which is a Taylor series artifact.
+    Calculates the power spectrum for the component given in the name. 
+    Following the construction from Mohammed, but to general power of k!
+    In practice the contributions from k > 50 are so small 
+    it is not worth doing it.
+    Extrapolates the power spectrum to get rid of the knee, 
+    which is a Taylor series artifact.
     """
 
     n = n + 2
@@ -245,12 +258,16 @@ def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_
     return spec_ext
 
 
-def GM_sat_spectrum(mass_func, z, rho_dm, rho_mean, n, population, ngal, k_x, r_x, m_x, T, T_tot):
+def GM_sat_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
+                    ngal, k_x, r_x, m_x, T, T_tot):
 
     """
-    Calculates the power spectrum for the component given in the name. Following the construction from Mohammed, but to general power of k!
-    In practice the contributions from k > 50 are so small it is not worth doing it.
-    Extrapolates the power spectrum to get rid of the knee, which is a Taylor series artifact.
+    Calculates the power spectrum for the component given in the name. 
+    Following the construction from Mohammed, but to general power of k!
+    In practice the contributions from k > 50 are so small 
+    it is not worth doing it.
+    Extrapolates the power spectrum to get rid of the knee, 
+    which is a Taylor series artifact.
     """
 
     n = n + 2

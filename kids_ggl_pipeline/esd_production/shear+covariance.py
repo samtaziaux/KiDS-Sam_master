@@ -13,7 +13,6 @@ import sys
 import os
 import time
 import multiprocessing as multi
-import sharedmem
 
 from astropy import constants as const, units as u
 import memory_test as memory

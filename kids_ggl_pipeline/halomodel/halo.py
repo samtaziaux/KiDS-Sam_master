@@ -304,7 +304,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         #M_min, M_max, M_step, M_bin_min, M_bin_max, \
         #centrals, satellites, taylor_procedure, include_baryons, \
         #smth1, smth2 = theta
-    z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
+    sigma_8, H0, omegam, omegab_h2, omegav, n, \
+        z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
         fc_nsat, alpha_s, b_0, b_1, b_2, \
         alpha_star, beta_gas, r_t0, r_c0, \
         M_bin_min, M_bin_max, \
@@ -335,8 +336,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                        for Mi, Mx in _izip(M_bin_min, M_bin_max)])
     #print 'hod_mass =', time() - to
 
-    cosmology_params = {"sigma_8": 0.80, "H0": 70.0,"omegab_h2": 0.022,
-                        "omegam": 0.3, "omegav": 0.7, "n": 0.96,
+    cosmology_params = {"sigma_8": sigma_8, "H0": H0,"omegab_h2": omegab_h2,
+                        "omegam": omegam, "omegav": omegav, "n": n,
                         "lnk_min": lnk_min ,"lnk_max": lnk_max,
                         "dlnk": k_step, "transfer_fit": "BBKS", "z": z,
                         "force_flat": True}

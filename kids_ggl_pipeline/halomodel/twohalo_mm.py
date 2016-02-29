@@ -63,7 +63,10 @@ def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     
     # Setting parameters from config file
     
-    cosmology_params = {"sigma_8": sigma_8, "h": h,"omegab_h2": omegab_h2, "omegam": omegam, "omegav": omegav, "n": n, "lnk_min": k_min ,"lnk_max": k_max, "dlnk": k_step, "transfer_fit": "BBKS", "z":z, "force_flat":True}
+    cosmology_params = {"sigma_8": sigma_8, "h": h,"omegab_h2": omegab_h2, \
+                        "omegam": omegam, "omegav": omegav, "n": n, \
+                        "lnk_min": k_min ,"lnk_max": k_max, "dlnk": k_step, \
+                        "transfer_fit": "BBKS", "z":z, "force_flat":True}
     # Calculation
     
     

@@ -20,12 +20,14 @@ def calc_S(M, Omega_m, Omega_b, sigma_8, h):
 
     c0 = 3.904e-4
     Gamma = Omega_m * h * np.exp( -Omega_b * (1. + np.sqrt(2.*h)/Omega_m ) )
-    var_S = (calc_u( (c0*Gamma) / (Omega_m**(1./3.)) * M**(1./3.) ))**2. * ( sigma_8**2. / (calc_u( 32.*Gamma ))**2. )
+    var_S = (calc_u( (c0*Gamma) / (Omega_m**(1./3.)) * M**(1./3.) ))**2. * \
+        ( sigma_8**2. / (calc_u( 32.*Gamma ))**2. )
 
     return var_S
 
 def calc_u(x):
-    u = 64.087 * (1. + 1.074*x**0.3 - 1.581*x**0.4 + 0.954*x**0.5 - 0.185*x**0.6)**-10.
+    u = 64.087 * (1. + 1.074*x**0.3 - 1.581*x**0.4 + 0.954*x**0.5 - \
+                  0.185*x**0.6)**-10.
     return u
 
 
@@ -47,7 +49,7 @@ def Bias_Tinker10(var_S):
     C = 0.019 + 0.107 * y + 0.19 * np.exp(-(4. / y) ** 4.)
     c = 2.4
 
-    bias = 1. - A * nu ** a / (nu ** a + delta_c ** a) + B * nu ** b + C * nu ** c
+    bias = 1.- A * nu ** a/(nu ** a + delta_c ** a) + B * nu ** b + C * nu ** c
 
     return bias
 

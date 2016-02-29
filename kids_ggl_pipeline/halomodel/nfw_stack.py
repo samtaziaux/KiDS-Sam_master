@@ -360,8 +360,11 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     _delta = delta
     _izip = izip
     
-    #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
-    central_profile, fc_central, logMcentral, b_in, z, Mstar, Rrange, angles = theta
+    #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, \
+    #fc_central1, fc_central2, logMcentral1, logMcentral2, z, \
+    #Mstar, Rrange, angles = theta
+    central_profile, fc_central, logMcentral, b_in, z, \
+        Mstar, Rrange, angles = theta
     
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
@@ -389,12 +392,14 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2.) for Mi, Ri in izip(Mstar, R)]
     
     # satellite signal
-    #esd_sat = [sat_profile(Ri[1:]/rs, sigma) for Ri, rs, sigma in izip(R, rs_sat, sigma_sat)]
+    #esd_sat = [sat_profile(Ri[1:]/rs, sigma) for Ri, rs, \
+    #sigma in izip(R, rs_sat, sigma_sat)]
     #esd_sat = _array(esd_sat)
     
     
     # central signal
-    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri, rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
+    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri, \
+                   rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
     
     
@@ -403,14 +408,20 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
     omegab_h2 = 0.02205
     n = 0.9603
     bias = calc_bias.calc_bias(Mcentral, Om, omegab_h2, sigma_8, h)
-    esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri[1:])[0] for b_i, biasi, zi, Ri in izip(b, bias, z, R)]
+    esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, \
+                                         n, zi, Ri[1:])[0] for b_i, biasi, \
+                 zi, Ri in izip(b, bias, z, R)]
     esd_2halo = _array(esd_2halo)
     
     # Total signal
-    #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo for f, esat, ecentral, e2halo in izip(fsat, esd_sat, esd_central, esd_2halo)])
-    esd_total = _array([ecentral + e2halo for ecentral, e2halo in izip(esd_central, esd_2halo)])
+    #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo
+    #for f, esat, ecentral, e2halo in izip(fsat,
+    #esd_sat, esd_central, esd_2halo)])
+    esd_total = _array([ecentral + e2halo for ecentral, \
+                        e2halo in izip(esd_central, esd_2halo)])
     
-    Mavg = Mcentral#( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
+    Mavg = Mcentral
+    #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
     
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_2halo, Mavg, 0]
@@ -428,8 +439,11 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     _izip = izip
     _linspace = linspace
     
-    #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
-    central_profile, host_profile, fc_central, logMcentral, alpha_in, f_off_in, b_in, z, Mstar, Rrange, angles = theta
+    #sat_profile, central_profile, fsat, fc_sat,
+    #logMsat1, logMsat2, fc_central1, fc_central2,
+    #logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
+    central_profile, host_profile, fc_central, logMcentral, alpha_in, \
+    f_off_in, b_in, z, Mstar, Rrange, angles = theta
     
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
@@ -458,15 +472,18 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     r_vir = (Mcentral / aux) ** (1./3.)
     rs_cent = (Mcentral / aux) ** (1./3.) / ccentral
     sigma_central = rs_cent * _delta(ccentral) * rho_m
-    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2.) for Mi, Ri in izip(Mstar, R)]
+    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2.) \
+                 for Mi, Ri in izip(Mstar, R)]
     
     # satellite signal
-    #esd_sat = [sat_profile(Ri[1:]/rs, sigma) for Ri, rs, sigma in izip(R, rs_sat, sigma_sat)]
+    #esd_sat = [sat_profile(Ri[1:]/rs, sigma) for Ri, rs,
+    #sigma in izip(R, rs_sat, sigma_sat)]
     #esd_sat = _array(esd_sat)
     
     
     # central signal
-    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri, rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
+    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri,\
+                   rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
     
     # mis-centered central signal
@@ -482,7 +499,10 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     Roff = [Roff[i] for i in j]
     n_Roff = [n[i] for i, n in _izip(j, n_Roff)]
     
-    esd_host = [host_profile(x[0]/x[1], x[2]/x[1], x[3], x[4], x[5]/x[1], angles) for x in izip(R, rs_cent, Roff, n_Roff, sigma_central, Rrange)]
+    esd_host = [host_profile(x[0]/x[1], x[2]/x[1], x[3], x[4], x[5]/x[1], \
+                             angles) for x in izip(R, rs_cent, \
+                                                   Roff, n_Roff, \
+                                                   sigma_central, Rrange)]
     esd_host = _array(esd_host)
     
     # 2-halo term signal
@@ -490,14 +510,23 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     omegab_h2 = 0.02205
     n = 0.9603
     bias = calc_bias.calc_bias(Mcentral, Om, omegab_h2, sigma_8, h)
-    esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri[1:])[0] for b_i, biasi, zi, Ri in izip(b, bias, z, R)]
+    esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, \
+                                         n, zi, Ri[1:])[0] for b_i, \
+                 biasi, zi, Ri in izip(b, bias, z, R)]
     esd_2halo = _array(esd_2halo)
     
     # Total signal
-    #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo for f, esat, ecentral, e2halo in izip(fsat, esd_sat, esd_central, esd_2halo)])
-    esd_total = _array([fo * ecentral + (1.0 - fo)*eoff + e2halo for ecentral, eoff, e2halo, fo in izip(esd_central, esd_host, esd_2halo, f_off)])
+    #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo \
+    #for f, esat, ecentral, e2halo in izip(fsat, esd_sat, \
+    #esd_central, esd_2halo)])
+    esd_total = _array([fo * ecentral + (1.0 - fo)*eoff + e2halo \
+                        for ecentral, eoff, e2halo, fo in izip(esd_central, \
+                                                               esd_host,\
+                                                               esd_2halo, \
+                                                               f_off)])
     
-    Mavg = Mcentral #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
+    Mavg = Mcentral
+    #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
     
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, 0]
@@ -514,12 +543,16 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     _delta = delta
     _izip = izip
     
-    #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
-    central_profile, fc_central, logMcentral, b_in, z, Mstar, Rrange, angles = theta
+    #sat_profile, central_profile, fsat, fc_sat, logMsat1, logMsat2,
+    #fc_central1, fc_central2, logMcentral1, logMcentral2, z,
+    #Mstar, Rrange, angles = theta
+    central_profile, fc_central, logMcentral, b_in, z, Mstar, \
+        Rrange, angles = theta
     
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
-    Mcentral = 10.0**logMcentral #_array([logMcentral1, logMcentral2, logMcentral3, logMcentral4])
+    Mcentral = 10.0**logMcentral
+    #_array([logMcentral1, logMcentral2, logMcentral3, logMcentral4])
     b = b_in #_array([b_in1, b_in2, b_in3, b_in4])
     
     Mstar = 10.0**Mstar
@@ -543,12 +576,15 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2.) for Mi, Ri in izip(Mstar, R)]
     
     # satellite signal
-    #esd_sat = [sat_profile(Ri[1:]/rs, sigma) for Ri, rs, sigma in izip(R, rs_sat, sigma_sat)]
+    #esd_sat = [sat_profile(Ri[1:]/rs, sigma) \
+    #for Ri, rs, sigma in izip(R, rs_sat, sigma_sat)]
     #esd_sat = _array(esd_sat)
     
     
     # central signal
-    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri, rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
+    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) \
+                   for pm, Ri, rs, sigma in izip(pointmass, \
+                                                 R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
     
     
@@ -558,14 +594,20 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     omegab_h2 = 0.02205
     n = 0.9603
     bias = calc_bias.calc_bias(Mcentral, Om, omegab_h2, sigma_8, h)
-    esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, n, zi, Ri[1:])[0] for b_i, biasi, zi, Ri in izip(b, bias, z, R)]
+    esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol,\
+                                         n, zi, Ri[1:])[0] for b_i, biasi, \
+                 zi, Ri in izip(b, bias, z, R)]
     esd_2halo = _array(esd_2halo)
     
     # Total signal
-    #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo for f, esat, ecentral, e2halo in izip(fsat, esd_sat, esd_central, esd_2halo)])
-    esd_total = _array([ecentral + e2halo for ecentral, e2halo in izip(esd_central, esd_2halo)])
+    #esd_total = _array([f * (esat) + (1.-f) * ecentral + \
+    #e2halo for f, esat, ecentral, e2halo in izip(fsat, \
+    #esd_sat, esd_central, esd_2halo)])
+    esd_total = _array([ecentral + e2halo for ecentral, \
+                        e2halo in izip(esd_central, esd_2halo)])
     
-    Mavg = Mcentral#( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
+    Mavg = Mcentral
+    #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
     
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_2halo, Mavg, 0]

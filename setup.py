@@ -29,5 +29,6 @@ setup(name='kids_ggl_pipeline',
                         'emcee>=2.1.0',
                         'hmf==1.7.0',
                         'mpmath>=0.19',
-                        'numpy>=1.5.0']
+                        'numpy>=1.5.0',
+                        'scipy>=0.16.0']
       )

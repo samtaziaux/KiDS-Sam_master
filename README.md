@@ -102,9 +102,7 @@ Update log:
 - MCMC sampling:
     - Uses `emcee` to sample parameters
 
-
-**2016 Feb 29** Release v1.1.0. Features:
-
+**2016 Feb 29** - Release v1.1.0. Features:
  - The syntax for `hm_output` parameters in the configuration file is now simpler and makes it easier to update the number of observable bins. Details can be found in `demo/ggl_demo_nfw_stack.txt`. Configuration files must be updated accordingly.
 
  - Cosmological parameters are no longer hard-coded in the halo model and can therefore be modified by the user in the config file. This also means the user can fit for them in the MCMC.
@@ -115,8 +113,7 @@ Update log:
 
  - General clean up of most modules
 
-
-**2016 Feb 29** Release v1.1.1. Features:
-
+**2016 Feb 29** - Release v1.1.1. Features:
  - Fixed demo config file to avoid confusion and problems when testing the pipeline for the first time.
+
 ---

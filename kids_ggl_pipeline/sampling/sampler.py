@@ -407,6 +407,7 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                for param, data in izip(params[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',
                           array=sampler.lnprobability.T[:iternum].flatten()))
+
     if len(meta_names) > 0:
         # save only the last chunk (starting from t),
         # all others are already in metadata.
@@ -427,7 +428,7 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                     continue
                 n = 0
                 for param in walker[:-nchi2]:
-                    if len(data[n].shape) == 2 and len(param.shape) == 1:
+                    if len(data[n]) == 2 and len(param.shape) == 1:
                         data[n][i] = param
                         n += 1
                         continue

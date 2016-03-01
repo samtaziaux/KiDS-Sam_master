@@ -690,7 +690,7 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
     spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
     spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
 
-    Z_B = spec_cat['z_spec']
+    Z_S = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
     manmask = spec_cat['MASK']
     
@@ -704,7 +704,7 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
         srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
             (spec_cat['Z_B'] < srclims[1])
 
-    return Z_B[srcmask], spec_weight[srcmask]
+    return Z_S[srcmask], spec_weight[srcmask]
 
 
 # Import and mask all used data from the sources in this KiDS field
@@ -731,13 +731,13 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     if cat_version == 3:
         w = np.transpose(np.array([kidscat['weight_A'], kidscat['weight_B'], \
                                    kidscat['weight_C'], kidscat['weight_C']]))
-        Z_B = kidscat['Z_B']
+        srcPZ = kidscat['Z_B']
         SN = kidscat['model_SNratio']
         manmask = kidscat['MASK']
         tile = kidscat['THELI_NAME']
         
     elif cat_version == 2:
-        Z_B = kidscat['PZ_full'] # Full P(z) probability function
+        srcPZ = kidscat['PZ_full'] # Full P(z) probability function
         w = np.transpose(np.array([kidscat['weight'], kidscat['weight'], \
                                    kidscat['weight'], kidscat['weight']]))
                                    
@@ -826,7 +826,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     e2 = e2[srcmask]
     tile = tile[srcmask]
 
-    return srcNr, srcRA, srcDEC, w, Z_B, e1, e2, srcm, tile
+    return srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile
 
 
 # Calculating the variance of the ellipticity for this source selection

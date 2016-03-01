@@ -353,8 +353,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                         np.zeros([len(outputnames), len(w.T[0]), nRbins])
         
             for l in xrange(len(lenssplits)-1):
-                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), \
-                                    lenssplits[l], '-', lenssplits[l+1]
+                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
                 
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \

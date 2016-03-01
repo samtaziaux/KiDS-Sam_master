@@ -1295,12 +1295,9 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   '\
-        'ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)'\
-        'variance(e_s)'%(Runit, h*100, h*100, h*100)
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)'%(Runit, h*100, h*100, h*100)
     else:
-        filehead = '# Radius(%s)	gamma_t gamma_x	error   '\
-        'bias(1+K)	variance(e_s)'%(Runit)
+        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)'%(Runit)
 
     with open(filename, 'w') as file:
         print >>file, filehead
@@ -1314,9 +1311,7 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
                 error_tot[R] = int(-999)
                 bias_tot[R] = int(-999)
 
-            print >>file, '%.12g	%.12g	%.12g	%.12g'\
-                '%.12g	%.12g'%(Rcenters[R], \
-                ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance)
+            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance)
 
     print 'Written: ESD profile data:', filename
 

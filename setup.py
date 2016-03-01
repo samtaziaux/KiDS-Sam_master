@@ -13,7 +13,7 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(name='kids_ggl_pipeline',
-      version='1.1.0',
+      version='1.1.1',
       description='KiDS Galaxy-Galaxy Lensing Pipeline',
       author='Margot Brouwer, Andrej Dvornik, Cristobal Sifon',
       author_email='dvornik@strw.leidenuniv.nl',
@@ -25,7 +25,7 @@ setup(name='kids_ggl_pipeline',
                 'kids_ggl_pipeline/sampling'],
       package_data={'': ['demo/*', 'README.md']},
       scripts=['bin/kids_ggl'],
-      install_requires=['astropy>=1.1.1',
+      install_requires=['astropy>=1.1.0',
                         'emcee>=2.1.0',
                         'hmf==1.7.0',
                         'mpmath>=0.19',

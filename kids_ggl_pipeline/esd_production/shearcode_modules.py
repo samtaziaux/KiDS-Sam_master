@@ -820,7 +820,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     srcRA = srcRA[srcmask]
     srcDEC = srcDEC[srcmask]
     w = w[srcmask]
-    Z_B = Z_B[srcmask]
+    srcPZ = srcPZ[srcmask]
     srcm = srcm[srcmask]
     e1 = e1[srcmask]
     e2 = e2[srcmask]
@@ -1050,7 +1050,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
         
         DlsoDs[(cond[0], cond[1])] = 0.0
         DlsoDs[(cond2[0], cond2[1])] = 0.0
-    
+
     DlsoDsmask = [] # Empty unused lists
 
     # Matrix multiplication that sums over P(z),

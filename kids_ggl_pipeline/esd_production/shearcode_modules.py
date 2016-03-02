@@ -1316,11 +1316,11 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
     print 'Written: ESD profile data:', filename
 
 
-    if len(galIDs_matched)>0 and blindcatnum == 3:
+    if len(galIDs_matched)>0:
         # Writing galID's to another file
         galIDsname_split = filename.rsplit('_',1)
-        galIDsname = '%s_lensIDs.txt'%galIDsname_split[0]
-        kidsgalIDsname = '%s_KiDSlensIDs.txt'%galIDsname_split[0]
+        galIDsname = '%s_%s_lensIDs.txt'%(galIDsname_split[0], str(blindcatnum))
+        kidsgalIDsname = '%s_%s_KiDSlensIDs.txt'%(galIDsname_split[0], str(blindcatnum))
 
         with open(galIDsname, 'w') as file:
             print >>file, "# ID's of all stacked lenses:"

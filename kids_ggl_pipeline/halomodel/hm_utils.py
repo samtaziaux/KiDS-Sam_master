@@ -125,6 +125,7 @@ def read_config(config_file, version='0.5.7'):
             val2.append([-1])
             val3.append([-inf])
             val4.append([inf])
+            nparams += 1
         elif line[0] == 'hm_functions':
             # check if there are comments at the end first
             if '#' in line:

@@ -125,6 +125,7 @@ def read_config(config_file, version='0.5.7'):
             val2.append([-1])
             val3.append([-inf])
             val4.append([inf])
+            nparams += 1
         elif line[0] == 'hm_functions':
             # check if there are comments at the end first
             if '#' in line:
@@ -154,6 +155,7 @@ def read_config(config_file, version='0.5.7'):
         hm_functions = (func for func in hm_functions)
     if njoin == 1 and len(join[0]) == 0:
         join = None
+    print join
     out = (model, array(params), array(param_types), array(prior_types),
            make_array(val1), make_array(val2), make_array(val3),
            make_array(val4), join, hm_functions, array(starting),

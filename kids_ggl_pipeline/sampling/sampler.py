@@ -124,6 +124,7 @@ def run_emcee(hm_options, sampling_options, args):
         print >>hdr, 'thin      {0:5d}'.format(thin)
         hdr.close()
 
+    
     # are we just running a demo?
     if args.demo:
         import pylab

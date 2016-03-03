@@ -340,7 +340,10 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
             srcm = srcm_varlist[(index)]
             tile = tile_varlist[(index)]
             
-            srcPZ = np.array([srcPZ_a,]  *len(srcNr))
+            if len(srcNr) != 0:
+                srcPZ = np.array([srcPZ_a,]  *len(srcNr))
+            else:
+                srcPZ = np.zeros((0, len(srcPZ_a)), dtype=np.float64)
             
             if 'covariance' in purpose:
                 # These lists will contain the final
@@ -350,8 +353,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                         np.zeros([len(outputnames), len(w.T[0]), nRbins])
         
             for l in xrange(len(lenssplits)-1):
-                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), \
-                                    lenssplits[l], '-', lenssplits[l+1]
+                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
                 
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
@@ -598,7 +600,6 @@ if __name__ == '__main__':
                       centering, purpose, Ncat, O_matter, O_lambda, Ok, h, \
                       lens_weights, filename_addition, cat_version)
 
-
     # Calculate the source variance
 
     # These lists will contain all ellipticities for the variance calculation
@@ -694,7 +695,6 @@ if __name__ == '__main__':
     print 'Using %s cores to create split catalogues'%Nsplits, \
             ', - Center definition = %s'%centering
     print
-
 
     output = 0
     outputnames = 0

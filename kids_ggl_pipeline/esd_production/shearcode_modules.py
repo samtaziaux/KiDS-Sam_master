@@ -690,7 +690,7 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
     spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
     spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
 
-    Z_B = spec_cat['z_spec']
+    Z_S = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
     manmask = spec_cat['MASK']
     
@@ -704,7 +704,7 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
         srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
             (spec_cat['Z_B'] < srclims[1])
 
-    return Z_B[srcmask], spec_weight[srcmask]
+    return Z_S[srcmask], spec_weight[srcmask]
 
 
 # Import and mask all used data from the sources in this KiDS field
@@ -731,13 +731,13 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     if cat_version == 3:
         w = np.transpose(np.array([kidscat['weight_A'], kidscat['weight_B'], \
                                    kidscat['weight_C'], kidscat['weight_C']]))
-        Z_B = kidscat['Z_B']
+        srcPZ = kidscat['Z_B']
         SN = kidscat['model_SNratio']
         manmask = kidscat['MASK']
         tile = kidscat['THELI_NAME']
         
     elif cat_version == 2:
-        Z_B = kidscat['PZ_full'] # Full P(z) probability function
+        srcPZ = kidscat['PZ_full'] # Full P(z) probability function
         w = np.transpose(np.array([kidscat['weight'], kidscat['weight'], \
                                    kidscat['weight'], kidscat['weight']]))
                                    
@@ -820,13 +820,13 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     srcRA = srcRA[srcmask]
     srcDEC = srcDEC[srcmask]
     w = w[srcmask]
-    Z_B = Z_B[srcmask]
+    srcPZ = srcPZ[srcmask]
     srcm = srcm[srcmask]
     e1 = e1[srcmask]
     e2 = e2[srcmask]
     tile = tile[srcmask]
 
-    return srcNr, srcRA, srcDEC, w, Z_B, e1, e2, srcm, tile
+    return srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile
 
 
 # Calculating the variance of the ellipticity for this source selection
@@ -1050,7 +1050,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
         
         DlsoDs[(cond[0], cond[1])] = 0.0
         DlsoDs[(cond2[0], cond2[1])] = 0.0
-    
+
     DlsoDsmask = [] # Empty unused lists
 
     # Matrix multiplication that sums over P(z),
@@ -1295,12 +1295,9 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   '\
-        'ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)'\
-        'variance(e_s)'%(Runit, h*100, h*100, h*100)
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)'%(Runit, h*100, h*100, h*100)
     else:
-        filehead = '# Radius(%s)	gamma_t gamma_x	error   '\
-        'bias(1+K)	variance(e_s)'%(Runit)
+        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)'%(Runit)
 
     with open(filename, 'w') as file:
         print >>file, filehead
@@ -1314,18 +1311,16 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
                 error_tot[R] = int(-999)
                 bias_tot[R] = int(-999)
 
-            print >>file, '%.12g	%.12g	%.12g	%.12g'\
-                '%.12g	%.12g'%(Rcenters[R], \
-                ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance)
+            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance)
 
     print 'Written: ESD profile data:', filename
 
 
-    if len(galIDs_matched)>0 and blindcatnum == 3:
+    if len(galIDs_matched)>0:
         # Writing galID's to another file
         galIDsname_split = filename.rsplit('_',1)
-        galIDsname = '%s_lensIDs.txt'%galIDsname_split[0]
-        kidsgalIDsname = '%s_KiDSlensIDs.txt'%galIDsname_split[0]
+        galIDsname = '%s_%s_lensIDs.txt'%(galIDsname_split[0], str(blindcatnum))
+        kidsgalIDsname = '%s_%s_KiDSlensIDs.txt'%(galIDsname_split[0], str(blindcatnum))
 
         with open(galIDsname, 'w') as file:
             print >>file, "# ID's of all stacked lenses:"

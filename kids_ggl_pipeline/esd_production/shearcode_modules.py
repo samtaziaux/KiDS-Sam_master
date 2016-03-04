@@ -1288,7 +1288,7 @@ def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
 
 # Printing stacked ESD profile to a text file
 def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
-                bias_tot, h, variance, blindcatnum, \
+                bias_tot, h, variance, blindcat, blindcats, blindcatnum, \
                 galIDs_matched, galIDs_matched_infield):
 
     # Choosing the appropriate covariance value
@@ -1316,11 +1316,11 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
     print 'Written: ESD profile data:', filename
 
 
-    if len(galIDs_matched)>0:
+    if len(galIDs_matched)>0 & (blindcat==blindcats[0]):
         # Writing galID's to another file
         galIDsname_split = filename.rsplit('_',1)
-        galIDsname = '%s_%s_lensIDs.txt'%(galIDsname_split[0], str(blindcatnum))
-        kidsgalIDsname = '%s_%s_KiDSlensIDs.txt'%(galIDsname_split[0], str(blindcatnum))
+        galIDsname = '%s_lensIDs.txt'%(galIDsname_split[0])
+        kidsgalIDsname = '%s_KiDSlensIDs.txt'%(galIDsname_split[0])
 
         with open(galIDsname, 'w') as file:
             print >>file, "# ID's of all stacked lenses:"

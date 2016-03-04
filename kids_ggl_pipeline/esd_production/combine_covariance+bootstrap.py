@@ -349,7 +349,7 @@ def main():
             shear.write_stack(filenameESD, Rcenters, Runit, \
                               ESDt_tot[N1], ESDx_tot[N1], \
                               error_tot[N1], bias_tot[N1], h, \
-                              variance, blindcatnum, \
+                              variance, blindcat, blindcats, blindcatnum, \
                               galIDs_matched, galIDs_matched_infield)
 
         for N1 in xrange(Nobsbins):

@@ -116,4 +116,7 @@ Update log:
 **2016 Feb 29** - Release v1.1.1. Features:
  - Fixed demo config file to avoid confusion and problems when testing the pipeline for the first time.
 
+**2016 Mar 5** - Release v1.1.2. Features:
+ - Crucial bug fixes.
+
 ---

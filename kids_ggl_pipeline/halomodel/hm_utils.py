@@ -155,7 +155,7 @@ def read_config(config_file, version='0.5.7'):
         hm_functions = (func for func in hm_functions)
     if njoin == 1 and len(join[0]) == 0:
         join = None
-    print join
+   
     out = (model, array(params), array(param_types), array(prior_types),
            make_array(val1), make_array(val2), make_array(val3),
            make_array(val4), join, hm_functions, array(starting),

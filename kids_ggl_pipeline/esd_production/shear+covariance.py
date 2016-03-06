@@ -29,7 +29,7 @@ nan = np.nan # Not a number
 
 def loop_multi(Nsplit, output, outputnames, gamacat, centering, \
                lens_selection, lens_binning, binname, binnum, \
-               binmin, binmax, filename_var):
+               binmin, binmax, filename_var, filename):
     
     q1 = multi.Queue()
     procs = []
@@ -41,7 +41,7 @@ def loop_multi(Nsplit, output, outputnames, gamacat, centering, \
                                                 gamacat, centering, \
                                                 lens_selection, lens_binning, \
                                                 binname, binnum, binmin, \
-                                                binmax, filename_var))
+                                                binmax, filename_var, filename))
         procs.append(work)
         work.start()
 
@@ -49,7 +49,7 @@ def loop_multi(Nsplit, output, outputnames, gamacat, centering, \
 
 def loop(Nsplit, output, outputnames, gamacat, centering, \
          lens_selection, lens_binning, binname, binnum, \
-         binmin, binmax, filename_var):
+         binmin, binmax, filename_var, filename):
     
     if 'catalog' in purpose:
         # These lists will contain the final output
@@ -276,10 +276,11 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm)
         if ('random' in purpose):
+	    """
             if os.path.isfile(filename):
-                os.remove(filename)
+                #os.remove(filename)
                 print 'Placeholder:', filename, 'is removed.'
-        
+            """
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, Nsplit+1, \
@@ -495,10 +496,11 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                     purpose, e1, e2, w, srcm)
         
         if ('random' in purpose):
+	    """
             if os.path.isfile(filename):
                 os.remove(filename)
                 print 'Placeholder:', filename, 'is removed.'
-    
+    	    """
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, Nsplit+1, \
@@ -578,19 +580,23 @@ if __name__ == '__main__':
         print
         quit()
 
-    """
+    
     # Printing a placeholder file, that tells other codes \
-        that this catalog is being written.
+    #    that this catalog is being written.
     if ('random' in purpose):
+	filename = 0
+	"""
         filename = shear.define_filename_splits(path_splits, purpose, \
-                                                filename_var, Nsplit+1, \
+                                                filename_var, i+1, \
                                                 Nsplits, filename_addition, \
                                                 blindcat)
+    	
         with open(filename, 'w') as file:
             print >>file, ''
         print 'Placeholder:', filename, 'is written.'
-    """
-
+        """
+    else:
+        filename = 0
     # Importing all GAMA data, and the information
     # on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
@@ -705,7 +711,7 @@ if __name__ == '__main__':
     if 'catalog' in purpose:
         calculation = loop_multi(Nsplits, output, outputnames, gamacat, \
                                  centering, lens_selection, lens_binning, \
-                                 binname, binnum, binmin, binmax, filename_var)
+                                 binname, binnum, binmin, binmax, filename_var, filename)
     if 'covariance' in purpose:
         for i in xrange(Nobsbins):
             filename_var = shear.define_filename_var(purpose, centering, \
@@ -719,7 +725,7 @@ if __name__ == '__main__':
             shear.define_obsbins(i+1, lens_binning, lenssel_binning, gamacat)
             calculation = loop_multi(Nsplits, output, outputnames, gamacat, \
                                      centering, lens_selection, lens_binning, \
-                                     binname, i, binmin, binmax, filename_var)
+                                     binname, i, binmin, binmax, filename_var, filename)
 
 
 

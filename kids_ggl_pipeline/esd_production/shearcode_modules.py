@@ -105,7 +105,7 @@ def input_variables():
     path_splits = '%s/splits_%s' %(path_output, purpose)
     path_results = '%s/results_%s' %(path_output, purpose)
     print path_splits
-
+    
     if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
 
         #print 'Nsplit:', Nsplit
@@ -130,11 +130,12 @@ def input_variables():
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
 
-        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == 1):
+        if (Nsplit==0) and (blindcat==blindcats[0]) and (binnum == Nobsbins):
 
             for path in [path_splits, path_results]:
                 if not os.path.isdir(path):
                     os.makedirs(path)
+		    
 
 
     # Name of the Rbins
@@ -149,7 +150,7 @@ def input_variables():
 
     # Determining Ncat, the number of existing random catalogs
     splitslist = [] # This list will contain all created random splits
-
+    
     if ('random' in purpose):
 
         # Defining the name of the output files

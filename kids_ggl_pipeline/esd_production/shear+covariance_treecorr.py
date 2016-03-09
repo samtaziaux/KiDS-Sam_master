@@ -76,7 +76,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
     if cat_version == 3:
         
         for kidscatname in splitkidscats[Nsplit]:
-    
+            start = time.time()
             index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
             
             memfrac = memory.test() # Check which fraction of the memory is full
@@ -179,43 +179,66 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D = [], [], [], []
                 foo = [] # Remove unused lists
                 
-                print k.shape, len(w.T[0])
-                quit()
                 if 'catalog' in purpose:
                     # For each radial bin of each lens we calculate
                     # the weights and weighted shears
+                    
+                    k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
+                    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
+                    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
+                        shear.calc_shear_output_tree(e1, e2, k,\
+                                                np.array(w_meshed), Nsrc, srcm)
+                    
+                    gammat_tot_A = np.zeros((len(galID_split), nRbins))
+                    gammax_tot_A = np.zeros((len(galID_split), nRbins))
+                    gammat_tot_B = np.zeros((len(galID_split), nRbins))
+                    gammax_tot_B = np.zeros((len(galID_split), nRbins))
+                    gammat_tot_C = np.zeros((len(galID_split), nRbins))
+                    gammax_tot_C = np.zeros((len(galID_split), nRbins))
+                    gammat_tot_D = np.zeros((len(galID_split), nRbins))
+                    gammax_tot_D = np.zeros((len(galID_split), nRbins))
+                    
+                    
+                    # THIS ALL WON'T WORK. Calculating shears is fine, just that all the weighting comming in is impossible to account for. We can still do something for randoms, other stuff is actually reasonably fine in terms of speed.
+                    for i in xrange(len(galID_split)):
+                        
+                        lens_cat = treecorr.Catalog(ra=[galRA_split[i]], dec=[galDEC_split[i]], ra_units='degrees', dec_units='degrees')
+                        src_cat_A = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1.T[0], g2=e2.T[0], w=w.T[0]*k[i,:]**2.0, ra_units='degrees', dec_units='degrees', flip_g2=True)
+                        #src_cat_B = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1.T[1], g2=e2.T[1], w=w.T[1]*k[i,:]**2.0, ra_units='degrees', dec_units='degrees', flip_g2=True)
+                        #src_cat_C = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1.T[2], g2=e2.T[2], w=w.T[2]*k[i,:]**2.0, ra_units='degrees', dec_units='degrees', flip_g2=True)
+                        # Setting up the tree
+                        gglensA = treecorr.NGCorrelation(nbins=nRbins, min_sep=Rmin/Dal_split[i], max_sep=Rmax/Dal_split[i], sep_units='radians')
+                        #gglensB = treecorr.NGCorrelation(nbins=nRbins, min_sep=Rmin/Dal_split[i], max_sep=Rmax/Dal_split[i], sep_units='radians')
+                        #gglensC = treecorr.NGCorrelation(nbins=nRbins, min_sep=Rmin/Dal_split[i], max_sep=Rmax/Dal_split[i], sep_units='radians')
+                        # Calculating shear signal
+                        gglensA.process(lens_cat, src_cat_A, num_threads=1)
+                        #gglensB.process(lens_cat, src_cat_B, num_threads=1)
+                        #gglensC.process(lens_cat, src_cat_C, num_threads=1)
+                        
+                        gammat_tot_A[i,:], gammax_tot_A[i,:] = gglensA.xi/k[i,0], gglensA.xi_im/k[i,0]
+                        
+                        #gammat_tot_B[i,:], gammax_tot_B[i,:] = gglensB.xi/k[i,0], gglensB.xi_im/k[i,0]
+                        #gammat_tot_C[i,:], gammax_tot_C[i,:] = gglensC.xi/k[i,0], gglensC.xi_im/k[i,0]
+                        #gammat_tot_D[i,:], gammax_tot_D[i,:] = gglensC.xi/k[i,0], gglensC.xi_im/k[i,0]
                     """
                     output_onebin = [gammat_tot_A, gammax_tot_A, \
                                      gammat_tot_B, gammax_tot_B, \
                                      gammat_tot_C, gammax_tot_C, \
                                      gammat_tot_D, gammax_tot_D, \
-                                     k_tot, k2_tot, \
-                                     wk2_tot_A, wk2_tot_B, \
-                                     wk2_tot_C, wk2_tot_D, \
-                                     w2k2_tot_A, w2k2_tot_B, \
-                                     w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-                                     srcm_tot_A, srcm_tot_B, \
-                                     srcm_tot_C, srcm_tot_D]
-                    """
-                    src_cat = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1.T[0], g2=e2.T[0], w=w.T[0], ra_units='degrees', dec_units='degrees', flip_g2=True)
-                    
-                    for i in xrange(len(galID_split)):
-                        lens_cat = treecorr.Catalog(ra=[galRA_split[i]], dec=[galDEC_split[i]], ra_units='degrees', dec_units='degrees')
-                    
-                        # Setting up the tree
-                        gglens = treecorr.NGCorrelation(nbins=nRbins, min_sep=Rmin/Dal_split[i], max_sep=Rmax/Dal_split[i], sep_units='radians') # Physical separation needs to be implemented before this will work!
-                        # Calculating shear signal
-                        gglens.process(lens_cat, src_cat, num_threads=1)
-                        print gglens.xi 
-                    
-                    quit()
+                                     k_tot*np.ones((len(galID_split), nRbins)), k2_tot*np.ones((len(galID_split), nRbins)), \
+                                     wk2_tot_A*np.ones((len(galID_split), nRbins)), wk2_tot_B*np.ones((len(galID_split), nRbins)), \
+                                     wk2_tot_C*np.ones((len(galID_split), nRbins)), wk2_tot_D*np.ones((len(galID_split), nRbins)), \
+                                     w2k2_tot_A*np.ones((len(galID_split), nRbins)), w2k2_tot_B*np.ones((len(galID_split), nRbins)), \
+                                     w2k2_tot_C*np.ones((len(galID_split), nRbins)), w2k2_tot_D*np.ones((len(galID_split), nRbins)), Nsrc_tot*np.ones((len(galID_split), nRbins)), \
+                                     srcm_tot_A*np.ones((len(galID_split), nRbins)), srcm_tot_B*np.ones((len(galID_split), nRbins)), \
+                                     srcm_tot_C*np.ones((len(galID_split), nRbins)), srcm_tot_D*np.ones((len(galID_split), nRbins))]
                     # Writing the lenssplit list to the complete
                     # output lists: [galIDs, Rbins] for every variable
                     for o in xrange(len(output)):
                         output[o, : ,:][galIDmask_split] = \
                         output[o, : ,:][galIDmask_split] + \
                             output_onebin[o]
-            
+                    """
                 if 'covariance' in purpose:
                     # Start the reduction of one radial bin
                     for r in xrange(nRbins):
@@ -265,7 +288,10 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm)
-        
+            end = time.time()
+            print end-start
+            
+        quit()
         if ('random' in purpose):
 	    
             if os.path.isfile(filename):

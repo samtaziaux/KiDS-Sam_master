@@ -83,7 +83,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
     
     if cat_version == 2:
         for kidscatname in splitkidscats[Nsplit]:
-            
+        
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 80: # If it is too high...
                 print 'Waiting: More memory required'
@@ -494,7 +494,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm)
-        
+            
         if ('random' in purpose):
 	    
             if os.path.isfile(filename):

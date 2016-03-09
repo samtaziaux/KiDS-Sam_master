@@ -1202,6 +1202,52 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
         srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
+
+def calc_shear_output_tree(e1, e2, klist, wlist, Nsrclist, srcm):
+    
+    wlist = wlist.T
+    klist_t = np.array([klist, klist, klist, klist]).T
+    
+    # Calculating the needed errors
+    wk2list = wlist*klist_t**2
+    
+    w_tot = np.sum(wlist, 0)
+    w2_tot = np.sum(wlist**2, 0)
+    
+    k_tot = np.sum(klist, 1)
+    k2_tot = np.sum(klist**2, 1)
+    
+    wk2_tot = np.sum(wk2list, 0)
+    w2k4_tot = np.sum(wk2list**2, 0)
+    w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+    wlist = []
+    
+    Nsrc_tot = np.sum(Nsrclist, 1)
+    
+    srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
+    srcm = np.array([srcm, srcm, srcm, srcm]).T
+    foo = [] # Empty unused lists
+    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
+    srcm = []
+    klist_t = []
+    
+    gc.collect()
+    
+    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
+    wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
+
+    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
+    w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
+    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
+    srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
+    
+    gc.collect()
+    
+    return k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
+        w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
+        srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
+
+
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 

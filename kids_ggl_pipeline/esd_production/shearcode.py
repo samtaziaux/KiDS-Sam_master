@@ -84,6 +84,19 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
             p.wait()
     """
     
+    # Testing of TreeCorr:
+    if 'tree' in purpose:
+        for n in xrange(nruns):
+            ps = []
+            splitsname = 'python -W ignore %sshear+covariance_treecorr.py'%(path_shearcodes)
+            splitsname += ' %i %i %i %s %s &'%(nsplit, nsplits, nobsbin, \
+                                           blindcat, config_file)
+            p = sub.Popen(shlex.split(splitsname))
+            ps.append(p)
+            for p in ps:
+                p.wait()
+        quit()
+    
     for n in xrange(nruns):
         ps = []
         splitsname = 'python -W ignore %sshear+covariance.py'%(path_shearcodes)

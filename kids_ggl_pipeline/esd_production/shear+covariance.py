@@ -278,7 +278,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
         if ('random' in purpose):
 	    
             if os.path.isfile(filename):
-                #os.remove(filename)
+                os.remove(filename)
                 print 'Placeholder:', filename, 'is removed.'
             
         if 'catalog' in purpose:

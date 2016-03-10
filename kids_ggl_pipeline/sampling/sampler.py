@@ -55,12 +55,14 @@ def run_emcee(hm_options, sampling_options, args):
     if exclude_bins is not None:
         exclude_bins = exclude_bins[exclude_bins < esd.shape[1]]
     R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins)
+
+    esd_rand = zeros(esd.shape)
     if randomfile is not None:
         R_rand, esd_rand = sampling_utils.load_datapoints(randomfile, \
                                                           randomcols, \
                                                           exclude_bins)
         esd = esd - esd_rand
-
+    
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = xrange(Nobsbins)
     rng_rbins = xrange(Nrbins)

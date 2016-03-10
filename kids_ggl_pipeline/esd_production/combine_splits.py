@@ -35,6 +35,7 @@ def main():
     filename_addition, Ncat, splitslist, blindcats, blindcat, blindcatnum, \
     path_kidscats, path_gamacat = shear.input_variables()
 
+    
     print 'Step 2: Combine splits into one catalogue'
     print
 

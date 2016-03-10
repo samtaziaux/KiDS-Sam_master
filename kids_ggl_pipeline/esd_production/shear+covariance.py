@@ -297,12 +297,12 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
         for kidscatname in splitkidscats[Nsplit]:
     
             index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
-            
+            """
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 90: # If it is too high...
                 print 'Waiting: More memory required'
                 time.sleep(30) # wait before continuing the calculation
-            
+            """
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \

@@ -48,7 +48,7 @@ from lens import power_to_corr, power_to_corr_multi, sigma, d_sigma, \
                  power_to_corr_ogata
 from dark_matter import NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, \
                         GM_cen_spectrum, GM_sat_spectrum, delta_NFW, \
-                        GM_cen_analy, GM_sat_analy
+                        GM_cen_analy, GM_sat_analy, miscenter
 from cmf import *
 
 import pylab
@@ -307,17 +307,18 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     sigma_8, H0, omegam, omegab_h2, omegav, n, \
         z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
         fc_nsat, alpha_s, b_0, b_1, b_2, \
-        alpha_star, beta_gas, r_t0, r_c0, \
+        alpha_star, beta_gas, r_t0, r_c0, p_off, r_off, bias, \
         M_bin_min, M_bin_max, \
-        taylor_procedure, include_baryons, \
-        smth1, smth2 = theta
+        Mstar, \
+        centrals, satellites, miscenter, taylor_procedure, include_baryons, \
+        simple_hod, smth1, smth2 = theta
     # hard-coded in the current version
     Ac2s = 0.56
     M_min = 5.
     M_max = 16.
     M_step = 0.01
-    centrals = 1
-    satellites = 1
+    #centrals = 1
+    #satellites = 1
 
     #to = time()
     # HMF set up parameters
@@ -389,7 +390,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     #to = time()
     if centrals:
-        pop_c = _array([ncm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
+        if simple_hod:
+            pop_c = _array([ncm_simple(hmf, mass_range, M_1_i, sigma_c_i)
+                            for M_1_i, sigma_c_i in
+                            _izip(M_1, sigma_c)])
+        else:
+            pop_c = _array([ncm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
                             gamma_1, gamma_2, b_0, b_1, b_2)
                         for i in _izip(hod_mass)])
     else:
@@ -397,7 +403,19 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #print 'centrals =', time() - to
     #to = time()
     if satellites:
-        pop_s = _array([nsm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
+        if simple_hod:
+            """
+            pop_s = _array([nsm_simple(hmf, mass_range, M_1_i,
+                                       sigma_c_i, alpha_s_i)
+                            for M_1_i, sigma_c_i, alpha_s_i in
+                            _izip(M_1, sigma_c, alpha_s)]) * \
+                    _array([ncm_simple(hmf, mass_range, M_1_i, sigma_c_i)
+                            for M_1_i, sigma_c_i in
+                            _izip(M_1, sigma_c)])
+            """
+            pop_s = np.zeros(hod_mass.shape)
+        else:
+            pop_s = _array([nsm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
                             gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
                         for i in _izip(hod_mass)])
     else:
@@ -415,9 +433,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                              for pop_g_i in _izip(pop_g)])
     # Why does this only have pop_c and not pop_g?
     # Do we need it? It's not used anywhere in the code
-    effective_mass_bar = _array([eff_mass(z, hmf, pop_c_i, mass_range) * \
+    effective_mass_bar = _array([eff_mass(z, hmf, pop_g_i, mass_range) * \
                                     (1.0 - baryons.f_dm(omegab, omegac))
-                                 for pop_c_i in _izip(pop_c)])
+                                 for pop_g_i in _izip(pop_g)])
     #effective_mass_bar = _array([effective_mass2 * \
                                    #(baryons.f_stars(i[0], effective_mass2,
                                                     #sigma_c, alpha_s, A, M_1,
@@ -477,10 +495,18 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     uk_s = NFW_f(z, rho_dm, fc_nsat, mass_range, rvir_range_lin, k_range_lin)
     uk_s = uk_s/uk_s[0]
     #uk_s = u_k
+    
+    # If there is miscentering to be accounted for
+    if miscenter:
+        u_k = NFW_f(z, rho_dm, f, mass_range, rvir_range_lin, k_range_lin,
+                    c=concentration) * miscenter(p_off, r_off, mass_range,
+                                                 rvir_range_lin, k_range_lin,
+                                                 c=concentration)
+        u_k = u_k/u_k[0]
 
     # Galaxy - dark matter spectra
     #to = time()
-    Pg_2h = _array([TwoHalo(hmf, ngal_i, pop_g_i, k_range_lin,
+    Pg_2h = bias * _array([TwoHalo(hmf, ngal_i, pop_g_i, k_range_lin,
                             rvir_range_lin, mass_range)
                     for ngal_i, pop_g_i in _izip(ngal, pop_g)])
     #print 'TwoHalo =', time() - to
@@ -695,6 +721,15 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
     for i in xrange(M_bin_min.size):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
+
+    if include_baryons:
+        pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0) \
+            for Mi in izip(effective_mass_bar)])
+    else:
+        pointmass = _array([(10.0**Mi)/(np.pi*rvir_range_2d_i**2.0) \
+            for Mi in izip(Mstar)])
+
+    out_esd_tot_inter = out_esd_tot_inter + pointmass
     #print 'out_esd_tot_inter =', time() - to
 
     #print np.nan_to_num(out_esd_tot_inter)

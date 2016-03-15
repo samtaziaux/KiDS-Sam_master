@@ -530,9 +530,9 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
 
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
-    out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, 0]
+    out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, ccentral, b*bias, 0]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
-    print fc_central, logMcentral, alpha_in, f_off_in, b_in
+    print ccentral, logMcentral, alpha_in, f_off_in, bias
     return out
 
 

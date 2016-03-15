@@ -30,7 +30,7 @@ def main():
             filename_addition, Ncat, splitslist, blindcats, blindcat, \
             blindcatnum, path_kidscats, path_gamacat = shear.input_variables()
 
-
+    
     if 'bootstrap' in purpose:
         print('Step 4: Combine the bootstrap samples into the ESD '\
               'profiles and bootstrap covariance matrix')

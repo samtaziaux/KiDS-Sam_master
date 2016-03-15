@@ -175,6 +175,7 @@ def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
     #nc = (func(m[-1]) - func(m[0]))
     return nc
 
+
 def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
         b_0, b_1, b_2, Ac2s):
     ns = np.ones(M.size)
@@ -193,6 +194,19 @@ def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
                      #sp.gamma(np.abs((alpha+1.0)/2.0))
     #ns = func(m[-1]) - func(m[0])
     return ns
+
+
+def ncm_simple(mass_func, M, M_1, sigma):
+    
+    nc = exp(-(log10(M/M_1)**2) / (2*(sigma**2))) / ((2*pi)**0.5 * sigma)
+    return nc
+
+
+def nsm_simple(mass_func, M, M_1, sigma, alpha):
+
+    ns = np.where(M >= M_1, ((M - M_1)/M_sat)**alpha, 0.0)
+    return ns
+
 
 
 def ngm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,

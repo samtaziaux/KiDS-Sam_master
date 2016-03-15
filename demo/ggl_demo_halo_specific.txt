@@ -62,6 +62,15 @@ hm_param          beta_gas        fixed     0.666666
 hm_param          r_t0            fixed     0.03
 hm_param          r_c0            fixed     0.05
 
+# Parameters for miscentering (see groups paper from Viola et al. 2015) - miscentering below should be set to 1 in order to use this.
+
+hm_param          p_off           fixed     0.5
+hm_param          r_off           fixed     0.5
+
+# Parameter to account for different large scale bias - i.e. when assessing assebmly bias (if 1, no change).
+
+hm_param          bias            fixed     1.0
+
 # Limits and resolution of the halo mass function. TO BE IMPLEMENTED IN A LATER VERSION
 #hm_param          logM_min           fixed     5.0
 #hm_param          logM_max           fixed    16.0
@@ -72,16 +81,24 @@ hm_param          r_c0            fixed     0.05
 hm_params         logM_bin_min       fixed     9.0,9.5,10.0
 hm_params         logM_bin_max       fixed     9.5,10.0,10.5
 
+# Mean stellar mass in each luminosity or stellar mass bin - for point mass lensing signal, relevant only when NOT using include_baryons!
+
+hm_params         Mstar              fixed     9.2,9.8,10.2
 
 # Extra boolean parameters. Values are either 0 or 1.
 
-# whether to use centrals and/or satellites. TO BE IMPLEMENTED IN A LATER VERSION.
-#hm_param          centrals           fixed     1
-#hm_param          satellites         fixed     1
+# whether to use centrals and/or satellites.
+hm_param          centrals           fixed     1
+hm_param          satellites         fixed     1
+hm_param          miscentering       fixed     0
 # Switch calculation of halo model between analytical evaluation or using the Taylor series expansion (Mohammed & Seljak, 2014 - http://arxiv.org/abs/1407.0060),
 hm_param          taylor_procedure fixed      0
 # and incorporation of baryons in the calculation. This works, but the outputs are still dark matter only using analytic prescription. That will be made more general, until then code needs to be changed manually
 hm_param          include_baryons  fixed      0
+# to use simple HOD or CMF/CLF based one
+hm_param          simple_hod                  0
+
+# When using simple HOD, the parameters sigma_c, M_0, M_1 and alpha_s have different meaning (check the source code) and should also be used with "join" functionality for the number of bins.
 
 
 ## Halo model output

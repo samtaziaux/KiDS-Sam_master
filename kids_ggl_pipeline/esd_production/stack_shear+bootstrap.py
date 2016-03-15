@@ -32,7 +32,6 @@ def main():
     splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
     path_gamacat = shear.input_variables()
 
-
     # Path to the output splits and results
     path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
     

@@ -403,7 +403,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         if simple_hod:
             pop_c = _array([ncm_simple(hmf, mass_range, M_1_i, sigma_c_i)
                             for M_1_i, sigma_c_i in
-                            _izip(M_1, sigma_c)])
+                            _izip(_array([M_1]), _array([sigma_c]))])
         else:
             pop_c = _array([ncm(hmf, i[0], mass_range, sigma_c, alpha_s, A, M_1,
                             gamma_1, gamma_2, b_0, b_1, b_2)

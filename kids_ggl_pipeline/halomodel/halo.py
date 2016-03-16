@@ -31,7 +31,7 @@ import mpmath as mp
 import longdouble_utils as ld
 import matplotlib.pyplot as pl
 import scipy
-from numpy import arange, array, exp, logspace, ones
+from numpy import arange, array, exp, linspace, logspace, ones
 from scipy import special as sp
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -280,10 +280,12 @@ def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
                      #Bias_Tinker10(mass_func,r_x)/m_x), m_x))
     ##print ("Two halo term calculated.")
     #return P2
-    return (exp(mass_func.power) / norm) * \
-           trapz(mass_func.dndlnm * population * \
-                     Bias_Tinker10(mass_func, r_x) / m_x,
-                 m_x)
+    
+    b_g = trapz(mass_func.dndlnm * population * \
+                Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
+                
+    return (exp(mass_func.power) * b_g), b_g
+
 
 def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
           expansion=100, expansion_stars=160, n_bins=10000,
@@ -295,6 +297,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     _array = array
     _izip = izip
     _logspace = logspace
+    _linspace = linspace
 
     # Setting parameters from config file
     # this is the way theta will look in v1.2.0
@@ -310,13 +313,13 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         alpha_star, beta_gas, r_t0, r_c0, p_off, r_off, bias, \
         M_bin_min, M_bin_max, \
         Mstar, \
-        centrals, satellites, miscenter, taylor_procedure, include_baryons, \
+        centrals, satellites, miscentering, taylor_procedure, include_baryons, \
         simple_hod, smth1, smth2 = theta
     # hard-coded in the current version
     Ac2s = 0.56
     M_min = 5.
     M_max = 16.
-    M_step = 0.01
+    M_step = 100
     #centrals = 1
     #satellites = 1
 
@@ -326,9 +329,16 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     k_range = arange(lnk_min, lnk_max, k_step)
     k_range_lin = exp(k_range)
     #mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step))
-    mass_range = 10**arange(M_min, M_max, M_step)
+    mass_range = 10**_linspace(M_min, M_max, M_step)
+    M_step = (M_max - M_min)/M_step
     concentration = Con(z, mass_range, f)
+    if not np.iterable(M_bin_min):
+        M_bin_min = np.array([M_bin_min])
+        M_bin_max = np.array([M_bin_max])
+
     n_bins_obs = M_bin_min.size
+    bias = np.array([bias]*k_range_lin.size).T
+    
     #print 'mass_range =', time() - to
 
     #to = time()
@@ -497,7 +507,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #uk_s = u_k
     
     # If there is miscentering to be accounted for
-    if miscenter:
+    if miscentering:
         u_k = NFW_f(z, rho_dm, f, mass_range, rvir_range_lin, k_range_lin,
                     c=concentration) * miscenter(p_off, r_off, mass_range,
                                                  rvir_range_lin, k_range_lin,
@@ -507,8 +517,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # Galaxy - dark matter spectra
     #to = time()
     Pg_2h = bias * _array([TwoHalo(hmf, ngal_i, pop_g_i, k_range_lin,
-                            rvir_range_lin, mass_range)
+                            rvir_range_lin, mass_range)[0]
                     for ngal_i, pop_g_i in _izip(ngal, pop_g)])
+
+    bias_out = bias.T[0] * _array([TwoHalo(hmf, ngal_i, pop_g_i, k_range_lin,
+                                  rvir_range_lin, mass_range)[1]
+                          for ngal_i, pop_g_i in _izip(ngal, pop_g)])
     #print 'TwoHalo =', time() - to
     if taylor_procedure or include_baryons:
         #print 'spectrum'
@@ -723,21 +737,21 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
 
     if include_baryons:
-        pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0) \
+        pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0)/1e12 \
             for Mi in izip(effective_mass_bar)])
     else:
-        pointmass = _array([(10.0**Mi)/(np.pi*rvir_range_2d_i**2.0) \
+        pointmass = _array([(10.0**Mi[0])/(np.pi*rvir_range_2d_i**2.0)/1e12 \
             for Mi in izip(Mstar)])
 
     out_esd_tot_inter = out_esd_tot_inter + pointmass
     #print 'out_esd_tot_inter =', time() - to
 
     #print np.nan_to_num(out_esd_tot_inter)
-    #print effective_mass
+    print np.log10(effective_mass.T[0]), bias_out
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
 
     # Add other outputs as needed. Total ESD should always be first!
-    return [out_esd_tot_inter, effective_mass.T[0], 0]
+    return [out_esd_tot_inter, np.log10(effective_mass.T[0]), bias_out, 0]
 
 
 if __name__ == '__main__':

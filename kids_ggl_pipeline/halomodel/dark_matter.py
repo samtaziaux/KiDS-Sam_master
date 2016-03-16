@@ -94,7 +94,7 @@ def miscenter(p_off, r_off, m_x, r_x, k_x, c=None):
         c = c * np.ones(m_x.size)
     for i in xrange(m_x.size):
         r_s = NFW_RS(c[i], r_x[i])
-        u_k[:,i] = (1.0 - p_off + p_off*np.exp(-0.5*(k_x**2.0)*(r_s*r_off)**2.0)
+        u_k[:,i] = (1.0 - p_off + p_off*np.exp(-0.5*(k_x**2.0)*(r_s*r_off)**2.0))
     return u_k
 
 

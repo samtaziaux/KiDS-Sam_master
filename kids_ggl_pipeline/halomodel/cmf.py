@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import array, exp, log10, pi
+from numpy import array, exp, log, log10, pi
 from scipy.integrate import simps, trapz
 import scipy.special as sp
 
@@ -198,7 +198,10 @@ def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
 
 def ncm_simple(mass_func, M, M_1, sigma):
     
-    nc = exp(-(log10(M/M_1)**2) / (2*(sigma**2))) / ((2*pi)**0.5 * sigma)
+    M_1 = 10.0**M_1
+    nc = exp(-(log10(M)-log10(M_1))**2 / (2*(sigma**2))) / \
+        ((2.0*pi)**0.5 * sigma * log(10))
+    
     return nc
 
 

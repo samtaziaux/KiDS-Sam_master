@@ -96,7 +96,7 @@ hm_param          taylor_procedure fixed      0
 # and incorporation of baryons in the calculation. This works, but the outputs are still dark matter only using analytic prescription. That will be made more general, until then code needs to be changed manually
 hm_param          include_baryons  fixed      0
 # to use simple HOD or CMF/CLF based one
-hm_param          simple_hod                  0
+hm_param          simple_hod       fixed      0
 
 # When using simple HOD, the parameters sigma_c, M_0, M_1 and alpha_s have different meaning (check the source code) and should also be used with "join" functionality for the number of bins.
 

@@ -275,15 +275,6 @@ path_data           demo/earlyscience_satellites/
 # the filenames can be correctly sorted alpha-numerically!
 data                esd_*.txt       0,1,4
 
-# Path to random ESD file (folders only; optional. Insert './' if local directory) - Optional!
-path_randoms           demo/earlyscience_satellites/
-
-# Name of the file containing the random ESDs and the columns to be read. Columns are (R,ESD_t[,1+K(R)]),
-# where K(R) is the noise bias correction as per Equation 12 of Viola et al. (2015).
-# If the name contains wildcards ('*'), all matching files will be read. Make sure that
-# the filenames can be correctly sorted alpha-numerically! - Optional!
-randoms                esd_*.txt       0,1,4
-
 # Any radial bins to be excluded from the analysis, numbered starting from zero.
 # Note that they will be excluded from all observable bins (and consistently from the
 # covariance matrix). Note that these are handled automatically by the code in terms of

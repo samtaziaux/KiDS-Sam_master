@@ -25,7 +25,7 @@ def run_emcee(hm_options, sampling_options, args):
         val1, val2, val3, val4, params_join, hm_functions, \
         starting, meta_names, fits_format = hm_options
     # load MCMC sampler setup
-    datafile, datacols, randomfile, randomcols, covfile, covcols, \
+    datafile, datacols, covfile, covcols, \
         exclude_bins, output, sampler, nwalkers, nsteps, nburn, \
         thin, k, threads, sampler_type, update_freq = sampling_options
 
@@ -56,13 +56,6 @@ def run_emcee(hm_options, sampling_options, args):
         exclude_bins = exclude_bins[exclude_bins < esd.shape[1]]
     R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins)
 
-    esd_rand = zeros(esd.shape)
-    if randomfile is not None:
-        R_rand, esd_rand = sampling_utils.load_datapoints(randomfile, \
-                                                          randomcols, \
-                                                          exclude_bins)
-        esd = esd - esd_rand
-    
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = xrange(Nobsbins)
     rng_rbins = xrange(Nrbins)

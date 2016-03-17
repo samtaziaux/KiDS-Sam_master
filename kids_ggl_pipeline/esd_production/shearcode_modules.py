@@ -1335,16 +1335,16 @@ def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
 
 # Printing stacked ESD profile to a text file
 def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
-                bias_tot, h, variance, blindcat, blindcats, blindcatnum, \
+                bias_tot, h, variance, wk2_tot, w2k2_tot, blindcat, blindcats, blindcatnum, \
                 galIDs_matched, galIDs_matched_infield):
 
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)'%(Runit, h*100, h*100, h*100)
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)     wk2     w2k2'%(Runit, h*100, h*100, h*100)
     else:
-        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)'%(Runit)
+        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2'%(Runit)
 
     with open(filename, 'w') as file:
         print >>file, filehead
@@ -1357,8 +1357,10 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
                 ESDx_tot[R] = int(-999)
                 error_tot[R] = int(-999)
                 bias_tot[R] = int(-999)
+                wk2_tot[R] = int(-999)
+                w2k2_tot[R] = int(-999)
 
-            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance)
+            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R])
 
     print 'Written: ESD profile data:', filename
 

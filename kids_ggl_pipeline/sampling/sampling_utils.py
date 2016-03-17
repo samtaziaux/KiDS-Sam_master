@@ -89,8 +89,6 @@ def read_config(config_file, version='0.5.7',
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
                    'fixed', 'read', 'function')
     exclude_bins = None
-    randomfiles = None
-    randomcols = None
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -105,14 +103,6 @@ def read_config(config_file, version='0.5.7',
             datacols = [int(i) for i in line[2].split(',')]
             if len(datacols) not in (2,3):
                 msg = 'datacols must have either two or three elements'
-                raise ValueError(msg)
-        if line[0] == 'path_randoms':
-            path_randoms = line[1]
-        if line[0] == 'randoms':
-            randomfiles = line[1]
-            randomcols = [int(i) for i in line[2].split(',')]
-            if len(randomcols) not in (2,3):
-                msg = 'randomcols must have either two or three elements'
                 raise ValueError(msg)
         elif line[0] == 'exclude_bins':
             exclude_bins = numpy.array([int(i) for i in line[1].split(',')])
@@ -162,7 +152,7 @@ def read_config(config_file, version='0.5.7',
         raise ValueError(msg)
     covfile = covfile[0]
 
-    out = (datafiles, datacols, randomfiles, randomcols, covfile, covcols,
+    out = (datafiles, datacols, covfile, covcols,
            exclude_bins, output,
            sampler, nwalkers, nsteps, nburn, thin, k, threads,
            sampler_type, update_freq)

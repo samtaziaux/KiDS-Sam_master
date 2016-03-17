@@ -296,7 +296,7 @@ def main():
 
         # Printing stacked shear profile to a txt file
         shear.write_stack(stackname, Rcenters, Runit, ESDt_tot, ESDx_tot, \
-                          error_tot, bias_tot, h, variance, \
+                          error_tot, bias_tot, h, variance, wk2, w2k2, \
                           blindcat, blindcats, blindcatnum, \
                           galIDs_matched, galIDs_matched_infield)
         

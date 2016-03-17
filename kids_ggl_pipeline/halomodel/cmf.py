@@ -206,8 +206,9 @@ def ncm_simple(mass_func, M, M_1, sigma):
 
 
 def nsm_simple(mass_func, M, M_1, sigma, alpha):
-
+    M_sat = 0.5*M_1
     ns = np.where(M >= M_1, ((M - M_1)/M_sat)**alpha, 0.0)
+    
     return ns
 
 

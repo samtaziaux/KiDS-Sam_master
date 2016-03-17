@@ -19,7 +19,8 @@ def angular(z,Om,Ol):
 
     # Important constants
     c = const.c.value # Speed of light (in m/s)
-    Hdim = h*1e-1 # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
+    Hdim = h*1e-1
+    # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
 
     n = 1000.
 
@@ -37,7 +38,8 @@ def comoving(z,Om,Ol,h):
 
     # Important constants
     c = const.c.value # Speed of light (in m/s)
-    Hdim = h*1e-1 # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
+    Hdim = h*1e-1
+    # dimension of H (H = h*100 km/s/Mpc = h*100*1e3m/s/1e6pc = h*0.1 m/s/pc)
 
     f = lambda zp: 1/(Om*(1+zp)**3 + Ol)**0.5
     integral = integrate.quad(f,0.,z)#, epsrel=1./n, epsabs=0)
@@ -46,7 +48,8 @@ def comoving(z,Om,Ol,h):
 
     return Dc
 
-def Da_Edo(z_low,z_high, POmega_L=0.73, POmega_M=0.27, POmega_R=0., POmega_K=0., Ph=0.7, Pw=-1., Niter=10000):
+def Da_Edo(z_low,z_high, POmega_L=0.73, POmega_M=0.27, POmega_R=0., \
+           POmega_K=0., Ph=0.7, Pw=-1., Niter=10000):
 
     Pc = 299792.458
 

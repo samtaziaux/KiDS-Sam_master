@@ -51,14 +51,15 @@ def f_dm(omegab, omegac):
 # CMF
 """
 
-def f_stars(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
+def f_stars(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+            b_0, b_1, b_2, Ac2s):
     """
     m - stellar mass, M - halo mass
 
     """
     central = cmf.av_cen(m, M, sigma, A, M_1, gamma_1, gamma_2)
     satelite = cmf.av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2,
-                          b_0, b_1, b_2)
+                          b_0, b_1, b_2, Ac2s)
     return (central + satelite) / M
 
 
@@ -94,15 +95,15 @@ def rhoDM(mass_func, M, omegab, omegac):
     return Integrate(integ, M)
 
 def rhoSTARS(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
-             b_0, b_1, b_2):
+             b_0, b_1, b_2, Ac2s):
     integ = mass_func.dndlnm * f_stars(m, M, sigma, alpha, A, M_1,
-                                       gamma_1, gamma_2, b_0, b_1, b_2)
+                                       gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
     return Integrate(integ, M)
 
 def rhoGAS(mass_func, rho_crit, omegab, omegac, m, M, sigma, alpha, A,
-           M_1, gamma_1, gamma_2, b_0, b_1, b_2):
+           M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     rho = rho_crit * omegab - rhoSTARS(mass_func, m, M, sigma, alpha, A, M_1,
-                                       gamma_1, gamma_2, b_0, b_1, b_2)
+                                       gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
     integ = mass_func.dndlnm * f_gas(omegab, omegac, M)
     F = 1.0#Integrate(integ, M)/rho
     #~ integ = mass_func.dndlnm*f_gas(omegab, omegac, M)
@@ -138,7 +139,7 @@ def u_g(r_x, beta, r_c0, omegab, omegac, m):
 
 
 def u_s(r_x, alpha, r_t0, m, M, sigma, alpha_hod, A, M_1, gamma_1, gamma_2,
-        b_0, b_1, b_2):
+        b_0, b_1, b_2, Ac2s):
     """
     NFW for smaller scales, more to the center, exponential decline for the
     outer regions, which can be varied with alpha parameter!
@@ -153,7 +154,7 @@ def u_s(r_x, alpha, r_t0, m, M, sigma, alpha_hod, A, M_1, gamma_1, gamma_2,
     E_alpha = sp.expn(np.absolute(nu_alpha), (x_delta**alpha))
     G_alpha = sp.gamma(1. - nu_alpha)
     rho_t = (M * f_stars(m, M, sigma, alpha_hod, A, M_1, gamma_1, gamma_2,
-                         b_0, b_1, b_2) * alpha) / \
+                         b_0, b_1, b_2, Ac2s) * alpha) / \
             (4 * np.pi * (r_t**3.0) * (G_alpha - (x_delta**2) * E_alpha))
     return (rho_t / x) * np.exp(-(x**alpha))
 
@@ -176,6 +177,8 @@ def star_f(z, rho_mean, m_x, r_x, k_x, r_t0):
     nu_alpha = 1 - (2 / alpha)
     G_alpha = sp.gamma(1 - nu_alpha)
     u_k = np.zeros((k_x.size, m_x.size))
+    #def f_stars(m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
+                #b_0, b_1, b_2, Ac2s)
     for i in xrange(m_x.size):
         r_t = r_t0[i] * r_x[i]
         x = r_x[i]/r_t

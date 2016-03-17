@@ -93,7 +93,7 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 """
 
 def T_n(n, rho_mean, z, M, R, h_mass, profile, f, omegab, omegac, slope,
-        r_char, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2):
+        r_char, sigma, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
 
     np.seterr(divide='ignore', over='ignore', under='ignore',
               invalid='ignore')
@@ -136,7 +136,7 @@ def T_n(n, rho_mean, z, M, R, h_mass, profile, f, omegab, omegac, slope,
                  mp.mpf(Integrate((i_range**(2.0 * (1.0 + n))) * \
                         (baryons.u_s(np.float64(i_range), slope, r_char[i],
                                      h_mass, M[i], sigma, alpha, A, M_1,
-                                     gamma_1, gamma_2, b_0, b_1, b_2)),
+                                     gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)),
                                    i_range))
             T[i] = ld.string2longdouble(str(Ti))
     return T
@@ -152,14 +152,14 @@ def f_k(k_x):
 
 def multi_proc_T(a,b, que, n, rho_mean, z, m_x, r_x, h_mass, profile, f,
                  omegab, omegac, slope, r_char, sigma, alpha, A, M_1, gamma_1,
-                 gamma_2, b_0, b_1, b_2):
+                 gamma_2, b_0, b_1, b_2, Ac2s):
     outdict = {}
     r = arange(a, b, 1)
     T = np.ones(r.size, len(m_x), dtype=np.longdouble)
     for i in xrange(r.size):
         T[i,:] = T_n(r[i], rho_mean, z, m_x, r_x, h_mass, profile, f, omegab,
                         omegac, slope, r_char, sigma, alpha, A, M_1, gamma_1,
-                        gamma_2, b_0, b_1, b_2)
+                        gamma_2, b_0, b_1, b_2, Ac2s)
     # Write in dictionary, so the result can be read outside of function.
     outdict = np.column_stack((r, T))
     que.put(outdict)
@@ -196,7 +196,7 @@ def T_table_multi(n, rho_mean, z, m_x, r_x, h_mass, profile, f,
 
 def T_table(n, rho_mean, z, m_x, r_x, h_mass, profile, f, omegab, omegac,
             slope, r_char, sigma, alpha, A, M_1, gamma_1, gamma_2,
-            b_0, b_1, b_2):
+            b_0, b_1, b_2, Ac2s):
 
     """
     Calculates all the T integrals and saves them into a array, so that the
@@ -211,7 +211,7 @@ def T_table(n, rho_mean, z, m_x, r_x, h_mass, profile, f, omegab, omegac,
     for i in xrange(n/2):
         T[i] = T_n(i, rho_mean, z, m_x, r_x, h_mass, profile, f, omegab,
                    omegac, slope, r_char, sigma, alpha, A, M_1, gamma_1,
-                   gamma_2, b_0, b_1, b_2)
+                   gamma_2, b_0, b_1, b_2, Ac2s)
         #pbar.update(i+1)
     #pbar.finish()
     return T
@@ -297,21 +297,37 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     _logspace = logspace
 
     # Setting parameters from config file
-    z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
-        fc_nsat, alpha_s, b_0, b_1, b_2, Ac2s, \
+    # this is the way theta will look in v1.2.0
+    #z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
+        #fc_nsat, alpha_s, b_0, b_1, b_2, Ac2s, \
+        #alpha_star, beta_gas, r_t0, r_c0, \
+        #M_min, M_max, M_step, M_bin_min, M_bin_max, \
+        #centrals, satellites, taylor_procedure, include_baryons, \
+        #smth1, smth2 = theta
+    sigma_8, H0, omegam, omegab_h2, omegav, n, \
+        z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
+        fc_nsat, alpha_s, b_0, b_1, b_2, \
         alpha_star, beta_gas, r_t0, r_c0, \
-        M_min, M_max, M_step, M_bin_min, M_bin_max, \
-        centrals, satellites, taylor_procedure, include_baryons, \
+        M_bin_min, M_bin_max, \
+        taylor_procedure, include_baryons, \
         smth1, smth2 = theta
+    # hard-coded in the current version
+    Ac2s = 0.56
+    M_min = 5.
+    M_max = 16.
+    M_step = 0.01
+    centrals = 1
+    satellites = 1
 
     #to = time()
     # HMF set up parameters
     k_step = (lnk_max-lnk_min) / n_bins
     k_range = arange(lnk_min, lnk_max, k_step)
     k_range_lin = exp(k_range)
-    mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step)+1)
+    #mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step))
+    mass_range = 10**arange(M_min, M_max, M_step)
     concentration = Con(z, mass_range, f)
-    n_bins_obs = len(M_bin_min)
+    n_bins_obs = M_bin_min.size
     #print 'mass_range =', time() - to
 
     #to = time()
@@ -319,11 +335,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                  dtype=np.longdouble)
                        for Mi, Mx in _izip(M_bin_min, M_bin_max)])
     #print 'hod_mass =', time() - to
-    r_t0 = r_t0 * ones(100)
-    r_c0 = r_c0 * ones(100)
 
-    cosmology_params = {"sigma_8": 0.80, "H0": 70.0,"omegab_h2": 0.022,
-                        "omegam": 0.3, "omegav": 0.7, "n": 0.96,
+    cosmology_params = {"sigma_8": sigma_8, "H0": H0,"omegab_h2": omegab_h2,
+                        "omegam": omegam, "omegav": omegav, "n": n,
                         "lnk_min": lnk_min ,"lnk_max": lnk_max,
                         "dlnk": k_step, "transfer_fit": "BBKS", "z": z,
                         "force_flat": True}
@@ -332,6 +346,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #to = time()
     hmf = Mass_Function(M_min, M_max, M_step, "Tinker10", **cosmology_params)
     #print 'mass function =', time() - to
+    #print fc_nsat, alpha_s, b_0, b_1, M_min, M_max,
+    #print mass_range.shape, hmf.dndm.shape
 
     omegab = hmf.omegab
     omegac = hmf.omegac
@@ -343,17 +359,22 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     rho_dm = rho_mean * baryons.f_dm(omegab, omegac)
 
     if include_baryons:
+        # these might as well be scalars
+        r_t0 = r_t0 * ones(mass_range.size)
+        r_c0 = r_c0 * ones(mass_range.size)
         #to = time()
         #rho_dm = baryons.rhoDM(hmf, mass_range, omegab, omegac)
         rho_stars = _array([baryons.rhoSTARS(hmf, i[0], mass_range,
                                              sigma_c, alpha_s, A, M_1,
-                                             gamma_1, gamma_2, b_0, b_1, b_2)
+                                             gamma_1, gamma_2, b_0, b_1, b_2,
+                                             Ac2s)
                             for i in _izip(hod_mass)])
         rho_gas, F = np.transpose([baryons.rhoGAS(hmf, rho_crit, omegab,
                                                   omegac, i[0],
                                                   mass_range, sigma_c,
                                                   alpha_s, A, M_1, gamma_1,
-                                                  gamma_2, b_0, b_1, b_2)
+                                                  gamma_2, b_0, b_1, b_2,
+                                                  Ac2s)
                                    for i in _izip(hod_mass)])
         #print 'rho_stars =', time() - to
 
@@ -415,7 +436,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         T_dm = _array([T_table(expansion, rho_dm, z, mass_range,
                                rvir_range_lin, i[0], "dm", f, omegab,
                                omegac, 0, 0, sigma_c, alpha_s, A, M_1,
-                               gamma_1, gamma_2, b_0, b_1, b_2)
+                               gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
                        for i in _izip(hod_mass)])
         T_tot = _array([T_dm[i][0:1:1,:] for i in xrange(M_bin_min.size)])
     else:
@@ -428,18 +449,18 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         T_dm = _array([T_table(expansion, rho_dm, z, mass_range,
                                rvir_range_lin, i[0], "dm", f, omegab,
                                omegac, 0, 0, sigma_c, alpha_s, A, M_1,
-                               gamma_1, gamma_2, b_0, b_1, b_2)
+                               gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
                        for i in _izip(hod_mass)])
         T_stars = _array([T_table(expansion_stars, rho_mean, z,
                                   mass_range, rvir_range_lin, i[0],
                                   'stars', f, omegab, omegac, alpha_star,
                                   r_t0, sigma_c, alpha_s, A, M_1, gamma_1,
-                                  gamma_2, b_0, b_1, b_2)
+                                  gamma_2, b_0, b_1, b_2, Ac2s)
                           for i in _izip(hod_mass)])
         T_gas = _array([T_table(expansion, rho_mean, z, mass_range,
                                 rvir_range_lin, i[0], 'gas', f, omegab,
                                 omegac, beta_gas, r_c0, sigma_c, alpha_s,
-                                A, M_1, gamma_1, gamma_2, b_0, b_1, b_2)
+                                A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
                         for i in _izip(hod_mass)])
         T_tot = _array([T_dm[i][0:1:1,:] + T_stars[i][0:1:1,:] + \
                         T_gas[i][0:1:1,:]

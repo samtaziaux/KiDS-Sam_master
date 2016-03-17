@@ -1,5 +1,5 @@
 """
-Excess surface densities of NFW profiles with and without truncation (see 
+Excess surface densities of NFW profiles with and without truncation (see
 Wright & Brainerd, 2000; Baltz et al., 2009; Pastor Mira et al., 2011).
 
 WARNING: Masses are not yet implemented
@@ -112,8 +112,8 @@ def esd_sharp(x, tau, sigma_s):
 #-----------------------------------#
 
 """
-Note that this implementation requires that the group distribution is given. 
-Will later try to 
+Note that this implementation requires that the group distribution is given.
+Will later try to
 
 """
 
@@ -153,6 +153,10 @@ def sigma_integrate(x_range, xoff, sigma_s, angles):
     itable = trapz(y, angles, axis=2)
     s = [interp1d(x_range, i, kind='slinear') for i in itable]
     return s
+
+def sigma_offset(x, xoff, n, sigma_s, x_range, angles, interp_kind='slinear'):
+    s = sigma_distribution(xoff, n, sigma_s, x_range, angles, interp_kind)
+    return s(x[1:]) / (2.0*3.14159265)
 
 def sigma_within(s, x):
     return s(x) * x / (2.0*3.14159265)
@@ -383,8 +387,19 @@ def mass_total_sharp(rs, tau, sigma_s):
 #--    3-dimensional density profiles
 #-----------------------------------#
 
-def rho(x, delta_c, rho_c):
-    return delta_c * rho_c / (x*(1+x)**2)
+def rho(x, delta_c, rho_bg):
+    return delta_c * rho_bg / (x*(1+x)**2)
+
+def rho_trunc5(x, tau, delta_c, rho_bg):
+    return delta_c * rho_bg / (x*(1+x)**2) * (tau**2 / (tau**2+x**2))
+
+def rho_trunc7(x, tau, delta_c, rho_bg):
+    return delta_c * rho_bg / (x*(1+x)**2) * (tau**2 / (tau**2+x**2))**2
+
+def rho_sharp(x, tau, delta_c, rho_bg):
+    y = zeros(x.size)
+    y[x < tau] = delta_c * rho_bg / (x[x < tau]*(1+x[x < tau])**2)
+    return y
 
 #-----------------------------------#
 #--    Auxiliary functions

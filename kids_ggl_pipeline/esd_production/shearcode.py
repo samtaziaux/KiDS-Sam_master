@@ -1,8 +1,10 @@
 #!/usr/bin/python
 
+"""
 "Determine the shear as a function of radius from a galaxy."
+"""
 
-import pyfits
+import astropy.io.fits as pyfits
 import numpy as np
 import sys
 import os
@@ -85,12 +87,13 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     for n in xrange(nruns):
         ps = []
         splitsname = 'python -W ignore %sshear+covariance.py'%(path_shearcodes)
-        splitsname += ' %i %i %i %s %s &'%(nsplit, nsplits, nobsbin, blindcat, config_file)
+        splitsname += ' %i %i %i %s %s &'%(nsplit, nsplits, nobsbin, \
+                                           blindcat, config_file)
         p = sub.Popen(shlex.split(splitsname))
         ps.append(p)
         for p in ps:
             p.wait()
-
+    
     # Combine the splits according to the purpose
 
     # Combining the catalog splits to a single output
@@ -144,11 +147,9 @@ def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file):
 def run_esd(config_file):
 
     # Input for the codes
-    [kids_path, gama_path,
-            Om, Ol, Ok, h,
-            folder, filename, purpose, Rbins, Runit, ncores,
-            lensid_file, lens_weights, lens_binning, lens_selection,
-            src_selection, cat_version, blindcats] = esd_utils.read_config(config_file)
+    [kids_path, gama_path, Om, Ol, Ok, h, folder, filename, purpose, Rbins, \
+     Runit, ncores, lensid_file, lens_weights, lens_binning, lens_selection, \
+     src_selection, cat_version, blindcats] = esd_utils.read_config(config_file)
 
     print '\n \n \n \n \n \n \n \n \n \n'
     print 'Running:', purpose

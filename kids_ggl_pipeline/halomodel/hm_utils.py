@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 # local
-import nfw, nfw_stack, satellites, halo
+import nfw, nfw_stack, satellites, halo, subhalo
 
 
 def read_config(config_file, version='0.5.7'):
@@ -177,6 +177,8 @@ def read_function(module, function):
         function = getattr(halo, function)
     elif module == 'models':
         function = getattr(models, function)
+    elif module == 'subhalo':
+        function = getattr(subhalo, function)
     print 'Successfully imported {0}'.format(function)
     #pickle.dumps(function)
     #print 'Pickled!'

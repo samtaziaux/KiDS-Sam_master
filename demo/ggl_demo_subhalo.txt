@@ -1,0 +1,169 @@
+########################
+### Subhalo model setup ###
+########################
+
+## IMPORTANT:
+##
+##  See ggl_demo_nfw_stack.txt in this same directory for details on the format of hm_param(s)
+##  and hm_output.
+##
+
+############################
+### Specific for subhalo.py ###
+############################
+
+# Name of the function containing the desired model (several fiducial models
+# may be implemented in the future)
+model             subhalo.model
+
+## Subhalo model parameters
+
+path        data/logLstar/logLstar_m1.5_m0.8_m0.4_m0.1_0.3-all-z_0.00_0.15-mrsource_20.0_24.5-rmax_2.0-minsep_32-delmag-manual_fiducial
+
+# Cosmology parameters for the halo model (reason for duplication - those can be fitted for using the sampler)
+
+hm_param          sigma_8         fixed     0.8159
+hm_param          H0              fixed     67.74
+hm_param          omegam          fixed     0.3089
+hm_param          omegab_h2       fixed     0.02230
+hm_param          omegav          fixed     0.6911
+hm_param          n               fixed     0.9667
+
+# Redshift and c(M) normalization for host halo
+
+hm_param          z               fixed     0.1
+hm_param          fh              fixed     1.0
+
+# Stellar-to-subhalo mass relation (SSHMR)
+
+hm_param          logMo           fixed     11
+hm_param          logM1           fixed     11
+hm_param          beta_sshmr      fixed     0
+hm_param          sigma_sshmr     fixed     0.1
+hm_param          fs              fixed     0.10
+
+# Subhalo mass function (SHMF)
+
+hm_param          alpha_shmf      fixed     -0.82
+hm_param          beta_shmf       fixed     50
+hm_param          omega_shmf      fixed     4
+
+# Subhalo mass-concentration relation
+
+hm_param          a_cMsub         fixed     10.14
+hm_param          b_cMsub         fixed     -0.081
+hm_param          g_cMsub         fixed     -1.01
+hm_param          Mo_cMsub        fixed     2e12
+
+# Limits and resolution of the halo mass function
+
+hm_param          logMh_min       fixed     5.0
+hm_param          logMh_max       fixed    16.0
+hm_param          logMh_step      fixed     0.01
+
+# Limits and resolution of the subhalo mass function, in units of the halo mass
+
+hm_param          logpsi_min      fixed     -4
+hm_param          logpsi_max      fixed      0
+hm_param          logpsi_step     fixed      0.01
+
+# Luminosity or stellar mass. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
+
+hm_param          Mstar           read      <path>/avgs-logMstar.dat
+
+# binning for the power spectrum
+
+hm_param          lnk_min         fixed     -12
+hm_param          lnk_max         fixed     12
+hm_param          lnk_step        fixed     0.01
+
+## Halo model output
+hm_output         esd_total         4,14E
+hm_output         Mavg              4,E
+# alternative:
+#hm_output         Mavg              3E
+
+
+
+#######################
+### Additonal info: ###
+#######################
+
+# The following are currently hard-coded in the halo model:
+#
+# - halo mass functions as defined in Tinker 2010 (http://arxiv.org/abs/1001.3162)
+# - corresponding bias function also from Tinker 2010 (http://arxiv.org/abs/1001.3162)
+# Note: halo mass function can always be changed when calling hmf, most popular ones are available through hmf package
+# Adding another bias function means adding additional python function in halo.py module (as for now done only for Tinker2010).
+#
+# - c(M,z) relation is curently used from Duffy et al. 2010 (http://arxiv.org/abs/0804.2486). There are few others available in dark_matter.py, adding additional ones should be done in the same location.
+# - The NFW density profile for DM components. The model is easily expandable to incorporate different density profiles or other functions, but to be consistent with other parts of the code, one should
+#   first go through the detailed explanation in my master's thesis, which can be found at: https://www.dropbox.com/s/77u49ltf8448eur/thesis_final.pdf?dl=0
+#
+# If I have missed anything or there are more questions, don't hesitate to send me an email: dvornik@strw.leidenuniv.nl
+
+
+
+#### Below I have copied the setup from ggl_demo_nfw_stack.py so that this config file can be used as a demo
+
+##########################
+### Parameter sampling ###
+##########################
+
+# Path to ESD file (folders only; optional. Insert './' if local directory) 
+path_data           data/logLstar/logLstar_m1.5_m0.8_m0.4_m0.1_0.3-all-z_0.00_0.15-mrsource_20.0_24.5-rmax_2.0-minsep_32-delmag-manual_fiducial
+
+# Name of the file containing the ESDs and the columns to be read. Columns are (R,ESD_t[,1+K(R)]),
+# where K(R) is the noise bias correction as per Equation 12 of Viola et al. (2015).
+# If the name contains wildcards ('*'), all matching files will be read. Make sure that
+# the filenames can be correctly sorted alpha-numerically!
+data                esd_*.dat       0,1
+
+# Any radial bins to be excluded from the analysis, numbered starting from zero.
+# Note that they will be excluded from all observable bins (and consistently from the
+# covariance matrix). Note that these are handled automatically by the code in terms of
+# the fits format of hm_output's (i.e., if you have 14 radial bins but want to exclude
+# two of them from your analysis, you should still give a fits format '14E', *not* '12E').
+exclude_bins        0,12,13
+
+# Path to covariance file. Same notes as path_data.
+path_covariance     data/logLstar/logLstar_m1.5_m0.8_m0.4_m0.1_0.3-all-z_0.00_0.15-mrsource_20.0_24.5-rmax_2.0-minsep_32-delmag-manual_fiducial
+
+# This file should have the same format as those the pipeline produces; that is, it should be
+# a single file with columns should be sorted by mnij where m,n are observable (e.g., logmstar)
+# bins and i,j are radial bins in the ESD. Columns are (cov[,1+K(R)]).
+covariance          covariance.dat   4
+
+# MCMC output. Note that the chain *will* be saved into a FITS file
+sampler_output       output/subhalo_logLstar_m1.5_m0.8_m0.4_m0.1_0.3-all-z_0.00_0.15-mrsource_20.0_24.5-rmax_2.0-minsep_32-delmag-manual_fiducial.fits
+
+# MCMC sampler. The only option for now is emcee (Foreman-Mackey et al. 2013, PASP, 125, 306).
+sampler              emcee
+
+# Type of sampler used. Fixed to 'ensemble' for now.
+sampler_type         ensemble
+
+# Number of walkers. Must be at least twice the number of free parameters, and the
+# recommendation from the technical paper is to use a large number for faster convergence.
+nwalkers             500
+
+# Number of steps *per walker*. Total number of MCMC samples will be nwalkers*nsteps.
+nsteps               600
+
+# Number of burn-in steps. Not sure but should also be per walker.
+nburn                0
+
+# Thinning. This is the fraction of samples that should be saved. However I can't guarantee that
+# thin!=1 will store the results properly.
+thin                 1
+
+# Number of iterations after which progress will be saved to the output file
+update_freq          10000
+
+# Apologies for the criptic name. This sets the number of bins used to sample the offset 1-halo term
+# (Nbins = 2^k + 1). Each increasing k will increase runtime significantly; k=7 gives precision of 1%
+# or better compared to k=10 (which would be a very fine sampling).
+k                    7
+
+# Number of cores, or threads, to be used to sample the MCMC.
+threads              6

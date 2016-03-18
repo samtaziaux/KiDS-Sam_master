@@ -28,6 +28,8 @@ from numpy import cos, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
+
+#from subhalo import nsub, p_nsub
 from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, \
                   virial_mass, virial_radius
 
@@ -107,6 +109,14 @@ def Con(z, M, f):
     return c
 
 
+def cM(z, M, a, b, g=0, Mo=2e12):
+    """
+    A generic mass-concentration relation
+
+    """
+    return a * (M/Mo)**b * (1+z)**g
+
+
 def delta_NFW(z, rho_mean, f, M, r):
 
 	c = Con(z, M, f)
@@ -161,23 +171,34 @@ def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 # Spectrum components for dark matter.
 """
 
+
 def GM_cen_analy(mass_func, uk, rho_dm, population, ngal, m_x):
     return trapz(mass_func.dndlnm * population * uk,
                  m_x, axis=1) / (rho_dm*ngal)
+
 
 def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
     return trapz(mass_func.dndlnm * population * uk_m * uk_s,
                  m_x, axis=1) / (rho_dm*ngal)
 
 
+def GM_sub_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, mh_range,
+                 shmf, msub_range):
+    print population.shape, uk_m.shape, uk_s.shape, mh_range.shape
+    print shmf.shape, msub_range.shape
+    int_sub = trapz(shmf * population * uk_s, msub_range, axis=1)
+    return trapz(mass_func.dndlnm * uk_m * int_sub, mh_range,
+                 axis=1) / (rho_dm*ngal)
+
+
 def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
 
 	"""
-	Calculates the power spectrum for the component given in the name. 
+	Calculates the power spectrum for the component given in the name.
     Following the construction from Mohammed, but to general power of k!
-	In practice the contributions from k > 50 are so small 
+	In practice the contributions from k > 50 are so small
     it is not worth doing it.
-	Extrapolates the power spectrum to get rid of the knee, 
+	Extrapolates the power spectrum to get rid of the knee,
     which is a Taylor series artifact.
 	"""
 
@@ -225,11 +246,11 @@ def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
                     ngal, k_x, r_x, m_x, T, T_tot):
 
     """
-    Calculates the power spectrum for the component given in the name. 
+    Calculates the power spectrum for the component given in the name.
     Following the construction from Mohammed, but to general power of k!
-    In practice the contributions from k > 50 are so small 
+    In practice the contributions from k > 50 are so small
     it is not worth doing it.
-    Extrapolates the power spectrum to get rid of the knee, 
+    Extrapolates the power spectrum to get rid of the knee,
     which is a Taylor series artifact.
     """
 
@@ -262,11 +283,11 @@ def GM_sat_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
                     ngal, k_x, r_x, m_x, T, T_tot):
 
     """
-    Calculates the power spectrum for the component given in the name. 
+    Calculates the power spectrum for the component given in the name.
     Following the construction from Mohammed, but to general power of k!
-    In practice the contributions from k > 50 are so small 
+    In practice the contributions from k > 50 are so small
     it is not worth doing it.
-    Extrapolates the power spectrum to get rid of the knee, 
+    Extrapolates the power spectrum to get rid of the knee,
     which is a Taylor series artifact.
     """
 

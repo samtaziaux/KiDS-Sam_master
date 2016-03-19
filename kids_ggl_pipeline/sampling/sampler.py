@@ -133,6 +133,7 @@ def run_emcee(hm_options, sampling_options, args):
             ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
             ax.plot(Ri, f, 'r-', lw=3)
             ax.set_xscale('log')
+            #ax.set_yscale('log')
             #for x, fi, gti, gei in izip(Ri, f, gt, gt_err):
                 #ax.annotate('{0:.2f}'.format((fi-gti)/gei),
                             #xy=(x,gti+20), ha='center', va='bottom',

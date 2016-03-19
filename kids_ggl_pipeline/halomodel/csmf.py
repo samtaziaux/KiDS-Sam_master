@@ -1,5 +1,5 @@
 
-def phi_sub(
+#def phi_sub(
 
 
 def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,

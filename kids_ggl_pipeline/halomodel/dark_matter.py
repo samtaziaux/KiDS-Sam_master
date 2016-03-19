@@ -24,7 +24,7 @@
 import time
 import numpy as np
 import matplotlib.pyplot as pl
-from numpy import cos, pi, sin
+from numpy import cos, iterable, newaxis, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
@@ -73,7 +73,7 @@ def NFW_f(z, rho_mean, f, m_x, r_x, k_x, c=None):
     u_k = np.zeros((k_x.size,m_x.size))
     if c is None:
         c = Con(z, m_x, f)
-    else:
+    elif not iterable(c):
         c = c * np.ones(m_x.size)
     for i in xrange(m_x.size):
         r_s = NFW_RS(c[i], r_x[i])
@@ -183,11 +183,18 @@ def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
 
 
 def GM_sub_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, mh_range,
-                 shmf, msub_range):
-    print population.shape, uk_m.shape, uk_s.shape, mh_range.shape
-    print shmf.shape, msub_range.shape
-    int_sub = trapz(shmf * population * uk_s, msub_range, axis=1)
-    return trapz(mass_func.dndlnm * uk_m * int_sub, mh_range,
+                 msub_range, shmf):
+    print 'integrand =', (shmf * population * uk_s).shape, msub_range.shape
+    # the shape of the result of this integral should be equal
+    # to mh_range.shape?
+    int_sub = trapz(shmf * population * uk_s, msub_range, axis=0)
+    print 'dndlnm =', mass_func.dndlnm.shape
+    print 'int_sub =', int_sub.shape
+    print 'uk_m =', uk_m.shape
+    print 'mh_range =', mh_range.shape
+    # the shape of the result of this integral should be equal
+    # to k_x.shape
+    return trapz(mass_func.dndlnm * uk_m * int_sub[:,newaxis], mh_range,
                  axis=1) / (rho_dm*ngal)
 
 

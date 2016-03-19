@@ -1,4 +1,6 @@
-from numpy import arange, array, exp, iterable, log, logspace, ones, pi
+import numpy
+from numpy import arange, array, exp, iterable, log, log10, logspace, \
+                  newaxis, ones, pi, squeeze
 from scipy.integrate import trapz
 from scipy.special import gammainc
 
@@ -71,13 +73,14 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # However since here we have only one population this isn't very
     # relevant, so let's just take the mean here
     sigma8, h, Om, Obh2, ns, \
-        z, fh, logMo, logM1, beta_sshmr, sigma_sshmr, \
+        z, fh, fc_nsat, logMo, logM1, beta_sshmr, sigma_sshmr, \
         fs, alpha_shmf, beta_shmf, omega_shmf, \
         a_cMsub, b_cMsub, g_cMsub, Mo_cMsub, \
         logMh_min, logMh_max, logMh_step, \
         logpsi_min, logpsi_max, logpsi_step, logMstar, \
         lnk_min, lnk_max, lnk_step, \
         smth1, smth2 = theta
+    print 'logMo =', logMo
 
     # HMF set up parameters
     #k_step = (lnk_max-lnk_min) / n_bins
@@ -108,8 +111,10 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # median logMstar in each bin), but let's keep it like this for now.
     #logMstar = (Mstar_bin_min + Mstar_bin_max) / 2
     #n_bins_obs = Mstar_bin_min.size
-    print 'psi =', psi_range.shape, Msub_range.shape,
-    print Mh_range.shape, logMstar.shape
+    print 'psi =', psi_range.shape
+    print 'Msub_range =', Msub_range[0][:10], Msub_range.shape
+    print 'Mh_range =', Mh_range.shape
+    print 'logMstar =', logMstar, logMstar.shape
 
     hmfparams = {'sigma_8': sigma8, 'H0': 100.*h,'omegab_h2': Obh2,
                  'omegam': Om, 'omegav': 1-Om, 'n': ns,
@@ -130,18 +135,19 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # by an error function to account for incompleteness
     #shmf = nsub_vdB05(Msub_range, Mh, a_shmf, b_shmf)
     shmf = nsub(psi_range, alpha_shmf, beta_shmf, omega_shmf, fs)
+    print 'shmf =', shmf.shape
 
     # what do I need all of these for?
     rvirh_range_lin = virial_radius(Mh_range, rho_mean, 200.0)
-    rvirh_range = np.log10(rvirh_range_lin)
+    rvirh_range = log10(rvirh_range_lin)
     rvirh_range_3d = logspace(-3.2, 4, 200, endpoint=True)
     rvirh_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
     rvirh_range_2d_i = R[0][1:]
-    #rvirs_range_lin = virial_radius(Mh_range, rho_mean, 200.0)
-    #rvirs_range = np.log10(rvirh_range_lin)
-    #rvirs_range_3d = logspace(-3.2, 4, 200, endpoint=True)
-    #rvirs_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
-    #rvirs_range_2d_i = R[0][1:]
+    rvirs_range_lin = virial_radius(Msub_range, rho_mean, 200.0)
+    rvirs_range = np.log10(rvirs_range_lin)
+    rvirs_range_3d = logspace(-3.2, 4, 200, endpoint=True)
+    rvirs_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
+    rvirs_range_2d_i = R[0][1:]
 
     # here I can use the stellar-to-halo mass relation typically used
     # for centrals, to get the stellar-to-subhalo mass relation of satellites
@@ -149,72 +155,101 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # satellites and so the number of them doesn't matter
     #pop_s = array([ncm(hmf, i[0], Msub_range, sigma_c, alpha_s, A, M_1,
                        #gamma_1, gamma_2)
-                   #for i in _izip(hod_mass)])
-    #pop_s = ones((psi_range.size,hod_mass.size))
+                   #for i in izip(hod_mass)])
+    # for now, just anything with the right shape
+    pop_s = 1
+    ngal = 1
 
     # average Msub given Mh
-    phi = phi_sub(Msub_range, logMstar, logMo, logM1, beta_sshmr,
+    phi = phi_sub(log10(Msub_range), logMstar, logMo, logM1, beta_sshmr,
                   sigma_sshmr)
     print 'phi =', phi.shape
-    Msub_Mh = trapz([[Msub_range * shmf_h * phi
-                      for Mh, shmf_h in izip(Mh_range, shmf)]
-                     for logMstar_bin in logMstar],
-                    axis=2)
+    Msub_Mh = trapz(Msub_range * shmf[:,newaxis] * phi, axis=1)
     # average Msub accounting for the HMF. This is a probability.
-    print Msub_Mh.shape, nh.shape
+    print 'Msub_Mh =', Msub_Mh.shape
+    print 'nh =', nh.shape
     Msub_avg = trapz(Msub_Mh * nh, Mh_range, axis=1)
     print 'Msub =', Msub_avg, Msub_avg.shape
 
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
     # Fourier Transform of the host NFW profile
-    u_k = NFW_f(z, rho_dm, f, Mh_range, rvirh_range_lin, k_range_lin,
-                c=concentration)
-    u_k = u_k/u_k[0]
+    concentration = Con(z, Mh_range, fh)
+    uk = NFW_f(z, rho_dm, fh, Mh_range, rvirh_range_lin, k_range_lin,
+               c=concentration)
+    uk = uk/uk[0]
     # FT of the subhalo NFW profile
-    csub = cM(z, Msub_range, acsub, bcsub, gcsub)
-    uk_s = NFW_f(z, rho_dm, 0, Msub_range, rvir_range_lin, k_range_lin, csub)
+    csub = cM(z, Msub_range, a_cMsub, b_cMsub, g_cMsub)
+    uk_s = array([NFW_f(z, rho_dm, 0, Msub_i, rvirs, k_range_lin, c)
+                  for Msub_i, rvirs, c
+                  in izip(Msub_range, rvirs_range_lin, csub)]).transpose(0,2,1)
     # and of the NFW profile of the satellites. This I would like to be
     # the actual Rsat distribution measured from the data (right?)
     #print fc_nsat
     uk_Rsat = NFW_f(z, rho_dm, fc_nsat, Mh_range, rvirh_range_lin, k_range_lin)
     uk_Rsat = uk_Rsat/uk_Rsat[0]
 
-    Pg_s = F_k1 * array([GM_sub_analy(hmf, u_k, uk_s, rho_dm,
-                                      pop_s_i, ngal_i, Mh_range,
-                                      Msub_range, shmf)
-                         for pop_s_i, ngal_i in _izip(pop_s, ngal)])
+    print 'hmf =', hmf.dndlnm.shape
+    print 'uk =', uk.shape
+    print 'uk_s =', uk_s.shape
+    #print 'pop_s =', pop_s.shape
+    #print 'ngal =', ngal.shape
+    print 'Mh_range =', Mh_range.shape
+    print 'Msub_range =', Msub_range.shape
+    print 'shmf =', shmf.shape
+    #Pg_s = F_k1 * array([GM_sub_analy(hmf, uk, uk_s, rho_dm,
+                                      #pop_s_i, ngal_i, Mh_range,
+                                      #Msub_range, shmf)
+                         #for pop_s_i, ngal_i in izip(pop_s, ngal)])
+    Pg_s = F_k1 * array([GM_sub_analy(hmf, uk, uk_s_i, rho_dm,
+                                      pop_s, ngal, Mh_range,
+                                      Msub_i, shmf_i)
+                         for uk_s_i, Msub_i, shmf_i
+                         in izip(uk_s, Msub_range, shmf)])
 
     # I am missing the offset central contribution
-    Pg_k = Pg_s
+    # the normalization is just to have numbers make more sense.
+    # the proper normalization is encoded in ngal and pop_s, which
+    # I haven't implemented yet.
+    Pg_k = Pg_s / Pg_s.max() / 100
+    print 'Pg_k =', Pg_k.shape, Pg_k.max()
+    #import pylab
+    #for i in xrange(0, len(Pg_k), 4):
+        #pylab.loglog(k_range_lin, Pg_k[i])
+    #pylab.show() 
 
-    P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-               for Pg_k_i in _izip(Pg_k)]
+    P_inter = [UnivariateSpline(k_range_lin, np.log(Pg_k_i), s=0, ext=0)
+               for Pg_k_i in izip(Pg_k)]
 
+    #print 'rvirs_range_3d =', rvirs_range_3d
     # correlation functions
-    xi2 = np.zeros((M_bin_min.size,rvirh_range_3d.size))
-    for i in xrange(M_bin_min.size):
-        xi2[i] = power_to_corr_ogata(P_inter[i], rvirh_range_3d)
+    xi2 = np.zeros((logMstar.size,rvirs_range_3d.size))
+    for i in xrange(logMstar.size):
+        xi2[i] = power_to_corr_ogata(P_inter[i], rvirs_range_3d)
+    print 'xi2 =', xi2, xi2.shape
 
     # surface density
-    sur_den2 = array([sigma(xi2_i, rho_mean, rvirh_range_3d, rvirh_range_3d_i)
+    sur_den2 = array([sigma(xi2_i, rho_mean, rvirs_range_3d, rvirs_range_3d_i)
                       for xi2_i in xi2])
-    for i in xrange(M_bin_min.size):
+    for i in xrange(logMstar.size):
         sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
         sur_den2[i] = fill_nan(sur_den2[i])
+    print 'sur_den2 =', sur_den2, sur_den2.shape
 
     # excess surface density
     d_sur_den2 = array([np.nan_to_num(d_sigma(sur_den2_i,
-                                              rvirh_range_3d_i,
-                                              rvirh_range_2d_i))
-                        for sur_den2_i in _izip(sur_den2)]) / 1e12
+                                              rvirs_range_3d_i,
+                                              rvirs_range_2d_i))
+                        for sur_den2_i in izip(sur_den2)]) / 1e12
+    print 'd_sur_den2 =', d_sur_den2, d_sur_den2.shape
 
-    out_esd_tot = _array([UnivariateSpline(rvirh_range_2d_i,
-                                           np.nan_to_num(d_sur_den2_i), s=0)
-                          for d_sur_den2_i in _izip(d_sur_den2)])
-    out_esd_tot_inter = np.zeros((M_bin_min.size, rvirh_range_2d_i.size))
-    for i in xrange(M_bin_min.size):
-        out_esd_tot_inter[i] = out_esd_tot[i](rvirh_range_2d_i)
+    out_esd_tot = array([UnivariateSpline(rvirs_range_2d_i,
+                                          np.nan_to_num(d_sur_den2_i), s=0)
+                         for d_sur_den2_i in izip(d_sur_den2)])
+    print 'out_esd_tot =', out_esd_tot, out_esd_tot.shape
+    out_esd_tot_inter = np.zeros((logMstar.size, rvirs_range_2d_i.size))
+    for i in xrange(logMstar.size):
+        out_esd_tot_inter[i] = out_esd_tot[i](rvirs_range_2d_i)
 
     return [out_esd_tot_inter, Msub_avg, csub, 0]
 
@@ -230,10 +265,14 @@ def nsub_vdB05(psi, a=0.9, b=0.13):
 def nsub(psi, alpha, beta, omega, fs, psi_min=1e-4):
     """
     Subhalo mass function of Jiang & van den Bosch (2016), Eqs. 13 and 16.
+    
+    I put a minus sign in gamma because something is wrong and it comes
+    out negative. However with that minus the shape looks right so until
+    the code itself is working I might just leave it there.
 
     """
     s = (1+alpha) / omega
-    gamma = fs * omega * beta**s / \
+    gamma = -fs * omega * beta**s / \
             (gammainc(s, beta*psi_min**omega) - gammainc(s, beta))
     # should I use dndpsi or dndlnpsi? Using dndpsi for now
     return gamma * psi**alpha * exp(-beta*psi**omega) / log(10)
@@ -241,27 +280,23 @@ def nsub(psi, alpha, beta, omega, fs, psi_min=1e-4):
 
 def phi_sub(logMsub, logMstar, logMo, logM1, beta, sigma):
     """
-    stellar-to-subhalo mass relation; mu and sigma are the mean and scatter
+    stellar-to-subhalo mass relation through a conditional mass function
+
+    mu and sigma are the mean and scatter in the SSHMR.
     We assume a constant scatter for now, but can easily be generalized to
     depend on mass.
 
+    To fit for individual masses fix beta to zero.
+
     """
-    # this assumes that all values are scalars
-    #mu = logMo + beta * (logMstar-logM1)
-    #return exp((logMsub - mu)**2 / (2*sigma**2)) / ((2*pi)**0.5*sigma)
-    # If I want to independently fit a mean mass (and scatter) to each
-    # logMstar bin then I should fix beta=0 (in the config file) and
-    # make logMo a joined array with len(logMo) = Nbins. However then I have
-    # to account for the different sizes of the arrays in the multiplication
-    # (by iterating over logMo and possibly sigma as well).
-    # this is the most general way
     if not iterable(logMo):
         logMo = array([logMo])
-    if not iterable(sigma):
-        sigma = array([sigma])
+    # mean subhalo mass given a stellar mass
     mu = logMo + beta * (logMstar-logM1)
-    return array([exp((logMsub - mu_i)**2 / (2*sigma_i**2)) / \
-                      ((2*pi)**0.5*sigma_i)
-                  for mu_i, sigma_i in izip(mu, sigma)])
+    #return squeeze([exp((logMsub - mu_i)**2 / (2*sigma_i**2)) / \
+    prob = array([exp(-(logMsub - mu_i)**2 / (2*sigma**2)) / \
+                      ((2*pi)**0.5*sigma)
+                  for mu_i in mu])
+    return prob
 
 

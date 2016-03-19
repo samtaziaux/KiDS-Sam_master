@@ -185,18 +185,18 @@ def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
 def GM_sub_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, mh_range,
                  msub_range, shmf):
     print shmf.shape, population.shape, uk_s.shape
-    print 'integrand =', (shmf * population * uk_s).shape, msub_range.shape
+    #print 'integrand =', (shmf[:,newaxis] * population * uk_s).shape, msub_range.shape
     # the shape of the result of this integral should be equal
     # to mh_range.shape?
-    int_sub = trapz(shmf * population * uk_s,
-                    msub_range[newaxis], axis=1)
+    int_sub = trapz((shmf[:,newaxis] * population)[:,:,newaxis] * uk_s,
+                    msub_range, axis=0ss)
     print 'dndlnm =', mass_func.dndlnm.shape
     print 'int_sub =', int_sub.shape
     print 'uk_m =', uk_m.shape
     print 'mh_range =', mh_range.shape
     # the shape of the result of this integral should be equal
     # to k_x.shape
-    return trapz(mass_func.dndlnm * uk_m * int_sub, mh_range,
+    return trapz(mass_func.dndlnm * uk_m * int_sub[:,newaxis], mh_range,
                  axis=1) / (rho_dm*ngal)
 
 

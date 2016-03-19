@@ -140,9 +140,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # I could also set a very low psi_res (default 1e-4) and multiply this
     # by an error function to account for incompleteness
     #shmf = nsub_vdB05(Msub_range, Mh, a_shmf, b_shmf)
-    # need the newaxis every time I call it because I always use it
-    # per Mh bin and then integrate over Mh
-    shmf = nsub(psi_range, alpha_shmf, beta_shmf, omega_shmf, fs)[:,newaxis]
+    shmf = nsub(psi_range, alpha_shmf, beta_shmf, omega_shmf, fs)
     print 'shmf =', shmf.shape
 
     # what do I need all of these for?
@@ -165,29 +163,23 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #pop_s = array([nsub_Msub(shmf, logmstar, Msub_range, sigma_shmf,
                              #logM
     #pop_s = 1
-    #ngal = 1
+    ngal = 1
 
     # average Msub given Mh
     print 'mstar_hod =', mstar_hod.shape
-    phi = array([phi_sub(log10(Msub_range), logmstar, logMi, logM1,
+    phi = array([phi_sub(log10(Msub_range), log10(mstar), logMi, logM1,
                          beta_sshmr, sigma_sshmr)
-                 for logmstar, logMi in izip(log10(mstar_hod), logMo)])
-    print 'phi =', phi.sum(), phi.shape
+                 for mstar, logMi in izip(mstar_hod, logMo)])
+    print 'phi =', phi.shape
     pop_s = array([nsub_Msub(phi_i, mstar)
                    for phi_i, mstar in izip(phi, mstar_hod)])
     print 'pop_s =', pop_s.shape
-    ngal = array([Nsub_avg(pop_s_i, hmf, shmf, Mh_range, Msub_range)
-                  for pop_s_i in pop_s])
-    # this is fake, just trying to see where are things going wrong
-    #ngal /= 1e2
-    print 'ngal =', ngal, ngal.shape
-
-    Msub_Mh = trapz(Msub_range * shmf * phi, axis=1)
+    Msub_Mh = trapz(Msub_range * shmf[:,newaxis] * phi, axis=1)
     # average Msub accounting for the HMF. This is a probability.
     print 'Msub_Mh =', Msub_Mh.shape
     print 'nh =', nh.shape
-    Msub_avg = trapz(Msub_Mh * nh, Mh_range, axis=2)
-    print 'Msub =', Msub_avg.shape
+    Msub_avg = trapz(Msub_Mh * nh, Mh_range, axis=1)
+    print 'Msub =', Msub_avg, Msub_avg.shape
 
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
@@ -200,8 +192,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     csub = cM(z, Msub_range, a_cMsub, b_cMsub, g_cMsub)
     uk_s = array([NFW_f(z, rho_dm, 0, Msub_i, rvirs, k_range_lin, c)
                   for Msub_i, rvirs, c
-                  in izip(Msub_range, rvirs_range_lin,
-                          csub)]).transpose(1,0,2)
+                  in izip(Msub_range, rvirs_range_lin, csub)]).transpose(0,2,1)
     # and of the NFW profile of the satellites. This I would like to be
     # the actual Rsat distribution measured from the data (right?)
     #print fc_nsat
@@ -220,15 +211,11 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                       #pop_s_i, ngal_i, Mh_range,
                                       #Msub_range, shmf)
                          #for pop_s_i, ngal_i in izip(pop_s, ngal)])
-    #Pg_s = F_k1 * array([GM_sub_analy(hmf, uk, uk_s_i, rho_dm,
-                                      #pop_s, ngal, Mh_range,
-                                      #Msub_i, shmf_i)
-                         #for uk_s_i, Msub_i, shmf_i
-                         #in izip(uk_s, Msub_range, shmf)])
-    Pg_s = F_k1 * array([GM_sub_analy(hmf, uk, uk_s, rho_dm,
-                                      pop_s_i, ngal_i, Mh_range,
-                                      Msub_range, shmf)
-                         for pop_s_i, ngal_i in izip(pop_s, ngal)])
+    Pg_s = F_k1 * array([GM_sub_analy(hmf, uk, uk_s_i, rho_dm,
+                                      pop_s, ngal, Mh_range,
+                                      Msub_i, shmf_i)
+                         for uk_s_i, Msub_i, shmf_i
+                         in izip(uk_s, Msub_range, shmf)])
 
     # I am missing the offset central contribution
     # the normalization is just to have numbers make more sense.
@@ -246,15 +233,15 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     #print 'rvirs_range_3d =', rvirs_range_3d
     # correlation functions
-    xi2 = np.zeros((logMstar_min.size,rvirs_range_3d.size))
-    for i in xrange(logMstar_min.size):
+    xi2 = np.zeros((logMstar.size,rvirs_range_3d.size))
+    for i in xrange(logMstar.size):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvirs_range_3d)
     print 'xi2 =', xi2, xi2.shape
 
     # surface density
     sur_den2 = array([sigma(xi2_i, rho_mean, rvirs_range_3d, rvirs_range_3d_i)
                       for xi2_i in xi2])
-    for i in xrange(logMstar_min.size):
+    for i in xrange(logMstar.size):
         sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
         sur_den2[i] = fill_nan(sur_den2[i])
     print 'sur_den2 =', sur_den2, sur_den2.shape
@@ -270,21 +257,11 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                           np.nan_to_num(d_sur_den2_i), s=0)
                          for d_sur_den2_i in izip(d_sur_den2)])
     print 'out_esd_tot =', out_esd_tot, out_esd_tot.shape
-    out_esd_tot_inter = np.zeros((logMstar_min.size, rvirs_range_2d_i.size))
-    for i in xrange(logMstar_min.size):
+    out_esd_tot_inter = np.zeros((logMstar.size, rvirs_range_2d_i.size))
+    for i in xrange(logMstar.size):
         out_esd_tot_inter[i] = out_esd_tot[i](rvirs_range_2d_i)
 
     return [out_esd_tot_inter, Msub_avg, csub, 0]
-
-
-def Nsub_avg(population, hmf, shmf, Mh_range, Msub_range):
-    """
-    Number of subhalos given the HOD and (S)HMF. Not to be
-    confused with nsub(), which is the SHMF itself.
-
-    """
-    n_gal_Mh = trapz(shmf * population, Msub_range, axis=0)
-    return trapz(hmf.dndm * n_gal_Mh, Mh_range)
 
 
 def nsub_vdB05(psi, a=0.9, b=0.13):
@@ -317,11 +294,10 @@ def nsub_Msub(phi, Mstar):
     write a new phi_sub itself to change the HOD
 
     """
-    #print phi.shape, Mstar.shape
-    #n = ones(phi.shape[0])
-    #for i in xrange(n.size):
-        #n[i] = trapz(phi[i], Mstar)
-    n = trapz(phi, Mstar, axis=0)
+    print phi.shape, Mstar.shape
+    n = ones(phi.shape[0])
+    for i in xrange(n.size):
+        n[i] = trapz(phi[i], Mstar, 0)
     return n
 
 
@@ -341,10 +317,10 @@ def phi_sub(logMsub, logMstar, logMo, logM1, beta, sigma):
     # mean subhalo mass given a stellar mass
     mu = logMo + beta * (logMstar-logM1)
     #mu = logMo + beta * (log10(Mstar)-logM1)
-    # Added a Msub and a log(10) to the denominator based on vUitert+16
+    #return squeeze([exp((logMsub - mu_i)**2 / (2*sigma_i**2)) / \
     prob = array([exp(-(logMsub - mu_i)**2 / (2*sigma**2)) / \
-                      ((2*pi)**0.5*sigma*10**logMsub)
-                  for mu_i in mu]) / log(10)
+                      ((2*pi)**0.5*sigma)
+                  for mu_i in mu])
     return prob
 
 

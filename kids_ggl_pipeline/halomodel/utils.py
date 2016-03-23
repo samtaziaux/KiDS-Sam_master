@@ -6,8 +6,9 @@ This should also take input from the config file.
 import os
 #from astro import cosmology
 from astropy.cosmology import FlatLambdaCDM
+from collections import OrderedDict
 from itertools import izip
-from numpy import array, exp, inf, loadtxt, median, pi
+from numpy import arange, array, cos, exp, inf, loadtxt, log, median, pi
 from scipy.stats import rv_discrete
 
 def cM_duffy08(M, z, h=1):
@@ -32,7 +33,6 @@ def cM_maccio08_WMAP3(M, z, h=1):
     return 10**0.769 / (M/(1e12/h))**0.083
 
 def delta(c):
-    from numpy import log
     return 200./3. * c**3 / (log(1+c) - c/(1.+c))
 
 def density_critical(z, h=1, Om=0.3, Ol=0.7):
@@ -87,7 +87,6 @@ def nfw_profile(r, c, M, aux):
     return 1 / (x * (1+x)**2)
 
 def gauleg(a, b, n):
-    from numpy import arange, cos
     x = arange(n+1) # x[0] unused
     w = arange(n+1) # w[0] unused
     eps = 3.0E-14
@@ -115,9 +114,6 @@ def gauleg(a, b, n):
     return x[1:], w1[1:]
 
 def read_covariance(filename):
-    #import readfile
-    from collections import OrderedDict
-    from numpy import array
     # returns unique values
     obsbins = [array(list(OrderedDict.fromkeys(d))) for d in data[:2]]
     rbins = [array(list(OrderedDict.fromkeys(ri))) for ri in data[2:4]]
@@ -127,7 +123,6 @@ def read_covariance(filename):
     return cov
 
 def read_header(hdr):
-    from numpy import array
 
     paramtypes = ('read', 'uniform',
                   'normal', 'lognormal', 'fixed', 'derived')
@@ -137,6 +132,7 @@ def read_header(hdr):
     val2 = []
     val3 = []
     val4 = []
+    exclude_bins = None
     file = open(hdr)
     for line in file:
         line = line.split()
@@ -163,12 +159,14 @@ def read_header(hdr):
             covfile = line[1]
         elif line[0] in ('covcol', 'covcols'):
             covcols = [int(i) for i in line[1].split(',')]
+        elif line[0] == 'exclude_bins':
+            exclude_bins = [int(i) for i in line[1].split(',')]
         elif line[0] == 'model':
             model = line[1]
-        elif line[0] == 'sat_profile':
-            sat_profile = line[1]
-        elif line[0] == 'group_profile':
-            group_profile = line[1]
+        #elif line[0] == 'sat_profile':
+            #sat_profile = line[1]
+        #elif line[0] in ('host_profile', 'group_profile'):
+            #host_profile = line[1]
         elif line[0] == 'metadata':
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
@@ -190,8 +188,8 @@ def read_header(hdr):
                 val3.append(float(line[4]))
                 val4.append(float(line[5]))
     file.close()
-    out = (array(params), prior_types, sat_profile, group_profile,
+    out = (array(params), array(prior_types),
            array(val1), array(val2), array(val3), array(val4),
-           datafile, cols, covfile, covcols,
+           datafile, cols, covfile, covcols, exclude_bins,
            model, nwalkers, nsteps, nburn)
     return out

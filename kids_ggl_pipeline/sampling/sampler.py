@@ -14,6 +14,7 @@ from numpy import all as npall, array, append, concatenate, dot, inf, isnan, \
                   zeros
 from os import remove
 from os.path import isfile
+from scipy.stats import chisqprob
 from time import ctime, time
 import pickle
 
@@ -159,7 +160,8 @@ def run_emcee(hm_options, sampling_options, args):
         dof = esd.size - starting.size - 1
         chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                       for m in rng_obsbins for n in rng_obsbins]).sum()
-        print ' ** chi2 = %.2f/%d **' %(chi2, dof)
+        print ' ** chi2 = {0:.2f}/{1}  (PTE={2:.3f}) **'.format(
+                                            chi2, dof, chisqprob(chi2, dof))
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:
             plot_demo(axes, R, esd, esd_err, model[0])

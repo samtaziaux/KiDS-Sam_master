@@ -160,7 +160,7 @@ def run_emcee(hm_options, sampling_options, args):
         dof = esd.size - starting.size - 1
         chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                       for m in rng_obsbins for n in rng_obsbins]).sum()
-        print ' ** chi2 = {0:.2f}/{1}  (PTE={2:.3f}) **'.format(
+        print ' ** chi2 = {0:.2f}/{1}  (PTE={2:.2e}) **'.format(
                                             chi2, dof, chisqprob(chi2, dof))
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:

@@ -12,7 +12,11 @@ except ImportError:
     pass
 
 # local
-import nfw, nfw_stack, satellites, halo, subhalo
+import halo
+import nfw
+import nfw_stack
+import satellites
+import subhalo
 
 
 def read_config(config_file, version='0.5.7'):

@@ -162,7 +162,7 @@ def input_variables():
                                            name_Rbins, O_matter, \
                                            O_lambda, Ok, h)
         path_randomsplits = '%s/splits_%s'%(path_catalogs, purpose)
-
+        
         for Ncat in xrange(100):
             outname = '%s/%s_%i_%s%s_split%iof*.fits'\
                     %(path_randomsplits.replace('bootstrap', 'catalog'), \

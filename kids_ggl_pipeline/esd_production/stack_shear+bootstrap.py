@@ -31,7 +31,7 @@ def main():
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
     path_gamacat = shear.input_variables()
-
+    
     # Path to the output splits and results
     path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
     
@@ -99,7 +99,6 @@ def main():
     Runit, path_gamacat, path_kidscats, centering, \
     purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, \
     lens_weights, filename_addition, cat_version)
-
 
     # The bootstrap lens-field matching is used to prevent duplicated lenses.
     

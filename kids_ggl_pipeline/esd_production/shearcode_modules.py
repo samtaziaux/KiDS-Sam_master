@@ -1529,7 +1529,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
             plt.plot(data_x, errorh, marker='o', label=plotlabel)
             plt.ylabel(r'Error(%s)'%ylabel,fontsize=15)
 
-    plt.xlim(1e1,1e4)
+    #plt.xlim(np.min(data_x),np.max(data_x))
     plt.xscale('log')
     
     plt.xlabel(r'%s'%xlabel,fontsize=15)

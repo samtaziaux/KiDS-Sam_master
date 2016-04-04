@@ -14,7 +14,6 @@ import os
 import time
 import shearcode_modules as shear
 from astropy import constants as const, units as u
-from termcolor import colored
 
 # Important constants
 inf = np.inf # Infinity
@@ -318,8 +317,8 @@ def main():
                                     (Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]* \
                                      Ss_N2[:,R2])) # The new covariance matrix
                 else:
-                    print colored('ERROR: Not all fields are analysed! '\
-                                  'Please restart shear code!', 'red')
+                    print('ERROR: Not all fields are analysed! '\
+                                  'Please restart shear code!')
                     quit()
             
             # Calculating the final output values of the accompanying shear data
@@ -363,11 +362,7 @@ def main():
 
 
     with open(filenamecov, 'w') as file:
-        print >>file, '#', '%s_min[m]'%binname, '	', '%s_min[n]'%binname, \
-            '	','Radius[i](kpc/h%g)'%(h*100), '	', \
-                  'Radius[j](kpc/h%g)'%(h*100), '   ', \
-        'covariance(h%g*M_sun/pc^2)^2'%(h*100), '	', 'correlation', \
-                            '	', 'bias(1+K[m,i])(1+K[n,j])'
+        print >>file, '#', '%s_min[m]'%binname, '	', '%s_min[n]'%binname,'	','Radius[i](kpc/h%g)'%(h*100), '	','Radius[j](kpc/h%g)'%(h*100), '   ','covariance(h%g*M_sun/pc^2)^2'%(h*100), '	', 'correlation','	', 'bias(1+K[m,i])(1+K[n,j])'
 
     with open(filenamecov, 'a') as file:
 
@@ -395,13 +390,7 @@ def main():
                             cor[N1,N2,R1,R2] = -999
                             covbias[N1,N2,R1,R2] = -999
 
-                        print >>file, bin1[N1,N2,R1,R2], '	', \
-                                bin2[N1,N2,R1,R2], '	', \
-                                radius1[N1,N2,R1,R2], '	', \
-                                radius2[N1,N2,R1,R2], '	', \
-                                cov[N1,N2,R1,R2], '	', \
-                                cor[N1,N2,R1,R2], '	', \
-                                covbias[N1,N2,R1,R2]
+                        print >>file, bin1[N1,N2,R1,R2], '	',bin2[N1,N2,R1,R2], '	',radius1[N1,N2,R1,R2], '	',radius2[N1,N2,R1,R2], '	',cov[N1,N2,R1,R2], '	',cor[N1,N2,R1,R2], '	',covbias[N1,N2,R1,R2]
 
     print 'Written: Covariance matrix data:', filenamecov
 

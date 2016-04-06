@@ -666,6 +666,11 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
     
     return catmatch, kidscats, galIDs_infield
 
+"""
+def bootstrap_patches(x_size, y_size)
+    kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
+"""
+
 
 def split(seq, size): # Split up the list of KiDS fields for parallel processing
 

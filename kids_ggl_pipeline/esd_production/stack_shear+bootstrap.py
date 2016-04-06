@@ -99,7 +99,7 @@ def main():
     Runit, path_gamacat, path_kidscats, centering, \
     purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, \
     lens_weights, filename_addition, cat_version)
-
+    
     # The bootstrap lens-field matching is used to prevent duplicated lenses.
     
     galIDlist_matched = np.array([], dtype=np.int32)
@@ -151,7 +151,7 @@ def main():
 
     # Defining the number of bootstrap samples ( = 1 for normal shear stack)
     if 'bootstrap' in purpose:
-        Nbootstraps = 10000#1e5
+        Nbootstraps = 1e5
         
         # Selecting the random fields (must be the same for all observable bins)
         # Select Nkidsfields random KiDS fields between 0 and
@@ -226,14 +226,13 @@ def main():
                 field_shears[k] = np.array([sum(gammat,0), sum(gammax,0), \
                                             sum(wk2,0), sum(w2k2,0), \
                                             sum(srcm,0)])
-            
+
         # Taking the bootstrap samples
         if 'bootstrap' in purpose:
             print 'Number of bootstraps: %g'%Nbootstraps
             # Randomly pick a number of fields equal to
             # the total number of fields and sum them
             shear_bootstrap = np.sum(field_shears[bootstrap_nums], 1)
-            
             
             # The summed quantities
             gammat, gammax, wk2, w2k2, srcm = [shear_bootstrap[:, x] \

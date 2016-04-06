@@ -331,15 +331,17 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step))
     mass_range = 10**_linspace(M_min, M_max, M_step)
     M_step = (M_max - M_min)/M_step
-    if not np.iterable(f):
-        f = np.array([f])
-    if not np.iterable(fc_nsat):
-        fc_nsat = np.array([fc_nsat])
-    concentration = np.array([Con(z, mass_range, np.float64(f_i)) for f_i in _izip(f)])
-    
+
     if not np.iterable(M_bin_min):
         M_bin_min = np.array([M_bin_min])
         M_bin_max = np.array([M_bin_max])
+    if not np.iterable(f):
+        f = np.array([f]*M_bin_min.size)
+    if not np.iterable(fc_nsat):
+        fc_nsat = np.array([fc_nsat]*M_bin_min.size)
+    concentration = np.array([Con(z, mass_range, np.float64(f_i)) for f_i in _izip(f)])
+    
+    
 
     n_bins_obs = M_bin_min.size
     bias = np.array([bias]*k_range_lin.size).T
@@ -407,9 +409,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     if centrals:
         if simple_hod:
             if not np.iterable(M_1):
-                M_1 = _array([M_1])
+                M_1 = _array([M_1]*M_bin_min.size)
             if not np.iterable(sigma_c):
-                sigma_c = _array([sigma_c])
+                sigma_c = _array([sigma_c]*M_bin_min.size)
             pop_c = _array([ncm_simple(hmf, mass_range, M_1_i, sigma_c_i)
                             for M_1_i, sigma_c_i in
                             _izip(M_1, sigma_c)])
@@ -425,9 +427,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         if simple_hod:
             """
             if not np.iterable(M_1):
-                M_1 = _array([M_1])
+                M_1 = _array([M_1]*M_bin_min.size)
             if not np.iterable(sigma_c):
-                sigma_c = _array([sigma_c])
+                sigma_c = _array([sigma_c]*M_bin_min.size)
             pop_s = _array([nsm_simple(hmf, mass_range, M_1_i,
                                        sigma_c_i, alpha_s_i)
                             for M_1_i, sigma_c_i, alpha_s_i in
@@ -522,6 +524,10 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     
     # If there is miscentering to be accounted for
     if miscentering:
+        if not np.iterable(p_off):
+            p_off = _array([p_off]*M_bin_min.size)
+        if not np.iterable(r_off):
+            r_off = _array([r_off]*M_bin_min.size)
         u_k = _array([NFW_f(z, rho_dm, np.float64(f_i), mass_range, rvir_range_lin, k_range_lin,
                     c=concentration_i) * miscenter(p_off_i, r_off_i, mass_range,
                                                  rvir_range_lin, k_range_lin,

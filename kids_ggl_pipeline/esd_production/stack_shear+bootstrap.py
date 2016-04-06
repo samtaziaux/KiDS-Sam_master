@@ -151,7 +151,7 @@ def main():
 
     # Defining the number of bootstrap samples ( = 1 for normal shear stack)
     if 'bootstrap' in purpose:
-        Nbootstraps = 1e5
+        Nbootstraps = 10000#1e5
         
         # Selecting the random fields (must be the same for all observable bins)
         # Select Nkidsfields random KiDS fields between 0 and

@@ -148,14 +148,16 @@ def main():
     except:
         print "Failed to create Matrix Plot of", filenamecov
 
-    
+    # Commented out the removal of splits. They might be useful for sanity checks.
+    # 6.4.2016 - Andrej D.
+    """
     # Remove the used splits
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-    
+    """
     
     return
     

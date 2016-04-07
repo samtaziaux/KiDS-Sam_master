@@ -41,7 +41,7 @@ Either of these will install some additional packages required by the pipeline: 
 
         which kids_ggl
 
-If you do not see any message it means the place where the executable is is not part of your `$PATH`. To fix this, look through the installation messages where the file was placed (in my Macbook this place is `/Library/Frameworks/Python.framework/Versions/2.7/bin/kids_ggl`) and add the following statement to your `~./bashrc` or `~/.bash_profile` if your terminal shell is `bash`:
+If you do not see any message it means the place where the executable is is not part of your `$PATH`. To fix this, look through the installation messages where the file was placed (in my Macbook this place is `/Library/Frameworks/Python.framework/Versions/2.7/bin/kids_ggl`) and add the following statement to your `~/.bashrc` or `~/.bash_profile` if your terminal shell is `bash`:
 
         export PATH=${PATH}:<path_to_kids_ggl_folder>
 

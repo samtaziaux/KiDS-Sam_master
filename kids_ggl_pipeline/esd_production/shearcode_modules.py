@@ -666,10 +666,6 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
     
     return catmatch, kidscats, galIDs_infield
 
-"""
-def bootstrap_patches(x_size, y_size)
-    kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
-"""
 
 
 def split(seq, size): # Split up the list of KiDS fields for parallel processing
@@ -1074,7 +1070,6 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
     kmask = np.logical_not((0. < k) & (k < inf))
 
     gc.collect()
-
     return k, kmask
 
 
@@ -1122,13 +1117,16 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_shear_output(incosphilist, insinphilist, e1, e2, \
-                      Rmask, klist, wlist, Nsrclist, srcm):
+                      Rmask, klist, wlist, Nsrclist, srcm, Runit):
     
     wlist = wlist.T
     klist_t = np.array([klist, klist, klist, klist]).T
 
     # Calculating the needed errors
-    wk2list = wlist*klist_t**2
+    if 'pc' not in Runit:
+        wk2list = wlist
+    else:
+        wk2list = wlist*klist_t**2
 
     w_tot = np.sum(wlist, 0)
     w2_tot = np.sum(wlist**2, 0)
@@ -1138,7 +1136,11 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     wk2_tot = np.sum(wk2list, 0)
     w2k4_tot = np.sum(wk2list**2, 0)
-    w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+    if 'pc' not in Runit:
+        w2k2_tot = np.sum(wlist**2, 0)
+    else:
+        w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+
     wlist = []
 
     Nsrc_tot = np.sum(Nsrclist, 1)
@@ -1159,15 +1161,22 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     klist = np.ma.filled(np.ma.array(klist, mask = Rmask, fill_value = inf))
     klist = np.array([klist, klist, klist, klist]).T
-
-    for g in xrange(4):
-        gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
+    if 'pc' not in Runit:
+        for g in xrange(4):
+            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
                                    insinphilist) * wk2list[:,:,g].T / \
                                   klist[:,:,g].T)
-        gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
+            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
                                    incosphilist) * wk2list[:,:,g].T / \
                                   klist[:,:,g].T)
-    
+
+    else:
+        for g in xrange(4):
+            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
+                                   insinphilist) * wk2list[:,:,g].T)
+            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
+                                       incosphilist) * wk2list[:,:,g].T)
+
     [gammat_tot_A, gammat_tot_B, gammat_tot_C, \
      gammat_tot_D] = [np.sum(gammatlists[g], 1) for g in xrange(4)]
     [gammax_tot_A, gammax_tot_B, gammax_tot_C, \
@@ -1208,51 +1217,6 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
 
-def calc_shear_output_tree(e1, e2, klist, wlist, Nsrclist, srcm):
-    
-    wlist = wlist.T
-    klist_t = np.array([klist, klist, klist, klist]).T
-    
-    # Calculating the needed errors
-    wk2list = wlist*klist_t**2
-    
-    w_tot = np.sum(wlist, 0)
-    w2_tot = np.sum(wlist**2, 0)
-    
-    k_tot = np.sum(klist, 1)
-    k2_tot = np.sum(klist**2, 1)
-    
-    wk2_tot = np.sum(wk2list, 0)
-    w2k4_tot = np.sum(wk2list**2, 0)
-    w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
-    wlist = []
-    
-    Nsrc_tot = np.sum(Nsrclist, 1)
-    
-    srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
-    srcm = np.array([srcm, srcm, srcm, srcm]).T
-    foo = [] # Empty unused lists
-    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
-    srcm = []
-    klist_t = []
-    
-    gc.collect()
-    
-    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
-    wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
-
-    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
-    w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
-    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
-    srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
-    
-    gc.collect()
-    
-    return k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
-        w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-        srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
-
-
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
@@ -1260,10 +1224,10 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
     # For each radial bin of each lens we calculate
     # the weighted sum of the tangential and cross shear
-    Cs_tot = sum(-incosphilist*klist*galweights, 0)
-    Ss_tot = sum(-insinphilist*klist*galweights, 0)
-    Zs_tot = sum(klist**2*galweights, 0)
-
+    Cs_tot = np.sum(-incosphilist*klist*galweights, axis=0)
+    Ss_tot = np.sum(-insinphilist*klist*galweights, axis=0)
+    Zs_tot = np.sum(klist**2*galweights, axis=0)
+    
     return Cs_tot, Ss_tot, Zs_tot
 
 

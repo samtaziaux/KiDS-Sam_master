@@ -94,7 +94,7 @@ def main():
     plottitle1 = shear.define_plottitle(purpose, centering, \
                                         lens_selection, binname, \
                                         Nobsbins, src_selection)
- 
+    
     if 'bootstrap' not in purpose:
         # Plotting the shear profiles for all observable bins
         for N1 in xrange(Nobsbins):
@@ -125,14 +125,13 @@ def main():
             shear.write_plot(filenameESD, plotstyle)
         except:
             print "Failed to create ESD Plot of:", filenameESD
-
+    
     # Creating the ueber-matrix plot
     filename_N1 = filename_var.replace('binnumof', 's')
     filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
                                               filename_N1, filename_addition, \
                                               blindcat)
-
-
+                                              
     # The Group bins
     if binname == 'No': # If there is no binning
         plottitle2 = ''

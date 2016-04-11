@@ -52,21 +52,19 @@ def main():
     filenameESD = shear.define_filename_results(path_results, \
                     purpose, filename_N1, filename_addition, Nsplit, blindcat)
 
-
+    
     # Printing the covariance matrix to a text file
     filename_N1 = filename_var.replace('binnumof', 's')
     filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
                             filename_N1, filename_addition, blindcat)
-
-
+    
     # Stop if the output already exists.
     if os.path.isfile(filenamecov):
         print 'This output already exists:', filenameESD
         print 'This output already exists:', filenamecov
         print
         quit()
-
-
+    
     # Importing all GAMA data, and the information
     # on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
@@ -94,7 +92,6 @@ def main():
     binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
                                           lenssel_binning, gamacat)
 
-
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
         gammat = np.zeros([Nobsbins,nRbins])
@@ -118,7 +115,7 @@ def main():
 
 
     # The calculation of the covariance starts
-
+    
     if 'bootstrap' in purpose: # Calculating the bootstrap covariance
         for N1 in xrange(Nobsbins):
 
@@ -128,7 +125,7 @@ def main():
                                                     src_selection, \
                                                     lens_weights, name_Rbins, \
                                                     O_matter, O_lambda, Ok, h)
-                                                    
+	                                           
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1)
                 # Ncat is the number of existing randoms
@@ -174,7 +171,7 @@ def main():
                                                         name_Rbins, \
                                                         O_matter, \
                                                         O_lambda, Ok, h)
-                                                        
+                                                       
                 if ('random' or 'star') in purpose:
                     filename_N2 = '%i_%s'%(Ncat, filename_N2)
                     # Ncat is the number of existing randoms
@@ -222,7 +219,7 @@ def main():
                                                     src_selection, \
                                                     lens_weights, name_Rbins, \
                                                     O_matter, O_lambda, Ok, h)
-                                                    
+	                                        
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1)
                 # Ncat is the number of existing randoms
@@ -242,7 +239,7 @@ def main():
                                                             kidscats[x], 0, \
                                                             filename_addition, \
                                                             blindcat)
-               
+                
                 if os.path.isfile(shearcatname_N1):
                     print '	Combining field', x+1, '/', len(kidscats), \
                             ':', kidscats[x]
@@ -267,14 +264,12 @@ def main():
                     # Calculating the relevant quantities for each field
                     
                     # The tangential shear
-                    gammat[N1] = gammat[N1] + \
-                                    sum(lfweights*(Cs_N1*e1+Ss_N1*e2),0)
-                     # The cross shear
-                    gammax[N1] = gammax[N1] + \
-                                    sum(lfweights*(-Ss_N1*e1+Cs_N1*e2),0)
-                    wk2[N1] = wk2[N1] + sum(lfweights*Zs_N1,0)
+                    gammat[N1] = gammat[N1] + np.sum(lfweights*(Cs_N1*e1+Ss_N1*e2),axis=0)
+                    # The cross shear
+                    gammax[N1] = gammax[N1] + np.sum(lfweights*(-Ss_N1*e1+Cs_N1*e2),axis=0)
+                    wk2[N1] = wk2[N1] + np.sum(lfweights*Zs_N1,axis=0)
                     # The total weight (lensfit weight + lensing efficiency)
-                    srcm[N1] = srcm[N1] + sum(lfweights*Zs_N1*srcmlists,0)
+                    srcm[N1] = srcm[N1] + np.sum(lfweights*Zs_N1*srcmlists,axis=0)
                     
                     for N2 in xrange(Nobsbins):
                         
@@ -288,7 +283,7 @@ def main():
                                                             name_Rbins, \
                                                             O_matter, \
                                                             O_lambda, Ok, h)
-                                                                
+                                                                 
                         if ('random' or 'star') in purpose:
                             filename_N2 = '%i_%s'%(Ncat, filename_N2)
                             # Ncat is the number of existing randoms
@@ -306,16 +301,18 @@ def main():
                         Cs_N2 = np.array(sheardat_N2['Cs'])
                         Ss_N2 = np.array(sheardat_N2['Ss'])
                         Zs_N2 = np.array(sheardat_N2['Zs'])
-                    
-                        
+	                
                         for R1 in xrange(nRbins):
                             for R2 in range(nRbins):
 
                                 if 'covariance' in purpose:
-                                    cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + \
-                                    sum(variance[blindcatnum]*(lfweight**2)* \
-                                    (Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]* \
-                                     Ss_N2[:,R2])) # The new covariance matrix
+                                    cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2])) # The new covariance matrix
+		    """
+                    for R1 in xrange(nRbins):
+                        for R2 in range(nRbins):
+                            cov_temp[N1,N1,R1,R2] = cov_temp[N1,N1,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N1[:,R2]+Ss_N1[:,R1]*Ss_N1[:,R2])) # The new covariance matrix
+		    """
+                                    
                 else:
                     print('ERROR: Not all fields are analysed! '\
                                   'Please restart shear code!')
@@ -328,7 +325,7 @@ def main():
                                             wk2[N1], \
                                             np.diagonal(cov[N1,N1,:,:]), \
                                             srcm[N1], [1,1,1,1], blindcatnum)
-            
+
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, \
             binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
@@ -343,24 +340,30 @@ def main():
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
             print 'galIDs_matched:', len(galIDs_matched)
-
+            
             # Printing stacked shear profile to a text file
-            shear.write_stack(filenameESD, Rcenters, Runit, \
-                              ESDt_tot[N1], ESDx_tot[N1], \
+            shear.write_stack(filenameESD, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], \
                               error_tot[N1], bias_tot[N1], h, \
                               variance, wk2[N1], np.diagonal(cov[N1,N1,:,:]), \
                               blindcat, blindcats, blindcatnum, \
                               galIDs_matched, galIDs_matched_infield)
-
+	"""
+	Nobsbins=4
         for N1 in xrange(Nobsbins):
             for N2 in xrange(Nobsbins):
                 for R1 in xrange(nRbins):
                     for R2 in xrange(nRbins):
-                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/ \
-                                            (wk2[N1,R1]*wk2[N2,R2])
+                        cov[N1,N2,R1,R2] = np.sqrt(np.abs(cov_temp[N1,N1,R1,R2]))*np.sqrt(np.abs(cov_temp[N2,N2,R1,R2]))*np.sign(cov_temp[N1,N1,R1,R2])
+			print N1,N2,R1,R2,cov[N1,N2,R1,R2]
+	"""
+        for N1 in xrange(Nobsbins):
+            for N2 in xrange(Nobsbins):
+                for R1 in xrange(nRbins):
+                    for R2 in xrange(nRbins):
+                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/(wk2[N1,R1]*wk2[N2,R2])
                         # The covariance matrix
-
-
+	
+    
     with open(filenamecov, 'w') as file:
         print >>file, '#', '%s_min[m]'%binname, '	', '%s_min[n]'%binname,'	','Radius[i](kpc/h%g)'%(h*100), '	','Radius[j](kpc/h%g)'%(h*100), '   ','covariance(h%g*M_sun/pc^2)^2'%(h*100), '	', 'correlation','	', 'bias(1+K[m,i])(1+K[n,j])'
 
@@ -380,8 +383,7 @@ def main():
                         if (0. < error_tot[N1,R1])&(error_tot[N1,R1] < inf) \
                             and (0. < error_tot[N2,R2])&(error_tot[N2,R2] < inf):
                             
-                            cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/ \
-                                    ((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
+                            cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
                             
                             covbias[N1,N2,R1,R2] = bias_tot[N1,R1]*bias_tot[N2,R2]
                             

@@ -113,7 +113,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         runblinds('%sstack_shear+bootstrap.py' \
                   %(path_shearcodes), blindcats,
                     nsplit, nsplits, nobsbin, config_file)        
-
+    
     # Creating the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
         runblinds('%scombine_covariance+bootstrap.py' \
@@ -149,7 +149,7 @@ def run_esd(config_file):
     # Input for the codes
     [kids_path, gama_path, Om, Ol, Ok, h, folder, filename, purpose, Rbins, \
      Runit, ncores, lensid_file, lens_weights, lens_binning, lens_selection, \
-     src_selection, cat_version, blindcats] = esd_utils.read_config(config_file)
+     src_selection, cat_version, wizz, blindcats] = esd_utils.read_config(config_file)
 
     print '\n \n \n \n \n \n \n \n \n \n'
     print 'Running:', purpose

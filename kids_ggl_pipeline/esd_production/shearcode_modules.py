@@ -12,6 +12,8 @@ import time
 from astropy import constants as const, units as u
 import glob
 import gc
+import subprocess as sub
+import shlex
 
 import distance
 import esd_utils
@@ -47,7 +49,7 @@ def input_variables():
     path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h, \
     path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
     lensid_file, lens_weights, lens_binning, lens_selection, \
-    src_selection, cat_version, blindcats = esd_utils.read_config(config_file)
+    src_selection, cat_version, wizz, blindcats = esd_utils.read_config(config_file)
 
     print
     print 'Running:', purpose
@@ -186,7 +188,7 @@ def input_variables():
 
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
     lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-    cat_version, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
+    cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, \
     filename_addition, Ncat, splitslist, blindcats, blindcat, \
     blindcatnum, path_kidscats, path_gamacat
@@ -682,16 +684,20 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
 
 def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
                     src_selection, cat_version):
-    
-    pattern = '*specweight.cat'
+    try:
+        pattern = '*specweight.cat'
 
-    files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
+        files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
     
-    filename = str(fnmatch.filter(files, pattern)[0])
+        filename = str(fnmatch.filter(files, pattern)[0])
     
-    spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
-    spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
-
+        spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
+        spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
+        print('Using direct callibration to estimate the redshifts.')
+    except:
+        print('Please check the required spec-z files.')
+        quit()
+    
     Z_S = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
     manmask = spec_cat['MASK']
@@ -707,6 +713,102 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
             (spec_cat['Z_B'] < srclims[1])
 
     return Z_S[srcmask], spec_weight[srcmask]
+
+
+def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
+                    src_selection, cat_version, filename_var, ncores):
+    
+    # Making selection of sources ...
+    try:
+        pattern = 'KiDS_COSMOS_DEEP2_photoz.fits'
+    
+        files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
+    
+        filename = str(fnmatch.filter(files, pattern)[0])
+    
+        spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
+        path_wizz_data = os.path.dirname('%s'%(path_kidscats))
+        spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
+        print
+        print('Using The-wiZZ to estimate the redshifts.')
+    except:
+        print
+        print('Cannot run The-wiZZ, please check the required files.')
+        quit()
+
+
+    if os.path.isfile('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+                                                          filename_var)):
+        print 'Loading precomputed The-wiZZ redshifts...'
+        print
+    else:
+        manmask = spec_cat['MASK']
+        srcmask = (manmask==0)
+        # We apply any other cuts specified by the user for Z_B
+        srclims = src_selection['Z_B'][1]
+        if len(srclims) == 1:
+            srcmask *= (spec_cat['Z_B'] == binlims[0])
+        else:
+            srcmask *= (srclims[0] <= spec_cat['Z_B']) & (spec_cat['Z_B'] < srclims[1])
+
+        # Writing reduced catalog with only selected sources ...
+        output_cat = spec_cat[srcmask]
+        #orig_cols = spec_cat_file[1].columns
+        hdu = pyfits.BinTableHDU(output_cat)
+        hdu.writeto('%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var), clobber=True)
+
+        # Setting The-wiZZ parameters (for now hardcoded)
+        input_pair_hdf5_file = '%s/KiDS_COSMOS_DEEP2_The-wiZZ_pairs.hdf5'%(path_wizz_data)
+        unknown_sample_file = '%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var)
+        output_pdf_file_name = '%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data, filename_var)
+        #use_inverse_weighting = True
+        n_target_load_size = 10000
+        z_n_bins = 70
+        z_max = 3.5
+        n_bootstrap = 1000
+        z_binning_type = 'linear'
+        pair_scale_name = 'kpc30t300'
+        n_processes = ncores
+        z_min = 0.025
+        #bootstrap_samples = None
+        #output_bootstraps_file = None
+        unknown_stomp_region_name = 'stomp_region'
+        unknown_index_name = 'wiZZ_idx'
+        unknown_weight_name = 'recal_weight'
+
+        # Running The-wiZZ to obtain Z_S
+        directory = os.path.dirname(os.path.dirname(__file__))
+        indirectory = os.listdir(directory)
+
+        if 'The-wiZZ' in indirectory:
+            path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
+        else:
+            print('Cannot locate The-wiZZ in the pipeline instalation.')
+            quit()
+
+        ps = []
+        codename = '%spdf_maker.py'%(path_shearcodes)
+        runname = 'python %s'%codename
+        runname += ' --input_pair_hdf5_file %s --unknown_sample_file %s --output_pdf_file_name %s --use_inverse_weighting --n_target_load_size %i --z_n_bins %i --z_max %f --n_bootstrap %i --z_binning_type %s --pair_scale_name %s --n_processes %i --z_min %f --unknown_stomp_region_name %s --unknown_index_name %s --unknown_weight_name %s'%(input_pair_hdf5_file, unknown_sample_file, output_pdf_file_name, n_target_load_size, z_n_bins, z_max, n_bootstrap, z_binning_type , pair_scale_name, n_processes, z_min, unknown_stomp_region_name, unknown_index_name, unknown_weight_name)
+
+        try:
+            p = sub.Popen(shlex.split(runname))
+            ps.append(p)
+            for p in ps:
+                p.wait()
+
+        except:
+            print
+            print('Cannot run The-wiZZ, please check the required files.')
+            quit()
+
+
+    # Reading in the calculated Z_S from The-wiZZ output file
+    n_z = np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+                                                                filename_var),\
+                                                            comments='#')[:,1]
+
+    return np.absolute(np.nan_to_num(n_z))
 
 
 # Import and mask all used data from the sources in this KiDS field
@@ -1121,7 +1223,6 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     
     wlist = wlist.T
     klist_t = np.array([klist, klist, klist, klist]).T
-
     # Calculating the needed errors
     if 'pc' not in Runit:
         wk2list = wlist
@@ -1164,18 +1265,20 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     if 'pc' not in Runit:
         for g in xrange(4):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
-                                   insinphilist) * wk2list[:,:,g].T / \
-                                  klist[:,:,g].T)
+                                   insinphilist) * wk2list[:,:,g].T)
             gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
-                                   incosphilist) * wk2list[:,:,g].T / \
-                                  klist[:,:,g].T)
+                                   incosphilist) * wk2list[:,:,g].T)
 
     else:
         for g in xrange(4):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
-                                   insinphilist) * wk2list[:,:,g].T)
+                                    insinphilist) * wk2list[:,:,g].T / \
+                                    klist[:,:,g].T)
             gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
-                                       incosphilist) * wk2list[:,:,g].T)
+                                    incosphilist) * wk2list[:,:,g].T / \
+                                    klist[:,:,g].T)
+
+
 
     [gammat_tot_A, gammat_tot_B, gammat_tot_C, \
      gammat_tot_D] = [np.sum(gammatlists[g], 1) for g in xrange(4)]

@@ -24,7 +24,7 @@ def main():
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
             lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-            cat_version, path_Rbins, name_Rbins, Runit, path_output, \
+            cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
             path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, \
             blindcatnum, path_kidscats, path_gamacat = shear.input_variables()
@@ -57,14 +57,14 @@ def main():
     filename_N1 = filename_var.replace('binnumof', 's')
     filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
                             filename_N1, filename_addition, blindcat)
-    
+
     # Stop if the output already exists.
     if os.path.isfile(filenamecov):
         print 'This output already exists:', filenameESD
         print 'This output already exists:', filenamecov
         print
         quit()
-    
+
     # Importing all GAMA data, and the information
     # on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
@@ -115,7 +115,7 @@ def main():
 
 
     # The calculation of the covariance starts
-    
+
     if 'bootstrap' in purpose: # Calculating the bootstrap covariance
         for N1 in xrange(Nobsbins):
 
@@ -125,7 +125,7 @@ def main():
                                                     src_selection, \
                                                     lens_weights, name_Rbins, \
                                                     O_matter, O_lambda, Ok, h)
-	                                           
+            
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1)
                 # Ncat is the number of existing randoms
@@ -171,7 +171,7 @@ def main():
                                                         name_Rbins, \
                                                         O_matter, \
                                                         O_lambda, Ok, h)
-                                                       
+                
                 if ('random' or 'star') in purpose:
                     filename_N2 = '%i_%s'%(Ncat, filename_N2)
                     # Ncat is the number of existing randoms
@@ -219,7 +219,7 @@ def main():
                                                     src_selection, \
                                                     lens_weights, name_Rbins, \
                                                     O_matter, O_lambda, Ok, h)
-	                                        
+        
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1)
                 # Ncat is the number of existing randoms
@@ -283,7 +283,7 @@ def main():
                                                             name_Rbins, \
                                                             O_matter, \
                                                             O_lambda, Ok, h)
-                                                                 
+                        
                         if ('random' or 'star') in purpose:
                             filename_N2 = '%i_%s'%(Ncat, filename_N2)
                             # Ncat is the number of existing randoms
@@ -301,17 +301,12 @@ def main():
                         Cs_N2 = np.array(sheardat_N2['Cs'])
                         Ss_N2 = np.array(sheardat_N2['Ss'])
                         Zs_N2 = np.array(sheardat_N2['Zs'])
-	                
+                        
                         for R1 in xrange(nRbins):
                             for R2 in range(nRbins):
 
                                 if 'covariance' in purpose:
                                     cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2])) # The new covariance matrix
-		    """
-                    for R1 in xrange(nRbins):
-                        for R2 in range(nRbins):
-                            cov_temp[N1,N1,R1,R2] = cov_temp[N1,N1,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N1[:,R2]+Ss_N1[:,R1]*Ss_N1[:,R2])) # The new covariance matrix
-		    """
                                     
                 else:
                     print('ERROR: Not all fields are analysed! '\
@@ -325,7 +320,7 @@ def main():
                                             wk2[N1], \
                                             np.diagonal(cov[N1,N1,:,:]), \
                                             srcm[N1], [1,1,1,1], blindcatnum)
-
+            
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, \
             binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
@@ -347,15 +342,16 @@ def main():
                               variance, wk2[N1], np.diagonal(cov[N1,N1,:,:]), \
                               blindcat, blindcats, blindcatnum, \
                               galIDs_matched, galIDs_matched_infield)
-	"""
-	Nobsbins=4
+            
+        """
+        Nobsbins=4
         for N1 in xrange(Nobsbins):
             for N2 in xrange(Nobsbins):
                 for R1 in xrange(nRbins):
                     for R2 in xrange(nRbins):
                         cov[N1,N2,R1,R2] = np.sqrt(np.abs(cov_temp[N1,N1,R1,R2]))*np.sqrt(np.abs(cov_temp[N2,N2,R1,R2]))*np.sign(cov_temp[N1,N1,R1,R2])
 			print N1,N2,R1,R2,cov[N1,N2,R1,R2]
-	"""
+        """
         for N1 in xrange(Nobsbins):
             for N2 in xrange(Nobsbins):
                 for R1 in xrange(nRbins):
@@ -363,7 +359,6 @@ def main():
                         cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/(wk2[N1,R1]*wk2[N2,R2])
                         # The covariance matrix
 	
-    
     with open(filenamecov, 'w') as file:
         print >>file, '#', '%s_min[m]'%binname, '	', '%s_min[n]'%binname,'	','Radius[i](kpc/h%g)'%(h*100), '	','Radius[j](kpc/h%g)'%(h*100), '   ','covariance(h%g*M_sun/pc^2)^2'%(h*100), '	', 'correlation','	', 'bias(1+K[m,i])(1+K[n,j])'
 

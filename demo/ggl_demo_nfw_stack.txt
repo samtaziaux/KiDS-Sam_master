@@ -39,6 +39,9 @@ KiDS_version      2
 # Full path to the GAMA catalogue fits file.
 GAMA_path           /disks/shear10/sifon/kids/gama/G3CGalv06.fits
 
+# Optional usage of The-wiZZ to estimate source redshifts. Default value is 'False'.
+The-wiZZ            True
+
 # Full path to a fits file with your custom lens catalogue (supersedes GAMA catalog).
 # This catalog should have columns (containing your lens information) with the following names: 
 # 'ID', 'RA', 'DEC', (optional: 'Z', if Runit = *pc), and your lens parameters (used for the selection).

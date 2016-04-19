@@ -348,7 +348,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     
     #print 'mass_range =', time() - to
     #to = time()
-    hod_mass = _array([_linspace(Mi, Mx, 100, endpoint=False,
+    hod_mass = _array([_logspace(Mi, Mx, 100, endpoint=False,
                                  dtype=np.longdouble)
                        for Mi, Mx in _izip(M_bin_min, M_bin_max)])
     #print 'hod_mass =', time() - to

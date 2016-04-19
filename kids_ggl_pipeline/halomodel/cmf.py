@@ -165,6 +165,8 @@ def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
         b_0, b_1, b_2):
     nc = np.ones(M.size)
     phi_int = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2)
+    print m
+    print phi_int
     for i in xrange(M.size):
         nc[i] = Integrate(phi_int[i], m)
     # This works, but above more general, for different definition of

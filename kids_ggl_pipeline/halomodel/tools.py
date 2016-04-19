@@ -39,7 +39,7 @@ def Integrate(func_in, x_array): # Simpson integration on fixed spaced data!
 
     func_in = np.nan_to_num(func_in)
     result = trapz(func_in, x_array)
-
+    
     return result
 
 

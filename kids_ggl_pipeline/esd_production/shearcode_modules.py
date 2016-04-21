@@ -890,17 +890,17 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
             c2_D = kidscat['c2_C']
     
     
-    #except:
-    #    c1_A = np.zeros(srcNr.size, dtype=np.float64)
-    #    c1_B = np.zeros(srcNr.size, dtype=np.float64)
-    #    c1_C = np.zeros(srcNr.size, dtype=np.float64)
-    #    c1_D = np.zeros(srcNr.size, dtype=np.float64)
-    #    c2_A = np.zeros(srcNr.size, dtype=np.float64)
-    #    c2_B = np.zeros(srcNr.size, dtype=np.float64)
-    #    c2_C = np.zeros(srcNr.size, dtype=np.float64)
-    #    c2_D = np.zeros(srcNr.size, dtype=np.float64)
+    except:
+        c1_A = np.zeros(srcNr.size, dtype=np.float64)
+        c1_B = np.zeros(srcNr.size, dtype=np.float64)
+        c1_C = np.zeros(srcNr.size, dtype=np.float64)
+        c1_D = np.zeros(srcNr.size, dtype=np.float64)
+        c2_A = np.zeros(srcNr.size, dtype=np.float64)
+        c2_B = np.zeros(srcNr.size, dtype=np.float64)
+        c2_C = np.zeros(srcNr.size, dtype=np.float64)
+        c2_D = np.zeros(srcNr.size, dtype=np.float64)
     
-    
+    """
     except:
         if 'G9' in kidscatname:
             c_in_A = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G9_A_all.dat')
@@ -950,7 +950,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
             c2_B = c_in_B[3,4]
             c2_C = c_in_C[3,4]
             c2_D = c_in_C[3,4]
-    
+    """
     # The corrected e1 and e2 for all blind catalogs
     e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D]))
     e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D]))

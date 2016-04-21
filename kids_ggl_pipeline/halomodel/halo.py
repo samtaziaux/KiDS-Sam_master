@@ -783,7 +783,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #print 'out_esd_tot_inter =', time() - to
 
     #print np.nan_to_num(out_esd_tot_inter)
-    print np.log10(effective_mass), bias_out
+    print np.log10(effective_mass), bias_out, bias_out/bias.T[0]
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
 
     # Add other outputs as needed. Total ESD should always be first!

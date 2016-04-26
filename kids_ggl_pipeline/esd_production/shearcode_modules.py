@@ -646,7 +646,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
             galIDs = galIDs[lensmask]
         else:
             if kidscat in kidscats:
-                lensmask = np.logical_not(np.in1d(galIDs, catmatch[kidscat]))
+                lensmask = np.logical_not(np.in1d(galIDs, catmatch[kidscat][0]))
                 galIDs = galIDs[lensmask]
 
         totgalIDs = np.append(totgalIDs, galIDs)

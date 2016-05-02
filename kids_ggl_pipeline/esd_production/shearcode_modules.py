@@ -574,7 +574,7 @@ def run_kidscoord(path_kidscats, cat_version):
 def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
                  purpose, filename_addition, cat_version):
 
-    Rfield = np.radians(np.sqrt(2)/2) * Dallist
+    Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
     if 'oldcatmatch' in filename_addition:
         print "*** Using old lens-field matching procedure! ***"
     else:
@@ -900,57 +900,6 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         c2_C = np.zeros(srcNr.size, dtype=np.float64)
         c2_D = np.zeros(srcNr.size, dtype=np.float64)
     
-    """
-    except:
-        if 'G9' in kidscatname:
-            c_in_A = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G9_A_all.dat')
-            c_in_B = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G9_B_all.dat')
-            c_in_C = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G9_C_all.dat')
-        if 'G12' in kidscatname:
-            c_in_A = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G12_A_all.dat')
-            c_in_B = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G12_B_all.dat')
-            c_in_C = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G12_C_all.dat')
-        if 'G15' in kidscatname:
-            c_in_A = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G15_A_all.dat')
-            c_in_B = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G15_B_all.dat')
-            c_in_C = np.genfromtxt('/disks/shear10/dvornik/KidsCatalogues/COSMIC_SHEAR_DATA/EMPIRICAL_C_CORRECTION/e_vs_ZB_G15_C_all.dat')
-        if (src_selection['Z_B'][1][0] == 0.101) & (src_selection['Z_B'][1][1] == 0.301):
-            c1_A = c_in_A[0,2]
-            c1_B = c_in_B[0,2]
-            c1_C = c_in_C[0,2]
-            c1_D = c_in_C[0,2]
-            c2_A = c_in_A[0,4]
-            c2_B = c_in_B[0,4]
-            c2_C = c_in_C[0,4]
-            c2_D = c_in_C[0,4]
-        if (src_selection['Z_B'][1][0] == 0.301) & (src_selection['Z_B'][1][1] == 0.501):
-            c1_A = c_in_A[1,2]
-            c1_B = c_in_B[1,2]
-            c1_C = c_in_C[1,2]
-            c1_D = c_in_C[1,2]
-            c2_A = c_in_A[1,4]
-            c2_B = c_in_B[1,4]
-            c2_C = c_in_C[1,4]
-            c2_D = c_in_C[1,4]
-        if (src_selection['Z_B'][1][0] == 0.501) & (src_selection['Z_B'][1][1] == 0.701):
-            c1_A = c_in_A[2,2]
-            c1_B = c_in_B[2,2]
-            c1_C = c_in_C[2,2]
-            c1_D = c_in_C[2,2]
-            c2_A = c_in_A[2,4]
-            c2_B = c_in_B[2,4]
-            c2_C = c_in_C[2,4]
-            c2_D = c_in_C[2,4]
-        if (src_selection['Z_B'][1][0] == 0.701) & (src_selection['Z_B'][1][1] == 0.901):
-            c1_A = c_in_A[3,2]
-            c1_B = c_in_B[3,2]
-            c1_C = c_in_C[3,2]
-            c1_D = c_in_C[3,2]
-            c2_A = c_in_A[3,4]
-            c2_B = c_in_B[3,4]
-            c2_C = c_in_C[3,4]
-            c2_D = c_in_C[3,4]
-    """
     # The corrected e1 and e2 for all blind catalogs
     e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D]))
     e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D]))

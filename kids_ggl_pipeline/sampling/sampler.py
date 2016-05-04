@@ -163,21 +163,30 @@ def run_emcee(hm_options, sampling_options, args):
         print ' ** chi2 = %.2f/%d **' %(chi2, dof)
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:
-            plot_demo(axes, R, esd, esd_err, model[0])
+            plot_demo(axes, R[0], esd[0], esd_err[0], model[0][0])
         else:
             for i in izip(axes, R, esd, esd_err, model[0]):
                 plot_demo(*i)
         if npall(esd - esd_err > 0):
-            for ax in axes:
-                ax.set_yscale('log')
+            if Ndatafiles == 1:
+                axes.set_yscale('log')
+            else:
+                for ax in axes:
+                    ax.set_yscale('log')
         fig.tight_layout(w_pad=0.01)
         pylab.show()
         fig, axes = pylab.subplots(figsize=(10,8), nrows=cov.shape[0],
                                    ncols=cov.shape[0])
         vmin, vmax = numpy.percentile(cov, [1,99])
-        for m, axm in enumerate(axes):
-            for n, axmn in enumerate(axm):
-                axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
+        if Ndatafiles == 1:
+            for m in xrange(1):
+                for n in xrange(1):
+                    axes.imshow(cov[m][-n-1][::-1], interpolation='nearest',
+                            cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
+        else:
+            for m, axm in enumerate(axes):
+                for n, axmn in enumerate(axm):
+                    axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
                             cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
         fig.tight_layout()
         pylab.show()

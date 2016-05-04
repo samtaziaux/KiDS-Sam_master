@@ -340,9 +340,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         f = np.array([f]*M_bin_min.size)
     if not np.iterable(fc_nsat):
         fc_nsat = np.array([fc_nsat]*M_bin_min.size)
+    if not np.iterable(Mstar):
+        Mstar = np.array([Mstar]*M_bin_min.size)
+
+
     concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i)) for z_i, f_i in _izip(z,f)])
     
-
     n_bins_obs = M_bin_min.size
     bias = np.array([bias]*k_range_lin.size).T
     

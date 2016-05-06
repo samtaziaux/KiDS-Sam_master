@@ -152,7 +152,8 @@ def read_config(config_file, version='0.5.7',
         raise ValueError(msg)
     covfile = covfile[0]
 
-    out = (datafiles, datacols, covfile, covcols, exclude_bins, output,
+    out = (datafiles, datacols, covfile, covcols,
+           exclude_bins, output,
            sampler, nwalkers, nsteps, nburn, thin, k, threads,
            sampler_type, update_freq)
     return out

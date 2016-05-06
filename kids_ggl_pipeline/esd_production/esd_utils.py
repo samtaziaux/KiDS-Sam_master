@@ -25,6 +25,7 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
     kids_path = 'None'
     gama_path = 'None'
     filename = 'None'
+    wizz = 'False'
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -45,6 +46,8 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             gama_path = line[1]
         elif line[0] == 'lens_catalog':
 			lens_catalog = line[1]
+        elif line[0] == 'The-wiZZ':
+            wizz = line[1]
 
         # Cosmology
         elif line[0] == 'Om':
@@ -137,6 +140,6 @@ def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,
-            src_selection, cat_version, blindcats)
+            src_selection, cat_version, wizz, blindcats)
 
     return out

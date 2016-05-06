@@ -161,7 +161,7 @@ def sigma(corr, rho_mean, r_i, r_x):
 
     integ = lambda x, rxi: 10**c(_log10(rxi/x)) / \
                            (x**2 * (1-x**2)**0.5)
-    s = np.array([quad(integ, 0, 1, args=(rxi,))[0]
+    s = np.array([quad(integ, 0, 1, args=(rxi,), full_output=1)[0]
                   for rxi in r_x])
     #s2 = np.array([romberg(integ, 0, 1, args=(rxi,))
                    #for rxi in r_x])

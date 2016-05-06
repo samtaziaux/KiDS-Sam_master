@@ -27,12 +27,11 @@ def main():
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
     lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-    cat_version, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
+    cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
     path_gamacat = shear.input_variables()
-
-
+    
     # Path to the output splits and results
     path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
     
@@ -55,6 +54,7 @@ def main():
                                              src_selection, lens_weights, \
                                              name_Rbins, O_matter, \
                                              O_lambda, Ok, h)
+    
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
@@ -99,8 +99,7 @@ def main():
     Runit, path_gamacat, path_kidscats, centering, \
     purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, \
     lens_weights, filename_addition, cat_version)
-
-
+    
     # The bootstrap lens-field matching is used to prevent duplicated lenses.
     
     galIDlist_matched = np.array([], dtype=np.int32)
@@ -227,14 +226,13 @@ def main():
                 field_shears[k] = np.array([sum(gammat,0), sum(gammax,0), \
                                             sum(wk2,0), sum(w2k2,0), \
                                             sum(srcm,0)])
-            
+
         # Taking the bootstrap samples
         if 'bootstrap' in purpose:
             print 'Number of bootstraps: %g'%Nbootstraps
             # Randomly pick a number of fields equal to
             # the total number of fields and sum them
             shear_bootstrap = np.sum(field_shears[bootstrap_nums], 1)
-            
             
             # The summed quantities
             gammat, gammax, wk2, w2k2, srcm = [shear_bootstrap[:, x] \
@@ -296,7 +294,7 @@ def main():
 
         # Printing stacked shear profile to a txt file
         shear.write_stack(stackname, Rcenters, Runit, ESDt_tot, ESDx_tot, \
-                          error_tot, bias_tot, h, variance, \
+                          error_tot, bias_tot, h, variance, wk2, w2k2, \
                           blindcat, blindcats, blindcatnum, \
                           galIDs_matched, galIDs_matched_infield)
         

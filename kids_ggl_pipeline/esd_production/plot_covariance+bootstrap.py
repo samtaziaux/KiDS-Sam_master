@@ -25,7 +25,7 @@ def main():
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
     lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-    cat_version, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
+    cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, \
     path_kidscats, path_gamacat = shear.input_variables()
@@ -94,7 +94,7 @@ def main():
     plottitle1 = shear.define_plottitle(purpose, centering, \
                                         lens_selection, binname, \
                                         Nobsbins, src_selection)
- 
+    
     if 'bootstrap' not in purpose:
         # Plotting the shear profiles for all observable bins
         for N1 in xrange(Nobsbins):
@@ -131,8 +131,7 @@ def main():
     filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
                                               filename_N1, filename_addition, \
                                               blindcat)
-
-
+    
     # The Group bins
     if binname == 'No': # If there is no binning
         plottitle2 = ''
@@ -148,14 +147,16 @@ def main():
     except:
         print "Failed to create Matrix Plot of", filenamecov
 
-    
+    # Commented out the removal of splits. They might be useful for sanity checks.
+    # 6.4.2016 - Andrej D.
+    """
     # Remove the used splits
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-    
+    """
     
     return
     

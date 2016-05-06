@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import array, exp, log10, pi
+from numpy import array, exp, log, log10, pi
 from scipy.integrate import simps, trapz
 import scipy.special as sp
 
@@ -175,6 +175,7 @@ def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
     #nc = (func(m[-1]) - func(m[0]))
     return nc
 
+
 def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
         b_0, b_1, b_2, Ac2s):
     ns = np.ones(M.size)
@@ -193,6 +194,23 @@ def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
                      #sp.gamma(np.abs((alpha+1.0)/2.0))
     #ns = func(m[-1]) - func(m[0])
     return ns
+
+
+def ncm_simple(mass_func, M, M_1, sigma):
+    
+    M_1 = 10.0**M_1
+    nc = exp(-(log10(M)-log10(M_1))**2 / (2*(sigma**2))) / \
+        ((2.0*pi)**0.5 * sigma * log(10))
+    
+    return nc
+
+
+def nsm_simple(mass_func, M, M_1, sigma, alpha):
+    M_sat = 0.5*M_1
+    ns = np.where(M >= M_1, ((M - M_1)/M_sat)**alpha, 0.0)
+    
+    return ns
+
 
 
 def ngm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,

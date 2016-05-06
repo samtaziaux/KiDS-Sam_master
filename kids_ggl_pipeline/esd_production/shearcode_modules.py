@@ -12,6 +12,8 @@ import time
 from astropy import constants as const, units as u
 import glob
 import gc
+import subprocess as sub
+import shlex
 
 import distance
 import esd_utils
@@ -47,7 +49,7 @@ def input_variables():
     path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h, \
     path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
     lensid_file, lens_weights, lens_binning, lens_selection, \
-    src_selection, cat_version, blindcats = esd_utils.read_config(config_file)
+    src_selection, cat_version, wizz, blindcats = esd_utils.read_config(config_file)
 
     print
     print 'Running:', purpose
@@ -162,7 +164,7 @@ def input_variables():
                                            name_Rbins, O_matter, \
                                            O_lambda, Ok, h)
         path_randomsplits = '%s/splits_%s'%(path_catalogs, purpose)
-
+        
         for Ncat in xrange(100):
             outname = '%s/%s_%i_%s%s_split%iof*.fits'\
                     %(path_randomsplits.replace('bootstrap', 'catalog'), \
@@ -186,7 +188,7 @@ def input_variables():
 
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
     lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-    cat_version, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
+    cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, \
     filename_addition, Ncat, splitslist, blindcats, blindcat, \
     blindcatnum, path_kidscats, path_gamacat
@@ -429,7 +431,7 @@ def define_Rbins(path_Rbins, Runit):
     print 'Rcenters', Rcenters
     print 'nRbins', nRbins
     """
-
+    
     return Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst
 
 
@@ -572,7 +574,7 @@ def run_kidscoord(path_kidscats, cat_version):
 def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
                  purpose, filename_addition, cat_version):
 
-    Rfield = np.radians(np.sqrt(2)/2) * Dallist
+    Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
     if 'oldcatmatch' in filename_addition:
         print "*** Using old lens-field matching procedure! ***"
     else:
@@ -644,7 +646,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
             galIDs = galIDs[lensmask]
         else:
             if kidscat in kidscats:
-                lensmask = np.logical_not(np.in1d(galIDs, catmatch[kidscat]))
+                lensmask = np.logical_not(np.in1d(galIDs, catmatch[kidscat][0]))
                 galIDs = galIDs[lensmask]
 
         totgalIDs = np.append(totgalIDs, galIDs)
@@ -667,6 +669,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
     return catmatch, kidscats, galIDs_infield
 
 
+
 def split(seq, size): # Split up the list of KiDS fields for parallel processing
 
     newseq = []
@@ -681,16 +684,20 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
 
 def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
                     src_selection, cat_version):
-    
-    pattern = '*specweight.cat'
+    try:
+        pattern = '*specweight.cat'
 
-    files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
+        files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
     
-    filename = str(fnmatch.filter(files, pattern)[0])
+        filename = str(fnmatch.filter(files, pattern)[0])
     
-    spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
-    spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
-
+        spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
+        spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
+        print('Using direct callibration to estimate the redshifts.')
+    except:
+        print('Please check the required spec-z files.')
+        quit()
+    
     Z_S = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
     manmask = spec_cat['MASK']
@@ -706,6 +713,102 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
             (spec_cat['Z_B'] < srclims[1])
 
     return Z_S[srcmask], spec_weight[srcmask]
+
+
+def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
+                    src_selection, cat_version, filename_var, ncores):
+    
+    # Making selection of sources ...
+    try:
+        pattern = 'KiDS_COSMOS_DEEP2_photoz.fits'
+    
+        files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
+    
+        filename = str(fnmatch.filter(files, pattern)[0])
+    
+        spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
+        path_wizz_data = os.path.dirname('%s'%(path_kidscats))
+        spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
+        print
+        print('Using The-wiZZ to estimate the redshifts.')
+    except:
+        print
+        print('Cannot run The-wiZZ, please check the required files.')
+        quit()
+
+
+    if os.path.isfile('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+                                                          filename_var)):
+        print 'Loading precomputed The-wiZZ redshifts...'
+        print
+    else:
+        manmask = spec_cat['MASK']
+        srcmask = (manmask==0)
+        # We apply any other cuts specified by the user for Z_B
+        srclims = src_selection['Z_B'][1]
+        if len(srclims) == 1:
+            srcmask *= (spec_cat['Z_B'] == binlims[0])
+        else:
+            srcmask *= (srclims[0] <= spec_cat['Z_B']) & (spec_cat['Z_B'] < srclims[1])
+
+        # Writing reduced catalog with only selected sources ...
+        output_cat = spec_cat[srcmask]
+        #orig_cols = spec_cat_file[1].columns
+        hdu = pyfits.BinTableHDU(output_cat)
+        hdu.writeto('%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var), clobber=True)
+
+        # Setting The-wiZZ parameters (for now hardcoded)
+        input_pair_hdf5_file = '%s/KiDS_COSMOS_DEEP2_The-wiZZ_pairs.hdf5'%(path_wizz_data)
+        unknown_sample_file = '%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var)
+        output_pdf_file_name = '%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data, filename_var)
+        #use_inverse_weighting = True
+        n_target_load_size = 10000
+        z_n_bins = 70
+        z_max = 3.5
+        n_bootstrap = 1000
+        z_binning_type = 'linear'
+        pair_scale_name = 'kpc30t300'
+        n_processes = ncores
+        z_min = 0.025
+        #bootstrap_samples = None
+        #output_bootstraps_file = None
+        unknown_stomp_region_name = 'stomp_region'
+        unknown_index_name = 'wiZZ_idx'
+        unknown_weight_name = 'recal_weight'
+
+        # Running The-wiZZ to obtain Z_S
+        directory = os.path.dirname(os.path.dirname(__file__))
+        indirectory = os.listdir(directory)
+
+        if 'The-wiZZ' in indirectory:
+            path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
+        else:
+            print('Cannot locate The-wiZZ in the pipeline instalation.')
+            quit()
+
+        ps = []
+        codename = '%spdf_maker.py'%(path_shearcodes)
+        runname = 'python %s'%codename
+        runname += ' --input_pair_hdf5_file %s --unknown_sample_file %s --output_pdf_file_name %s --use_inverse_weighting --n_target_load_size %i --z_n_bins %i --z_max %f --n_bootstrap %i --z_binning_type %s --pair_scale_name %s --n_processes %i --z_min %f --unknown_stomp_region_name %s --unknown_index_name %s --unknown_weight_name %s'%(input_pair_hdf5_file, unknown_sample_file, output_pdf_file_name, n_target_load_size, z_n_bins, z_max, n_bootstrap, z_binning_type , pair_scale_name, n_processes, z_min, unknown_stomp_region_name, unknown_index_name, unknown_weight_name)
+
+        try:
+            p = sub.Popen(shlex.split(runname))
+            ps.append(p)
+            for p in ps:
+                p.wait()
+
+        except:
+            print
+            print('Cannot run The-wiZZ, please check the required files.')
+            quit()
+
+
+    # Reading in the calculated Z_S from The-wiZZ output file
+    n_z = np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+                                                                filename_var),\
+                                                            comments='#')[:,1]
+
+    return np.absolute(np.nan_to_num(n_z))
 
 
 # Import and mask all used data from the sources in this KiDS field
@@ -785,7 +888,8 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
             c2_D = kidscat['c2_D']
         except:
             c2_D = kidscat['c2_C']
-                
+    
+    
     except:
         c1_A = np.zeros(srcNr.size, dtype=np.float64)
         c1_B = np.zeros(srcNr.size, dtype=np.float64)
@@ -795,7 +899,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         c2_B = np.zeros(srcNr.size, dtype=np.float64)
         c2_C = np.zeros(srcNr.size, dtype=np.float64)
         c2_D = np.zeros(srcNr.size, dtype=np.float64)
-
+    
     # The corrected e1 and e2 for all blind catalogs
     e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D]))
     e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D]))
@@ -1069,7 +1173,6 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
     kmask = np.logical_not((0. < k) & (k < inf))
 
     gc.collect()
-
     return k, kmask
 
 
@@ -1117,13 +1220,15 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_shear_output(incosphilist, insinphilist, e1, e2, \
-                      Rmask, klist, wlist, Nsrclist, srcm):
+                      Rmask, klist, wlist, Nsrclist, srcm, Runit):
     
     wlist = wlist.T
     klist_t = np.array([klist, klist, klist, klist]).T
-
     # Calculating the needed errors
-    wk2list = wlist*klist_t**2
+    if 'pc' not in Runit:
+        wk2list = wlist
+    else:
+        wk2list = wlist*klist_t**2
 
     w_tot = np.sum(wlist, 0)
     w2_tot = np.sum(wlist**2, 0)
@@ -1133,7 +1238,11 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     wk2_tot = np.sum(wk2list, 0)
     w2k4_tot = np.sum(wk2list**2, 0)
-    w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+    if 'pc' not in Runit:
+        w2k2_tot = np.sum(wlist**2, 0)
+    else:
+        w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+
     wlist = []
 
     Nsrc_tot = np.sum(Nsrclist, 1)
@@ -1154,15 +1263,24 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     klist = np.ma.filled(np.ma.array(klist, mask = Rmask, fill_value = inf))
     klist = np.array([klist, klist, klist, klist]).T
+    if 'pc' not in Runit:
+        for g in xrange(4):
+            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
+                                   insinphilist) * wk2list[:,:,g].T)
+            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
+                                   incosphilist) * wk2list[:,:,g].T)
 
-    for g in xrange(4):
-        gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
-                                   insinphilist) * wk2list[:,:,g].T / \
-                                  klist[:,:,g].T)
-        gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
-                                   incosphilist) * wk2list[:,:,g].T / \
-                                  klist[:,:,g].T)
-    
+    else:
+        for g in xrange(4):
+            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
+                                    insinphilist) * wk2list[:,:,g].T / \
+                                    klist[:,:,g].T)
+            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
+                                    incosphilist) * wk2list[:,:,g].T / \
+                                    klist[:,:,g].T)
+
+
+
     [gammat_tot_A, gammat_tot_B, gammat_tot_C, \
      gammat_tot_D] = [np.sum(gammatlists[g], 1) for g in xrange(4)]
     [gammax_tot_A, gammax_tot_B, gammax_tot_C, \
@@ -1203,51 +1321,6 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
 
-def calc_shear_output_tree(e1, e2, klist, wlist, Nsrclist, srcm):
-    
-    wlist = wlist.T
-    klist_t = np.array([klist, klist, klist, klist]).T
-    
-    # Calculating the needed errors
-    wk2list = wlist*klist_t**2
-    
-    w_tot = np.sum(wlist, 0)
-    w2_tot = np.sum(wlist**2, 0)
-    
-    k_tot = np.sum(klist, 1)
-    k2_tot = np.sum(klist**2, 1)
-    
-    wk2_tot = np.sum(wk2list, 0)
-    w2k4_tot = np.sum(wk2list**2, 0)
-    w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
-    wlist = []
-    
-    Nsrc_tot = np.sum(Nsrclist, 1)
-    
-    srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
-    srcm = np.array([srcm, srcm, srcm, srcm]).T
-    foo = [] # Empty unused lists
-    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
-    srcm = []
-    klist_t = []
-    
-    gc.collect()
-    
-    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
-    wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
-
-    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
-    w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
-    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
-    srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
-    
-    gc.collect()
-    
-    return k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
-        w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-        srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
-
-
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
@@ -1255,10 +1328,10 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
     # For each radial bin of each lens we calculate
     # the weighted sum of the tangential and cross shear
-    Cs_tot = sum(-incosphilist*klist*galweights, 0)
-    Ss_tot = sum(-insinphilist*klist*galweights, 0)
-    Zs_tot = sum(klist**2*galweights, 0)
-
+    Cs_tot = np.sum(-incosphilist*klist*galweights, axis=0)
+    Ss_tot = np.sum(-insinphilist*klist*galweights, axis=0)
+    Zs_tot = np.sum(klist**2*galweights, axis=0)
+    
     return Cs_tot, Ss_tot, Zs_tot
 
 
@@ -1335,16 +1408,16 @@ def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
 
 # Printing stacked ESD profile to a text file
 def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
-                bias_tot, h, variance, blindcat, blindcats, blindcatnum, \
+                bias_tot, h, variance, wk2_tot, w2k2_tot, blindcat, blindcats, blindcatnum, \
                 galIDs_matched, galIDs_matched_infield):
 
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)'%(Runit, h*100, h*100, h*100)
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)     wk2     w2k2'%(Runit, h*100, h*100, h*100)
     else:
-        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)'%(Runit)
+        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2'%(Runit)
 
     with open(filename, 'w') as file:
         print >>file, filehead
@@ -1357,8 +1430,10 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
                 ESDx_tot[R] = int(-999)
                 error_tot[R] = int(-999)
                 bias_tot[R] = int(-999)
+                wk2_tot[R] = int(-999)
+                w2k2_tot[R] = int(-999)
 
-            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance)
+            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R])
 
     print 'Written: ESD profile data:', filename
 
@@ -1527,7 +1602,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
             plt.plot(data_x, errorh, marker='o', label=plotlabel)
             plt.ylabel(r'Error(%s)'%ylabel,fontsize=15)
 
-    plt.xlim(1e1,1e4)
+    #plt.xlim(np.min(data_x),np.max(data_x))
     plt.xscale('log')
     
     plt.xlabel(r'%s'%xlabel,fontsize=15)

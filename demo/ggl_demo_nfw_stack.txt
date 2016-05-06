@@ -257,9 +257,9 @@ hm_param          h               fixed       1
 #
 #                        which would produce three separate columns in the FITS file (Mtot1,
 #                        Mtot2 and Mtot3).
-hm_output         esd            3,14E
-hm_output         esd_sat        3,14E
-hm_output         esd_host       3,14E
+hm_output         esd            3,12E
+hm_output         esd_sat        3,12E
+hm_output         esd_host       3,12E
 
 
 ##########################
@@ -280,7 +280,7 @@ data                esd_*.txt       0,1,4
 # covariance matrix). Note that these are handled automatically by the code in terms of
 # the fits format of hm_output's (i.e., if you have 14 radial bins but want to exclude
 # three of them from your analysis, you should still give a fits format '14E', *not* '11E').
-exclude_bins        0,12,13
+exclude_bins        0,1,11
 
 # Path to covariance file. Same notes as path_data.
 path_covariance     demo/earlyscience_satellites/
@@ -291,7 +291,7 @@ path_covariance     demo/earlyscience_satellites/
 covariance          covariance.txt   4,6
 
 # MCMC output. Note that the chain *will* be saved into a FITS file
-sampler_output       earlyscience_satellites/demo_mcmc_output.fits
+sampler_output       demo/earlyscience_satellites/demo_mcmc_output.fits
 
 # MCMC sampler. The only option for now is emcee (Foreman-Mackey et al. 2013, PASP, 125, 306).
 sampler              emcee
@@ -319,7 +319,7 @@ thin		         1
 
 # Number of iterations after which progress will be saved to the output file. If this number is too
 # small it may represent a significant overhead.
-update_freq          10000
+update_freq          20
 
 # Apologies for the criptic name. This sets the number of bins used to sample the offset 1-halo term
 # (Nbins = 2^k + 1). Each increasing k will increase runtime significantly; k=7 gives precision of 1%

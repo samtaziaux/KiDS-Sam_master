@@ -48,7 +48,7 @@ def run_emcee(hm_options, sampling_options, args):
     if not args.demo:
         print '\nStarted - {0}\n'.format(ctime())
 
-    #load data files
+    # load data files
     Ndatafiles = len(datafile)
     # need to run this without exclude_bins to throw out invalid values in it
     R, esd = sampling_utils.load_datapoints(datafile, datacols)
@@ -124,7 +124,7 @@ def run_emcee(hm_options, sampling_options, args):
         print >>hdr, 'thin      {0:5d}'.format(thin)
         hdr.close()
 
-    
+
     # are we just running a demo?
     if args.demo:
         import pylab
@@ -204,8 +204,6 @@ def run_emcee(hm_options, sampling_options, args):
         metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     metadata = [m[0] if m.shape[0] == 1 else m for m in metadata]
-    #print meta_names
-    #print [m.shape for m in metadata]
     fail_value = []
     for m in metadata:
         shape = list(m.shape)
@@ -238,7 +236,8 @@ def run_emcee(hm_options, sampling_options, args):
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
         # make sure that nwalkers is a factor of this number!
-        if i*nwalkers % update_freq == nwalkers:
+        #if i*nwalkers % update_freq == nwalkers:
+        if i + update_freq > nwritten + nwalkers:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
                                 fits_format, update_freq, i, nwritten,

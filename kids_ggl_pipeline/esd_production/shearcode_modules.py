@@ -95,12 +95,33 @@ def input_variables():
         msg = 'WARNING: With the Cen definition,'
         msg += ' you can only use Centrals (Rank = 1)'
         print msg
+    
+    # Name of the Rbins
+    if os.path.isfile(path_Rbins): # from a file
+        name_Rbins = path_Rbins.split('.')[0]
+        name_Rbins = name_Rbins.split('/')[-1]
+        name_Rbins = 'Rbins~%s%s'%(name_Rbins, Runit)
+    else:
+        name_Rbins = path_Rbins.replace(',', '~')
+        name_Rbins = 'Rbins%s%s'%(name_Rbins, Runit)
 
     # Creating all necessary folders
 
     # Path containing the output folders
-    path_output = '%s/output_%sbins%s' \
-                  %(path_output, binname, filename_addition)
+    output_var = ''
+    var_print = ''
+    output_var, var_print, x = define_filename_sel(output_var, var_print,\
+                                                     '', src_selection)
+    output_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(output_var, name_Rbins, \
+                                               O_matter, O_lambda, Ok, h)
+
+    output_var = output_var.replace('.', 'p')
+    output_var = output_var.replace('-', 'm')
+    output_var = output_var.replace('~', '-')
+    output_var = output_var.split('_', 1)[1]
+
+    path_output = '%s/output_%s_bins_%s%s' \
+                  %(path_output, binname, output_var, filename_addition)
     path_catalogs = '%s/catalogs' %(path_output.rsplit('/',1)[0])
 
     # Path to the output splits and results
@@ -138,16 +159,6 @@ def input_variables():
                 if not os.path.isdir(path):
                     os.makedirs(path)
 		    
-
-
-    # Name of the Rbins
-    if os.path.isfile(path_Rbins): # from a file
-        name_Rbins = path_Rbins.split('.')[0]
-        name_Rbins = name_Rbins.split('/')[-1]
-        name_Rbins = 'Rbins~%s%s'%(name_Rbins, Runit)
-    else:
-        name_Rbins = path_Rbins.replace(',', '~')
-        name_Rbins = 'Rbins%s%s'%(name_Rbins, Runit)
 
 
     # Determining Ncat, the number of existing random catalogs
@@ -287,7 +298,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                                                     O_matter, \
                                                     O_lambda, Ok, \
                                                     h)).replace('~', '-')
-    
+
     # Replace points with p and minus with m
     filename_var = filename_var.replace('.', 'p')
     filename_var = filename_var.replace('-', 'm')
@@ -305,13 +316,14 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
 
 def define_filename_splits(path_splits, purpose, filename_var, \
                            Nsplit, Nsplits, filename_addition, blindcat):
-
     # Defining the names of the shear/random catalog
     if 'covariance' in purpose:
+        filename_var = filename_var.partition('_Z_B')[0]
         splitname = '%s/%s_%s%s_%s.fits'%(path_splits, purpose, filename_var, \
                                           filename_addition, Nsplit)
                                         # Here Nsplit = kidscatname
     if 'bootstrap' in purpose:
+        filename_var = filename_var.partition('_Z_B')[0]
         splitname = '%s/%s_%s%s_%s.fits'%(path_splits, purpose, filename_var, \
                                           filename_addition, blindcat)
     if 'catalog' in purpose:
@@ -326,11 +338,11 @@ def define_filename_splits(path_splits, purpose, filename_var, \
 def define_filename_results(path_results, purpose, filename_var, \
                             filename_addition, Nsplit, blindcat):
     # Paths to the resulting files
-
     if 'catalogs' in path_results:
         resultname = '%s/%s_%s%s.fits'%(path_results, purpose, \
                                         filename_var, filename_addition)
     else:
+        filename_var = filename_var.partition('_Z_B')[0]
         resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, \
                                           filename_addition, blindcat)
 
@@ -1407,10 +1419,11 @@ def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
 
 
 # Printing stacked ESD profile to a text file
-def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
+def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
                 bias_tot, h, variance, wk2_tot, w2k2_tot, blindcat, blindcats, blindcatnum, \
                 galIDs_matched, galIDs_matched_infield):
 
+    config_params = filename_var
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
@@ -1442,7 +1455,7 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
         # Writing galID's to another file
         galIDsname_split = filename.rsplit('_',1)
         galIDsname = '%s_lensIDs.txt'%(galIDsname_split[0])
-        kidsgalIDsname = '%s_KiDSlensIDs.txt'%(galIDsname_split[0])
+        #kidsgalIDsname = '%s_KiDSlensIDs.txt'%(galIDsname_split[0])
 
         with open(galIDsname, 'w') as file:
             print >>file, "# ID's of all stacked lenses:"
@@ -1451,19 +1464,22 @@ def write_stack(filename, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
             for i in xrange(len(galIDs_matched)):
                 print >>file, galIDs_matched[i]
 
-
+        """
         with open(kidsgalIDsname, 'w') as file:
             print >>file, "# ID's of stacked lenses within fields:"
 
         with open(kidsgalIDsname, 'a') as file:
             for i in xrange(len(galIDs_matched_infield)):
                 print >>file, galIDs_matched_infield[i]
-
+        """
+        
         print "Written: List of all stacked lens ID's"\
                 " that contribute to the signal:", galIDsname
+        
+        """
         print "Written: List of stacked lens ID's"\
                 " with their center within a KiDS field:", kidsgalIDsname
-
+        """
     return
 
 

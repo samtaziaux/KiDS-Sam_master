@@ -128,8 +128,10 @@ def main():
 
     # Creating the ueber-matrix plot
     filename_N1 = filename_var.replace('binnumof', 's')
+    filename_cov = filename_var.replace('binnumof', 's')
+    filename_cov = filename_cov.partition('_Z_B')[0]
     filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
-                                              filename_N1, filename_addition, \
+                                              filename_cov, filename_addition, \
                                               blindcat)
     
     # The Group bins

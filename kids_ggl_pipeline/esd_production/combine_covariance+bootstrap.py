@@ -55,8 +55,10 @@ def main():
     
     # Printing the covariance matrix to a text file
     filename_N1 = filename_var.replace('binnumof', 's')
+    filename_cov = filename_var.replace('binnumof', 's')
+    filename_cov = filename_cov.partition('_Z_B')[0]
     filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
-                            filename_N1, filename_addition, blindcat)
+                            filename_cov, filename_addition, blindcat)
                             
     # Stop if the output already exists.
     if os.path.isfile(filenamecov):
@@ -337,7 +339,7 @@ def main():
             print 'galIDs_matched:', len(galIDs_matched)
             
             # Printing stacked shear profile to a text file
-            shear.write_stack(filenameESD, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], \
+            shear.write_stack(filenameESD, filename_N1, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], \
                               error_tot[N1], bias_tot[N1], h, \
                               variance, wk2[N1], np.diagonal(cov[N1,N1,:,:]), \
                               blindcat, blindcats, blindcatnum, \
@@ -349,8 +351,7 @@ def main():
                     for R2 in xrange(nRbins):
                         cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/(wk2[N1,R1]*wk2[N2,R2])
                         # The covariance matrix
-	
-    
+
     with open(filenamecov, 'w') as file:
         print >>file, '#', '%s_min[m]'%binname, '	', '%s_min[n]'%binname,'	','Radius[i](kpc/h%g)'%(h*100), '	','Radius[j](kpc/h%g)'%(h*100), '   ','covariance(h%g*M_sun/pc^2)^2'%(h*100), '	', 'correlation','	', 'bias(1+K[m,i])(1+K[n,j])'
 

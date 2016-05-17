@@ -24,7 +24,7 @@
 import time
 import numpy as np
 import matplotlib.pyplot as pl
-from numpy import cos, iterable, newaxis, pi, sin
+from numpy import array, cos, iterable, newaxis, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
@@ -181,23 +181,23 @@ def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
     return trapz(mass_func.dndlnm * population * uk_m * uk_s,
                  m_x, axis=1) / (rho_dm*ngal)
 
-
-def GM_sub_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, mh_range,
-                 msub_range, shmf):
-    print shmf.shape, population.shape, uk_s.shape
-    print 'integrand =', (shmf * population * uk_s).shape, msub_range.shape
-    # the shape of the result of this integral should be equal
-    # to mh_range.shape?
-    int_sub = trapz(shmf * population * uk_s,
+#GM_sub_analy(hmf, uk, uk_s, rho_dm,
+              #Nsub_i, ngal_i, Mh_range, Msub_range, shmf)
+def GM_sub_analy(mass_func, uk_m, uk_s, rho_dm, Ngal, ngal_bar,
+                 mh_range, msub_range, shmf):
+    #print 'shmf =', shmf.shape
+    #print 'Ngal =', Ngal.shape
+    #print 'uk_s =', uk_s.shape
+    #print 'msub_range =', msub_range.shape
+    int_sub = trapz((shmf * Ngal)[:,newaxis] * uk_s,
                     msub_range[newaxis], axis=1)
-    print 'dndlnm =', mass_func.dndlnm.shape
-    print 'int_sub =', int_sub.shape
-    print 'uk_m =', uk_m.shape
-    print 'mh_range =', mh_range.shape
-    # the shape of the result of this integral should be equal
-    # to k_x.shape
-    return trapz(mass_func.dndlnm * uk_m * int_sub, mh_range,
-                 axis=1) / (rho_dm*ngal)
+    #print 'int_sub =', int_sub.shape
+    #print 'dndlnm =', mass_func.dndlnm.shape
+    #print 'uk_m =', uk_m.shape
+    #print 'mh_range =', mh_range.shape
+    #print 'ngal_bar =', ngal_bar.shape
+    N = trapz(mass_func.dndlnm * uk_m * int_sub, mh_range, axis=1)
+    return N / (rho_dm*ngal_bar)
 
 
 def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):

@@ -6,10 +6,10 @@ from numpy import array, inf, iterable, loadtxt
 import sys
 sys.path.append(os.getcwd())
 # in the working directory, for custom functions
-try:
-    import models
-except ImportError:
-    pass
+#try:
+import models
+#except ImportError:
+    #pass
 
 # local
 import halo

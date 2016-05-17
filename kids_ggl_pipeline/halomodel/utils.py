@@ -8,7 +8,8 @@ import os
 from astropy.cosmology import FlatLambdaCDM
 from collections import OrderedDict
 from itertools import izip
-from numpy import arange, array, cos, exp, inf, loadtxt, log, median, pi
+from numpy import arange, array, cos, cumsum, digitize, exp, inf, loadtxt, \
+                  log, median, pi, random
 from scipy.stats import rv_discrete
 
 
@@ -71,13 +72,13 @@ def r3d_from_2d(Rsat, n_Rsat, z, cgroup, Mgroup, n=300000,
     """
     rho_c = density_average(z, h, Om, Ol)
     aux = 200*rho_c * 4*3.14159265/3
-    rsample = 1e3 * numpy.array([rsat_range[rsat_range > Ri] for Ri in Rsat])
+    rsample = 1e3 * array([rsat_range[rsat_range > Ri] for Ri in Rsat])
     nfw_dist = nfw_profile(rsample, cgroup, Mgroup, aux)
     nfw_dist /= nfw_dist.sum()
     # draw random samples from a given distribution
-    dist = rsample[numpy.digitize(numpy.random(n), numpy.cumsum(nfw_dist))]
+    dist = rsample[digitize(random(n), cumsum(nfw_dist))]
     print dist.shape
-    rsat = dist[numpy.digitize(numpy.random(n), numpy.cumsum(n_Rsat))] / 1000.
+    rsat = dist[digitize(random(n), cumsum(n_Rsat))] / 1000.
     print rsat.shape
     return rsat
 
@@ -135,7 +136,7 @@ def read_avgs(chainfile, param):
     binparam = name.split('_')[0]
     avgfile = os.path.join('data', binparam, path,
                            'avgs-{0}.dat'.format(param))
-    data = readfile.table(avgfile)
+    data = loadtxt(avgfile, unpack=True)
     return data[1:]
 
 

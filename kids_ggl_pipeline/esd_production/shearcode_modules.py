@@ -753,26 +753,13 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
                                                           filename_var)):
         print 'Loading precomputed The-wiZZ redshifts...'
         print
+        n_z = np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+                                                                    filename_var),\
+                                                                    comments='#')
     else:
-        manmask = spec_cat['MASK']
-        srcmask = (manmask==0)
-        # We apply any other cuts specified by the user for Z_B
-        srclims = src_selection['Z_B'][1]
-        if len(srclims) == 1:
-            srcmask *= (spec_cat['Z_B'] == binlims[0])
-        else:
-            srcmask *= (srclims[0] <= spec_cat['Z_B']) & (spec_cat['Z_B'] < srclims[1])
-
-        # Writing reduced catalog with only selected sources ...
-        output_cat = spec_cat[srcmask]
-        #orig_cols = spec_cat_file[1].columns
-        hdu = pyfits.BinTableHDU(output_cat)
-        hdu.writeto('%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var), clobber=True)
-
+        
         # Setting The-wiZZ parameters (for now hardcoded)
         input_pair_hdf5_file = '%s/KiDS_COSMOS_DEEP2_The-wiZZ_pairs.hdf5'%(path_wizz_data)
-        unknown_sample_file = '%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var)
-        output_pdf_file_name = '%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data, filename_var)
         #use_inverse_weighting = True
         n_target_load_size = 10000
         z_n_bins = 70
@@ -787,40 +774,77 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
         unknown_stomp_region_name = 'stomp_region'
         unknown_index_name = 'wiZZ_idx'
         unknown_weight_name = 'recal_weight'
+        
+        srclims = src_selection['Z_B'][1]
+        src_z_max = srclims[1]
+        src_z_min = srclims[0]
+        step = np.ceil((src_z_max-src_z_min)/0.2)
+        n_loops = np.linspace(src_z_min, src_z_max, step, endpoint=True)
+        
+        
+        n_z = np.zeros((z_n_bins, len(n_loops)-1))
+        w_i = np.zeros((z_n_bins, len(n_loops)-1))
 
-        # Running The-wiZZ to obtain Z_S
-        directory = os.path.dirname(os.path.dirname(__file__))
-        indirectory = os.listdir(directory)
-
-        if 'The-wiZZ' in indirectory:
-            path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
-        else:
-            print('Cannot locate The-wiZZ in the pipeline instalation.')
-            quit()
-
-        ps = []
-        codename = '%spdf_maker.py'%(path_shearcodes)
-        runname = 'python %s'%codename
-        runname += ' --input_pair_hdf5_file %s --unknown_sample_file %s --output_pdf_file_name %s --use_inverse_weighting --n_target_load_size %i --z_n_bins %i --z_max %f --n_bootstrap %i --z_binning_type %s --pair_scale_name %s --n_processes %i --z_min %f --unknown_stomp_region_name %s --unknown_index_name %s --unknown_weight_name %s'%(input_pair_hdf5_file, unknown_sample_file, output_pdf_file_name, n_target_load_size, z_n_bins, z_max, n_bootstrap, z_binning_type , pair_scale_name, n_processes, z_min, unknown_stomp_region_name, unknown_index_name, unknown_weight_name)
-
-        try:
-            p = sub.Popen(shlex.split(runname))
-            ps.append(p)
-            for p in ps:
-                p.wait()
-
-        except:
-            print
-            print('Cannot run The-wiZZ, please check the required files.')
-            quit()
+        for i in xrange(len(n_loops)-1):
+            manmask = spec_cat['MASK']
+            srcmask = 0
+            srcmask = (manmask==0)
+            srcmask *= (n_loops[i] <= spec_cat['Z_B']) & (spec_cat['Z_B'] < n_loops[i+1])
+            print('Preselecting sources in photo-z range between %f and %f'%(n_loops[i], n_loops[i+1]))
+            # Writing reduced catalog with only selected sources ...
+            output_cat = spec_cat[srcmask]
+            #orig_cols = spec_cat_file[1].columns
+            hdu = pyfits.BinTableHDU(output_cat)
+            hdu.writeto('%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data,\
+                                                               filename_var),\
+                                                                clobber=True)
 
 
-    # Reading in the calculated Z_S from The-wiZZ output file
-    n_z = np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
-                                                                filename_var),\
-                                                            comments='#')[:,1]
+            # Running The-wiZZ to obtain Z_S
+            directory = os.path.dirname(os.path.dirname(__file__))
+            indirectory = os.listdir(directory)
+            
+            unknown_sample_file = '%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var)
+            output_pdf_file_name = '%s/KiDS_COSMOS_DEEP2_photoz_%s_preselect_%i.ascii'%(path_wizz_data, filename_var, i)
 
-    return np.absolute(np.nan_to_num(n_z))
+            if 'The-wiZZ' in indirectory:
+                path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
+            else:
+                print('Cannot locate The-wiZZ in the pipeline instalation.')
+                quit()
+
+            ps = []
+            codename = '%spdf_maker.py'%(path_shearcodes)
+            runname = 'python %s'%codename
+            runname += ' --input_pair_hdf5_file %s --unknown_sample_file %s --output_pdf_file_name %s --use_inverse_weighting --n_target_load_size %i --z_n_bins %i --z_max %f --n_bootstrap %i --z_binning_type %s --pair_scale_name %s --n_processes %i --z_min %f --unknown_stomp_region_name %s --unknown_index_name %s --unknown_weight_name %s'%(input_pair_hdf5_file, unknown_sample_file, output_pdf_file_name, n_target_load_size, z_n_bins, z_max, n_bootstrap, z_binning_type , pair_scale_name, n_processes, z_min, unknown_stomp_region_name, unknown_index_name, unknown_weight_name)
+
+            try:
+                p = sub.Popen(shlex.split(runname))
+                ps.append(p)
+                for p in ps:
+                    p.wait()
+
+            except:
+                print
+                print('Cannot run The-wiZZ, please check the required files.')
+                quit()
+
+
+            # Reading in the calculated Z_S from The-wiZZ output file
+            n_z[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s_preselect_%i.ascii'%(path_wizz_data,\
+                                                            filename_var, i),\
+                                                            comments='#')[:,1])
+            w_i[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s_preselect_%i.ascii'%(path_wizz_data,\
+                                                            filename_var, i),\
+                                                            comments='#')[:,3])
+            #print n_z[:,i], w_i[:,i]
+
+        n_z = np.sum(n_z*w_i, axis=1)/np.sum(w_i, axis=1)
+        np.savetxt('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+                                        filename_var), n_z, delimiter='\t')
+        n_z[n_z < 0] = 0
+
+    return np.nan_to_num(n_z)
 
 
 # Import and mask all used data from the sources in this KiDS field

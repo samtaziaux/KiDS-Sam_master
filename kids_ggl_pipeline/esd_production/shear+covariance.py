@@ -699,7 +699,6 @@ if __name__ == '__main__':
     zsrcbins = np.arange(0.025,3.5,0.05)
     Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
                         for y in zsrcbins])
-    import matplotlib.pyplot as pl
     if cat_version == 3:
         if wizz in 'False':
             srcNZ, spec_weight = shear.import_spec_cat(path_kidscats, kidscatname2,\

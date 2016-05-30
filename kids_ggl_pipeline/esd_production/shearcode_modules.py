@@ -213,14 +213,14 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname):
     lensid_files = lensid_file.split(',')
 
     if len(lensid_files) == 1: # If there is only one lensID bin -> selection
-        lensids = np.loadtxt(lensid_files[0])
+        lensids = np.loadtxt(lensid_files[0], dtype=np.int64)
         lens_selection[IDname] = ['self', lensids]
     else: # If there are multiple lensID bins -> binning
         binname = IDname
         lens_binning = dict()
         for i, f in enumerate(lensid_files):
-            lensids = np.loadtxt(f)
-            lens_binning['%sbin%i' %(binname, i)] = ['self', lensids]
+            lensids = np.loadtxt(f, dtype=np.int64)
+            lens_binning['%s%i'%(binname, i)] = ['self', lensids]
 
     return lens_selection, lens_binning, binname
 
@@ -1146,17 +1146,20 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         # Importing the binning file
         obsfile = lens_binning[binname][0]
         if obsfile == 'self':
-            obslist = define_obslist(binname, gamacat)
+            if 'ID' in binname:
+                obslist = define_obslist('ID', gamacat)
+            else:
+                obslist = define_obslist(binname, gamacat)
         else:
             print 'Using %s from %s'%(binname, obsfile)
             bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[binname]
         
         if 'ID' in binname:
-            lensids = lens_binning['%s%i'%(binname, binnum)]
+            lensids = lens_binning['ID%i'%(binnum)][1]
             lenssel *= np.in1d(obslist, lensids)
         else:
-            lenssel *=  (binmin <= obslist) & (obslist < binmax)
+            lenssel *= (binmin <= obslist) & (obslist < binmax)
 
     return lenssel
 
@@ -1356,6 +1359,99 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
         srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
+"""
+def calc_shear_output_treecorr(galRA_split,\
+                               galDEC_split, galZ_split, Dcl_split, \
+                               Dal_split, srcRA, srcDEC, e1, e2, Rmin, Rmax, \
+                               nRbins, klist, wlist, Nsrclist, srcm, Runit):
+    
+    wlist = wlist.T
+    klist_t = np.array([klist, klist, klist, klist]).T
+    # Calculating the needed errors
+    if 'pc' not in Runit:
+        wk2list = wlist
+    else:
+        wk2list = wlist*klist_t**2
+
+    w_tot = np.sum(wlist, 0)
+    w2_tot = np.sum(wlist**2, 0)
+
+    k_tot = np.sum(klist, 1)
+    k2_tot = np.sum(klist**2, 1)
+    
+    wk2_tot = np.sum(wk2list, 0)
+    w2k4_tot = np.sum(wk2list**2, 0)
+    if 'pc' not in Runit:
+        w2k2_tot = np.sum(wlist**2, 0)
+    else:
+        w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+
+    wlist = []
+    
+    Nsrc_tot = np.sum(Nsrclist, 1)
+    
+    srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
+    srcm = np.array([srcm, srcm, srcm, srcm]).T
+    foo = [] # Empty unused lists
+    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
+    srcm = []
+    klist_t = []
+    
+    gc.collect()
+    
+    # Calculating the weighted tangential and
+    # cross shear of the lens-source pairs
+
+    gammat_tot_A = np.zeros((klist.shape[0], nRbins))
+    gammax_tot_A = np.zeros((klist.shape[0], nRbins))
+    gammat_tot_B = np.zeros((klist.shape[0], nRbins))
+    gammax_tot_B = np.zeros((klist.shape[0], nRbins))
+    gammat_tot_C = np.zeros((klist.shape[0], nRbins))
+    gammax_tot_C = np.zeros((klist.shape[0], nRbins))
+    gammat_tot_D = np.zeros((klist.shape[0], nRbins))
+    gammax_tot_D = np.zeros((klist.shape[0], nRbins))
+
+    import treecorr
+    for i in xrange(klist.shape[0]):
+        lens = treecorr.Catalog(ra=galRA_split, dec=galDEC_split, r=Dal_split, ra_units='degrees', dec_units='degrees')
+        src_A = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,0], g2=e2[:,0], ra_units='degrees', dec_units='degrees')
+        src_B = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,1], g2=e2[:,1], ra_units='degrees', dec_units='degrees')
+        src_C = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,2], g2=e2[:,2], ra_units='degrees', dec_units='degrees')
+    
+        ng = treecorr.NGCorrelation(min_sep=Rmin/Dal_split[i], max_sep=Rmax/Dal_split[i], nbins=nRbins, sep_units='rad')
+    
+        ng.process(lens, src_A, metric='Rlens', num_threads=1)
+        gammat_tot_A[i,:], gammax_tot_A[i,:], var = ng.calculateXi(ng)
+        ng.process(lens, src_B, metric='Rlens', num_threads=1)
+        gammat_tot_B[i,:], gammax_tot_B[i,:], var = ng.calculateXi(ng)
+        ng.process(lens, src_C, metric='Rlens', num_threads=1)
+        gammat_tot_C[i,:], gammax_tot_C[i,:], var = ng.calculateXi(ng)
+        print gammat_tot_A[i,:]
+
+    if 'pc' not in Runit:
+        pass
+    else:
+        pass
+    #quit()
+    print wk2_tot.T[0].shape
+    print gammat_tot_A.shape
+     
+    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
+    wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
+    
+    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
+    w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
+    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
+    srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
+     
+    gc.collect()
+    
+    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, \
+            gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
+            k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
+            w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
+            srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
+"""
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):

@@ -446,6 +446,21 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     f_off_in, b_in, z, Mstar, Rrange, angles = theta
 
 
+    if not np.iterable(alpha_in):
+        alpha_in = np.array([alpha_in])
+    if not np.iterable(f_off_in):
+        f_off_in = np.array([f_off_in])
+    if not np.iterable(fc_central):
+        fc_central = np.array([fc_central])
+    if not np.iterable(logMcentral):
+        logMcentral = np.array([logMcentral])
+    if not np.iterable(b_in):
+        b_in = np.array([b_in])
+    if not np.iterable(z):
+        z = np.array([z])
+    if not np.iterable(Mstar):
+        Mstar = np.array([Mstar])
+
     #Msat = 10.0**_array([logMsat1, logMsat2])
     Mcentral = 10.0**logMcentral #_array([logMcentral1, logMcentral2])
     b = b_in #_array([b_in1, b_in2])
@@ -507,6 +522,7 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     esd_host = _array(esd_host)
 
     # 2-halo term signal
+    
     sigma_8 = 0.829
     omegab_h2 = 0.02205
     n = 0.9603
@@ -514,12 +530,14 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     esd_2halo = [b_i * biasi * dsigma_mm(sigma_8, h, omegab_h2, Om, Ol, \
                                          n, zi, Ri[1:])[0] for b_i, \
                  biasi, zi, Ri in izip(b, bias, z, R)]
-    esd_2halo = _array(esd_2halo)
+    
+    esd_2halo = np.zeros(esd_central.shape)#_array(esd_2halo)
 
     # Total signal
-    #esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo \
-    #for f, esat, ecentral, e2halo in izip(fsat, esd_sat, \
-    #esd_central, esd_2halo)])
+    esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo \
+    for f, esat, ecentral, e2halo in izip(fsat, esd_sat, \
+    esd_central, esd_2halo)])
+    
     esd_total = _array([fo * ecentral + (1.0 - fo)*eoff + e2halo \
                         for ecentral, eoff, e2halo, fo in izip(esd_central, \
                                                                esd_host,\
@@ -530,9 +548,9 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
 
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
-    out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, ccentral, b*bias, 0]
+    out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, ccentral, b, 0]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
-    print ccentral, logMcentral, alpha_in, f_off_in, bias
+    print ccentral, logMcentral, alpha_in, f_off_in
     return out
 
 
@@ -549,7 +567,6 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     #Mstar, Rrange, angles = theta
     central_profile, fc_central, logMcentral, b_in, z, Mstar, \
         Rrange, angles = theta
-
 
     #Msat = 10.0**_array([logMsat1, logMsat2])
     Mcentral = 10.0**logMcentral
@@ -615,6 +632,107 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
     print fc_central, logMcentral, b_in
     return out
+
+
+def nfw_off(theta, R, h=1, Om=0.315, Ol=0.685):
+    # local variables are accessed much faster than global ones
+    _array = array
+    _cM_duffy08 = cM_duffy08
+    _cumsum = cumsum
+    _delta = delta
+    _izip = izip
+    _linspace = linspace
+    
+    #sat_profile, central_profile, fsat, fc_sat,
+    #logMsat1, logMsat2, fc_central1, fc_central2,
+    #logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
+    central_profile, host_profile, fc_central, logMcentral, alpha_in, \
+    f_off_in, z, Mstar, Rrange, angles = theta
+    
+    
+    if not np.iterable(alpha_in):
+        alpha_in = np.array([alpha_in])
+    if not np.iterable(f_off_in):
+        f_off_in = np.array([f_off_in])
+    if not np.iterable(fc_central):
+        fc_central = np.array([fc_central])
+    if not np.iterable(logMcentral):
+        logMcentral = np.array([logMcentral])
+        Rrange = np.array([Rrange])
+    if not np.iterable(z):
+        z = np.array([z])
+    if not np.iterable(Mstar):
+        Mstar = np.array([Mstar])
+    
+    #Msat = 10.0**_array([logMsat1, logMsat2])
+    Mcentral = 10.0**logMcentral #_array([logMcentral1, logMcentral2])
+    alpha = alpha_in #_array([alpha_in1, alpha_in2])
+    f_off = f_off_in #_array([f_off_in1, f_off_in2])
+    
+    Mstar = 10.0**Mstar
+    
+    #fc_central = _array([fc_central1, fc_central2])
+    fc_central = fc_central
+    
+    #csat = fc_sat * _cM_duffy08(Msat, z, h)
+    ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
+    
+    # some auxiliaries
+    rho_m = density_average(z, h, Om, Ol)
+    aux = 200.0 * rho_m * 4*3.14159265/3
+    
+    # more parameters
+    #r200_sat = (Msat / aux) ** (1./3.)
+    #rs_sat = r200_sat / csat
+    #sigma_sat = rs_sat * _delta(csat) * rho_m
+    #r200_gr = (Mcentral / aux) ** (1./3)
+    r_vir = (Mcentral / aux) ** (1./3.)
+    rs_cent = (Mcentral / aux) ** (1./3.) / ccentral
+    sigma_central = rs_cent * _delta(ccentral) * rho_m
+    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2.) \
+                 for Mi, Ri in izip(Mstar, R)]
+    pointmass = _array(pointmass)
+                 
+                 
+    # central signal
+    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri,\
+                                rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
+    esd_central = _array(esd_central)
+                 
+    # mis-centered central signal
+
+    Roff = _linspace(Rrange[0][1], Rrange[0][-1], 100)
+
+    n_Roff = lambda x: (Roff/(x)**2.0) * np.exp(-0.5 * (Roff/x)**2.0)
+    n_Roff = [n_Roff(alpha_i * r_vi) for alpha_i, r_vi in izip(alpha, r_vir)]
+                 
+    j = [(ni > 0) for ni in n_Roff]
+    Roff = [Roff[i] for i in j]
+    n_Roff = [n[i] for i, n in _izip(j, n_Roff)]
+                 
+    esd_host = [host_profile(x[0]/x[1], x[2]/x[1], x[3], x[4], x[5]/x[1], \
+                                        angles) for x in izip(R, rs_cent, \
+                                                        Roff, n_Roff,\
+                                                    sigma_central, Rrange)]
+    esd_host = _array(esd_host)
+                 
+                 
+    # Total signal
+    
+    esd_total = _array([fo * ecentral + (1.0 - fo)*eoff \
+                            for ecentral, eoff, fo in izip(esd_central,\
+                                                                    esd_host,\
+                                                                    f_off)])
+    Mavg = Mcentral
+    #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
+                 
+    #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
+    out = [esd_total, esd_central, esd_host, pointmass, Mavg, 0]
+    #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
+    print logMcentral, alpha_in, f_off_in
+    return out
+
+
 
 def satellites(theta, R):
     """

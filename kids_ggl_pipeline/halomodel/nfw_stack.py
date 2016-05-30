@@ -534,10 +534,6 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
     esd_2halo = np.zeros(esd_central.shape)#_array(esd_2halo)
 
     # Total signal
-    esd_total = _array([f * (esat) + (1.-f) * ecentral + e2halo \
-    for f, esat, ecentral, e2halo in izip(fsat, esd_sat, \
-    esd_central, esd_2halo)])
-    
     esd_total = _array([fo * ecentral + (1.0 - fo)*eoff + e2halo \
                         for ecentral, eoff, e2halo, fo in izip(esd_central, \
                                                                esd_host,\

@@ -127,7 +127,7 @@ def main():
                                                     src_selection, \
                                                     lens_weights, name_Rbins, \
                                                     O_matter, O_lambda, Ok, h)
-            
+        
             if ('random' or 'star') in purpose:
                 filename_N1 = '%i_%s'%(Ncat, filename_N1)
                 # Ncat is the number of existing randoms

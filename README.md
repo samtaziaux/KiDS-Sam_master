@@ -119,4 +119,12 @@ Update log:
 **2016 Mar 5** - Release v1.1.2. Features:
  - Crucial bug fixes.
 
+**2016 May 31** - Release v1.2. Features:
+ - Option to use The-wiZZ for obtaining `n(z)` of sources.
+ - Addition of miscentering into `halo.py`, inclusion of simpler HOD and point mass approximation for stellar contribution to lensing signal.
+ - Fixed issues with halo model and sampler when using only one bin.
+ - If using angular scales in ESD production, pipeline returns shears instead of ESD.
+ - KiDS+GAMA matching algorithm fixed.
+ - Multiple ID files now supported.
+
 ---

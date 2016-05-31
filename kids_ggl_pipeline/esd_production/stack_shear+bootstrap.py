@@ -200,7 +200,6 @@ def main():
 
         # Paths to the resulting files
         filename_bin = filename_var.replace('binnum', '%s'%(binnum))
-
         # These arrays will contain the stacked profiles...
         field_shears = np.zeros([len(kidscats), 5, nRbins])
         outputnames = ['ESDt', 'ESDx', 'ESD(error)', 'bias']

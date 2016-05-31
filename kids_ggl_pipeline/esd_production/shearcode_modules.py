@@ -71,7 +71,6 @@ def input_variables():
     else:
         filename_addition = '_%s'%filename_addition
     
-    
     # Binnning information of the lenses
     obsbins = define_obsbins(1, lens_binning, [], [])
     binname, lens_binning, Nobsbins, binmin, binmax = obsbins
@@ -80,8 +79,8 @@ def input_variables():
     if 'None' not in lensid_file:
         selection = define_lensid_selection(lensid_file, lens_selection, \
                                             lens_binning, binname)
-        lens_selection, lens_binning, binname = selection
-    
+        lens_selection, lens_binning, binname, Nobsbins = selection
+
     # Defining the center definition
     centers = np.array(['Cen', 'IterCen', 'BCG'])
     centering = 'None'
@@ -215,14 +214,16 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname):
     if len(lensid_files) == 1: # If there is only one lensID bin -> selection
         lensids = np.loadtxt(lensid_files[0], dtype=np.int64)
         lens_selection[IDname] = ['self', lensids]
+        Nobsbins = 1
     else: # If there are multiple lensID bins -> binning
         binname = IDname
         lens_binning = dict()
+        Nobsbins = len(lensid_files)
         for i, f in enumerate(lensid_files):
             lensids = np.loadtxt(f, dtype=np.int64)
-            lens_binning['%s%i'%(binname, i)] = ['self', lensids]
+            lens_binning['%sbin%i' %(binname, i+1)] = ['self', lensids]
 
-    return lens_selection, lens_binning, binname
+    return lens_selection, lens_binning, binname, Nobsbins
 
 
 # Define the part of the filename and plottitle
@@ -274,6 +275,8 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
 
         # Lens binning
         if 'No' not in binname: # If there is binning
+            if 'ID' in binname:
+                binname = 'ID'
             filename_var = '%s_%sbin%sof%i'%(filename_var, binname, \
                                              binnum, Nobsbins)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
@@ -1156,7 +1159,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
             obslist = bincat[binname]
         
         if 'ID' in binname:
-            lensids = lens_binning['ID%i'%(binnum)][1]
+            lensids = lens_binning['%s%i'%(binname[:-1], binnum)][1]
             lenssel *= np.in1d(obslist, lensids)
         else:
             lenssel *= (binmin <= obslist) & (obslist < binmax)

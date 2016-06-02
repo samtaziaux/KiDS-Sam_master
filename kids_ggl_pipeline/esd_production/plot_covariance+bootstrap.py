@@ -151,14 +151,20 @@ def main():
 
     # Commented out the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.
-    """
+
     # Remove the used splits
+    msg = 'Warning: do you want to delete split files? [y/n]'
+    answer = raw_input(msg)
+    if len(answer) == 0:
+        exit()
+    if answer.lower() not in ('y', 'yes'):
+        exit()
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-    """
+    
     
     return
     

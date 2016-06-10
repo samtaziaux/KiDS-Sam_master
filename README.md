@@ -133,4 +133,7 @@ Update log:
 **2016 June 10** - Release v1.2.2. Features:
 - Bug fixes to filename generation.
 
+**2016 June 10** - Release v1.2.3. Features:
+- Bug fixes to compatibility issues with Numpy and blinding when running bootstrap.
+
 ---

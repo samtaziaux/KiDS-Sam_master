@@ -50,7 +50,7 @@ def main():
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
                                              'binnum', Nobsbins, \
-                                             lens_selection, src_selection, \
+                                             lens_selection, lens_binning, src_selection, \
                                              lens_weights, name_Rbins, \
                                              O_matter, O_lambda, Ok, h)
 
@@ -100,7 +100,7 @@ def main():
         for N1 in xrange(Nobsbins):
 
             binname, lens_binning, \
-        Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
+            Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
                                                         lenssel_binning, \
                                                         gamacat)
 
@@ -109,7 +109,6 @@ def main():
                                                         filename_N1, \
                                                         filename_addition, \
                                                         Nsplit, blindcat)
-
             if 'No' in binname:
                 plotlabel = r'ESD$_t$'
             else:

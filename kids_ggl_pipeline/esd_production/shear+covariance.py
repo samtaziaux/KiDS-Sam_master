@@ -572,7 +572,7 @@ if __name__ == '__main__':
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
-    binnum, Nobsbins, lens_selection, src_selection, lens_weights, \
+    binnum, Nobsbins, lens_selection, lens_binning, src_selection, lens_weights, \
     name_Rbins, O_matter, O_lambda, Ok, h)
 
     if ('random' in purpose):
@@ -699,6 +699,7 @@ if __name__ == '__main__':
     zsrcbins = np.arange(0.025,3.5,0.05)
     Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
                         for y in zsrcbins])
+    #import matplotlib.pyplot as pl
     if cat_version == 3:
         if wizz in 'False':
             srcNZ, spec_weight = shear.import_spec_cat(path_kidscats, kidscatname2,\
@@ -707,11 +708,30 @@ if __name__ == '__main__':
             srcPZ_a, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, \
                                      weights=spec_weight, density=1)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
+            #pl.plot(np.arange(0.025,3.5,0.05), srcPZ_a, color='black')#, label='0.1-0.9')
+            #src_selection['Z_B'] = ['self', np.array([ 0.005,  1.2])]
+            #srcNZ, spec_weight = shear.import_spec_cat(path_kidscats, kidscatname2,\
+            #                                       kidscat_end, src_selection, \
+            #                                        cat_version)
+            #srcPZ_b, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, \
+            #                             weights=spec_weight, density=1)
+            #print src_selection
+            #srcPZ_b = srcPZ_b/srcPZ_b.sum()
+            #pl.plot(np.arange(0.025,3.5,0.05), srcPZ_b, color='red', label='0.005-1.2')
+            #pl.legend()
+            #pl.savefig('/data2/dvornik/test/n_z_comparison_0p9_1p2.pdf')
+            #pl.show()
+        
+            #pl.plot(np.arange(0.025,3.5,0.05), (srcPZ_b-srcPZ_a)/srcPZ_b, color='black')
+            #pl.show()
         if wizz in 'True':
             srcPZ_a = shear.import_spec_wizz(path_kidscats, kidscatname2,\
                                             kidscat_end, src_selection, \
                                             cat_version, filename_var, Nsplits)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
+            #pl.plot(np.arange(0.025,3.5,0.05), srcPZ_a, color='red')
+            #pl.show()
+    #quit()
     # Printing the made choices
 
     print
@@ -729,11 +749,12 @@ if __name__ == '__main__':
         calculation = loop_multi(Nsplits, output, outputnames, gamacat, \
                                  centering, lens_selection, lens_binning, \
                                  binname, binnum, binmin, binmax, filename_var, filename)
+
     if 'covariance' in purpose:
         for i in xrange(Nobsbins):
             filename_var = shear.define_filename_var(purpose, centering, \
                                                      binname, i+1, Nobsbins, \
-                                                     lens_selection, \
+                                                     lens_selection, lens_binning, \
                                                      src_selection, \
                                                      lens_weights, name_Rbins, \
                                                      O_matter, O_lambda, Ok, h)

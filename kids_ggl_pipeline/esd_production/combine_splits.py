@@ -13,7 +13,6 @@ import os
 import time
 import shearcode_modules as shear
 from astropy import constants as const, units as u
-import numpy.core._dotblas
 import glob
 
 # Important constants

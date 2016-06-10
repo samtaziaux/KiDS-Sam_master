@@ -112,34 +112,43 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     if ('bootstrap' in purpose) or ('catalog' in purpose):
         runblinds('%sstack_shear+bootstrap.py' \
                   %(path_shearcodes), blindcats,
-                    nsplit, nsplits, nobsbin, config_file)        
-    
+                    nsplit, nsplits, nobsbin, config_file, purpose)
+
     # Creating the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
         runblinds('%scombine_covariance+bootstrap.py' \
                   %(path_shearcodes), blindcats,
-                    nsplit, nsplits, nobsbin, config_file)
-
+                    nsplit, nsplits, nobsbin, config_file, purpose)
+                    
     # Plotting the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
         runblinds('%splot_covariance+bootstrap.py' \
                   %(path_shearcodes), blindcats,
-                    nsplit, nsplits, nobsbin, config_file)
+                    nsplit, nsplits, nobsbin, config_file, 'covariance')
 
     return
     
     
-def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file):
+def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
     
-    ps = []
-    for blindcat in blindcats:
-        runname = 'python -W ignore %s'%codename
-        runname += ' %i %i %i %s %s &' \
+    if 'bootstrap' in purpose:
+        ps = []
+        for blindcat in blindcats:
+            runname = 'python -W ignore %s'%codename
+            runname += ' %i %i %i %s %s &' \
                 %(nsplit, nsplits, nobsbin, blindcat, config_file)
-        p = sub.Popen(shlex.split(runname))
-        ps.append(p)
-    for p in ps:
-        p.wait()
+            p = sub.Popen(shlex.split(runname))
+            p.wait()
+    else:
+        ps = []
+        for blindcat in blindcats:
+            runname = 'python -W ignore %s'%codename
+            runname += ' %i %i %i %s %s &' \
+                %(nsplit, nsplits, nobsbin, blindcat, config_file)
+            p = sub.Popen(shlex.split(runname))
+            ps.append(p)
+        for p in ps:
+            p.wait()
 
     return
 

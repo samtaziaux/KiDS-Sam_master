@@ -1508,7 +1508,7 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 # Write the shear or covariance catalog to a fits file
 def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
                   output, outputnames, variance, purpose, e1, e2, w, srcm):
-
+    
     fitscols = []
 
     Rmin = Rbins[0:nRbins]/Rconst
@@ -1614,30 +1614,13 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
         galIDsname_split = filename.rsplit('_',1)
         galIDsname = '%s_lensIDs.txt'%(galIDsname_split[0])
         #kidsgalIDsname = '%s_KiDSlensIDs.txt'%(galIDsname_split[0])
-
-        with open(galIDsname, 'w') as file:
-            print >>file, "# ID's of all stacked lenses:"
-
-        with open(galIDsname, 'a') as file:
-            for i in xrange(len(galIDs_matched)):
-                print >>file, galIDs_matched[i]
-
-        """
-        with open(kidsgalIDsname, 'w') as file:
-            print >>file, "# ID's of stacked lenses within fields:"
-
-        with open(kidsgalIDsname, 'a') as file:
-            for i in xrange(len(galIDs_matched_infield)):
-                print >>file, galIDs_matched_infield[i]
-        """
+        
+        np.savetxt(galIDsname, galIDs_matched, fmt='%s', delimiter='\t',\
+                   header="ID's of all stacked lenses:", comments='# ')
         
         print "Written: List of all stacked lens ID's"\
                 " that contribute to the signal:", galIDsname
         
-        """
-        print "Written: List of stacked lens ID's"\
-                " with their center within a KiDS field:", kidsgalIDsname
-        """
     return
 
 

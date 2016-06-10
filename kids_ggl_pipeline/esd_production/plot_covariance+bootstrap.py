@@ -50,7 +50,7 @@ def main():
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
                                              'binnum', Nobsbins, \
-                                             lens_selection, src_selection, \
+                                             lens_selection, lens_binning, src_selection, \
                                              lens_weights, name_Rbins, \
                                              O_matter, O_lambda, Ok, h)
 
@@ -100,7 +100,7 @@ def main():
         for N1 in xrange(Nobsbins):
 
             binname, lens_binning, \
-        Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
+            Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
                                                         lenssel_binning, \
                                                         gamacat)
 
@@ -109,7 +109,6 @@ def main():
                                                         filename_N1, \
                                                         filename_addition, \
                                                         Nsplit, blindcat)
-
             if 'No' in binname:
                 plotlabel = r'ESD$_t$'
             else:
@@ -151,14 +150,20 @@ def main():
 
     # Commented out the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.
-    """
+
     # Remove the used splits
+    msg = 'Warning: do you want to delete split files? [y/n]'
+    answer = raw_input(msg)
+    if len(answer) == 0:
+        exit()
+    if answer.lower() not in ('y', 'yes'):
+        exit()
     if (Nsplit==0) and (blindcat==blindcats[0]):
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
             os.remove('%s/%s'%(path_splits, filename))
-    """
+    
     
     return
     

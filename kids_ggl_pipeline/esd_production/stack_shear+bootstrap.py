@@ -131,7 +131,7 @@ def main():
     w2k2list = sheardat['lfweight_%s^2*k^2'%blindcat]
     srcmlist = sheardat['bias_m_%s'%blindcat] # Bias profile of each galaxy
     variance = sheardat['variance(e[A,B,C,D])'][blindcatnum] # The variance
-
+    
     # Adding the lens weights
     galweightlist = np.reshape(galweightlist, [len(galIDlist),1])
     [gammatlist, gammaxlist, wk2list, \

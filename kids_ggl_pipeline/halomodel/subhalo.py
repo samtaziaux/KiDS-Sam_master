@@ -18,7 +18,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         sigma8, h, Om, Obh2, ns : cosmological parameters
         z  : redshift
         fh  : normalization of the c(M) relation for the host halos
-        logMo  : normalization of the SSHMR
+        logm0  : normalization of the SSHMR
         logM1  : pivot log-mass of the SSHMR
         beta_sshmr  : slope of the SSHMR
         sigma_sshmr  : scatter in the SSHMR
@@ -59,23 +59,23 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #seterr(divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
     sigma8, h, Om, Obh2, ns, \
-        z, fh, fc_nsat, logMo, logM1, beta_sshmr, sigma_sshmr, \
+        z, fh, fc_nsat, logmstar0, logm0, beta_sshmr, sigma_sshmr, \
         fs, alpha_shmf, beta_shmf, omega_shmf, \
         a_cMsub, b_cMsub, g_cMsub, Mo_cMsub, \
         logMh_min, logMh_max, logMh_step, \
-        logpsi_min, logpsi_max, logpsi_step, logMstar_min, logMstar_max, \
+        logpsi_min, logpsi_max, logpsi_step, logmstar_min, logmstar_max, \
         lnk_min, lnk_max, lnk_step, \
         smth1, smth2 = theta
     # for now. Remember that I need to read logmstar, which is currently not
     # stored by lensing_signal.py
-    logMstar_min = log10(logMstar_min)
-    logMstar_max = log10(logMstar_max)
+    logmstar_min = log10(logmstar_min)
+    logmstar_max = log10(logmstar_max)
 
     # if we want to fit for a relation instead of individual masses
-    # then logMo should be a scalar.
-    if not iterable(logMo):
-        logMo = logMo * ones(logMstar_min.size)
-    print 'logMo =', logMo
+    # then logm0 should be a scalar.
+    if not iterable(logm0):
+        logm0 = logm0 * ones(logmstar_min.size)
+    print 'logm0 =', logm0
 
     # HMF set up parameters
     #k_step = (lnk_max-lnk_min) / n_bins
@@ -91,11 +91,11 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     print 'psi =', psi_range.shape
     print 'Msub_range =', Msub_range.shape
     print 'Mh_range =', Mh_range.shape
-    print 'logMstar =', (logMstar_min+logMstar_max)/2, logMstar_min.shape
+    print 'logmstar =', (logmstar_min+logmstar_max)/2, logmstar_min.shape
 
     mstar_hod = array([logspace(Mlo, Mhi, 100, endpoint=False,
                                 dtype=numpy.longdouble)
-                       for Mlo, Mhi in izip(logMstar_min, logMstar_max)])
+                       for Mlo, Mhi in izip(logmstar_min, logmstar_max)])
 
     hmfparams = {'sigma_8': sigma8, 'H0': 100.*h,'omegab_h2': Obh2,
                  'omegam': Om, 'omegav': 1-Om, 'n': ns,
@@ -139,7 +139,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     print 'mstar_hod =', mstar_hod.shape
     phi = array([phi_sub(log10(Msub_range), logmstar, logMi, logM1,
                          beta_sshmr, sigma_sshmr)
-                 for logmstar, logMi in izip(log10(mstar_hod), logMo)])
+                 for logmstar, logMi in izip(log10(mstar_hod), logm0)])
     print 'phi =', phi.shape
     #"""
     # number of subhalos in each observable bin
@@ -235,15 +235,15 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     #print 'rvirs_range_3d =', rvirs_range_3d
     # correlation functions
-    xi2 = np.zeros((logMstar_min.size,rvirs_range_3d.size))
-    for i in xrange(logMstar_min.size):
+    xi2 = np.zeros((logmstar_min.size,rvirs_range_3d.size))
+    for i in xrange(logmstar_min.size):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvirs_range_3d)
     print 'xi2 =', xi2.shape
 
     # surface density
     sur_den2 = array([sigma(xi2_i, rho_mean, rvirs_range_3d, rvirs_range_3d_i)
                       for xi2_i in xi2])
-    for i in xrange(logMstar_min.size):
+    for i in xrange(logmstar_min.size):
         sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
         sur_den2[i] = fill_nan(sur_den2[i])
     print 'sur_den2 =', sur_den2.shape
@@ -258,8 +258,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #out_esd_tot = array([UnivariateSpline(rvirs_range_2d_i,
                                           #np.nan_to_num(d_sur_den2_i), s=0)
                          #for d_sur_den2_i in izip(d_sur_den2)])
-    #out_esd_tot_inter = np.zeros((logMstar_min.size, rvirs_range_2d_i.size))
-    #for i in xrange(logMstar_min.size):
+    #out_esd_tot_inter = np.zeros((logmstar_min.size, rvirs_range_2d_i.size))
+    #for i in xrange(logmstar_min.size):
         #out_esd_tot_inter[i] = out_esd_tot[i](rvirs_range_2d_i)
     #print 'out_esd_tot_inter =', out_esd_tot_inter, out_esd_tot_inter.shape
 
@@ -320,7 +320,7 @@ def nsub_Msub(phi, Mstar):
     return n
 
 
-def phi_sub(logMsub, logMstar, logMo, logM1, beta, sigma):
+def phi_sub(logMsub, logmstar, logm0, logM1, beta, sigma):
     """
     stellar-to-subhalo mass relation through a conditional mass function
 
@@ -331,18 +331,18 @@ def phi_sub(logMsub, logMstar, logMo, logM1, beta, sigma):
     To fit for individual masses fix beta to zero.
 
     """
-    if not iterable(logMo):
-        logMo = array([logMo])
+    if not iterable(logm0):
+        logm0 = array([logm0])
     # mean subhalo mass given a stellar mass
-    #mu = logMo + beta * (logMstar-logM1)
+    #mu = logm0 + beta * (logmstar-logM1)
     # should I divide by Msub or Mstar?
     #prob = array([exp(-(logMsub - mu_i)**2 / (2*sigma**2)) / \
                      #((2*pi)**0.5*sigma*Mstar)
-                  #for mu_i, Mstar in izip(mu, 10**logMstar)]) / log(10)
+                  #for mu_i, Mstar in izip(mu, 10**logmstar)]) / log(10)
     #return prob
-    mu = logMo + beta * (logMsub-logM1)
+    mu = logm0 + beta * (logMsub-logM1)
     prob = array([exp(-(logm - mu)**2 / (2*sigma**2)) / 10**logm
-                  for logm in logMstar])
+                  for logm in logmstar])
     return prob / ((2*pi)**0.5 * sigma * log(10))
 
 

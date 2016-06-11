@@ -129,13 +129,15 @@ def gauleg(a, b, n):
     return x[1:], w1[1:]
 
 
-def read_avgs(chainfile, param):
-    name = '.'.join(chainfile.split('/')[-1].split('.')[:-1])
-    path = '-'.join(name.split('-')[1:])
-    name = '-'.join(name.split('-')[1:])
-    binparam = name.split('_')[0]
-    avgfile = os.path.join('data', binparam, path,
-                           'avgs-{0}.dat'.format(param))
+def read_avgs(param, path='', chainfile=''):
+    if chainfile:
+        hdrfile = chainfile.replace('.fits', '.hdr')
+        hf = open(hdrfile)
+        for line in hf:
+            line = line.split()
+            if line[0] == 'datafile':
+                path = os.path.split(line[1].split(',')[0])[0]
+    avgfile = os.path.join(path, 'avgs-{0}.dat'.format(param))
     data = loadtxt(avgfile, unpack=True)
     return data[1:]
 
@@ -188,7 +190,8 @@ def read_header(hdr):
         elif line[0] in ('covcol', 'covcols'):
             covcols = [int(i) for i in line[1].split(',')]
         elif line[0] == 'exclude_bins':
-            exclude_bins = [int(i) for i in line[1].split(',')]
+            if len(line) == 2:
+                exclude_bins = [int(i) for i in line[1].split(',')]
         elif line[0] == 'model':
             model = line[1]
         #elif line[0] == 'sat_profile':
@@ -198,6 +201,8 @@ def read_header(hdr):
         elif line[0] == 'metadata':
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
+        if len(line) == 1:
+            continue
         if line[1] in paramtypes:
             params.append(line[0])
             prior_types.append(line[1])

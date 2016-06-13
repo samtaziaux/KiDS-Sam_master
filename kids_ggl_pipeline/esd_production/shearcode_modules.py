@@ -1222,16 +1222,26 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
         cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
                                 np.zeros(cond[1].size, dtype=np.int32)))
         cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                 np.zeros(cond[1].size, dtype=np.int32)))
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
         
         cond[cond >= DlsoDs[0].size-1] = DlsoDs[0].size-1
         cond2[cond2 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
+        cond3[cond4 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
+        cond4[cond3 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
         
         cond[cond >= DlsoDs[1].size-1] = DlsoDs[1].size-1
         cond2[cond2 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
+        cond3[cond3 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
+        cond4[cond4 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
         
         DlsoDs[(cond[0], cond[1])] = 0.0
         DlsoDs[(cond2[0], cond2[1])] = 0.0
+        DlsoDs[(cond3[0], cond3[1])] = 0.0
+        DlsoDs[(cond4[0], cond4[1])] = 0.0
 
     DlsoDsmask = [] # Empty unused lists
 

@@ -134,7 +134,7 @@ hm_output         Mavg              3,E
 ##########################
 
 # Path to ESD file (folders only, relative to the config file or full path; optional. Insert './' if local directory)
-#path_data           earlyscience_satellites/
+path_data           earlyscience_satellites/
 
 # Name of the file containing the ESDs and the columns to be read. Columns are (R,ESD_t[,1+K(R)]),
 # where K(R) is the noise bias correction as per Equation 12 of Viola et al. (2015).

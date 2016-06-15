@@ -78,7 +78,7 @@ def input_variables():
     # Defining the lens-ID lens selection/binning
     if 'None' not in lensid_file:
         selection = define_lensid_selection(lensid_file, lens_selection, \
-                                            lens_binning, binname)
+                                            lens_binning, binname, Nobsbins)
         lens_selection, lens_binning, binname, Nobsbins = selection
 
     # Defining the center definition
@@ -126,7 +126,7 @@ def input_variables():
     # Path to the output splits and results
     path_splits = '%s/splits_%s' %(path_output, purpose)
     path_results = '%s/results_%s' %(path_output, purpose)
-    print path_splits
+    #print path_splits
     
     if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
 
@@ -169,7 +169,7 @@ def input_variables():
         filename_var = define_filename_var(purpose.replace('bootstrap', \
                                                            'catalog'), \
                                            centering, binname, binnum, \
-                                           Nobsbins, lens_selection, \
+                                           Nobsbins, lens_selection, lens_binning, \
                                            src_selection, lens_weights, \
                                            name_Rbins, O_matter, \
                                            O_lambda, Ok, h)
@@ -195,7 +195,7 @@ def input_variables():
 
     else:
         Ncat = 1
-
+    
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
     lens_selection, lens_weights, binname, Nobsbins, src_selection, \
     cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
@@ -205,7 +205,7 @@ def input_variables():
 
 
 # Defining the lensID lens selection/binning
-def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname):
+def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, Nobsbins):
     
     IDname = 'ID'
     
@@ -214,7 +214,6 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname):
     if len(lensid_files) == 1: # If there is only one lensID bin -> selection
         lensids = np.loadtxt(lensid_files[0], dtype=np.int64)
         lens_selection[IDname] = ['self', lensids]
-        Nobsbins = 1
     else: # If there are multiple lensID bins -> binning
         binname = IDname
         lens_binning = dict()
@@ -254,10 +253,37 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
         
     return filename_var, var_print, plottitle
 
+
+def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnum, Nobsbins):
+    print binnum
+    if type(binnum) == int:
+        binnum = binnum-1
+    elif type(binnum) == str:
+        binnum = Nobsbins-1
+    print binnum
+    print 
+
+    selnames = np.sort(selection.keys())
+    for selname in selnames:
+        sellims = (selection[selname])[1]
+        
+        if 'ID' in selname:
+            pass
+        else:
+            filename_var = '%s_%.2f~%.2f'%(filename_var, \
+                                             sellims[binnum], sellims[binnum+1])
+            var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
+                                                sellims[binnum], sellims[binnum+1])
+            plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
+                                                sellims[binnum], selname, \
+                                                sellims[binnum+1])
+
+    return filename_var, var_print, plottitle
+
     
 # Defining the part of the filename that contains the chosen variables
 def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
-                        lens_selection, src_selection, lens_weights, \
+                        lens_selection, lens_binning, src_selection, lens_weights, \
                         name_Rbins, O_matter, O_lambda, Ok, h):
     
     # Define the list of variables for the output filename
@@ -280,7 +306,8 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
             filename_var = '%s_%sbin%sof%i'%(filename_var, binname, \
                                              binnum, Nobsbins)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
-        
+            #filename_var, var_print, x = \
+            #    define_filename_sel_bin(filename_var, var_print, '', lens_binning, binnum, Nobsbins)
         # Lens selection
         filename_var, var_print, x = define_filename_sel(filename_var, \
                                                          var_print, '', \
@@ -735,7 +762,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
     
     # Making selection of sources ...
     try:
-        pattern = 'KiDS_COSMOS_DEEP2_photoz.fits'
+        pattern = 'KiDS_COSMOS_DEEP2_stomp_masked.cat'
     
         files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
     
@@ -752,17 +779,20 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
         quit()
 
 
-    if os.path.isfile('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+    if os.path.isfile('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(\
+                                                        path_wizz_data,\
                                                           filename_var)):
         print 'Loading precomputed The-wiZZ redshifts...'
         print
-        n_z = np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
-                                                                    filename_var),\
-                                                                    comments='#')
+        n_z = np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(\
+                                                                path_wizz_data,\
+                                                                filename_var),\
+                                                                comments='#')
     else:
         
         # Setting The-wiZZ parameters (for now hardcoded)
-        input_pair_hdf5_file = '%s/KiDS_COSMOS_DEEP2_The-wiZZ_pairs.hdf5'%(path_wizz_data)
+        input_pair_hdf5_file = '%s/KiDS_COSMOS_DEEP2_The-wiZZ_pairs.hdf5'%(\
+                                                                path_wizz_data)
         #use_inverse_weighting = True
         n_target_load_size = 10000
         z_n_bins = 70
@@ -775,13 +805,13 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
         #bootstrap_samples = None
         #output_bootstraps_file = None
         unknown_stomp_region_name = 'stomp_region'
-        unknown_index_name = 'wiZZ_idx'
+        unknown_index_name = 'SeqNr'
         unknown_weight_name = 'recal_weight'
         
         srclims = src_selection['Z_B'][1]
         src_z_max = srclims[1]
         src_z_min = srclims[0]
-        step = np.ceil((src_z_max-src_z_min)/0.2)
+        step = np.ceil((src_z_max-src_z_min)/0.1)
         n_loops = np.linspace(src_z_min, src_z_max, step, endpoint=True)
         
         
@@ -792,23 +822,28 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
             manmask = spec_cat['MASK']
             srcmask = 0
             srcmask = (manmask==0)
-            srcmask *= (n_loops[i] <= spec_cat['Z_B']) & (spec_cat['Z_B'] < n_loops[i+1])
-            print('Preselecting sources in photo-z range between %f and %f'%(n_loops[i], n_loops[i+1]))
+            srcmask *= (n_loops[i] <= spec_cat['Z_B']) \
+                        & (spec_cat['Z_B'] < n_loops[i+1])
+            print('Preselecting sources in photo-z range between %f and %f'%(\
+                                                    n_loops[i], n_loops[i+1]))
             # Writing reduced catalog with only selected sources ...
             output_cat = spec_cat[srcmask]
             #orig_cols = spec_cat_file[1].columns
             hdu = pyfits.BinTableHDU(output_cat)
-            hdu.writeto('%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data,\
-                                                               filename_var),\
-                                                                clobber=True)
+            hdu.writeto('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.cat'%(\
+                                                            path_wizz_data,\
+                                                            filename_var),\
+                                                            clobber=True)
 
 
             # Running The-wiZZ to obtain Z_S
             directory = os.path.dirname(os.path.dirname(__file__))
             indirectory = os.listdir(directory)
             
-            unknown_sample_file = '%s/KiDS_COSMOS_DEEP2_photoz_%s.fits'%(path_wizz_data, filename_var)
-            output_pdf_file_name = '%s/KiDS_COSMOS_DEEP2_photoz_%s_preselect_%i.ascii'%(path_wizz_data, filename_var, i)
+            unknown_sample_file = '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.cat'%(\
+                                                                path_wizz_data,\
+                                                                filename_var)
+            output_pdf_file_name = '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data, filename_var, i)
 
             if 'The-wiZZ' in indirectory:
                 path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
@@ -834,16 +869,16 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
 
 
             # Reading in the calculated Z_S from The-wiZZ output file
-            n_z[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s_preselect_%i.ascii'%(path_wizz_data,\
+            n_z[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data,\
                                                             filename_var, i),\
                                                             comments='#')[:,1])
-            w_i[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_photoz_%s_preselect_%i.ascii'%(path_wizz_data,\
+            w_i[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data,\
                                                             filename_var, i),\
                                                             comments='#')[:,3])
             #print n_z[:,i], w_i[:,i]
 
         n_z = np.sum(n_z*w_i, axis=1)/np.sum(w_i, axis=1)
-        np.savetxt('%s/KiDS_COSMOS_DEEP2_photoz_%s.ascii'%(path_wizz_data,\
+        np.savetxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(path_wizz_data,\
                                         filename_var), n_z, delimiter='\t')
         n_z[n_z < 0] = 0
 
@@ -1159,7 +1194,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
             obslist = bincat[binname]
         
         if 'ID' in binname:
-            lensids = lens_binning['%s%i'%(binname[:-1], binnum)][1]
+            lensids = lens_binning['%s%i'%(binname[:-1], binnum+1)][1]
             lenssel *= np.in1d(obslist, lensids)
         else:
             lenssel *= (binmin <= obslist) & (obslist < binmax)
@@ -1473,7 +1508,7 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 # Write the shear or covariance catalog to a fits file
 def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
                   output, outputnames, variance, purpose, e1, e2, w, srcm):
-
+    
     fitscols = []
 
     Rmin = Rbins[0:nRbins]/Rconst
@@ -1579,30 +1614,13 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
         galIDsname_split = filename.rsplit('_',1)
         galIDsname = '%s_lensIDs.txt'%(galIDsname_split[0])
         #kidsgalIDsname = '%s_KiDSlensIDs.txt'%(galIDsname_split[0])
-
-        with open(galIDsname, 'w') as file:
-            print >>file, "# ID's of all stacked lenses:"
-
-        with open(galIDsname, 'a') as file:
-            for i in xrange(len(galIDs_matched)):
-                print >>file, galIDs_matched[i]
-
-        """
-        with open(kidsgalIDsname, 'w') as file:
-            print >>file, "# ID's of stacked lenses within fields:"
-
-        with open(kidsgalIDsname, 'a') as file:
-            for i in xrange(len(galIDs_matched_infield)):
-                print >>file, galIDs_matched_infield[i]
-        """
+        
+        np.savetxt(galIDsname, galIDs_matched, fmt='%s', delimiter='\t',\
+                   header="ID's of all stacked lenses:", comments='# ')
         
         print "Written: List of all stacked lens ID's"\
                 " that contribute to the signal:", galIDsname
         
-        """
-        print "Written: List of stacked lens ID's"\
-                " with their center within a KiDS field:", kidsgalIDsname
-        """
     return
 
 

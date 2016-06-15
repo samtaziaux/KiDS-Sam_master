@@ -50,7 +50,7 @@ def main():
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose.replace('catalog',''), \
                                              centering, binname, Nobsbins, \
-                                             Nobsbins, lens_selection, \
+                                             Nobsbins, lens_selection, lens_binning, \
                                              src_selection, lens_weights, \
                                              name_Rbins, O_matter, \
                                              O_lambda, Ok, h)
@@ -69,7 +69,7 @@ def main():
     # Define the list of variables for the input catalog
     filename_var = shear.define_filename_var('shearcatalog', centering, \
                                              'None', -999, -999, \
-                                             {'None': np.array([])}, \
+                                             {'None': np.array([])}, {'None': np.array([])}, \
                                              src_selection, ['None', ''], \
                                              name_Rbins, O_matter, \
                                              O_lambda, Ok, h)
@@ -112,7 +112,7 @@ def main():
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose.replace('catalog',''), \
                                              centering, binname, 'binnum', \
-                                             Nobsbins, lens_selection, \
+                                             Nobsbins, lens_selection, lens_binning, \
                                              src_selection, lens_weights, \
                                              name_Rbins, O_matter, \
                                              O_lambda, Ok, h)
@@ -131,7 +131,7 @@ def main():
     w2k2list = sheardat['lfweight_%s^2*k^2'%blindcat]
     srcmlist = sheardat['bias_m_%s'%blindcat] # Bias profile of each galaxy
     variance = sheardat['variance(e[A,B,C,D])'][blindcatnum] # The variance
-
+    
     # Adding the lens weights
     galweightlist = np.reshape(galweightlist, [len(galIDlist),1])
     [gammatlist, gammaxlist, wk2list, \

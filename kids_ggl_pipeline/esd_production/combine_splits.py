@@ -13,7 +13,6 @@ import os
 import time
 import shearcode_modules as shear
 from astropy import constants as const, units as u
-import numpy.core._dotblas
 import glob
 
 # Important constants
@@ -67,7 +66,7 @@ def main():
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
                                              'binnum', Nobsbins, \
-                                             lens_selection, src_selection, \
+                                             lens_selection, lens_binning, src_selection, \
                                              lens_weights, name_Rbins, \
                                              O_matter, O_lambda, Ok, h)
 

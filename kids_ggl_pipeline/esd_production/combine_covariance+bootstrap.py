@@ -40,7 +40,7 @@ def main():
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
-                    'binnum', Nobsbins, lens_selection, src_selection, \
+                    'binnum', Nobsbins, lens_selection, lens_binning, src_selection, \
                     lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
@@ -52,7 +52,6 @@ def main():
     filenameESD = shear.define_filename_results(path_results, \
                     purpose, filename_N1, filename_addition, Nsplit, blindcat)
 
-    
     # Printing the covariance matrix to a text file
     filename_N1 = filename_var.replace('binnumof', 's')
     filename_cov = filename_var.replace('binnumof', 's')
@@ -123,7 +122,7 @@ def main():
 
             filename_N1 = shear.define_filename_var(purpose, centering, \
                                                     binname, N1+1, Nobsbins, \
-                                                    lens_selection, \
+                                                    lens_selection, lens_binning, \
                                                     src_selection, \
                                                     lens_weights, name_Rbins, \
                                                     O_matter, O_lambda, Ok, h)
@@ -167,7 +166,7 @@ def main():
                 filename_N2 = shear.define_filename_var(purpose, centering, \
                                                         binname, N2+1, \
                                                         Nobsbins, \
-                                                        lens_selection, \
+                                                        lens_selection, lens_binning, \
                                                         src_selection, \
                                                         lens_weights, \
                                                         name_Rbins, \
@@ -217,7 +216,7 @@ def main():
             filename_N1 = shear.define_filename_var(purpose, centering, \
                                                     binname, \
                                                     N1+1, Nobsbins, \
-                                                    lens_selection, \
+                                                    lens_selection, lens_binning, \
                                                     src_selection, \
                                                     lens_weights, name_Rbins, \
                                                     O_matter, O_lambda, Ok, h)
@@ -279,7 +278,7 @@ def main():
                                                             centering, \
                                                             binname, \
                                                             N2+1, Nobsbins, \
-                                                            lens_selection, \
+                                                            lens_selection, lens_binning, \
                                                             src_selection, \
                                                             lens_weights, \
                                                             name_Rbins, \

@@ -269,8 +269,8 @@ hm_output         esd_host       3,12E
 ### Parameter sampling ###
 ##########################
 
-# Path to ESD file (folders only; optional. Insert './' if local directory)
-path_data           demo/earlyscience_satellites/
+# Path to ESD file (folders only, relative to the config file or full path; optional. Insert './' if local directory)
+path_data           earlyscience_satellites/
 
 # Name of the file containing the ESDs and the columns to be read. Columns are (R,ESD_t[,1+K(R)]),
 # where K(R) is the noise bias correction as per Equation 12 of Viola et al. (2015).
@@ -286,7 +286,7 @@ data                esd_*.txt       0,1,4
 exclude_bins        0,1,11
 
 # Path to covariance file. Same notes as path_data.
-path_covariance     demo/earlyscience_satellites/
+path_covariance     earlyscience_satellites/
 
 # This file should have the same format as those the pipeline produces; that is, it should be
 # a single file with columns should be sorted by mnij where m,n are observable (e.g., logmstar)

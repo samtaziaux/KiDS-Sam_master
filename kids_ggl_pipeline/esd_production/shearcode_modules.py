@@ -988,7 +988,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     for param in src_selection.keys():
         srclims = src_selection[param][1]
         if len(srclims) == 1:
-            srcmask *= (kidscat[param] == binlims[0])
+            srcmask *= (kidscat[param] == srclims[0])
 
         else:
             srcmask *= (srclims[0] <= kidscat[param]) & \

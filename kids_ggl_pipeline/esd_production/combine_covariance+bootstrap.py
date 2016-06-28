@@ -99,6 +99,7 @@ def main():
         gammax = np.zeros([Nobsbins,nRbins])
         wk2 = np.zeros([Nobsbins,nRbins])
         srcm = np.zeros([Nobsbins,nRbins])
+        Nsrc = np.zeros([Nobsbins,nRbins])
 
     ESDt_tot = np.zeros([Nobsbins,nRbins])
     ESDx_tot = np.zeros([Nobsbins,nRbins])
@@ -271,6 +272,7 @@ def main():
                     wk2[N1] = wk2[N1] + np.sum(lfweights*Zs_N1,axis=0)
                     # The total weight (lensfit weight + lensing efficiency)
                     srcm[N1] = srcm[N1] + np.sum(lfweights*Zs_N1*srcmlists,axis=0)
+                    Nsrc[N1] = Nsrc[N1] + np.sum(np.ones(srcmlists.shape),axis=0)
                     
                     for N2 in xrange(Nobsbins):
                         
@@ -341,7 +343,7 @@ def main():
             shear.write_stack(filenameESD, filename_N1, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], \
                               error_tot[N1], bias_tot[N1], h, \
                               variance, wk2[N1], np.diagonal(cov[N1,N1,:,:]), \
-                              blindcat, blindcats, blindcatnum, \
+                              Nsrc[N1], blindcat, blindcats, blindcatnum, \
                               galIDs_matched, galIDs_matched_infield)
         
         for N1 in xrange(Nobsbins):

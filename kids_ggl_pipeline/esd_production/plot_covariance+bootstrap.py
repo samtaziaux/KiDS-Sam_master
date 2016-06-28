@@ -148,7 +148,7 @@ def main():
     except:
         print "Failed to create Matrix Plot of", filenamecov
 
-    # Commented out the removal of splits. They might be useful for sanity checks.
+    # Addapted the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.
 
     # Remove the used splits

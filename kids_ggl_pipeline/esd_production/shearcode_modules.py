@@ -757,6 +757,68 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
     return Z_S[srcmask], spec_weight[srcmask]
 
 
+"""
+#Temp
+def import_spec_cat_pz(path_kidscats, kidscatname, kidscat_end, \
+                    src_selection, cat_version):
+    
+    print('Using direct callibration to estimate the redshifts.')
+    files = os.listdir(os.path.dirname('/disks/shear10/KiDS/All_tiles/'))
+    Z_S_varlist = np.zeros(351)
+    for i, filename in enumerate(files):
+        print i
+        try:
+            spec_cat = pyfits.open('/disks/shear10/KiDS/All_tiles/%s'%filename, memmap=True)[1].data
+        
+            Z_S = spec_cat['PZ_full']
+            manmask = spec_cat['MASK']
+        
+            srcmask = (manmask==0)
+        
+            # We apply any other cuts specified by the user for Z_B
+            srclims = src_selection['Z_B'][1]
+            if len(srclims) == 1:
+                srcmask *= (spec_cat['Z_B'] == binlims[0])
+            else:
+                srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
+                (spec_cat['Z_B'] < srclims[1])
+            Z_S = Z_S[srcmask]
+    
+            Z_S_varlist += Z_S.sum(axis=0)
+            print Z_S_varlist[:20]
+        
+        except:
+            pass
+    
+
+    print Z_S_varlist.shape
+    return Z_S_varlist, 1.0
+"""
+
+"""
+#Temp
+def import_spec_cat_pz(kidscatname, catmatch, srcNr):
+    
+    #print('Using direct callibration to estimate the redshifts.')
+    
+    files = os.listdir(os.path.dirname('/disks/shear10/KiDS/All_tiles/'))
+    filename = str(fnmatch.filter(files, kidscatname+'*')[0])
+    
+    spec_cat = pyfits.open('/disks/shear10/KiDS/All_tiles/%s'%filename, memmap=True)[1].data
+    
+    Z_S = spec_cat['PZ_full']
+    mask = np.in1d(spec_cat['SeqNr'],srcNr)
+    Z_S = Z_S[mask]
+    Z_S_out = np.zeros((len(srcNr), 70))
+    for i in range(len(srcNr)):
+        Z_S_out[i,:] = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), Z_S[i,:])
+        Z_S_out[i,:] = Z_S_out[i,:]/Z_S_out[i,:].sum()
+    
+    # We apply any other cuts specified by the user for Z_B
+    return Z_S_out
+"""
+
+
 def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
                     src_selection, cat_version, filename_var, ncores):
     
@@ -900,6 +962,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     
     # List of the ID's of all sources in the KiDS catalogue
     srcNr = kidscat['SeqNr']
+    #srcNr = kidscat['SeqNr_field'] # If ever needed for p(z)
     # List of the RA's of all sources in the KiDS catalogue
     srcRA = kidscat['ALPHA_J2000']
     # List of the DEC's of all sources in the KiDS catalogue
@@ -1294,10 +1357,10 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
     theta = np.arccos(np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC))+\
                       np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*\
                       np.cos(np.radians(galRA-srcRA))) # in radians
-    incosphi = ((-np.cos(np.radians(galDEC))*(np.radians(galRA-srcRA)))**2-\
-                (np.radians(galDEC-srcDEC))**2)/(theta)**2
+    incosphi = ((-np.cos(np.radians(galDEC))*(np.arctan(np.tan(np.radians(galRA-srcRA)))))**2-\
+                    (np.arctan(np.tan(np.radians(galDEC-srcDEC))))**2)/(theta)**2
     insinphi = 2*(-np.cos(np.radians(galDEC))*\
-                  (np.radians(galRA-srcRA)))*np.radians(galDEC-srcDEC)/(theta)**2
+                    (np.arctan(np.tan(np.radians(galRA-srcRA)))))*np.arctan(np.tan(np.radians(galDEC-srcDEC)))/(theta)**2
 
     incosphi = incosphi.T
     insinphi = insinphi.T
@@ -1407,99 +1470,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
         srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
-"""
-def calc_shear_output_treecorr(galRA_split,\
-                               galDEC_split, galZ_split, Dcl_split, \
-                               Dal_split, srcRA, srcDEC, e1, e2, Rmin, Rmax, \
-                               nRbins, klist, wlist, Nsrclist, srcm, Runit):
-    
-    wlist = wlist.T
-    klist_t = np.array([klist, klist, klist, klist]).T
-    # Calculating the needed errors
-    if 'pc' not in Runit:
-        wk2list = wlist
-    else:
-        wk2list = wlist*klist_t**2
 
-    w_tot = np.sum(wlist, 0)
-    w2_tot = np.sum(wlist**2, 0)
-
-    k_tot = np.sum(klist, 1)
-    k2_tot = np.sum(klist**2, 1)
-    
-    wk2_tot = np.sum(wk2list, 0)
-    w2k4_tot = np.sum(wk2list**2, 0)
-    if 'pc' not in Runit:
-        w2k2_tot = np.sum(wlist**2, 0)
-    else:
-        w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
-
-    wlist = []
-    
-    Nsrc_tot = np.sum(Nsrclist, 1)
-    
-    srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
-    srcm = np.array([srcm, srcm, srcm, srcm]).T
-    foo = [] # Empty unused lists
-    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
-    srcm = []
-    klist_t = []
-    
-    gc.collect()
-    
-    # Calculating the weighted tangential and
-    # cross shear of the lens-source pairs
-
-    gammat_tot_A = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_A = np.zeros((klist.shape[0], nRbins))
-    gammat_tot_B = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_B = np.zeros((klist.shape[0], nRbins))
-    gammat_tot_C = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_C = np.zeros((klist.shape[0], nRbins))
-    gammat_tot_D = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_D = np.zeros((klist.shape[0], nRbins))
-
-    import treecorr
-    for i in xrange(klist.shape[0]):
-        lens = treecorr.Catalog(ra=galRA_split, dec=galDEC_split, r=Dal_split, ra_units='degrees', dec_units='degrees')
-        src_A = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,0], g2=e2[:,0], ra_units='degrees', dec_units='degrees')
-        src_B = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,1], g2=e2[:,1], ra_units='degrees', dec_units='degrees')
-        src_C = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,2], g2=e2[:,2], ra_units='degrees', dec_units='degrees')
-    
-        ng = treecorr.NGCorrelation(min_sep=Rmin/Dal_split[i], max_sep=Rmax/Dal_split[i], nbins=nRbins, sep_units='rad')
-    
-        ng.process(lens, src_A, metric='Rlens', num_threads=1)
-        gammat_tot_A[i,:], gammax_tot_A[i,:], var = ng.calculateXi(ng)
-        ng.process(lens, src_B, metric='Rlens', num_threads=1)
-        gammat_tot_B[i,:], gammax_tot_B[i,:], var = ng.calculateXi(ng)
-        ng.process(lens, src_C, metric='Rlens', num_threads=1)
-        gammat_tot_C[i,:], gammax_tot_C[i,:], var = ng.calculateXi(ng)
-        print gammat_tot_A[i,:]
-
-    if 'pc' not in Runit:
-        pass
-    else:
-        pass
-    #quit()
-    print wk2_tot.T[0].shape
-    print gammat_tot_A.shape
-     
-    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
-    wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
-    
-    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
-    w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
-    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
-    srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
-     
-    gc.collect()
-    
-    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, \
-            gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
-            k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
-            w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-            srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
-"""
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):

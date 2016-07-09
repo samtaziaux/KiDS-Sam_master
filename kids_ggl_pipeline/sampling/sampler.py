@@ -179,7 +179,7 @@ def run_emcee(hm_options, sampling_options, args):
         for m, axm in enumerate(axes):
             for n, axmn in enumerate(axm):
                 axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
-                            cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
+                            cmap='cubehelix_r', vmin=vmin, vmax=vmax)
         fig.tight_layout()
         pylab.show()
         exit()

@@ -1,7 +1,7 @@
 import numpy
 import os
 from glob import glob
-#from ConfigParser import SafeConfigParser
+
 
 def load_datapoints(datafile, datacols, exclude_bins=None):
     if isinstance(datafile, basestring):
@@ -30,7 +30,7 @@ def load_datapoints(datafile, datacols, exclude_bins=None):
         esd = numpy.array([[esdi[j] for j in xrange(len(esdi))
                             if j not in exclude_bins] for esdi in esd])
     return R, esd
-    #return R, numpy.absolute(esd)
+
 
 def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     cov = numpy.loadtxt(covfile, usecols=[covcols[0]])
@@ -42,6 +42,9 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     else:
         nexcl = len(exclude_bins)
     cov = cov.reshape((Nobsbins,Nobsbins,Nrbins+nexcl,Nrbins+nexcl))
+    #cov2d = cov[:,:,::-1,::-1].transpose(0,2,1,3)
+    #cov2d = cov2d.reshape((Nobsbins*(Nrbins+nexcl),
+                           #Nobsbins*(Nrbins+nexcl)))[::-1,::-1]
     cov2d = cov.transpose(0,2,1,3)
     cov2d = cov2d.reshape((Nobsbins*(Nrbins+nexcl),
                            Nobsbins*(Nrbins+nexcl)))
@@ -84,6 +87,7 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     icov = icov.transpose(2,0,3,1)
     return cov, icov, likenorm, esd_err, cov2d
 
+
 def read_config(config_file, version='0.5.7',
                 path_data='', path_covariance=''):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
@@ -96,6 +100,8 @@ def read_config(config_file, version='0.5.7',
         line = line.split()
         if len(line) == 0:
             continue
+        #if line[0] == 'path':
+            #path = line[1]
         if line[0] == 'path_data':
             path_data = line[1]
         if line[0] == 'data':
@@ -151,11 +157,15 @@ def read_config(config_file, version='0.5.7',
         msg = 'ambiguous covariance filename'
         raise ValueError(msg)
     covfile = covfile[0]
+    output_dir = os.path.split(output)[0]
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
 
     out = (datafiles, datacols, covfile, covcols, exclude_bins, output,
            sampler, nwalkers, nsteps, nburn, thin, k, threads,
            sampler_type, update_freq)
     return out
+
 
 def read_function(function):
     print 'Reading function', function
@@ -170,6 +180,7 @@ def read_function(function):
         for attr in function_path:
             func = getattr(func, attr)
     return func
+
 
 def setup_integrand(R, k=7):
     """
@@ -193,3 +204,4 @@ def setup_integrand(R, k=7):
         R = numpy.array(R)
         Rrange = numpy.array(Rrange)
     return R, Rrange
+

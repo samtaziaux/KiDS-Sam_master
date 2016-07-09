@@ -59,7 +59,7 @@ def read_config(config_file, version='0.5.7'):
             if line[2] not in valid_types:
                 msg = 'ERROR: Please provide only valid prior types in the'
                 msg += ' parameter file (%s). Value %s is invalid.' \
-                       %(paramfile, line[1])
+                       %(config_file, line[1])
                 msg = ' Valid types are %s' %valid_types
                 print msg
                 exit()

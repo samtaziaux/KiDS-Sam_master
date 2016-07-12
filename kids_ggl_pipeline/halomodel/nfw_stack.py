@@ -391,32 +391,36 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     _delta = delta
     _izip = izip
 
-    z, Mstar, Rrange, angles = theta
+    A, z, Mstar, Rrange, angles = theta
    
     # some auxiliaries
-    H = [H0 * np.sqrt(Om*(1+zi)**3 + Ol)
-                    for zi in izip(z)]
     c = 4.51835939627e-30
     G = 9.71561189026e-09
+    H0 = 3.24077928947e-18
+
+    #H = [H0 * np.sqrt(Om*(1+zi)**3 + Ol) for zi in izip(z)]
+    #Cd = [(c * Hi) / (G * 6) for Hi in izip(H)]
+
+    Cd = [(c * H0) / (G * 6) for Hi in izip(H)]
+
+    esd_mdm = [Ai * (Mi * Cdi)**0.5 / (4 * Ri[1:])
+                    for Ai, Mi, Cdi, Ri in izip(A, Mstar, Cd, R)]
     
-    Cd = [(c * Hi) / (G * 6) for Hi in izip(H)]
-
-    esd_mdm = [(Mi * Cdi)**0.5 / (4 * Ri[1:])
-                    for Mi, Cdi, Ri in izip(Mstar, Cd, R)]
-
+    """
     # more parameters
     rs_cent = (Mcentral / aux) ** (1./3) / ccentral
     sigma_central = rs_cent * _delta(ccentral) * rho_m
     pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2)
                  for Mi, Ri in izip(Mstar, R)]
+    """
 
     # central signal
-    esd_central = [pm + esd
+    esd_mdm = [esd
                    for pm, esd
                    in izip(pointmass, esd_mdm)]
-    esd_central = _array(esd_central)
+    esd_mdm = _array(esd_central)
 
-    out = [esd_central, 0]
+    out = [esd_mdm, 0]
     return out
 
 

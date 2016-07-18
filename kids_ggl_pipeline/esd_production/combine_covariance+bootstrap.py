@@ -84,14 +84,15 @@ def main():
     galIDlist_matched = np.unique(galIDlist_matched)
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering, \
-                        lens_selection, 'None', 'None', 0, -inf, inf) # Mask
-                        # the galaxies in the shear catalog, WITHOUT binning
-                        # (for the bin creation)
+    # Mask the galaxies in the shear catalog, WITHOUT binning
+    # (for the bin creation)
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
+                                           'None', 'None', 0, -inf, inf,
+                                           Dcllist)
 
     binname, lens_binning, Nobsbins, \
     binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                          lenssel_binning, gamacat)
+                                          lenssel_binning, gamacat, Dcllist)
 
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
@@ -324,12 +325,13 @@ def main():
             
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, \
-            binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
-                                                lenssel_binning, gamacat)
+            binmin, binmax = shear.define_obsbins(N1+1, lens_binning,
+                                                  lenssel_binning, gamacat,
+                                                  Dcllist)
 
-            lenssel = shear.define_lenssel(gamacat, centering, \
-                                           lens_selection, lens_binning, \
-                                           binname, N1+1, binmin, binmax)
+            lenssel = shear.define_lenssel(gamacat, centering, lens_selection,
+                                           lens_binning, binname, N1+1,
+                                           binmin, binmax, Dcllist)
 
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]

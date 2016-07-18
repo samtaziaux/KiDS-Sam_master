@@ -686,12 +686,14 @@ if __name__ == '__main__':
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist)
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, \
-                                           'None', 'None', 0, -inf, inf)
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
+                                           'None', 'None', 0, -inf, inf,
+                                           Dcllist)
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     binname, lens_binning, Nobsbins, binmin, binmax = \
-    shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
+        shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
+                             Dcllist)
 
 
     # We translate the range in source redshifts

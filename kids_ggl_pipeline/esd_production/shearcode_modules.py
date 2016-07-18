@@ -15,6 +15,12 @@ import gc
 import subprocess as sub
 import shlex
 
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
+from matplotlib import gridspec
+from matplotlib import rc, rcParams
+
+
 import distance
 import esd_utils
 
@@ -406,8 +412,8 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
     gc.collect()
     
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
-    Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
-    galDEClist, galweightlist, galZlist, Dcllist, Dallist
+        Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
+        galDEClist, galweightlist, galZlist, Dcllist, Dallist
 
 
 # Define the radial bins around the lenses
@@ -622,7 +628,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
     else:
         Rmax = Rmax + Rfield
         print "*** Using new lens-field matching procedure ***"
-        print "(for 'early science' mode, put"\
+        print "(for 'early science' mode, select"\
                 " 'oldcatmatch' in 'ESD_output_filename')"
 
     totgalIDs = np.array([])
@@ -1064,7 +1070,8 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
 
 
 # Binnning information of the groups
-def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
+def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
+                   Dcllist=[]):
 
     # Check how the binning is given
     binname = lens_binning.keys()[0]
@@ -1073,7 +1080,8 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
         if 'ID' in binname:
             Nobsbins = len(lens_binning.keys())
             if len(lenssel_binning) > 0:
-                print 'Lens binning: Lenses divided in %i lens-ID bins'%(Nobsbins)
+                print 'Lens binning: Lenses divided in %i lens-ID bins' \
+                      %(Nobsbins)
 
         else:
             obsbins = lens_binning[binname][1]
@@ -1092,22 +1100,23 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
                 
                 # Importing the binning file
                 if obsfile == 'self':
-                    obslist = define_obslist(binname, gamacat)
+                    obslist = define_obslist(binname, gamacat, Dcllist)
                 else:
-                    print 'Using %s from %s'%(binname, obsfile)
+                    print 'Using %s from %s' %(binname, obsfile)
                     obscat = pyfits.open(obsfile)[1].data
                     obslist = obscat[binname]
 
                 
                 print
-                print 'Lens binning: Lenses divided in %i %s-bins'%(Nobsbins, \
-                                                                    binname)
+                print 'Lens binning: Lenses divided in %i %s-bins' \
+                      %(Nobsbins, binname)
                 print '%s Min:          Max:          Mean:'%binname
                 for b in xrange(Nobsbins):
                     lenssel = lenssel_binning & (obsbins[b] <= obslist) \
                                 & (obslist < obsbins[b+1])
-                    print '%g    %g    %g'%(obsbins[b], obsbins[b+1], \
-                                            np.mean(obslist[lenssel]))
+                    print '%g    %g    %g' \
+                          %(obsbins[b], obsbins[b+1],
+                            np.mean(obslist[lenssel]))
             
     else: # If there is no binning
         obsbins = np.array([-999, -999])
@@ -1128,15 +1137,15 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
 
 
 # Corrections on GAMA catalog observables
-def define_obslist(obsname, gamacat):
+def define_obslist(obsname, gamacat, Dcllist=[]):
 
     obslist = gamacat[obsname]
 
-    if 'AngSep' in obsname:
-        print 'Applying cosmology correction "AngSep"'
+    if 'AngSep' in obsname and len(Dcllist) > 0:
+        print 'Applying cosmology correction to "AngSep"'
 
-        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.) \
-                            for z in galZlist])
+        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
+                            for z in gamacat['Z']])
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list
 
@@ -1154,7 +1163,7 @@ def define_obslist(obsname, gamacat):
 # Masking the lenses according to the appropriate
 # lens selection and the current KiDS field
 def define_lenssel(gamacat, centering, lens_selection, lens_binning,
-                   binname, binnum, binmin, binmax):
+                   binname, binnum, binmin, binmax, Dcllist):
 
     lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
@@ -1166,7 +1175,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_selection[param][0]
         # Importing the binning file
         if obsfile == 'self':
-            obslist = define_obslist(param, gamacat)
+            obslist = define_obslist(param, gamacat, Dcllist)
         else:
             print 'Using %s from %s'%(param, obsfile)
             bincat = pyfits.open(obsfile)[1].data
@@ -1185,9 +1194,9 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_binning[binname][0]
         if obsfile == 'self':
             if 'ID' in binname:
-                obslist = define_obslist('ID', gamacat)
+                obslist = define_obslist('ID', gamacat, Dcllist)
             else:
-                obslist = define_obslist(binname, gamacat)
+                obslist = define_obslist(binname, gamacat, Dcllist)
         else:
             print 'Using %s from %s'%(binname, obsfile)
             bincat = pyfits.open(obsfile)[1].data
@@ -1645,11 +1654,6 @@ def define_plottitle(purpose, centering, lens_selection, \
 def define_plot(filename, plotlabel, plottitle, plotstyle, \
                 Nsubplots, n, Runit, h):
 
-    from matplotlib import pyplot as plt
-    from matplotlib.colors import LogNorm
-    from matplotlib import gridspec
-    from matplotlib import rc, rcParams
-
     # Make use of TeX
     rc('text',usetex=True)
 
@@ -1772,11 +1776,6 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
 # Writing the ESD profile plot
 def write_plot(plotname, plotstyle): # Writing and showing the plot
 
-    from matplotlib import pyplot as plt
-    from matplotlib.colors import LogNorm
-    from matplotlib import gridspec
-    from matplotlib import rc, rcParams
-
     #	# Make use of TeX
     rc('text',usetex=True)
 
@@ -1798,11 +1797,6 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
 # Plotting the analytical or bootstrap covariance matrix
 def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
                            binname, lens_binning, Rbins, Runit, h):
-
-    from matplotlib import pyplot as plt
-    from matplotlib.colors import LogNorm
-    from matplotlib import gridspec
-    from matplotlib import rc, rcParams
 
     # Make use of TeX
     rc('text',usetex=True)

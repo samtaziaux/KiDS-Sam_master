@@ -67,26 +67,22 @@ def main():
     # Importing all GAMA data, and the information on
     # radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
-    Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
-    galweightlist, galZlist, Dcllist, Dallist = shear.import_data(path_Rbins, \
-                                                        Runit, path_gamacat, \
-                                                        path_kidscats, \
-                                                        centering, \
-                                                        purpose, Ncat, \
-                                                        O_matter, O_lambda, \
-                                                        Ok, h, lens_weights, \
-                                                        filename_addition, \
-                                                        cat_version)
+        Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
+        galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
+            path_Rbins, Runit, path_gamacat, path_kidscats, centering,
+            purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
+            filename_addition, cat_version)
     
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering, \
-                                           lens_selection, 'None', \
-                                           'None', 0, -inf, inf)
+    lenssel_binning = shear.define_lenssel(gamacat, centering,
+                                           lens_selection, 'None',
+                                           'None', 0, -inf, inf, Dcllist)
     # Mask the galaxies in the shear catalog, 
     # WITHOUT binning (for the bin creation)
     binname, lens_binning, \
-    Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                                    lenssel_binning, gamacat)
+    Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning,
+                                                    lenssel_binning, gamacat,
+                                                    Dcllist)
 
 
     # Writing and showing the plots
@@ -102,7 +98,7 @@ def main():
             binname, lens_binning, \
             Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
                                                         lenssel_binning, \
-                                                        gamacat)
+                                                        gamacat, Dcllist)
 
             filename_N1 = filename_var.replace('binnum', '%i'%(N1+1))
             filenameESD = shear.define_filename_results(path_results, purpose, \

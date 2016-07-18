@@ -92,15 +92,28 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 ---
 Update log:
 
-**2016 Feb 23** - First release v1.0.0. Features:
-- Installed with a single command-line, including all dependencies
-- User interaction through a single configuration file
-- ESD production:
-    - Compatible with both KiDS-450 (Feb 2016) and KiDS-DR2 (Mar 2015)
-- Halo model:
-    - Both an NFW stack and a full halo model (relies on [hmf](https://github.com/steven-murray/hmf) module for the mass function)
-- MCMC sampling:
-    - Uses `emcee` to sample parameters
+**2016 June 10** - Release v1.2.3. Features:
+- Bug fixes to compatibility issues with Numpy and blinding when running bootstrap.
+
+**2016 June 10** - Release v1.2.2. Features:
+- Bug fixes to filename generation.
+
+**2016 May 31** - Release v1.2.1. Features:
+ - Bug fixes.
+
+**2016 May 31** - Release v1.2.0 Features:
+ - Option to use The-wiZZ for obtaining `n(z)` of sources.
+ - Addition of miscentering into `halo.py`, inclusion of simpler HOD and point mass approximation for stellar contribution to lensing signal.
+ - Fixed issues with halo model and sampler when using only one bin.
+ - If using angular scales in ESD production, pipeline returns shears instead of ESD.
+ - KiDS+GAMA matching algorithm fixed.
+ - Multiple ID files now supported.
+
+**2016 Mar 5** - Release v1.1.2. Features:
+ - Crucial bug fixes.
+
+**2016 Feb 29** - Release v1.1.1. Features:
+ - Fixed demo config file to avoid confusion and problems when testing the pipeline for the first time.
 
 **2016 Feb 29** - Release v1.1.0. Features:
  - The syntax for `hm_output` parameters in the configuration file is now simpler and makes it easier to update the number of observable bins. Details can be found in `demo/ggl_demo_nfw_stack.txt`. Configuration files must be updated accordingly.
@@ -113,27 +126,14 @@ Update log:
 
  - General clean up of most modules
 
-**2016 Feb 29** - Release v1.1.1. Features:
- - Fixed demo config file to avoid confusion and problems when testing the pipeline for the first time.
-
-**2016 Mar 5** - Release v1.1.2. Features:
- - Crucial bug fixes.
-
-**2016 May 31** - Release v1.2.0 Features:
- - Option to use The-wiZZ for obtaining `n(z)` of sources.
- - Addition of miscentering into `halo.py`, inclusion of simpler HOD and point mass approximation for stellar contribution to lensing signal.
- - Fixed issues with halo model and sampler when using only one bin.
- - If using angular scales in ESD production, pipeline returns shears instead of ESD.
- - KiDS+GAMA matching algorithm fixed.
- - Multiple ID files now supported.
-
-**2016 May 31** - Release v1.2.1. Features:
- - Bug fixes.
-
-**2016 June 10** - Release v1.2.2. Features:
-- Bug fixes to filename generation.
-
-**2016 June 10** - Release v1.2.3. Features:
-- Bug fixes to compatibility issues with Numpy and blinding when running bootstrap.
+**2016 Feb 23** - First release v1.0.0. Features:
+- Installed with a single command-line, including all dependencies
+- User interaction through a single configuration file
+- ESD production:
+    - Compatible with both KiDS-450 (Feb 2016) and KiDS-DR2 (Mar 2015)
+- Halo model:
+    - Both an NFW stack and a full halo model (relies on [hmf](https://github.com/steven-murray/hmf) module for the mass function)
+- MCMC sampling:
+    - Uses `emcee` to sample parameters
 
 ---

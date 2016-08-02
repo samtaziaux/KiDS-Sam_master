@@ -251,12 +251,15 @@ def main():
                     Cs_N1 = sheardat_N1['Cs']
                     Ss_N1 = sheardat_N1['Ss']
                     Zs_N1 = sheardat_N1['Zs']
+                    if Cs_N1.size == 0:
+                        continue
                     
                     e1 = sheardat_N1['e1'][:,blindcatnum]
                     e2 = sheardat_N1['e2'][:,blindcatnum]
                     lfweight = sheardat_N1['lfweight'][:,blindcatnum]
                     srcmlist = sheardat_N1['bias_m']
                     variance = sheardat_N1['variance(e[A,B,C,D])'][0]
+    
 
                     e1 = np.reshape(e1,[len(e1),1])
                     e2 = np.reshape(e2,[len(e2),1])
@@ -304,7 +307,8 @@ def main():
                         Cs_N2 = np.array(sheardat_N2['Cs'])
                         Ss_N2 = np.array(sheardat_N2['Ss'])
                         Zs_N2 = np.array(sheardat_N2['Zs'])
-                    
+                        if Cs_N1.size == 0:
+                            continue
                         for R1 in xrange(nRbins):
                             for R2 in range(nRbins):
 

@@ -156,10 +156,26 @@ def run_emcee(hm_options, sampling_options, args):
         to = time()
         model = function(val1, R)
         print 'Model evaluated in {0:.2e} seconds'.format(time() - to)
-        residuals = esd - model[0]
+        #residuals = esd - model[0]
+        if 'model' in str(function):
+            # model assumes comoving separations, changing data to accomodate for that
+            redshift_index = numpy.where(params == 'z')[0]
+            redshift = array([val1[redshift_index]])
+            esd = esd/(1.0+redshift.T)**2.0
+            residuals = esd - model[0]
+            esd_err = esd_err/(1.0+redshift.T)**2.0
+        else:
+            residuals = esd - model[0]
+
         dof = esd.size - starting.size - 1
-        chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+        if 'model' in str(function):
+            redshift = numpy.outer((1.0+redshift)**2.0, (1.0+redshift)**2.0)
+            chi2 = array([dot(residuals[m], dot(icov[m][n]/redshift[m][n], residuals[n]))
                       for m in rng_obsbins for n in rng_obsbins]).sum()
+        else:
+            chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+                          for m in rng_obsbins for n in rng_obsbins]).sum()
+
         print ' ** chi2 = %.2f/%d **' %(chi2, dof)
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:
@@ -389,9 +405,28 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
-    residuals = esd - model[0]
-    chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-                  for m in rng_obsbins for n in rng_obsbins]).sum()
+    #residuals = esd - model[0]
+    #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+    #              for m in rng_obsbins for n in rng_obsbins]).sum()
+    
+    if 'model' in str(function):
+        # model assumes comoving separations, changing data to accomodate for that
+        redshift_index = numpy.where(params == 'z')[0]
+        redshift = array([v1[redshift_index]])
+        esd = esd/(1.0+redshift.T)**2.0
+        residuals = esd - model[0]
+    else:
+        residuals = esd - model[0]
+
+
+    if 'model' in str(function):
+        redshift = numpy.outer((1.0+redshift)**2.0, (1.0+redshift)**2.0)
+        chi2 = array([dot(residuals[m], dot(icov[m][n]/redshift[m][n], residuals[n]))
+                          for m in rng_obsbins for n in rng_obsbins]).sum()
+    else:
+        chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+                    for m in rng_obsbins for n in rng_obsbins]).sum()
+
     if not isfinite(chi2):
         return -inf, fail_value
     # remember that the last value returned by the models must be a lnprior

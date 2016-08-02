@@ -32,7 +32,7 @@ def main():
 
     print 'Final step: Plot the ESD profiles and correlation matrix'
     print
-
+    
     # Plot settings:
 
     # Plotting the data for the separate observable bins
@@ -147,13 +147,13 @@ def main():
                                      lens_binning, Rbins, Runit, h)
     except:
         print "Failed to create Matrix Plot of", filenamecov
-
+    
     # Addapted the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.
 
     # Remove the used splits
     if (Nsplit==0) and (blindcat==blindcats[0]):
-        msg = 'Warning: do you want to delete split files? [y/n] '
+        msg = '\nWarning: do you want to delete split files? [y/n] \n'
         answer = raw_input(msg)
         if len(answer) == 0:
             exit()

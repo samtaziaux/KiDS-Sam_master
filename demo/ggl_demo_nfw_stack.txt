@@ -140,9 +140,10 @@ lens_limits2      Nfof           self       5,inf
 ## Source selection
 
 # Allowed ranges in the KiDS source catalogue. The format is similar as for lens_limits
-# except the <catalogue> entry does not exist.
+# except the <catalogue> entry does not exist. When using with KiDS-450, use limits in
+# range [0.1, 0.9] with 0.1 increment.
 # Format: src_limits[i]    <param>      <limit(s)>
-src_limits1           Z_B        0.005,1.2
+src_limits1           Z_B        0.1,0.9
 
 
 ########################

@@ -107,7 +107,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         ps.append(p)
         for p in ps:
             p.wait()
-    
+
     # Stacking the lenses into an ESD profile
     if ('bootstrap' in purpose) or ('catalog' in purpose):
         runblinds('%sstack_shear+bootstrap.py' \

@@ -749,7 +749,7 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
     # We apply any other cuts specified by the user for Z_B
     srclims = src_selection['Z_B'][1]
     if len(srclims) == 1:
-        srcmask *= (spec_cat['Z_B'] == binlims[0])
+        srcmask *= (spec_cat['Z_B'] == srclims[0])
     else:
         srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
             (spec_cat['Z_B'] < srclims[1])
@@ -803,7 +803,7 @@ def import_spec_cat_pz(kidscatname, catmatch, srcNr):
     
     files = os.listdir(os.path.dirname('/disks/shear10/KiDS/All_tiles/'))
     filename = str(fnmatch.filter(files, kidscatname+'*')[0])
-    
+    print filename
     spec_cat = pyfits.open('/disks/shear10/KiDS/All_tiles/%s'%filename, memmap=True)[1].data
     
     Z_S = spec_cat['PZ_full']
@@ -991,7 +991,27 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     try:
         srcm = kidscat['m_cor'] # The multiplicative bias m
     except:
-        srcm = np.zeros(srcNr.size, dtype=np.float64)
+        if 'Z_B' in src_selection.keys():
+            srclims = src_selection['Z_B'][1]
+            if srclims[1] > 0.9:
+                print 'Do not use higher limit of Z_B > 0.9! Quitting...'
+                quit()
+            if srclims[0] > 0.5:
+                print 'Do not use lower limit of Z_B > 0.5! Quitting...'
+                quit()
+            if srclims[0] == 0.1:
+                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
+            if srclims[1] == 0.2:
+                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
+            if srclims[1] == 0.3:
+                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
+            if srclims[1] == 0.4:
+                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
+            if srclims[1] == 0.5:
+                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
+        else:
+            srcm = np.zeros(srcNr.size, dtype=np.float64)
+            #srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
 
     e1_A = kidscat['e1_A']
     e1_B = kidscat['e1_B']
@@ -1267,7 +1287,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
 
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
 def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
-
+    
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
     DlsoDs = (Dcsbins-Dcls)/Dcsbins
@@ -1290,22 +1310,22 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
                                 np.zeros(cond[1].size, dtype=np.int32)))
         cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
                                 np.zeros(cond[1].size, dtype=np.int32)))
+
+        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
         
-        cond[cond >= DlsoDs[0].size-1] = DlsoDs[0].size-1
-        cond2[cond2 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
-        cond3[cond4 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
-        cond4[cond3 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
-        
-        cond[cond >= DlsoDs[1].size-1] = DlsoDs[1].size-1
-        cond2[cond2 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
-        cond3[cond3 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
-        cond4[cond4 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
-        
+        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+
         DlsoDs[(cond[0], cond[1])] = 0.0
         DlsoDs[(cond2[0], cond2[1])] = 0.0
         DlsoDs[(cond3[0], cond3[1])] = 0.0
         DlsoDs[(cond4[0], cond4[1])] = 0.0
-
+    
     DlsoDsmask = [] # Empty unused lists
 
     # Matrix multiplication that sums over P(z),
@@ -1358,9 +1378,9 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
                       np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*\
                       np.cos(np.radians(galRA-srcRA))) # in radians
     incosphi = ((-np.cos(np.radians(galDEC))*(np.arctan(np.tan(np.radians(galRA-srcRA)))))**2-\
-                    (np.arctan(np.tan(np.radians(galDEC-srcDEC))))**2)/(theta)**2
+                (np.arctan(np.tan(np.radians(galDEC-srcDEC))))**2)/(theta)**2
     insinphi = 2*(-np.cos(np.radians(galDEC))*\
-                    (np.arctan(np.tan(np.radians(galRA-srcRA)))))*np.arctan(np.tan(np.radians(galDEC-srcDEC)))/(theta)**2
+                (np.arctan(np.tan(np.radians(galRA-srcRA)))))*np.arctan(np.tan(np.radians(galDEC-srcDEC)))/(theta)**2
 
     incosphi = incosphi.T
     insinphi = insinphi.T
@@ -1561,7 +1581,7 @@ def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
 def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
                 bias_tot, h, variance, wk2_tot, w2k2_tot, Nsrc, blindcat, blindcats, blindcatnum, \
                 galIDs_matched, galIDs_matched_infield):
-
+    
     config_params = filename_var
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]

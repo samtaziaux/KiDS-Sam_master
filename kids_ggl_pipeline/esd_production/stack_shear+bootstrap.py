@@ -321,10 +321,10 @@ def main():
             pass
         
     # Writing and showing the plot
-    try:
-        shear.write_plot(stackname, plotstyle)
-    except:
-        print 'Failed to write ESD plot for:', stackname 
+    #try:
+    shear.write_plot(stackname, plotstyle)
+    #except:
+        #print 'Failed to write ESD plot for:', stackname 
     
     return
 

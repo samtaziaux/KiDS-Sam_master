@@ -27,7 +27,8 @@ def main():
             cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
             path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, \
-            blindcatnum, path_kidscats, path_gamacat = shear.input_variables()
+            blindcatnum, path_kidscats, path_gamacat, specz_file = \
+            shear.input_variables()
 
     
     if 'bootstrap' in purpose:
@@ -241,7 +242,7 @@ def main():
                                                             kidscats[x], 0, \
                                                             filename_addition, \
                                                             blindcat)
-                
+
                 if os.path.isfile(shearcatname_N1):
                     print '	Combining field', x+1, '/', len(kidscats), \
                             ':', kidscats[x]
@@ -311,6 +312,7 @@ def main():
                                     cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2])) # The new covariance matrix
             
                 else:
+                    # This message should be a lot more explicit
                     print('ERROR: Not all fields are analysed! '\
                                   'Please restart shear code!')
                     quit()

@@ -31,8 +31,10 @@
 
 # Full path to the folder containing the KiDS catalogues to be used and
 # version of the KiDS catalogue being used. Options are 2 or 3. If you
-# are using version 3 (i.e. KiDS-450) then you *HAVE* to have spec-z
-# catalogue in the same location as the parent folder of individual patches!
+# are using version 3 (i.e. KiDS-450) then you should also provide the
+# path to the spec-z catalogue with the entry `specz_file`. If this
+# entry is not given, then it is assumed that the spec-z catalogue
+# is in the same location as the parent folder of individual patches.
 # The following paths work if you run the pipeline in Leiden.
 
 # Option 1:
@@ -41,6 +43,8 @@
 # Option 2:
 KiDS_path           /disks/shear10/dvornik/KidsCatalogues/DR3/
 KiDS_version        3
+# this entry is optional
+specz_file          /disks/shear10/KiDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat
 
 # Full path to the GAMA catalogue fits file.
 GAMA_path           /disks/shear10/brouwer_veersemeer/MergedCatalogues/GAMACatalogue_1.0.fits

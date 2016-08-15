@@ -4,16 +4,16 @@
 # calculate the shear profile catalog and the covariance.
 """
 import astropy.io.fits as pyfits
+import gc
 import numpy as np
 import sys
 import os
 import fnmatch
+import shlex
+import subprocess as sub
 import time
 from astropy import constants as const, units as u
-import glob
-import gc
-import subprocess as sub
-import shlex
+from glob import glob
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -52,10 +52,11 @@ def input_variables():
         print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h, \
-    path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
-    lensid_file, lens_weights, lens_binning, lens_selection, \
-    src_selection, cat_version, wizz, blindcats = esd_utils.read_config(config_file)
+    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, \
+        path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
+        lensid_file, lens_weights, lens_binning, lens_selection, \
+        src_selection, cat_version, wizz, blindcats = \
+        esd_utils.read_config(config_file)
 
     print
     print 'Running:', purpose
@@ -190,7 +191,7 @@ def input_variables():
             if os.path.isfile(placeholder):
                 os.remove(placeholder)
 
-            splitfiles = glob.glob(outname)
+            splitfiles = glob(outname)
             splitslist = np.append(splitslist, splitfiles)
             
             if len(splitfiles) == 0:
@@ -203,11 +204,11 @@ def input_variables():
         Ncat = 1
     
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
-    lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-    cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
-    path_results, purpose, O_matter, O_lambda, Ok, h, \
-    filename_addition, Ncat, splitslist, blindcats, blindcat, \
-    blindcatnum, path_kidscats, path_gamacat
+        lens_selection, lens_weights, binname, Nobsbins, src_selection, \
+        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        filename_addition, Ncat, splitslist, blindcats, blindcat, \
+        blindcatnum, path_kidscats, path_gamacat, specz_file
 
 
 # Defining the lensID lens selection/binning
@@ -730,21 +731,18 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
     return newseq
 
 
-def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
+def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
                     src_selection, cat_version):
-    try:
-        pattern = '*specweight.cat'
-
-        files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
-    
-        filename = str(fnmatch.filter(files, pattern)[0])
-    
-        spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
-        spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
-        print('Using direct callibration to estimate the redshifts.')
-    except:
-        print('Please check the required spec-z files.')
-        quit()
+    if specz_file is None:
+        specz_file = os.path.join(path_kidscats, '*specweight.cat')
+    files = glob(specz_file)
+    if len(files) == 0:
+        msg = 'Spec-z file {0} not found.'.format(filename)
+        raise IOError(msg)
+    elif len(files) > 1:
+        msg = 'Spec-z file name {0} ambiguous. Using file {1}.'.format(
+                filename, files[0])
+    spec_cat = pyfits.open(files[0], memmap=True)[1].data
     
     Z_S = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
@@ -1786,6 +1784,9 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
     file_ext = plotname.split('.')[-1]
     plotname = plotname.replace('.%s'%file_ext,'_%s.png'%plotstyle)
 
+    path = os.path.split(plotname)[0]
+    if path and not os.path.isdir(path):
+        os.makedirs(path)
     plt.savefig(plotname, format='png')
     print 'Written: ESD profile plot:', plotname
     #	plt.show()
@@ -1845,20 +1846,20 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
             ax_sub.set_yscale('log')
 
             if plotstyle == 'covlin':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             covariance[N1,N2,:,:], \
+                mappable = ax_sub.pcolormesh(Rbins, Rbins, 
+                                             covariance[N1,N2,:,:],
                                              vmin=-1e7, vmax=1e7)
             if plotstyle == 'covlog':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             abs(covariance[N1,N2,:,:]), \
+                mappable = ax_sub.pcolormesh(Rbins, Rbins,
+                                             abs(covariance[N1,N2,:,:]),
                                              norm=LogNorm(vmin=1e-7, vmax=1e7))
             if plotstyle == 'corlin':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             correlation[N1,N2,:,:], \
+                mappable = ax_sub.pcolormesh(Rbins, Rbins,
+                                             correlation[N1,N2,:,:],
                                              vmin=-1, vmax=1)
             if plotstyle == 'corlog':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             abs(correlation)[N1,N2,:,:], \
+                mappable = ax_sub.pcolormesh(Rbins, Rbins,
+                                             abs(correlation)[N1,N2,:,:],
                                              norm=LogNorm(vmin=1e-5, vmax=1e0))
 
             ax_sub.set_xlim(Rbins[0],Rbins[-1])
@@ -1874,25 +1875,25 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
                 if N1 == Nobsbins - 1:
                     ax_sub.xaxis.set_label_position('top')
                     if N2 == 0:
-                        ax_sub.set_xlabel(r'%s = %.3g - %.3g'%(binname, \
-                                                               obsbins[N2], \
-                                                               obsbins[N2+1]), \
+                        ax_sub.set_xlabel(r'%s = %.3g - %.3g' \
+                                          %(binname, obsbins[N2],
+                                            obsbins[N2+1]),
                                           fontsize=12)
                     else:
-                        ax_sub.set_xlabel(r'%.3g - %.3g'%(obsbins[N2], \
-                                                          obsbins[N2+1]), \
+                        ax_sub.set_xlabel(r'%.3g - %.3g' \
+                                          %(obsbins[N2], obsbins[N2+1]),
                                           fontsize=12)
 
                 if N2 == Nobsbins - 1:
                     ax_sub.yaxis.set_label_position('right')
                     if N1 == 0:
-                        ax_sub.set_ylabel(r'%s = %.3g - %.3g'%(binname, \
-                                                               obsbins[N1], \
-                                                               obsbins[N1+1]), \
+                        ax_sub.set_ylabel(r'%s = %.3g - %.3g' \
+                                          %(binname, obsbins[N1],
+                                            obsbins[N1+1]),
                                           fontsize=12)
                     else:
-                        ax_sub.set_ylabel(r'%.3g - %.3g'%(obsbins[N1], \
-                                                          obsbins[N1+1]), \
+                        ax_sub.set_ylabel(r'%.3g - %.3g' \
+                                          %(obsbins[N1], obsbins[N1+1]),
                                           fontsize=12)
 
 
@@ -1919,15 +1920,18 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
     ax.xaxis.label.set_size(17)
     ax.yaxis.label.set_size(17)
 
-    plt.text(0.5, 1.08, plottitle1, horizontalalignment='center', fontsize=17, \
-             transform = ax.transAxes)
-    plt.text(0.5, 1.05, plottitle2, horizontalalignment='center', fontsize=17, \
-             transform = ax.transAxes)
+    plt.text(0.5, 1.08, plottitle1, horizontalalignment='center',
+             fontsize=17, transform=ax.transAxes)
+    plt.text(0.5, 1.05, plottitle2, horizontalalignment='center',
+             fontsize=17, transform=ax.transAxes)
     plt.colorbar(mappable, cax=cax, orientation='vertical')
 
     file_ext = filename.split('.')[-1]
     plotname = filename.replace('.%s'%file_ext,'_%s.png'%plotstyle)
 
+    path = os.path.split(plotname)[0]
+    if path and not os.path.isdir(path):
+        os.makedirs(path)
     plt.savefig(plotname,format='png')
 
     print 'Written: Covariance matrix plot:', plotname

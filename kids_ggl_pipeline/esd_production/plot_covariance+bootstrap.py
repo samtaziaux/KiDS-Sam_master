@@ -28,7 +28,7 @@ def main():
     cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, \
-    path_kidscats, path_gamacat = shear.input_variables()
+    path_kidscats, path_gamacat, specz_file = shear.input_variables()
 
     print 'Final step: Plot the ESD profiles and correlation matrix'
     print
@@ -116,10 +116,10 @@ def main():
                                   plotstyle, subplots, N1+1, Runit, h)
             except:
                 pass
-        try:
-            shear.write_plot(filenameESD, plotstyle)
-        except:
-            print "Failed to create ESD Plot of:", filenameESD
+        #try:
+        shear.write_plot(filenameESD, plotstyle)
+        #except:
+            #print "Failed to create ESD Plot of:", filenameESD
 
     # Creating the ueber-matrix plot
     filename_N1 = filename_var.replace('binnumof', 's')
@@ -137,12 +137,12 @@ def main():
                                             (lens_binning.values()[0])[1][0], \
                                             (lens_binning.values()[0])[1][-1])
 
-    try:
-        shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, \
-                                     plotstyle_matrix, binname, \
-                                     lens_binning, Rbins, Runit, h)
-    except:
-        print "Failed to create Matrix Plot of", filenamecov
+    #try:
+    shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, \
+                                    plotstyle_matrix, binname, \
+                                    lens_binning, Rbins, Runit, h)
+    #except:
+        #print "Failed to create Matrix Plot of", filenamecov
 
     # Commented out the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.

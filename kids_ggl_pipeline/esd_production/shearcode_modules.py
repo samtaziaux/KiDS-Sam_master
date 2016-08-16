@@ -254,9 +254,13 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
                                              sellims[0], sellims[1])
                 var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
                                                      sellims[0], sellims[1])
-                plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
-                                                          sellims[0], selname, \
-                                                          sellims[1])
+                #plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
+                                                          #sellims[0], selname, \
+                                                          #sellims[1])
+                plottitle = '$\mathrm{{{0}\,{1:g}}} \leq'.format(
+                                plottitle, sellims[0])
+                plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(
+                                plottitle, selname, sellims[1])
         
     return filename_var, var_print, plottitle
 
@@ -1797,7 +1801,8 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
 
 # Plotting the analytical or bootstrap covariance matrix
 def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
-                           binname, lens_binning, Rbins, Runit, h):
+                           binname, lens_binning, Rbins, Runit, h,
+                           cmap='gray_r'):
 
     # Make use of TeX
     rc('text',usetex=True)
@@ -1848,19 +1853,22 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
             if plotstyle == 'covlin':
                 mappable = ax_sub.pcolormesh(Rbins, Rbins, 
                                              covariance[N1,N2,:,:],
-                                             vmin=-1e7, vmax=1e7)
+                                             vmin=-1e7, vmax=1e7, cmap=cmap)
             if plotstyle == 'covlog':
                 mappable = ax_sub.pcolormesh(Rbins, Rbins,
                                              abs(covariance[N1,N2,:,:]),
-                                             norm=LogNorm(vmin=1e-7, vmax=1e7))
+                                             norm=LogNorm(vmin=1e-7,vmax=1e7),
+                                             cmap=cmap)
             if plotstyle == 'corlin':
                 mappable = ax_sub.pcolormesh(Rbins, Rbins,
                                              correlation[N1,N2,:,:],
-                                             vmin=-1, vmax=1)
+                                             vmin=-1, vmax=1, cmap=cmap)
+                                             #cmap=cmap)
             if plotstyle == 'corlog':
                 mappable = ax_sub.pcolormesh(Rbins, Rbins,
                                              abs(correlation)[N1,N2,:,:],
-                                             norm=LogNorm(vmin=1e-5, vmax=1e0))
+                                             #norm=LogNorm(vmin=1e-5,vmax=1e0),
+                                             cmap=cmap)
 
             ax_sub.set_xlim(Rbins[0],Rbins[-1])
             ax_sub.set_ylim(Rbins[0],Rbins[-1])
@@ -1906,12 +1914,13 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
                    left='off', right='off')
 
     if 'pc' in Runit:
-        labelunit = '%s/h$_{%g}$)'%(Runit, h*100)
+        #labelunit = '%s/h$_{%g}$'%(Runit, h*100)
+        labelunit = '{0}/h$_{{{1:g}}}$'.format(Runit, h*100)
     else:
         labelunit = Runit
     
-    ax.set_xlabel(r'Radial distance (%s)'%labelunit)
-    ax.set_ylabel(r'Radial distance (%s)'%labelunit)
+    ax.set_xlabel(r'Radial distance ({0})'.format(labelunit))
+    ax.set_ylabel(r'Radial distance ({0})'.format(labelunit))
 
 
     ax.xaxis.set_label_coords(0.5, -0.05)

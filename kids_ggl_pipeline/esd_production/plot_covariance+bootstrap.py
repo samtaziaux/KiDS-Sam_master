@@ -46,7 +46,6 @@ def main():
     # Creating the ueber-matrix plot (covlin, covlog, corlin, corlog)
     plotstyle_matrix = 'corlin'
 
-
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
                                              'binnum', Nobsbins, \

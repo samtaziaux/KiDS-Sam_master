@@ -93,7 +93,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         ps.append(p)
         for p in ps:
             p.wait()
-    quit()
+    
     # Combine the splits according to the purpose
 
     # Combining the catalog splits to a single output

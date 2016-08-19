@@ -346,7 +346,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
             e2 = e2_varlist[:,index][[0,1,2,3],:].T
             srcm = srcm_varlist[(index)]
             tile = tile_varlist[(index)]
-            
+
             if len(srcNr) != 0:
                 srcPZ = np.array([srcPZ_a,]  *len(srcNr))
             else:
@@ -701,6 +701,7 @@ if __name__ == '__main__':
     zsrcbins = np.arange(0.025,3.5,0.05)
     Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
                         for y in zsrcbins])
+
     #import matplotlib.pyplot as pl
     if cat_version == 3:
         if wizz in 'False':
@@ -753,7 +754,48 @@ if __name__ == '__main__':
                                             cat_version, filename_var, Nsplits)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
 
-    
+    # Calculation of average m correctionf for KiDS-450
+    if cat_version == 3:
+        # Values are hardcoded, if image simulations give
+        # different results this must be changed!
+        print('\nCalculating average m correction...')
+        
+        m_corr = np.unique(srcm_varlist)
+        m_selection = {}
+        dlsods = np.zeros(m_corr.shape)
+        
+        for i, m in enumerate(m_corr):
+            srcm_i = srcm_varlist[srcm_varlist == m]
+            if m == -0.0165984884074:
+                m_selection['Z_B'] = ['self', np.array([0.1, 0.2])]
+            if m == -0.0107643100825:
+                m_selection['Z_B'] = ['self', np.array([0.2, 0.3])]
+            if m == -0.0163154916657:
+                m_selection['Z_B'] = ['self', np.array([0.3, 0.4])]
+            if m == -0.00983059386823:
+                m_selection['Z_B'] = ['self', np.array([0.4, 0.5])]
+            if m == -0.0050563715617:
+                m_selection['Z_B'] = ['self', np.array([0.5, 0.6])]
+            if m == -0.00931232658151:
+                m_selection['Z_B'] = ['self', np.array([0.6, 0.7])]
+            if m == -0.0135538269718:
+                m_selection['Z_B'] = ['self', np.array([0.7, 0.8])]
+            if m == -0.0286749355629:
+                m_selection['Z_B'] = ['self', np.array([0.8, 0.9])]
+        
+            srcNZ_m, spec_weight_m = shear.import_spec_cat(path_kidscats, kidscatname2,\
+                                                        kidscat_end, m_selection, \
+                                                        cat_version)
+            srcPZ_m, bins_m = np.histogram(srcNZ_m, range=[0.025, 3.5], bins=70, \
+                                                weights=spec_weight_m, density=1)
+            srcPZ_m = srcPZ_m/srcPZ_m.sum()
+            dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
+                                Dcsbins, srcPZ_m, cat_version))
+            
+        srcm_varlist = np.average(m_corr, weights=dlsods)
+        srcm_varlist = srcm_varlist * np.ones(srcNr_varlist.shape)
+
+
     # Printing the made choices
 
     print

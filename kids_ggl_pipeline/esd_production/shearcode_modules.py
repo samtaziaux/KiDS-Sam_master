@@ -988,31 +988,22 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         manmask = kidscat['MAN_MASK']
         tile = np.zeros(srcNr.size, dtype=np.float64)
     
-    try:
+    if cat_version == 2:
         srcm = kidscat['m_cor'] # The multiplicative bias m
-    except:
-        if 'Z_B' in src_selection.keys():
-            srclims = src_selection['Z_B'][1]
-            if srclims[1] > 0.9:
-                print 'Do not use higher limit of Z_B > 0.9! Quitting...'
-                quit()
-            if srclims[0] > 0.5:
-                print 'Do not use lower limit of Z_B > 0.5! Quitting...'
-                quit()
-            if srclims[0] == 0.1:
-                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
-            if srclims[1] == 0.2:
-                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
-            if srclims[1] == 0.3:
-                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
-            if srclims[1] == 0.4:
-                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
-            if srclims[1] == 0.5:
-                srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
-        else:
-            srcm = np.zeros(srcNr.size, dtype=np.float64)
-            #srcm = np.ones(srcNr.size, dtype=np.float64) * (-0.0125)
-
+    if cat_version == 3:
+        # Values are hardcoded, if image simulations give
+        # different results this must be changed!
+        srcm = np.zeros(srcNr.size, dtype=np.float64)
+        srcm[(0.1 < srcPZ) & (srcPZ <= 0.2)] = -0.0165984884074
+        srcm[(0.2 < srcPZ) & (srcPZ <= 0.3)] = -0.0107643100825
+        srcm[(0.3 < srcPZ) & (srcPZ <= 0.4)] = -0.0163154916657
+        srcm[(0.4 < srcPZ) & (srcPZ <= 0.5)] = -0.00983059386823
+        srcm[(0.5 < srcPZ) & (srcPZ <= 0.6)] = -0.0050563715617
+        srcm[(0.6 < srcPZ) & (srcPZ <= 0.7)] = -0.00931232658151
+        srcm[(0.7 < srcPZ) & (srcPZ <= 0.8)] = -0.0135538269718
+        srcm[(0.8 < srcPZ) & (srcPZ <= 0.9)] = -0.0286749355629
+            
+            
     e1_A = kidscat['e1_A']
     e1_B = kidscat['e1_B']
     e1_C = kidscat['e1_C']
@@ -1065,7 +1056,8 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     if cat_version == 2:
         srcmask = (w.T[0]>0.0)&(SN>0.0)&(srcm<0.0)&(manmask==0)&(-1<c1_A)
     if cat_version == 3:
-        srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)
+        srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)&(srcm!=0)
+        # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
 
     # We apply any other cuts specified by the user
     for param in src_selection.keys():
@@ -1344,6 +1336,59 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
 
     gc.collect()
     return k, kmask
+
+
+
+# Weigth for average m correction in KiDS-450
+def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version):
+    
+    # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
+    Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
+    DlsoDs = (Dcsbins-Dcls)/Dcsbins
+    Dcls = [] # Empty unused lists
+    Dcsbins = []
+    
+    # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
+    #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
+    #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
+    DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    
+    if cat_version == 3:
+        cond = np.array(np.where(DlsoDs == 0.0))
+        
+        cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+                                
+        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+                                
+        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+                                
+        DlsoDs[(cond[0], cond[1])] = 0.0
+        DlsoDs[(cond2[0], cond2[1])] = 0.0
+        DlsoDs[(cond3[0], cond3[1])] = 0.0
+        DlsoDs[(cond4[0], cond4[1])] = 0.0
+    
+    DlsoDsmask = [] # Empty unused lists
+
+    # Matrix multiplication that sums over P(z),
+    # to calculate <Dls/Ds> for each lens-source pair
+    DlsoDs = np.dot(srcPZ, DlsoDs).T
+    
+    gc.collect()
+    return DlsoDs
+
 
 
 # Calculate the projected distance (srcR) and the

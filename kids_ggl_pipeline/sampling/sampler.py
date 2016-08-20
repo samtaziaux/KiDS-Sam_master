@@ -130,6 +130,7 @@ def run_emcee(hm_options, sampling_options, args):
     if args.demo:
         import pylab
         from matplotlib import cm
+        #print R.shape, gt.shape
         def plot_demo(ax, Ri, gt, gt_err, f):
             Ri = Ri[1:]
             ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
@@ -462,8 +463,8 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                 else:
                     metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
                     n += 1
-            lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
-                                                           for b in blob])
+            #lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
+                                                           #for b in blob])
             lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])
             chi2[j*nwalkers:(j+1)*nwalkers] = array([b[-2] for b in blob])
             lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
@@ -475,14 +476,17 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                 fmt = fmt[-1]
             columns.append(Column(name=name, array=val, format=fmt))
     columns.append(Column(name='lnprior', format='E', array=lnprior))
-    columns.append(Column(name='lnPderived', format='E', array=lnPderived))
+    #columns.append(Column(name='lnPderived', format='E', array=lnPderived))
     columns.append(Column(name='chi2', format='E', array=chi2))
     columns.append(Column(name='lnlike', format='E', array=lnlike))
     fitstbl = BinTableHDU.from_columns(columns)
     fitstbl.writeto(output)
     nwritten = iternum * nwalkers
-    print 'Saved to {0} with {1} samples'.format(output, nwritten),
+    print 'Saved to {0} with {1} samples'.format(output, nwritten)
     if thin > 1:
-        print '(printing every {0}th sample)'.format(thin),
-    print '- {0}'.format(ctime())
+        print '(printing every {0}th sample)'.format(thin)
+    print 'acceptance fraction =', sampler.acceptance_fraction
+    print 'autocorrelation length =', sampler.acor
+    print 'autocorrelation time =', sampler.get_autocorr_time()
+    print '{0}'.format(ctime())
     return metadata, nwritten

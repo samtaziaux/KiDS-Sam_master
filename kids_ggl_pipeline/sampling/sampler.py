@@ -162,19 +162,14 @@ def run_emcee(hm_options, sampling_options, args):
             redshift_index = numpy.where(params == 'z')[0]
             redshift = array([val1[redshift_index]])
             esd = esd/(1.0+redshift.T)**2.0
-            residuals = esd - model[0]
+            residuals = (esd - model[0])*(1.0+redshift.T)**2.0
             esd_err = esd_err/(1.0+redshift.T)**2.0
         else:
             residuals = esd - model[0]
 
         dof = esd.size - starting.size - 1
-        if 'model' in str(function):
-            redshift = numpy.outer((1.0+redshift)**2.0, (1.0+redshift)**2.0)
-            chi2 = array([dot(residuals[m], dot(icov[m][n]/redshift[m][n], residuals[n]))
-                      for m in rng_obsbins for n in rng_obsbins]).sum()
-        else:
-            chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-                          for m in rng_obsbins for n in rng_obsbins]).sum()
+        chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+                    for m in rng_obsbins for n in rng_obsbins]).sum()
 
         print ' ** chi2 = %.2f/%d **' %(chi2, dof)
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
@@ -183,7 +178,7 @@ def run_emcee(hm_options, sampling_options, args):
         else:
             for i in izip(axes, R, esd, esd_err, model[0]):
                 plot_demo(*i)
-        if npall(esd - esd_err > 0):
+        if npall(esd - esd_err > 0) or 'model' in str(function):
             if Ndatafiles == 1:
                 axes.set_yscale('log')
             else:
@@ -414,17 +409,11 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
         redshift_index = numpy.where(params == 'z')[0]
         redshift = array([v1[redshift_index]])
         esd = esd/(1.0+redshift.T)**2.0
-        residuals = esd - model[0]
+        residuals = (esd - model[0])*(1.0+redshift.T)**2.0
     else:
         residuals = esd - model[0]
 
-
-    if 'model' in str(function):
-        redshift = numpy.outer((1.0+redshift)**2.0, (1.0+redshift)**2.0)
-        chi2 = array([dot(residuals[m], dot(icov[m][n]/redshift[m][n], residuals[n]))
-                          for m in rng_obsbins for n in rng_obsbins]).sum()
-    else:
-        chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+    chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                     for m in rng_obsbins for n in rng_obsbins]).sum()
 
     if not isfinite(chi2):

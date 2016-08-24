@@ -46,7 +46,7 @@ def run_emcee(hm_options, sampling_options, args):
         if answer.lower() not in ('y', 'yes'):
             exit()
     if not args.demo:
-        print '\nStarted - {0}\n'.format(ctime())
+        print '\n{0}: Started\n'.format(ctime())
 
     # load data files
     Ndatafiles = len(datafile)
@@ -130,7 +130,6 @@ def run_emcee(hm_options, sampling_options, args):
     if args.demo:
         import pylab
         from matplotlib import cm
-        #print R.shape, gt.shape
         def plot_demo(ax, Ri, gt, gt_err, f):
             Ri = Ri[1:]
             ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
@@ -164,7 +163,7 @@ def run_emcee(hm_options, sampling_options, args):
         print ' ** chi2 = %.2f/%d **' %(chi2, dof)
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:
-            plot_demo(axes, R[0], esd[0], esd_err[0], model[0][0])
+            plot_demo(axes, R[0], esd[0], esd_err[0], model[0])
         else:
             for i in izip(axes, R, esd, esd_err, model[0]):
                 plot_demo(*i)
@@ -202,6 +201,7 @@ def run_emcee(hm_options, sampling_options, args):
     metadata = [[] for m in meta_names]
     for j, fmt in enumerate(fits_format):
         n = 1 if len(fmt) == 1 else int(fmt[0])
+        # is this value a scalar?
         if len(fmt) == 1:
             size = nwalkers * nsteps / thin
         else:
@@ -220,8 +220,8 @@ def run_emcee(hm_options, sampling_options, args):
         shape = list(m.shape)
         shape.remove(max(shape))
         fail_value.append(zeros(shape))
-    # the last numbers are data chi2, lnLdata, lnPderived
-    for i in xrange(4):
+    # the last numbers are data chi2, lnLdata
+    for i in xrange(3):
         fail_value.append(9999)
 
     sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
@@ -232,30 +232,28 @@ def run_emcee(hm_options, sampling_options, args):
                                           jfree,lnprior,likenorm,
                                           rng_obsbins,fail_value,
                                           array,dot,inf,izip,outer,pi))
-                                          #isfinite,log,log10
-                                          #outer,sqrt,zeros))
     # burn-in
     if nburn > 0:
         pos, prob, state, blobs = sampler.run_mcmc(po, nburn)
         sampler.reset()
-        print '{0} Burn-in steps finished ({1})'.format(nburn, ctime())
+        print '{1}: {0} Burn-in steps finished'.format(nburn, ctime())
     else:
         pos = po
     # incrementally save output
-    chi2 = [zeros(nwalkers*nsteps/thin) for i in xrange(4)]
+    # this array contains lnprior, chi2, lnlike
+    chi2 = [zeros(nwalkers*nsteps/thin) for i in xrange(3)]
     nwritten = 0
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
         # make sure that nwalkers is a factor of this number!
-        #if i*nwalkers % update_freq == nwalkers:
-        if i + update_freq > nwritten + nwalkers:
+        if i * nwalkers > nwritten + update_freq:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
                                 fits_format, update_freq, i, nwritten,
                                 Nobsbins, fail_value, array, BinTableHDU,
                                 Column, ctime, enumerate, isfile, izip,
                                 transpose, xrange)
-            metadata, nwriten = out
+            metadata, nwritten = out
 
     hdr = open(hdrfile, 'a')
     try:
@@ -298,6 +296,7 @@ def run_emcee(hm_options, sampling_options, args):
     print 'Everything saved to {0}!'.format(output)
     return
 
+
 def lnprob(theta, R, esd, icov, function, params, prior_types,
            val1, val2, val3, val4, params_join, jfree, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, izip, outer, pi):
@@ -313,9 +312,9 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
         R
             projected distances from the satellite
         esd
-            Excess surface density at distances R
-        esd_err
-            Uncertainties on the ESD
+            excess surface density at distances R
+        icov
+            inverse covariance
         function
             the model used to calculate the likelihood
         prior_types
@@ -391,6 +390,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
     residuals = esd - model[0]
+    #print(R.shape, esd.shape)
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
     if not isfinite(chi2):
@@ -401,7 +401,10 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     model.append(lnprior_total)
     model.append(chi2)
     model.append(lnlike)
-    return lnlike + model[-3] + lnprior_total, model
+    # model[-3] is lnPderived, removed in v1.3.0
+    #return lnlike + model[-3] + lnprior_total, model
+    return lnlike + lnprior_total, model
+
 
 def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                   metadata, meta_names, fits_format, update_freq, iternum,
@@ -410,7 +413,9 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     nchi2 = len(chi2)
     # the two following lines should remain consistent if modified
     chi2_loc = -2
-    lnprior, lnPderived, chi2, lnlike = chi2
+    # removed lnPderived in v1.3.0
+    #lnprior, lnPderived, chi2, lnlike = chi2
+    lnprior, chi2, lnlike = chi2
     if isfile(output):
         remove(output)
     chain = transpose(sampler.chain, axes=(2,1,0))
@@ -439,6 +444,11 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                     continue
                 n = 0
                 for param in walker[:-nchi2]:
+                    # if it's a scalar
+                    if not hasattr(param, '__iter__'):
+                        data[n] = param
+                        n += 1
+                        continue
                     if len(data[n].shape) == 2 and len(param.shape) == 1:
                         data[n][i] = param
                         n += 1
@@ -449,9 +459,14 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             # store data
             n = 0
             for k in xrange(len(data)):
+                # if using a single bin, there can be scalars
+                if not hasattr(data[k], '__iter__'):
+                    metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
+                    n += 1
+                    continue
                 shape = data[k].shape
                 if len(shape) == 3:
-                    for i, datum in enumerate(data[k]):
+                    for datum in data[k]:
                         for m, val in enumerate(datum):
                             metadata[n][j*nwalkers:(j+1)*nwalkers] = val
                             n += 1
@@ -470,10 +485,11 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
         # this handles exclude_bins properly
         for name, val, fmt in izip(meta_names, metadata, fits_format):
-            try:
-                fmt = '{0}{1}'.format(val.shape[1], fmt[-1])
-            except IndexError:
+            val = squeeze(val)
+            if len(val.shape) == 1:
                 fmt = fmt[-1]
+            else:
+                fmt = '{0}{1}'.format(val.shape[1], fmt[-1])
             columns.append(Column(name=name, array=val, format=fmt))
     columns.append(Column(name='lnprior', format='E', array=lnprior))
     #columns.append(Column(name='lnPderived', format='E', array=lnPderived))
@@ -482,11 +498,12 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     fitstbl = BinTableHDU.from_columns(columns)
     fitstbl.writeto(output)
     nwritten = iternum * nwalkers
-    print 'Saved to {0} with {1} samples'.format(output, nwritten)
+    print '{2}: Saved to {0} with {1} samples'.format(
+            output, nwritten, ctime())
     if thin > 1:
         print '(printing every {0}th sample)'.format(thin)
-    print 'acceptance fraction =', sampler.acceptance_fraction
-    print 'autocorrelation length =', sampler.acor
-    print 'autocorrelation time =', sampler.get_autocorr_time()
-    print '{0}'.format(ctime())
+    #print 'acceptance fraction =', sampler.acceptance_fraction
+    # these two are the same
+    #print 'autocorrelation length =', sampler.acor
+    #print 'autocorrelation time =', sampler.get_autocorr_time()
     return metadata, nwritten

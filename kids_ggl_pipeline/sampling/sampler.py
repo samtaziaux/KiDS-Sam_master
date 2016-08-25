@@ -245,8 +245,7 @@ def run_emcee(hm_options, sampling_options, args):
     nwritten = 0
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
-        # make sure that nwalkers is a factor of this number!
-        if i > 0 and (i+1) * nwalkers > nwritten + update_freq:
+        if i > 0 and (i+1) * nwalkers > nwalkers * nwritten + update_freq:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
                                 fits_format, update_freq, i, nwritten,

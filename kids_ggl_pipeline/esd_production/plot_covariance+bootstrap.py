@@ -28,7 +28,7 @@ def main():
     cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, \
-    path_kidscats, path_gamacat = shear.input_variables()
+    path_kidscats, path_gamacat, specz_file = shear.input_variables()
 
     print 'Final step: Plot the ESD profiles and correlation matrix'
     print
@@ -45,7 +45,6 @@ def main():
 
     # Creating the ueber-matrix plot (covlin, covlog, corlin, corlog)
     plotstyle_matrix = 'corlin'
-
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
@@ -67,26 +66,22 @@ def main():
     # Importing all GAMA data, and the information on
     # radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
-    Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
-    galweightlist, galZlist, Dcllist, Dallist = shear.import_data(path_Rbins, \
-                                                        Runit, path_gamacat, \
-                                                        path_kidscats, \
-                                                        centering, \
-                                                        purpose, Ncat, \
-                                                        O_matter, O_lambda, \
-                                                        Ok, h, lens_weights, \
-                                                        filename_addition, \
-                                                        cat_version)
+        Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
+        galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
+            path_Rbins, Runit, path_gamacat, path_kidscats, centering,
+            purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
+            filename_addition, cat_version)
     
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering, \
-                                           lens_selection, 'None', \
-                                           'None', 0, -inf, inf)
+    lenssel_binning = shear.define_lenssel(gamacat, centering,
+                                           lens_selection, 'None',
+                                           'None', 0, -inf, inf, Dcllist)
     # Mask the galaxies in the shear catalog, 
     # WITHOUT binning (for the bin creation)
     binname, lens_binning, \
-    Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                                    lenssel_binning, gamacat)
+    Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning,
+                                                    lenssel_binning, gamacat,
+                                                    Dcllist)
 
 
     # Writing and showing the plots
@@ -102,7 +97,7 @@ def main():
             binname, lens_binning, \
             Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
                                                         lenssel_binning, \
-                                                        gamacat)
+                                                        gamacat, Dcllist)
 
             filename_N1 = filename_var.replace('binnum', '%i'%(N1+1))
             filenameESD = shear.define_filename_results(path_results, purpose, \
@@ -120,10 +115,10 @@ def main():
                                   plotstyle, subplots, N1+1, Runit, h)
             except:
                 pass
-        try:
-            shear.write_plot(filenameESD, plotstyle)
-        except:
-            print "Failed to create ESD Plot of:", filenameESD
+        #try:
+        shear.write_plot(filenameESD, plotstyle)
+        #except:
+            #print "Failed to create ESD Plot of:", filenameESD
 
     # Creating the ueber-matrix plot
     filename_N1 = filename_var.replace('binnumof', 's')

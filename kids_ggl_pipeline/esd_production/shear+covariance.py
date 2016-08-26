@@ -310,9 +310,11 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 time.sleep(30) # wait before continuing the calculation
             """
             kidscatN = kidscatN+1
+#def define_lenssel(gamacat, centering, lens_selection, lens_binning,
+                   #binname, binnum, binmin, binmax, Dcllist):
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \
-                                           binmin, binmax)
+                                           binmin, binmax, Dcllist)
             
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -532,11 +534,12 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
 if __name__ == '__main__':
 
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
-    lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-    cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
-    path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
-    splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
-    path_gamacat = shear.input_variables()
+        lens_selection, lens_weights, binname, Nobsbins, src_selection, \
+        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        filename_addition, Ncat, splitslist, blindcats, blindcat, \
+        blindcatnum, path_kidscats, path_gamacat, specz_file = \
+        shear.input_variables()
 
     print 'Step 1: Create split catalogues in parallel'
     print
@@ -688,12 +691,14 @@ if __name__ == '__main__':
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist)
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, \
-                                           'None', 'None', 0, -inf, inf)
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
+                                           'None', 'None', 0, -inf, inf,
+                                           Dcllist)
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     binname, lens_binning, Nobsbins, binmin, binmax = \
-    shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat)
+        shear.define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
+                             Dcllist)
 
 
     # We translate the range in source redshifts

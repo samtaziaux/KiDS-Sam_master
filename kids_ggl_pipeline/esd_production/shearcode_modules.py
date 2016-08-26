@@ -4,16 +4,22 @@
 # calculate the shear profile catalog and the covariance.
 """
 import astropy.io.fits as pyfits
+import gc
 import numpy as np
 import sys
 import os
 import fnmatch
+import shlex
+import subprocess as sub
 import time
 from astropy import constants as const, units as u
-import glob
-import gc
-import subprocess as sub
-import shlex
+from glob import glob
+
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
+from matplotlib import gridspec
+from matplotlib import rc, rcParams
+
 
 import distance
 import esd_utils
@@ -46,10 +52,11 @@ def input_variables():
         print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, O_matter, O_lambda, Ok, h, \
-    path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
-    lensid_file, lens_weights, lens_binning, lens_selection, \
-    src_selection, cat_version, wizz, blindcats = esd_utils.read_config(config_file)
+    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, \
+        path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
+        lensid_file, lens_weights, lens_binning, lens_selection, \
+        src_selection, cat_version, wizz, blindcats = \
+        esd_utils.read_config(config_file)
 
     print
     print 'Running:', purpose
@@ -184,7 +191,7 @@ def input_variables():
             if os.path.isfile(placeholder):
                 os.remove(placeholder)
 
-            splitfiles = glob.glob(outname)
+            splitfiles = glob(outname)
             splitslist = np.append(splitslist, splitfiles)
             
             if len(splitfiles) == 0:
@@ -197,11 +204,11 @@ def input_variables():
         Ncat = 1
     
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
-    lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-    cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
-    path_results, purpose, O_matter, O_lambda, Ok, h, \
-    filename_addition, Ncat, splitslist, blindcats, blindcat, \
-    blindcatnum, path_kidscats, path_gamacat
+        lens_selection, lens_weights, binname, Nobsbins, src_selection, \
+        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        filename_addition, Ncat, splitslist, blindcats, blindcat, \
+        blindcatnum, path_kidscats, path_gamacat, specz_file
 
 
 # Defining the lensID lens selection/binning
@@ -247,9 +254,13 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
                                              sellims[0], sellims[1])
                 var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
                                                      sellims[0], sellims[1])
-                plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
-                                                          sellims[0], selname, \
-                                                          sellims[1])
+                #plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
+                                                          #sellims[0], selname, \
+                                                          #sellims[1])
+                plottitle = '$\mathrm{{{0}\,{1:g}}} \leq'.format(
+                                plottitle, sellims[0])
+                plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(
+                                plottitle, selname, sellims[1])
         
     return filename_var, var_print, plottitle
 
@@ -406,8 +417,8 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
     gc.collect()
     
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
-    Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
-    galDEClist, galweightlist, galZlist, Dcllist, Dallist
+        Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
+        galDEClist, galweightlist, galZlist, Dcllist, Dallist
 
 
 # Define the radial bins around the lenses
@@ -622,7 +633,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
     else:
         Rmax = Rmax + Rfield
         print "*** Using new lens-field matching procedure ***"
-        print "(for 'early science' mode, put"\
+        print "(for 'early science' mode, select"\
                 " 'oldcatmatch' in 'ESD_output_filename')"
 
     totgalIDs = np.array([])
@@ -724,21 +735,18 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
     return newseq
 
 
-def import_spec_cat(path_kidscats, kidscatname, kidscat_end, \
+def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
                     src_selection, cat_version):
-    try:
-        pattern = '*specweight.cat'
-
-        files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
-    
-        filename = str(fnmatch.filter(files, pattern)[0])
-    
-        spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
-        spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
-        print('Using direct callibration to estimate the redshifts.')
-    except:
-        print('Please check the required spec-z files.')
-        quit()
+    if specz_file is None:
+        specz_file = os.path.join(path_kidscats, '*specweight.cat')
+    files = glob(specz_file)
+    if len(files) == 0:
+        msg = 'Spec-z file {0} not found.'.format(filename)
+        raise IOError(msg)
+    elif len(files) > 1:
+        msg = 'Spec-z file name {0} ambiguous. Using file {1}.'.format(
+                filename, files[0])
+    spec_cat = pyfits.open(files[0], memmap=True)[1].data
     
     Z_S = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
@@ -1139,7 +1147,8 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
 
 
 # Binnning information of the groups
-def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
+def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
+                   Dcllist=[]):
 
     # Check how the binning is given
     binname = lens_binning.keys()[0]
@@ -1148,7 +1157,8 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
         if 'ID' in binname:
             Nobsbins = len(lens_binning.keys())
             if len(lenssel_binning) > 0:
-                print 'Lens binning: Lenses divided in %i lens-ID bins'%(Nobsbins)
+                print 'Lens binning: Lenses divided in %i lens-ID bins' \
+                      %(Nobsbins)
 
         else:
             obsbins = lens_binning[binname][1]
@@ -1167,22 +1177,23 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
                 
                 # Importing the binning file
                 if obsfile == 'self':
-                    obslist = define_obslist(binname, gamacat)
+                    obslist = define_obslist(binname, gamacat, Dcllist)
                 else:
-                    print 'Using %s from %s'%(binname, obsfile)
+                    print 'Using %s from %s' %(binname, obsfile)
                     obscat = pyfits.open(obsfile)[1].data
                     obslist = obscat[binname]
 
                 
                 print
-                print 'Lens binning: Lenses divided in %i %s-bins'%(Nobsbins, \
-                                                                    binname)
+                print 'Lens binning: Lenses divided in %i %s-bins' \
+                      %(Nobsbins, binname)
                 print '%s Min:          Max:          Mean:'%binname
                 for b in xrange(Nobsbins):
                     lenssel = lenssel_binning & (obsbins[b] <= obslist) \
                                 & (obslist < obsbins[b+1])
-                    print '%g    %g    %g'%(obsbins[b], obsbins[b+1], \
-                                            np.mean(obslist[lenssel]))
+                    print '%g    %g    %g' \
+                          %(obsbins[b], obsbins[b+1],
+                            np.mean(obslist[lenssel]))
             
     else: # If there is no binning
         obsbins = np.array([-999, -999])
@@ -1203,15 +1214,15 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat):
 
 
 # Corrections on GAMA catalog observables
-def define_obslist(obsname, gamacat):
+def define_obslist(obsname, gamacat, Dcllist=[]):
 
     obslist = gamacat[obsname]
 
-    if 'AngSep' in obsname:
-        print 'Applying cosmology correction "AngSep"'
+    if 'AngSep' in obsname and len(Dcllist) > 0:
+        print 'Applying cosmology correction to "AngSep"'
 
-        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.) \
-                            for z in galZlist])
+        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
+                            for z in gamacat['Z']])
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list
 
@@ -1229,7 +1240,7 @@ def define_obslist(obsname, gamacat):
 # Masking the lenses according to the appropriate
 # lens selection and the current KiDS field
 def define_lenssel(gamacat, centering, lens_selection, lens_binning,
-                   binname, binnum, binmin, binmax):
+                   binname, binnum, binmin, binmax, Dcllist):
 
     lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
@@ -1241,7 +1252,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_selection[param][0]
         # Importing the binning file
         if obsfile == 'self':
-            obslist = define_obslist(param, gamacat)
+            obslist = define_obslist(param, gamacat, Dcllist)
         else:
             print 'Using %s from %s'%(param, obsfile)
             bincat = pyfits.open(obsfile)[1].data
@@ -1260,9 +1271,9 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_binning[binname][0]
         if obsfile == 'self':
             if 'ID' in binname:
-                obslist = define_obslist('ID', gamacat)
+                obslist = define_obslist('ID', gamacat, Dcllist)
             else:
-                obslist = define_obslist(binname, gamacat)
+                obslist = define_obslist(binname, gamacat, Dcllist)
         else:
             print 'Using %s from %s'%(binname, obsfile)
             bincat = pyfits.open(obsfile)[1].data
@@ -1692,11 +1703,6 @@ def define_plottitle(purpose, centering, lens_selection, \
 def define_plot(filename, plotlabel, plottitle, plotstyle, \
                 Nsubplots, n, Runit, h):
 
-    from matplotlib import pyplot as plt
-    from matplotlib.colors import LogNorm
-    from matplotlib import gridspec
-    from matplotlib import rc, rcParams
-
     # Make use of TeX
     rc('text',usetex=True)
 
@@ -1819,11 +1825,6 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
 # Writing the ESD profile plot
 def write_plot(plotname, plotstyle): # Writing and showing the plot
 
-    from matplotlib import pyplot as plt
-    from matplotlib.colors import LogNorm
-    from matplotlib import gridspec
-    from matplotlib import rc, rcParams
-
     #	# Make use of TeX
     rc('text',usetex=True)
 
@@ -1834,6 +1835,9 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
     file_ext = plotname.split('.')[-1]
     plotname = plotname.replace('.%s'%file_ext,'_%s.png'%plotstyle)
 
+    path = os.path.split(plotname)[0]
+    if path and not os.path.isdir(path):
+        os.makedirs(path)
     plt.savefig(plotname, format='png')
     print 'Written: ESD profile plot:', plotname
     #	plt.show()
@@ -1844,12 +1848,8 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
 
 # Plotting the analytical or bootstrap covariance matrix
 def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
-                           binname, lens_binning, Rbins, Runit, h):
-
-    from matplotlib import pyplot as plt
-    from matplotlib.colors import LogNorm
-    from matplotlib import gridspec
-    from matplotlib import rc, rcParams
+                           binname, lens_binning, Rbins, Runit, h,
+                           cmap='gray_r'):
 
     # Make use of TeX
     rc('text',usetex=True)
@@ -1898,21 +1898,24 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
             ax_sub.set_yscale('log')
 
             if plotstyle == 'covlin':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             covariance[N1,N2,:,:], \
-                                             vmin=-1e7, vmax=1e7)
+                mappable = ax_sub.pcolormesh(Rbins, Rbins, 
+                                             covariance[N1,N2,:,:],
+                                             vmin=-1e7, vmax=1e7, cmap=cmap)
             if plotstyle == 'covlog':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             abs(covariance[N1,N2,:,:]), \
-                                             norm=LogNorm(vmin=1e-7, vmax=1e7))
+                mappable = ax_sub.pcolormesh(Rbins, Rbins,
+                                             abs(covariance[N1,N2,:,:]),
+                                             norm=LogNorm(vmin=1e-7,vmax=1e7),
+                                             cmap=cmap)
             if plotstyle == 'corlin':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             correlation[N1,N2,:,:], \
-                                             vmin=-1, vmax=1)
+                mappable = ax_sub.pcolormesh(Rbins, Rbins,
+                                             correlation[N1,N2,:,:],
+                                             vmin=-1, vmax=1, cmap=cmap)
+                                             #cmap=cmap)
             if plotstyle == 'corlog':
-                mappable = ax_sub.pcolormesh(Rbins, Rbins, \
-                                             abs(correlation)[N1,N2,:,:], \
-                                             norm=LogNorm(vmin=1e-5, vmax=1e0))
+                mappable = ax_sub.pcolormesh(Rbins, Rbins,
+                                             abs(correlation)[N1,N2,:,:],
+                                             #norm=LogNorm(vmin=1e-5,vmax=1e0),
+                                             cmap=cmap)
 
             ax_sub.set_xlim(Rbins[0],Rbins[-1])
             ax_sub.set_ylim(Rbins[0],Rbins[-1])
@@ -1927,25 +1930,25 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
                 if N1 == Nobsbins - 1:
                     ax_sub.xaxis.set_label_position('top')
                     if N2 == 0:
-                        ax_sub.set_xlabel(r'%s = %.3g - %.3g'%(binname, \
-                                                               obsbins[N2], \
-                                                               obsbins[N2+1]), \
+                        ax_sub.set_xlabel(r'%s = %.3g - %.3g' \
+                                          %(binname, obsbins[N2],
+                                            obsbins[N2+1]),
                                           fontsize=12)
                     else:
-                        ax_sub.set_xlabel(r'%.3g - %.3g'%(obsbins[N2], \
-                                                          obsbins[N2+1]), \
+                        ax_sub.set_xlabel(r'%.3g - %.3g' \
+                                          %(obsbins[N2], obsbins[N2+1]),
                                           fontsize=12)
 
                 if N2 == Nobsbins - 1:
                     ax_sub.yaxis.set_label_position('right')
                     if N1 == 0:
-                        ax_sub.set_ylabel(r'%s = %.3g - %.3g'%(binname, \
-                                                               obsbins[N1], \
-                                                               obsbins[N1+1]), \
+                        ax_sub.set_ylabel(r'%s = %.3g - %.3g' \
+                                          %(binname, obsbins[N1],
+                                            obsbins[N1+1]),
                                           fontsize=12)
                     else:
-                        ax_sub.set_ylabel(r'%.3g - %.3g'%(obsbins[N1], \
-                                                          obsbins[N1+1]), \
+                        ax_sub.set_ylabel(r'%.3g - %.3g' \
+                                          %(obsbins[N1], obsbins[N1+1]),
                                           fontsize=12)
 
 
@@ -1958,12 +1961,13 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
                    left='off', right='off')
 
     if 'pc' in Runit:
-        labelunit = '%s/h$_{%g}$)'%(Runit, h*100)
+        #labelunit = '%s/h$_{%g}$'%(Runit, h*100)
+        labelunit = '{0}/h$_{{{1:g}}}$'.format(Runit, h*100)
     else:
         labelunit = Runit
     
-    ax.set_xlabel(r'Radial distance (%s)'%labelunit)
-    ax.set_ylabel(r'Radial distance (%s)'%labelunit)
+    ax.set_xlabel(r'Radial distance ({0})'.format(labelunit))
+    ax.set_ylabel(r'Radial distance ({0})'.format(labelunit))
 
 
     ax.xaxis.set_label_coords(0.5, -0.05)
@@ -1972,15 +1976,18 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
     ax.xaxis.label.set_size(17)
     ax.yaxis.label.set_size(17)
 
-    plt.text(0.5, 1.08, plottitle1, horizontalalignment='center', fontsize=17, \
-             transform = ax.transAxes)
-    plt.text(0.5, 1.05, plottitle2, horizontalalignment='center', fontsize=17, \
-             transform = ax.transAxes)
+    plt.text(0.5, 1.08, plottitle1, horizontalalignment='center',
+             fontsize=17, transform=ax.transAxes)
+    plt.text(0.5, 1.05, plottitle2, horizontalalignment='center',
+             fontsize=17, transform=ax.transAxes)
     plt.colorbar(mappable, cax=cax, orientation='vertical')
 
     file_ext = filename.split('.')[-1]
     plotname = filename.replace('.%s'%file_ext,'_%s.png'%plotstyle)
 
+    path = os.path.split(plotname)[0]
+    if path and not os.path.isdir(path):
+        os.makedirs(path)
     plt.savefig(plotname,format='png')
 
     print 'Written: Covariance matrix plot:', plotname

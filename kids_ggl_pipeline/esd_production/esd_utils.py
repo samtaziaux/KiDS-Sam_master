@@ -22,6 +22,7 @@ def read_config(config_file):
     sampler_params = []
     cat_version = []
     kids_path = 'None'
+    specz_file = None
     gama_path = 'None'
     filename = 'None'
     wizz = 'False'
@@ -41,6 +42,8 @@ def read_config(config_file):
             gamaversion = line[1]
         elif line[0] == 'KiDS_path':
             kids_path = line[1]
+        elif line[0] == 'specz_file':
+            specz_file = line[1]
         elif line[0] == 'GAMA_path':
             gama_path = line[1]
         elif line[0] == 'lens_catalog':
@@ -135,7 +138,7 @@ def read_config(config_file):
         pass
         
         
-    out = (kids_path, gama_path,
+    out = (kids_path, gama_path, specz_file,
             Om, Ol, Ok, h,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,

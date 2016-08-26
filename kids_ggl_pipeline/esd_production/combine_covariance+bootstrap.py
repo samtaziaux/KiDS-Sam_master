@@ -27,7 +27,8 @@ def main():
             cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
             path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, \
-            blindcatnum, path_kidscats, path_gamacat = shear.input_variables()
+            blindcatnum, path_kidscats, path_gamacat, specz_file = \
+            shear.input_variables()
 
     
     if 'bootstrap' in purpose:
@@ -84,14 +85,15 @@ def main():
     galIDlist_matched = np.unique(galIDlist_matched)
 
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering, \
-                        lens_selection, 'None', 'None', 0, -inf, inf) # Mask
-                        # the galaxies in the shear catalog, WITHOUT binning
-                        # (for the bin creation)
+    # Mask the galaxies in the shear catalog, WITHOUT binning
+    # (for the bin creation)
+    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
+                                           'None', 'None', 0, -inf, inf,
+                                           Dcllist)
 
     binname, lens_binning, Nobsbins, \
     binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                          lenssel_binning, gamacat)
+                                          lenssel_binning, gamacat, Dcllist)
 
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
@@ -241,7 +243,7 @@ def main():
                                                             kidscats[x], 0, \
                                                             filename_addition, \
                                                             blindcat)
-                
+
                 if os.path.isfile(shearcatname_N1):
                     print '	Combining field', x+1, '/', len(kidscats), \
                             ':', kidscats[x]
@@ -316,6 +318,7 @@ def main():
                                     cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2])) # The new covariance matrix
             
                 else:
+                    # This message should be a lot more explicit
                     print('ERROR: Not all fields are analysed! '\
                                   'Please restart shear code!')
                     quit()
@@ -330,12 +333,13 @@ def main():
             
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, \
-            binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
-                                                lenssel_binning, gamacat)
+            binmin, binmax = shear.define_obsbins(N1+1, lens_binning,
+                                                  lenssel_binning, gamacat,
+                                                  Dcllist)
 
-            lenssel = shear.define_lenssel(gamacat, centering, \
-                                           lens_selection, lens_binning, \
-                                           binname, N1+1, binmin, binmax)
+            lenssel = shear.define_lenssel(gamacat, centering, lens_selection,
+                                           lens_binning, binname, N1+1,
+                                           binmin, binmax, Dcllist)
 
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]

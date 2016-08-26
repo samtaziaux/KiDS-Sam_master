@@ -757,12 +757,74 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
     # We apply any other cuts specified by the user for Z_B
     srclims = src_selection['Z_B'][1]
     if len(srclims) == 1:
-        srcmask *= (spec_cat['Z_B'] == binlims[0])
+        srcmask *= (spec_cat['Z_B'] == srclims[0])
     else:
         srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
             (spec_cat['Z_B'] < srclims[1])
 
     return Z_S[srcmask], spec_weight[srcmask]
+
+
+"""
+#Temp
+def import_spec_cat_pz(path_kidscats, kidscatname, kidscat_end, \
+                    src_selection, cat_version):
+    
+    print('Using direct callibration to estimate the redshifts.')
+    files = os.listdir(os.path.dirname('/disks/shear10/KiDS/All_tiles/'))
+    Z_S_varlist = np.zeros(351)
+    for i, filename in enumerate(files):
+        print i
+        try:
+            spec_cat = pyfits.open('/disks/shear10/KiDS/All_tiles/%s'%filename, memmap=True)[1].data
+        
+            Z_S = spec_cat['PZ_full']
+            manmask = spec_cat['MASK']
+        
+            srcmask = (manmask==0)
+        
+            # We apply any other cuts specified by the user for Z_B
+            srclims = src_selection['Z_B'][1]
+            if len(srclims) == 1:
+                srcmask *= (spec_cat['Z_B'] == binlims[0])
+            else:
+                srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
+                (spec_cat['Z_B'] < srclims[1])
+            Z_S = Z_S[srcmask]
+    
+            Z_S_varlist += Z_S.sum(axis=0)
+            print Z_S_varlist[:20]
+        
+        except:
+            pass
+    
+
+    print Z_S_varlist.shape
+    return Z_S_varlist, 1.0
+"""
+
+"""
+#Temp
+def import_spec_cat_pz(kidscatname, catmatch, srcNr):
+    
+    #print('Using direct callibration to estimate the redshifts.')
+    
+    files = os.listdir(os.path.dirname('/disks/shear10/KiDS/All_tiles/'))
+    filename = str(fnmatch.filter(files, kidscatname+'*')[0])
+    print filename
+    spec_cat = pyfits.open('/disks/shear10/KiDS/All_tiles/%s'%filename, memmap=True)[1].data
+    
+    Z_S = spec_cat['PZ_full']
+    mask = np.in1d(spec_cat['SeqNr'],srcNr)
+    Z_S = Z_S[mask]
+    Z_S_out = np.zeros((len(srcNr), 70))
+    for i in range(len(srcNr)):
+        Z_S_out[i,:] = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), Z_S[i,:])
+        Z_S_out[i,:] = Z_S_out[i,:]/Z_S_out[i,:].sum()
+    
+    # We apply any other cuts specified by the user for Z_B
+    return Z_S_out
+"""
 
 
 def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
@@ -908,6 +970,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     
     # List of the ID's of all sources in the KiDS catalogue
     srcNr = kidscat['SeqNr']
+    #srcNr = kidscat['SeqNr_field'] # If ever needed for p(z)
     # List of the RA's of all sources in the KiDS catalogue
     srcRA = kidscat['ALPHA_J2000']
     # List of the DEC's of all sources in the KiDS catalogue
@@ -933,11 +996,22 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         manmask = kidscat['MAN_MASK']
         tile = np.zeros(srcNr.size, dtype=np.float64)
     
-    try:
+    if cat_version == 2:
         srcm = kidscat['m_cor'] # The multiplicative bias m
-    except:
+    if cat_version == 3:
+        # Values are hardcoded, if image simulations give
+        # different results this must be changed!
         srcm = np.zeros(srcNr.size, dtype=np.float64)
-
+        srcm[(0.1 < srcPZ) & (srcPZ <= 0.2)] = -0.0165984884074
+        srcm[(0.2 < srcPZ) & (srcPZ <= 0.3)] = -0.0107643100825
+        srcm[(0.3 < srcPZ) & (srcPZ <= 0.4)] = -0.0163154916657
+        srcm[(0.4 < srcPZ) & (srcPZ <= 0.5)] = -0.00983059386823
+        srcm[(0.5 < srcPZ) & (srcPZ <= 0.6)] = -0.0050563715617
+        srcm[(0.6 < srcPZ) & (srcPZ <= 0.7)] = -0.00931232658151
+        srcm[(0.7 < srcPZ) & (srcPZ <= 0.8)] = -0.0135538269718
+        srcm[(0.8 < srcPZ) & (srcPZ <= 0.9)] = -0.0286749355629
+            
+            
     e1_A = kidscat['e1_A']
     e1_B = kidscat['e1_B']
     e1_C = kidscat['e1_C']
@@ -990,13 +1064,14 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     if cat_version == 2:
         srcmask = (w.T[0]>0.0)&(SN>0.0)&(srcm<0.0)&(manmask==0)&(-1<c1_A)
     if cat_version == 3:
-        srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)
+        srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)&(srcm!=0)
+        # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
 
     # We apply any other cuts specified by the user
     for param in src_selection.keys():
         srclims = src_selection[param][1]
         if len(srclims) == 1:
-            srcmask *= (kidscat[param] == binlims[0])
+            srcmask *= (kidscat[param] == srclims[0])
 
         else:
             srcmask *= (srclims[0] <= kidscat[param]) & \
@@ -1215,7 +1290,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
 
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
 def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
-
+    
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
     DlsoDs = (Dcsbins-Dcls)/Dcsbins
@@ -1233,17 +1308,27 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
         cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
                                 np.zeros(cond[1].size, dtype=np.int32)))
         cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                 np.zeros(cond[1].size, dtype=np.int32)))
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+
+        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
         
-        cond[cond >= DlsoDs[0].size-1] = DlsoDs[0].size-1
-        cond2[cond2 >= DlsoDs[0].size-1] = DlsoDs[0].size-1
-        
-        cond[cond >= DlsoDs[1].size-1] = DlsoDs[1].size-1
-        cond2[cond2 >= DlsoDs[1].size-1] = DlsoDs[1].size-1
-        
+        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+
         DlsoDs[(cond[0], cond[1])] = 0.0
         DlsoDs[(cond2[0], cond2[1])] = 0.0
-
+        DlsoDs[(cond3[0], cond3[1])] = 0.0
+        DlsoDs[(cond4[0], cond4[1])] = 0.0
+    
     DlsoDsmask = [] # Empty unused lists
 
     # Matrix multiplication that sums over P(z),
@@ -1262,6 +1347,59 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
 
     gc.collect()
     return k, kmask
+
+
+
+# Weigth for average m correction in KiDS-450
+def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version):
+    
+    # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
+    Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
+    DlsoDs = (Dcsbins-Dcls)/Dcsbins
+    Dcls = [] # Empty unused lists
+    Dcsbins = []
+    
+    # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
+    #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
+    #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
+    DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    
+    if cat_version == 3:
+        cond = np.array(np.where(DlsoDs == 0.0))
+        
+        cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
+                                np.zeros(cond[1].size, dtype=np.int32)))
+                                
+        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
+                                
+        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
+                                
+        DlsoDs[(cond[0], cond[1])] = 0.0
+        DlsoDs[(cond2[0], cond2[1])] = 0.0
+        DlsoDs[(cond3[0], cond3[1])] = 0.0
+        DlsoDs[(cond4[0], cond4[1])] = 0.0
+    
+    DlsoDsmask = [] # Empty unused lists
+
+    # Matrix multiplication that sums over P(z),
+    # to calculate <Dls/Ds> for each lens-source pair
+    DlsoDs = np.dot(srcPZ, DlsoDs).T
+    
+    gc.collect()
+    return DlsoDs
+
 
 
 # Calculate the projected distance (srcR) and the
@@ -1295,10 +1433,10 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
     theta = np.arccos(np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC))+\
                       np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*\
                       np.cos(np.radians(galRA-srcRA))) # in radians
-    incosphi = ((-np.cos(np.radians(galDEC))*(np.radians(galRA-srcRA)))**2-\
-                (np.radians(galDEC-srcDEC))**2)/(theta)**2
+    incosphi = ((-np.cos(np.radians(galDEC))*(np.arctan(np.tan(np.radians(galRA-srcRA)))))**2-\
+                (np.arctan(np.tan(np.radians(galDEC-srcDEC))))**2)/(theta)**2
     insinphi = 2*(-np.cos(np.radians(galDEC))*\
-                  (np.radians(galRA-srcRA)))*np.radians(galDEC-srcDEC)/(theta)**2
+                (np.arctan(np.tan(np.radians(galRA-srcRA)))))*np.arctan(np.tan(np.radians(galDEC-srcDEC)))/(theta)**2
 
     incosphi = incosphi.T
     insinphi = insinphi.T
@@ -1408,99 +1546,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
         srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
 
-"""
-def calc_shear_output_treecorr(galRA_split,\
-                               galDEC_split, galZ_split, Dcl_split, \
-                               Dal_split, srcRA, srcDEC, e1, e2, Rmin, Rmax, \
-                               nRbins, klist, wlist, Nsrclist, srcm, Runit):
-    
-    wlist = wlist.T
-    klist_t = np.array([klist, klist, klist, klist]).T
-    # Calculating the needed errors
-    if 'pc' not in Runit:
-        wk2list = wlist
-    else:
-        wk2list = wlist*klist_t**2
 
-    w_tot = np.sum(wlist, 0)
-    w2_tot = np.sum(wlist**2, 0)
-
-    k_tot = np.sum(klist, 1)
-    k2_tot = np.sum(klist**2, 1)
-    
-    wk2_tot = np.sum(wk2list, 0)
-    w2k4_tot = np.sum(wk2list**2, 0)
-    if 'pc' not in Runit:
-        w2k2_tot = np.sum(wlist**2, 0)
-    else:
-        w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
-
-    wlist = []
-    
-    Nsrc_tot = np.sum(Nsrclist, 1)
-    
-    srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
-    srcm = np.array([srcm, srcm, srcm, srcm]).T
-    foo = [] # Empty unused lists
-    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
-    srcm = []
-    klist_t = []
-    
-    gc.collect()
-    
-    # Calculating the weighted tangential and
-    # cross shear of the lens-source pairs
-
-    gammat_tot_A = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_A = np.zeros((klist.shape[0], nRbins))
-    gammat_tot_B = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_B = np.zeros((klist.shape[0], nRbins))
-    gammat_tot_C = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_C = np.zeros((klist.shape[0], nRbins))
-    gammat_tot_D = np.zeros((klist.shape[0], nRbins))
-    gammax_tot_D = np.zeros((klist.shape[0], nRbins))
-
-    import treecorr
-    for i in xrange(klist.shape[0]):
-        lens = treecorr.Catalog(ra=galRA_split, dec=galDEC_split, r=Dal_split, ra_units='degrees', dec_units='degrees')
-        src_A = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,0], g2=e2[:,0], ra_units='degrees', dec_units='degrees')
-        src_B = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,1], g2=e2[:,1], ra_units='degrees', dec_units='degrees')
-        src_C = treecorr.Catalog(ra=srcRA, dec=srcDEC, g1=e1[:,2], g2=e2[:,2], ra_units='degrees', dec_units='degrees')
-    
-        ng = treecorr.NGCorrelation(min_sep=Rmin/Dal_split[i], max_sep=Rmax/Dal_split[i], nbins=nRbins, sep_units='rad')
-    
-        ng.process(lens, src_A, metric='Rlens', num_threads=1)
-        gammat_tot_A[i,:], gammax_tot_A[i,:], var = ng.calculateXi(ng)
-        ng.process(lens, src_B, metric='Rlens', num_threads=1)
-        gammat_tot_B[i,:], gammax_tot_B[i,:], var = ng.calculateXi(ng)
-        ng.process(lens, src_C, metric='Rlens', num_threads=1)
-        gammat_tot_C[i,:], gammax_tot_C[i,:], var = ng.calculateXi(ng)
-        print gammat_tot_A[i,:]
-
-    if 'pc' not in Runit:
-        pass
-    else:
-        pass
-    #quit()
-    print wk2_tot.T[0].shape
-    print gammat_tot_A.shape
-     
-    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
-    wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
-    
-    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
-    w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
-    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
-    srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
-     
-    gc.collect()
-    
-    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, \
-            gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
-            k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
-            w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-            srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
-"""
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
@@ -1589,17 +1635,17 @@ def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
 
 # Printing stacked ESD profile to a text file
 def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
-                bias_tot, h, variance, wk2_tot, w2k2_tot, blindcat, blindcats, blindcatnum, \
+                bias_tot, h, variance, wk2_tot, w2k2_tot, Nsrc, blindcat, blindcats, blindcatnum, \
                 galIDs_matched, galIDs_matched_infield):
-
+    
     config_params = filename_var
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)     wk2     w2k2'%(Runit, h*100, h*100, h*100)
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)     wk2     w2k2     Nsources'%(Runit, h*100, h*100, h*100)
     else:
-        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2'%(Runit)
+        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2    Nsources'%(Runit)
 
     with open(filename, 'w') as file:
         print >>file, filehead
@@ -1614,8 +1660,9 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
                 bias_tot[R] = int(-999)
                 wk2_tot[R] = int(-999)
                 w2k2_tot[R] = int(-999)
+                Nsrc[R] = int(-999)
 
-            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R])
+            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g   %.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R], Nsrc[R])
 
     print 'Written: ESD profile data:', filename
 

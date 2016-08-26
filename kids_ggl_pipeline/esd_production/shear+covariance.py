@@ -709,14 +709,10 @@ if __name__ == '__main__':
 
     #import matplotlib.pyplot as pl
     if cat_version == 3:
-        if wizz in 'False':
-            
-            #rand_nums = np.random.random_integers(0,len(srcNZ)-1, len(srcNZ))
-            srcNZ, spec_weight = shear.import_spec_cat(path_kidscats, kidscatname2,\
-                                                   kidscat_end, src_selection, \
-                                                   cat_version)
-                                                   
-            
+        if wizz == 'False':
+            srcNZ, spec_weight = shear.import_spec_cat(
+                path_kidscats, kidscatname2, kidscat_end, specz_file,
+                src_selection, cat_version)
             srcPZ_a, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, \
                                                 weights=spec_weight, density=1)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
@@ -753,7 +749,7 @@ if __name__ == '__main__':
             """
             #srcPZ_a = np.genfromtxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt')
             
-        if wizz in 'True':
+        if wizz == 'True':
             srcPZ_a = shear.import_spec_wizz(path_kidscats, kidscatname2,\
                                             kidscat_end, src_selection, \
                                             cat_version, filename_var, Nsplits)

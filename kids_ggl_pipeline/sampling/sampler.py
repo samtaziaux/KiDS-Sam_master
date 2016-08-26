@@ -256,8 +256,7 @@ def run_emcee(hm_options, sampling_options, args):
     nwritten = 0
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
-        # make sure that nwalkers is a factor of this number!
-        if i * nwalkers > nwritten + update_freq:
+        if i > 0 and (i+1) * nwalkers > nwalkers * nwritten + update_freq:
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
                                 fits_format, update_freq, i, nwritten,
@@ -281,13 +280,14 @@ def run_emcee(hm_options, sampling_options, args):
             print >>hdr, ac,
     except ImportError:
         pass
-    try:
-        print 'acor_time =', sampler.get_autocorr_time()
-        print >>hdr, '\nacor_time =',
-        for act in sampler.get_autocorr_time():
-            print >>hdr, act,
-    except AttributeError:
-        pass
+    # acor and get_autocorr_time() are the same
+    #try:
+        #print 'acor_time =', sampler.get_autocorr_time()
+        #print >>hdr, '\nacor_time =',
+        #for act in sampler.get_autocorr_time():
+            #print >>hdr, act,
+    #except AttributeError:
+        #pass
     print >>hdr, '\nFinished', ctime()
     hdr.close()
     print 'Saved to', hdrfile
@@ -436,8 +436,6 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     nchi2 = len(chi2)
     # the two following lines should remain consistent if modified
     chi2_loc = -2
-    # removed lnPderived in v1.3.0
-    #lnprior, lnPderived, chi2, lnlike = chi2
     lnprior, chi2, lnlike = chi2
     if isfile(output):
         remove(output)
@@ -482,6 +480,7 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
             # store data
             n = 0
             for k in xrange(len(data)):
+                
                 # if using a single bin, there can be scalars
                 if not hasattr(data[k], '__iter__'):
                     metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
@@ -520,9 +519,9 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     columns.append(Column(name='lnlike', format='E', array=lnlike))
     fitstbl = BinTableHDU.from_columns(columns)
     fitstbl.writeto(output)
-    nwritten = iternum * nwalkers
+    nwritten = iternum
     print '{2}: Saved to {0} with {1} samples'.format(
-            output, nwritten, ctime())
+            output, nwritten*nwalkers, ctime())
     if thin > 1:
         print '(printing every {0}th sample)'.format(thin)
     #print 'acceptance fraction =', sampler.acceptance_fraction

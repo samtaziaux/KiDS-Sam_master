@@ -106,41 +106,37 @@ def input_variables():
     if os.path.isfile(path_Rbins): # from a file
         name_Rbins = path_Rbins.split('.')[0]
         name_Rbins = name_Rbins.split('/')[-1]
-        name_Rbins = 'Rbins~%s%s'%(name_Rbins, Runit)
+        name_Rbins = 'Rbins~%s_%s'%(name_Rbins, Runit)
     else:
         name_Rbins = path_Rbins.replace(',', '~')
-        name_Rbins = 'Rbins%s%s'%(name_Rbins, Runit)
+        name_Rbins = 'Rbins%s_%s'%(name_Rbins, Runit)
 
     # Creating all necessary folders
 
     # Path containing the output folders
     output_var = ''
     var_print = ''
-    output_var, var_print, x = define_filename_sel(output_var, var_print,\
-                                                     '', src_selection)
-    output_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(output_var, name_Rbins, \
-                                               O_matter, O_lambda, Ok, h)
+    #output_var, var_print, x = define_filename_sel(output_var, var_print,\
+    #                                                 '', src_selection)
+    if ('ID' in lens_selection) & ('No' in binname):
+        output_var = 'IDs_from_file'
+        path_output = '%s/%s%s' \
+            %(path_output, output_var, filename_addition)
+    else:
+        output_var = str(lens_binning[binname][1])
+        output_var = '_'.join(output_var.split())
+        output_var = output_var.replace('.', 'p').replace('[','')\
+            .replace(']','').replace('-','m')
+        path_output = '%s/%s%s%s' \
+            %(path_output, binname, output_var, filename_addition)
 
-    output_var = output_var.replace('.', 'p')
-    output_var = output_var.replace('-', 'm')
-    output_var = output_var.replace('~', '-')
-    output_var = output_var.split('_', 1)[1]
-
-    path_output = '%s/output_%s_bins_%s%s' \
-                  %(path_output, binname, output_var, filename_addition)
     path_catalogs = '%s/catalogs' %(path_output.rsplit('/',1)[0])
 
     # Path to the output splits and results
-    path_splits = '%s/splits_%s' %(path_output, purpose)
-    path_results = '%s/results_%s' %(path_output, purpose)
-    #print path_splits
-    
-    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
+    path_splits = '%s/splits_%s' %(path_output, purpose) #'%s/splits_%s' %(path_output, purpose)
+    path_results = path_output #'%s/results_%s' %(path_output, purpose)
 
-        #print 'Nsplit:', Nsplit
-        #print 'blindcat:', blindcat
-        #print 'binnum:', binnum
-        #print 'Nobsbins:', Nobsbins
+    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
 
         for path in [path_output, path_catalogs, path_splits, path_results]:
             if not os.path.isdir(path):
@@ -150,11 +146,6 @@ def input_variables():
 
     if 'catalog' in purpose:
 
-    #    print 'Nsplit:', Nsplit
-    #    print 'blindcat:', blindcat
-    #    print 'binnum:', binnum
-    #    print 'Nobsbins:', Nobsbins
-        
         # Path to the output splits and results
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
@@ -305,8 +296,6 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
     if 'catalog' in purpose:
         if centering == 'Cen':
             filename_var = 'Cen'
-        
-        var_print = 'Galaxy catalogue,'
 
     else: # Binnning information of the groups
 
@@ -314,65 +303,87 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
         if 'No' not in binname: # If there is binning
             if 'ID' in binname:
                 binname = 'ID'
-            filename_var = '%s_%sbin%sof%i'%(filename_var, binname, \
-                                             binnum, Nobsbins)
+            filename_var_bins = '%s_%s_bin_%s'%(filename_var, purpose, \
+                                             binnum)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
-            #filename_var, var_print, x = \
-            #    define_filename_sel_bin(filename_var, var_print, '', lens_binning, binnum, Nobsbins)
         # Lens selection
-        filename_var, var_print, x = define_filename_sel(filename_var, \
+        filename_var_lens, var_print, x = define_filename_sel(filename_var, \
                                                          var_print, '', \
                                                          lens_selection)
     
         weightname = lens_weights.keys()[0]
         if weightname != 'None':
-            filename_var = '%s_lw~%s'%(filename_var, weightname)
+            filename_var_lens = '%s_lw~%s'%(filename_var_lens, weightname)
             var_print = '%s Lens weights: %s,'%(var_print, weightname)
     
     # Source selection
-    filename_var, var_print, x = define_filename_sel(filename_var, var_print,\
+    filename_var_source, var_print, x = define_filename_sel(filename_var, var_print,\
                                                      '', src_selection)
     
-    filename_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(filename_var, name_Rbins, \
+    filename_var_cosmo = '%s_Om%g_Ol%g_Ok%g_h%g'%(filename_var, \
                                                O_matter, O_lambda, Ok, h)
+    filename_var_radial = '%s_%s'%(filename_var, name_Rbins)
     cosmo_print = ('    %s, Omatter=%g, Olambda=%g, Ok=%g, h=%g'%(name_Rbins, \
                                                     O_matter, \
                                                     O_lambda, Ok, \
                                                     h)).replace('~', '-')
-
+    # Make this prettier!
     # Replace points with p and minus with m
-    filename_var = filename_var.replace('.', 'p')
-    filename_var = filename_var.replace('-', 'm')
-    filename_var = filename_var.replace('~', '-')
-    filename_var = filename_var.split('_', 1)[1]
+    filename_var_bins = filename_var_bins.replace('.', 'p')
+    filename_var_bins = filename_var_bins.replace('-', 'm')
+    filename_var_bins = filename_var_bins.replace('~', '_')
+    filename_var_bins = filename_var_bins.split('_', 1)[1]
+
+    filename_var_lens = filename_var_lens.replace('.', 'p')
+    filename_var_lens = filename_var_lens.replace('-', 'm')
+    filename_var_lens = filename_var_lens.replace('~', '_')
+    filename_var_lens = filename_var_lens.split('_', 1)[1]
+
+    filename_var_cosmo = filename_var_cosmo.replace('.', 'p')
+    filename_var_cosmo = filename_var_cosmo.replace('-', 'm')
+    filename_var_cosmo = filename_var_cosmo.replace('~', '_')
+    filename_var_cosmo = filename_var_cosmo.split('_', 1)[1]
+
+    filename_var_radial = filename_var_radial.replace('.', 'p')
+    filename_var_radial = filename_var_radial.replace('-', 'm')
+    filename_var_radial = filename_var_radial.replace('~', '_')
+    filename_var_radial = filename_var_radial.split('_', 1)[1]
+
+    filename_var_source = filename_var_source.replace('.', 'p')
+    filename_var_source = filename_var_source.replace('-', 'm')
+    filename_var_source = filename_var_source.replace('~', '_')
+    filename_var_source = filename_var_source.split('_', 1)[1]
+
+    filename_var = '%s/%s_%s/%s/%s/%s'%(filename_var_lens,filename_var_source,\
+                                        filename_var_cosmo,filename_var_radial,\
+                                        purpose,filename_var_bins)
 
     if 'covariance' not in purpose:
         print 'Chosen %s-configuration: '%purpose
         print var_print
         print cosmo_print
         print
-
+    #print filename_var
     return filename_var
 
 
 def define_filename_splits(path_splits, purpose, filename_var, \
                            Nsplit, Nsplits, filename_addition, blindcat):
+    
     # Defining the names of the shear/random catalog
     if 'covariance' in purpose:
-        filename_var = filename_var.partition('_Z_B')[0]
-        splitname = '%s/%s_%s%s_%s.fits'%(path_splits, purpose, filename_var, \
-                                          filename_addition, Nsplit)
+        splitname = '%s/%s_%s.fits'%(path_splits, filename_var, Nsplit)
                                         # Here Nsplit = kidscatname
     if 'bootstrap' in purpose:
-        filename_var = filename_var.partition('_Z_B')[0]
-        splitname = '%s/%s_%s%s_%s.fits'%(path_splits, purpose, filename_var, \
-                                          filename_addition, blindcat)
-    if 'catalog' in purpose:
-        splitname = '%s/%s_%s%s_split%iof%i.fits'%(path_splits, purpose, \
-                                                   filename_var, \
-                                                   filename_addition, \
-                                                   Nsplit, Nsplits)
+        splitname = '%s/%s_%s.fits'%(path_splits, purpose, blindcat)
 
+    if 'catalog' in purpose:
+        splitname = '%s/%s_%s_split%iof%i.fits'%(path_splits, purpose, \
+                                                   filename_var, \
+                                                   Nsplit, Nsplits)
+    new_path = '/'.join(splitname.split('/')[:-1])
+    if not os.path.isdir(new_path):
+       os.makedirs(new_path)
     return splitname
 
 
@@ -383,10 +394,15 @@ def define_filename_results(path_results, purpose, filename_var, \
         resultname = '%s/%s_%s%s.fits'%(path_results, purpose, \
                                         filename_var, filename_addition)
     else:
-        filename_var = filename_var.partition('_Z_B')[0]
-        resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, \
-                                          filename_addition, blindcat)
-
+        #filename_var = filename_var.partition('purpose')[0]
+        #resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, \
+        #                                  filename_addition, blindcat)
+        resultname = '%s/%s_%s.txt'%(path_results, filename_var, blindcat)
+    
+    new_path = '/'.join(resultname.split('/')[:-1])
+    if not os.path.isdir(new_path):
+        os.makedirs(new_path)
+    
     return resultname
 
 
@@ -737,8 +753,9 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
 
 def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
                     src_selection, cat_version):
+    filename = '../*specweight.cat'
     if specz_file is None:
-        specz_file = os.path.join(path_kidscats, '*specweight.cat')
+        specz_file = os.path.join(path_kidscats, filename)
     files = glob(specz_file)
     if len(files) == 0:
         msg = 'Spec-z file {0} not found.'.format(filename)

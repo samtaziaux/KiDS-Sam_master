@@ -592,7 +592,7 @@ if __name__ == '__main__':
                                             Nsplit, blindcat)
     print 'Requested file:', outname
     print
-
+    
     if os.path.isfile(outname):
         print 'This output already exists:', outname
         print
@@ -785,7 +785,7 @@ if __name__ == '__main__':
                 m_selection['Z_B'] = ['self', np.array([0.8, 0.9])]
         
             srcNZ_m, spec_weight_m = shear.import_spec_cat(path_kidscats, kidscatname2,\
-                                                        kidscat_end, m_selection, \
+                                                        kidscat_end, specz_file, m_selection, \
                                                         cat_version)
             srcPZ_m, bins_m = np.histogram(srcNZ_m, range=[0.025, 3.5], bins=70, \
                                                 weights=spec_weight_m, density=1)

@@ -121,12 +121,9 @@ def main():
             #print "Failed to create ESD Plot of:", filenameESD
 
     # Creating the ueber-matrix plot
-    filename_N1 = filename_var.replace('binnumof', 's')
-    filename_cov = filename_var.replace('binnumof', 's')
-    filename_cov = filename_cov.partition('_Z_B')[0]
-    filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
-                                              filename_cov, filename_addition, \
-                                              blindcat)
+    filename_N1 = filename_var.replace('_binnum', 's')
+    filename_cov = filename_var.replace('_binnum', 's')
+    filenamecov = '%s/%s_matrix_%s.txt'%(path_results, filename_cov, blindcat)
     
     # The Group bins
     if binname == 'No': # If there is no binning
@@ -136,12 +133,12 @@ def main():
                                             (lens_binning.values()[0])[1][0], \
                                             (lens_binning.values()[0])[1][-1])
 
-    try:
-        shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, \
+    #try:
+    shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, \
                                      plotstyle_matrix, binname, \
                                      lens_binning, Rbins, Runit, h)
-    except:
-        print "Failed to create Matrix Plot of", filenamecov
+    #except:
+    #    print "Failed to create Matrix Plot of", filenamecov
     
     # Addapted the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.

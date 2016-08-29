@@ -30,13 +30,13 @@ def main():
     cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
-    path_gamacat = shear.input_variables()
+    path_gamacat, specz_file = shear.input_variables()
     
     # Path to the output splits and results
     path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
     
     path_splits = '%s/splits_%s'%(path_output, purpose)
-    path_results = '%s/results_%s'%(path_output, purpose)
+    path_results = path_output #'%s/results_%s'%(path_output, purpose)
     path_catalog_splits = '%s/splits_%s'%(path_catalogs, purpose)
     path_catalog_results = '%s/results_%s'%(path_catalogs, purpose)
 
@@ -54,7 +54,7 @@ def main():
                                              src_selection, lens_weights, \
                                              name_Rbins, O_matter, \
                                              O_lambda, Ok, h)
-    
+
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
@@ -143,7 +143,7 @@ def main():
     
     # Mask the galaxies in the shear catalog, WITHOUT binning
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, \
-                                           'None', 'None', 0, -inf, inf) \
+                                           'None', 'None', 0, -inf, inf, Dcllist)
     # Defining the observable binnning range of the groups
     binname, lens_binning, Nobsbins, \
     binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
@@ -178,7 +178,7 @@ def main():
         # Mask the galaxies in the shear catalog
         lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                        lens_binning, binname, binnum, \
-                                       binmin, binmax)
+                                       binmin, binmax, Dcllist)
 
         if debug:
             print 'lenssel:', sum(lenssel)
@@ -285,13 +285,13 @@ def main():
 
 
         # Printing the ESD profile to a file
-        
+    
         # Path to the output plot and text files
         stackname = shear.define_filename_results(path_results, purpose, \
                                                   filename_bin, \
                                                   filename_addition, Nsplit, \
                                                   blindcat)
-
+        
         # Printing stacked shear profile to a txt file
         shear.write_stack(stackname, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, \
                           error_tot, bias_tot, h, variance, wk2, w2k2, Nsrc, \

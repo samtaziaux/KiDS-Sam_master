@@ -297,6 +297,9 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
         if centering == 'Cen':
             filename_var = 'Cen'
 
+        filename_var_bins = '_'
+        filename_var_lens = '_'
+
     else: # Binnning information of the groups
 
         # Lens binning
@@ -327,43 +330,32 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                                                     O_matter, \
                                                     O_lambda, Ok, \
                                                     h)).replace('~', '-')
-    # Make this prettier!
-    # Replace points with p and minus with m
-    filename_var_bins = filename_var_bins.replace('.', 'p')
-    filename_var_bins = filename_var_bins.replace('-', 'm')
-    filename_var_bins = filename_var_bins.replace('~', '_')
+
     filename_var_bins = filename_var_bins.split('_', 1)[1]
-
-    filename_var_lens = filename_var_lens.replace('.', 'p')
-    filename_var_lens = filename_var_lens.replace('-', 'm')
-    filename_var_lens = filename_var_lens.replace('~', '_')
     filename_var_lens = filename_var_lens.split('_', 1)[1]
-
-    filename_var_cosmo = filename_var_cosmo.replace('.', 'p')
-    filename_var_cosmo = filename_var_cosmo.replace('-', 'm')
-    filename_var_cosmo = filename_var_cosmo.replace('~', '_')
     filename_var_cosmo = filename_var_cosmo.split('_', 1)[1]
-
-    filename_var_radial = filename_var_radial.replace('.', 'p')
-    filename_var_radial = filename_var_radial.replace('-', 'm')
-    filename_var_radial = filename_var_radial.replace('~', '_')
     filename_var_radial = filename_var_radial.split('_', 1)[1]
-
-    filename_var_source = filename_var_source.replace('.', 'p')
-    filename_var_source = filename_var_source.replace('-', 'm')
-    filename_var_source = filename_var_source.replace('~', '_')
     filename_var_source = filename_var_source.split('_', 1)[1]
 
-    filename_var = '%s/%s_%s/%s/%s/%s'%(filename_var_lens,filename_var_source,\
-                                        filename_var_cosmo,filename_var_radial,\
-                                        purpose,filename_var_bins)
+    if 'catalog' in purpose:
+        filename_var = '%s_%s/%s/%s'%(filename_var_source,\
+                                    filename_var_cosmo,filename_var_radial,\
+                                    purpose)
+    else:
+        filename_var = '%s/%s_%s/%s/%s/%s'%(filename_var_lens,filename_var_source,\
+                                    filename_var_cosmo,filename_var_radial,\
+                                    purpose,filename_var_bins)
 
+    filename_var = filename_var.replace('.', 'p')
+    filename_var = filename_var.replace('-', 'm')
+    filename_var = filename_var.replace('~', '_')
+    
     if 'covariance' not in purpose:
         print 'Chosen %s-configuration: '%purpose
         print var_print
         print cosmo_print
         print
-    #print filename_var
+
     return filename_var
 
 
@@ -396,7 +388,10 @@ def define_filename_results(path_results, purpose, filename_var, \
     else:
         #filename_var = filename_var.partition('purpose')[0]
         #resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, \
-        #                                  filename_addition, blindcat)
+        #                                           filename_addition, blindcat)
+        if 'catalog' in purpose:
+            filename_var = filename_var.replace('shear','shearcatalog')
+    
         resultname = '%s/%s_%s.txt'%(path_results, filename_var, blindcat)
     
     new_path = '/'.join(resultname.split('/')[:-1])

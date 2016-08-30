@@ -11,6 +11,7 @@ import numpy as np
 import distance
 import sys
 import os
+import shutil
 import time
 import shearcode_modules as shear
 from astropy import constants as const, units as u
@@ -154,9 +155,12 @@ def main():
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
-            os.remove('%s/%s'%(path_splits, filename))
-    
-    
+            #os.remove('%s/%s'%(path_splits, filename))
+            try:
+                os.remove('%s/%s'%(path_splits, filename))
+            except OSError:
+                shutil.rmtree('%s/%s'%(path_splits, filename))
+
     return
     
 main()

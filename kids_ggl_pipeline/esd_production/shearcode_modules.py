@@ -108,7 +108,7 @@ def input_variables():
         name_Rbins = name_Rbins.split('/')[-1]
         name_Rbins = 'Rbins~%s_%s'%(name_Rbins, Runit)
     else:
-        name_Rbins = path_Rbins.replace(',', '~')
+        name_Rbins = path_Rbins.replace(',', '_')
         name_Rbins = 'Rbins%s_%s'%(name_Rbins, Runit)
 
     # Creating all necessary folders
@@ -226,22 +226,23 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, 
 # Define the part of the filename and plottitle
 # that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
-
+    
     selnames = np.sort(selection.keys())
     for selname in selnames:
         sellims = (selection[selname])[1]
+        selname = selname.replace('_','')
 
         if 'ID' in selname:
-            filename_var = '%s_%ss%g'%(filename_var, selname, len(sellims))
+            filename_var = '%s~%ss_%g'%(filename_var, selname, len(sellims))
             var_print = '%s #%ss = %g,'%(var_print, selname, len(sellims))
             plottitle = '%s $\#$ %ss = %g,'%(plottitle, selname, len(sellims))
         else:
             if len(sellims) == 1:
-                filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
+                filename_var = '%s~%s_%g'%(filename_var, selname, sellims[0])
                 var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
                 plottitle = '%s %s = %g,'%(plottitle, selname, sellims[0])
             else:
-                filename_var = '%s_%s%g~%g'%(filename_var, selname, \
+                filename_var = '%s~%s_%g_%g'%(filename_var, selname, \
                                              sellims[0], sellims[1])
                 var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
                                                      sellims[0], sellims[1])
@@ -298,7 +299,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
             filename_var = 'Cen'
 
         filename_var_bins = '_'
-        filename_var_lens = '_'
+        filename_var_lens = '~'
 
     else: # Binnning information of the groups
 
@@ -323,7 +324,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
     filename_var_source, var_print, x = define_filename_sel(filename_var, var_print,\
                                                      '', src_selection)
     
-    filename_var_cosmo = '%s_Om%g_Ol%g_Ok%g_h%g'%(filename_var, \
+    filename_var_cosmo = '%s_Om_%g~Ol_%g~Ok_%g~h_%g'%(filename_var, \
                                                O_matter, O_lambda, Ok, h)
     filename_var_radial = '%s_%s'%(filename_var, name_Rbins)
     cosmo_print = ('    %s, Omatter=%g, Olambda=%g, Ok=%g, h=%g'%(name_Rbins, \
@@ -332,30 +333,30 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                                                     h)).replace('~', '-')
 
     filename_var_bins = filename_var_bins.split('_', 1)[1]
-    filename_var_lens = filename_var_lens.split('_', 1)[1]
+    filename_var_lens = filename_var_lens.split('~', 1)[1]
     filename_var_cosmo = filename_var_cosmo.split('_', 1)[1]
     filename_var_radial = filename_var_radial.split('_', 1)[1]
-    filename_var_source = filename_var_source.split('_', 1)[1]
+    filename_var_source = filename_var_source.split('~', 1)[1]
 
     if 'catalog' in purpose:
-        filename_var = '%s_%s/%s/%s'%(filename_var_source,\
+        filename_var = '%s~%s/%s/%s'%(filename_var_source,\
                                     filename_var_cosmo,filename_var_radial,\
                                     purpose)
     else:
-        filename_var = '%s/%s_%s/%s/%s/%s'%(filename_var_lens,filename_var_source,\
+        filename_var = '%s/%s~%s/%s/%s/%s'%(filename_var_lens,filename_var_source,\
                                     filename_var_cosmo,filename_var_radial,\
                                     purpose,filename_var_bins)
 
     filename_var = filename_var.replace('.', 'p')
     filename_var = filename_var.replace('-', 'm')
-    filename_var = filename_var.replace('~', '_')
+    filename_var = filename_var.replace('~', '-')
     
     if 'covariance' not in purpose:
         print 'Chosen %s-configuration: '%purpose
         print var_print
         print cosmo_print
         print
-
+    
     return filename_var
 
 

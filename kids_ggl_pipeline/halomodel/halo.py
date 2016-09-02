@@ -744,6 +744,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                for Pg_k_i in _izip(Pg_k)]
     #print 'P_inter =', time() - to
+    # For plotting parts - Andrej!
+    #P_inter_c = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+    #       for Pg_k_i in _izip((rho_dm/rho_mean) *Pg_c)]
+
+    #P_inter_2 = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+    #       for Pg_k_i in _izip(Pg_2h)]
 
     """
     # Correlation functions
@@ -763,6 +769,15 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #pylab.yscale('log')
     #pylab.show()
 
+    # For plotting parts - Andrej!
+    #xi3 = np.zeros((M_bin_min.size,rvir_range_3d.size))
+    #for i in xrange(M_bin_min.size):
+    #    xi3[i] = power_to_corr_ogata(P_inter_c[i], rvir_range_3d)
+
+    #xi4 = np.zeros((M_bin_min.size,rvir_range_3d.size))
+    #for i in xrange(M_bin_min.size):
+    #    xi4[i] = power_to_corr_ogata(P_inter_2[i], rvir_range_3d)
+
     """
     # Projected surface density
     """
@@ -777,6 +792,17 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         sur_den2[i] = fill_nan(sur_den2[i])
     #print 'sur_den2 =', time() - to
 
+    # For plotting parts - Andrej!
+    #sur_den3 = _array([sigma(xi2_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
+    #               for xi2_i, rho_mean_i in _izip(xi3, rho_mean)])
+    #sur_den4 = _array([sigma(xi2_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
+    #               for xi2_i, rho_mean_i in _izip(xi4, rho_mean)])
+
+    #for i in xrange(M_bin_min.size):
+    #    sur_den3[i][(sur_den3[i] <= 0.0) | (sur_den3[i] >= 1e20)] = np.nan
+    #    sur_den3[i] = fill_nan(sur_den3[i])
+    #    sur_den4[i][(sur_den4[i] <= 0.0) | (sur_den4[i] >= 1e20)] = np.nan
+    #    sur_den4[i] = fill_nan(sur_den4[i])
     """
     # Excess surface density
     """
@@ -793,6 +819,18 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                                  rvir_range_3d_i,
                                                  rvir_range_2d_i))
                            for sur_den2_i in _izip(sur_den2)]) / 1e12
+
+    # For plotting parts - Andrej!
+    #d_sur_den3 = _array([np.nan_to_num(d_sigma(sur_den2_i,
+    #                                       rvir_range_3d_i,
+    #                                       rvir_range_2d_i))
+    #                 for sur_den2_i in _izip(sur_den3)]) / 1e12
+
+    #d_sur_den4 = _array([np.nan_to_num(d_sigma(sur_den2_i,
+    #                                       rvir_range_3d_i,
+    #                                       rvir_range_2d_i))
+    #                 for sur_den2_i in _izip(sur_den4)]) / 1e12
+
     #for i in xrange(len(M_bin_min)):
         #d_sur_den2[i][d_sur_den2[i] <= 0.0] = np.nan
         #d_sur_den2[i][d_sur_den2[i] >= 10.0**20.0] = np.nan
@@ -824,8 +862,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
 
     # Add other outputs as needed. Total ESD should always be first!
-    return [out_esd_tot_inter, np.log10(effective_mass), bias_out, 0]
-
+    return [out_esd_tot_inter, np.log10(effective_mass), bias_out]
+    #return d_sur_den3, d_sur_den4, pointmass
 
 if __name__ == '__main__':
     print 0

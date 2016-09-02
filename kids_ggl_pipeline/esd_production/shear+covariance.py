@@ -792,7 +792,7 @@ if __name__ == '__main__':
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
             dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
                                 Dcsbins, srcPZ_m, cat_version))
-            
+    
         srcm_varlist = np.average(m_corr, weights=dlsods)
         srcm_varlist = srcm_varlist * np.ones(srcNr_varlist.shape)
 

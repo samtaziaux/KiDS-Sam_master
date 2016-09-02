@@ -793,7 +793,7 @@ def nfw_off(theta, R, h=1, Om=0.315, Ol=0.685):
     #( fsat * Msat**(2./3.) + (1.-fsat) * Mcentral**(2./3.) )**(3./2.)
                  
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
-    out = [esd_total, esd_central, esd_host, pointmass, Mavg, 0]
+    out = [esd_total, esd_central, esd_host, pointmass, Mavg]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
     print logMcentral, alpha_in, f_off_in
     return out

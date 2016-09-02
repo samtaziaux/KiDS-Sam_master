@@ -23,6 +23,7 @@ def read_config(config_file):
     cat_version = []
     kids_path = 'None'
     specz_file = None
+    z_epsilon = 0.2
     gama_path = 'None'
     filename = 'None'
     wizz = 'False'
@@ -60,6 +61,8 @@ def read_config(config_file):
             Ok = float(line[1])
         elif line[0] == 'h':
             h = float(line[1])
+        elif line[0] == 'z_epsilon':
+            z_epsilon = float(line[1])
 
         ## ESD production
 
@@ -139,7 +142,7 @@ def read_config(config_file):
         
         
     out = (kids_path, gama_path, specz_file,
-            Om, Ol, Ok, h,
+            Om, Ol, Ok, h, z_epsilon,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,
             src_selection, cat_version, wizz, blindcats)

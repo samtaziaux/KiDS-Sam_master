@@ -30,7 +30,7 @@ def main():
     cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
-    path_gamacat, specz_file = shear.input_variables()
+    path_gamacat, specz_file, z_epsilon = shear.input_variables()
     
     # Path to the output splits and results
     path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])

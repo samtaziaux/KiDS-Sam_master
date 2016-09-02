@@ -52,7 +52,7 @@ def input_variables():
         print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, \
+    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
         path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
         lensid_file, lens_weights, lens_binning, lens_selection, \
         src_selection, cat_version, wizz, blindcats = \
@@ -199,7 +199,7 @@ def input_variables():
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon
 
 
 # Defining the lensID lens selection/binning
@@ -1302,45 +1302,21 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
 
 
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
-def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
+def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
     
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
     DlsoDs = (Dcsbins-Dcls)/Dcsbins
-    Dcls = [] # Empty unused lists
-    Dcsbins = []
 
     # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
     #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
     #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
-    DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
     if cat_version == 3:
-        cond = np.array(np.where(DlsoDs == 0.0))
-        
-        cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-
-        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        
-        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-
-        DlsoDs[(cond[0], cond[1])] = 0.0
-        DlsoDs[(cond2[0], cond2[1])] = 0.0
-        DlsoDs[(cond3[0], cond3[1])] = 0.0
-        DlsoDs[(cond4[0], cond4[1])] = 0.0
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+    else:
+        DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
     DlsoDsmask = [] # Empty unused lists
 
@@ -1355,6 +1331,8 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
     DlsoDs = [] # Empty unused lists
     Dals = []
 
+    Dcls = [] # Empty unused lists
+    Dcsbins = []
     # Create the mask that removes all sources with k not between 0 and infinity
     kmask = np.logical_not((0. < k) & (k < inf))
 
@@ -1364,48 +1342,25 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
 
 
 # Weigth for average m correction in KiDS-450
-def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version):
+def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
     
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
     DlsoDs = (Dcsbins-Dcls)/Dcsbins
-    Dcls = [] # Empty unused lists
-    Dcsbins = []
     
     # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
     #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
     #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
-    DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
     if cat_version == 3:
-        cond = np.array(np.where(DlsoDs == 0.0))
-        
-        cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-                                
-        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-                                
-        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-                                
-        DlsoDs[(cond[0], cond[1])] = 0.0
-        DlsoDs[(cond2[0], cond2[1])] = 0.0
-        DlsoDs[(cond3[0], cond3[1])] = 0.0
-        DlsoDs[(cond4[0], cond4[1])] = 0.0
-    
-    DlsoDsmask = [] # Empty unused lists
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+    else:
+        DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
 
+    DlsoDsmask = [] # Empty unused lists
+    Dcls = [] # Empty unused lists
+    Dcsbins = []
     # Matrix multiplication that sums over P(z),
     # to calculate <Dls/Ds> for each lens-source pair
     DlsoDs = np.dot(srcPZ, DlsoDs).T

@@ -58,7 +58,7 @@ Notes
 from itertools import izip
 from numpy import arctan, arctanh, arccos, array, cos, \
                   hypot, log, log10, logspace, \
-                  meshgrid, ones, sqrt, sum as nsum, transpose, zeros
+                  meshgrid, ones, sum as nsum, transpose, zeros
 from scipy.integrate import cumtrapz, trapz
 from scipy.interpolate import interp1d
 
@@ -170,11 +170,11 @@ def sigma(x, sigma_s):
     s[x == 0] = 0
     s[x == 1] = 1 / 3.
     j = (x > 0) & (x < 1)
-    s[j] = arctanh(sqrt((1 - x[j]) / (1 + x[j])))
-    s[j] = (1 - 2 * s[j] / sqrt(1-x[j]**2)) / (x[j]**2 - 1)
+    s[j] = arctanh(((1 - x[j]) / (1 + x[j]))**0.5)
+    s[j] = (1 - 2.*s[j] / (1.-x[j]**2)**0.5) / (x[j]**2 - 1)
     j = x > 1
-    s[j] = arctan(sqrt((x[j] - 1) / (1 + x[j])))
-    s[j] = (1 - 2 * s[j] / sqrt(x[j]**2 - 1)) / (x[j]**2 - 1)
+    s[j] = arctan(((x[j] - 1) / (1 + x[j]))**0.5)
+    s[j] = (1 - 2.*s[j] / (x[j]**2 - 1)**0.5) / (x[j]**2 - 1.)
     return 2 * sigma_s * s / 1e12
 
 def sigma_trunc5(x, tau, sigma_s):
@@ -196,7 +196,7 @@ def sigma_sharp(x, tau, sigma_s):
     mask = x < tau
     xmask = x[mask]
     s = zeros(x.shape)
-    s[mask] = sqrt(tau**2 - xmask**2) / (1+tau) - T(xmask, tau)
+    s[mask] = (tau**2-xmask**2)**0.5 / (1.+tau) - T(xmask, tau)
     return 2 * sigma_s / (x**2 - 1) * s.real / 1e12
 
 #-----------------------------------#
@@ -208,13 +208,13 @@ def barsigma(x, sigma_s):
     s[x == 0] = 0
     s[x == 1] = 1 + log(0.5)
     j = (x > 0) & (x < 1)
-    s[j] = arctanh(sqrt((1 - x[j])/(1 + x[j])))
-    s[j] = 2 * s[j] / sqrt(1 - x[j]**2)
-    s[j] = (s[j] + log(x[j] / 2.)) / x[j]**2
+    s[j] = arctanh(((1 - x[j])/(1 + x[j]))**0.5)
+    s[j] = 2 * s[j] / (1 - x[j]**2)**0.5
+    s[j] = (s[j] + log(0.5*x[j])) / x[j]**2
     j = x > 1
-    s[j] = arctan(sqrt((x[j] - 1)/(1 + x[j])))
-    s[j] = 2 * s[j] / sqrt(x[j]**2 - 1)
-    s[j] = (s[j] + log(x[j] / 2.)) / x[j]**2
+    s[j] = arctan(((x[j] - 1)/(1 + x[j]))**0.5)
+    s[j] = 2 * s[j] / (x[j]**2 - 1)**0.5
+    s[j] = (s[j] + log(0.5*x[j])) / x[j]**2
     return 4 * sigma_s * s / 1e12
 
 def barsigma_trunc5(x, tau, sigma_s):
@@ -238,8 +238,8 @@ def barsigma_trunc7(x, tau, sigma_s):
 
 def barsigma_sharp(x, tau, sigma_s):
     x = x + 0j
-    s = log(1+tau) - (tau - sqrt(tau**2 - x**2)) / (1 + tau)
-    s -= arctanh(sqrt(tau**2 - x**2) / tau) - T(x, tau)
+    s = log(1.+tau) - (tau - (tau**2-x**2)**0.5) / (1.+tau)
+    s -= arctanh((tau**2 - x**2)**0.5 / tau) - T(x, tau)
     s *= 4 * sigma_s / x**2
     return s.real / 1e12
 
@@ -300,7 +300,7 @@ def mass_enclosed(x, rs, sigma_s):
     See module help for parameters
 
     """
-    return 4 * 3.14159265 * rs**2 * sigma_s * (log(1+x) - x / (1+x))
+    return 4 * 3.14159265 * rs**2 * sigma_s * (log(1.+x) - x / (1.+x))
 
 def mass_enclosed_trunc5(x, rs, tau, sigma_s):
     """
@@ -311,9 +311,9 @@ def mass_enclosed_trunc5(x, rs, tau, sigma_s):
     See module help for parameters
 
     """
-    f = lambda X: ((2 * (1 + tau**2)) / (1 + X) + 4 * tau * arctan(X/tau) + \
-                   2 * (-1 + tau**2) * log(1+X) - \
-                   (-1 + tau**2) * log(tau**2+X**2)) / (2 * (1+tau**2)**2)
+    f = lambda X: ((2 * (1+tau**2)) / (1.+X) + 4 * tau * arctan(X/tau) + \
+                   2 * (-1+tau**2) * log(1.+X) - \
+                   (-1 + tau**2) * log(tau**2+X**2)) / (2 * (1.+tau**2)**2)
     return 4 * 3.14159265 * rs**2 * sigma_s * tau**2 * (f(x) - f(0))
 
 def mass_enclosed_trunc7(x, rs, tau, sigma_s):
@@ -327,7 +327,7 @@ def mass_enclosed_trunc7(x, rs, tau, sigma_s):
     f = lambda X: ((tau**2 + 1) * (tau**2 + 2*X - 1) / (tau**2 + X**2) - \
                    (tau**2 - 3) * log(tau**2 + X**2) + \
                    2 * (tau**2 + 1) / (X + 1) + \
-                   2 * (tau**2 - 3) * log(1 + X) + \
+                   2 * (tau**2 - 3) * log(1. + X) + \
                    2 * (3*tau**2 - 1) * arctan(X / tau) / tau) / \
                   (2 * (tau**2 + 1)**3)
     return 4 * 3.14159265 * rs**2 * sigma_s * tau**4 * (f(x) - f(0))
@@ -340,7 +340,7 @@ def mass_enclosed_sharp(x, rs, tau, sigma_s):
     See module help for parameters
 
     """
-    return 4 * 3.14159265 * rs**2 * sigma_s * (log(1+x) - x / (1+x))
+    return 4 * 3.14159265 * rs**2 * sigma_s * (log(1.+x) - x / (1.+x))
 
 #-----------------------------------#
 #--    Total  masses
@@ -408,21 +408,21 @@ def rho_sharp(x, tau, delta_c, rho_bg):
 def F(x):
     x = array(x)
     f = ones(x.shape)
-    f[x < 1] = log(1/x[x < 1] + sqrt(1/x[x < 1]**2 - 1))
-    f[x < 1] /= sqrt(1-x[x < 1]**2)
-    f[x > 1] = arccos(1/x[x > 1]) / sqrt(x[x > 1]**2 - 1)
+    f[x < 1] = log(1./x[x < 1] + (1/x[x < 1]**2 - 1)**0.5)
+    f[x < 1] /= (1-x[x < 1]**2)**0.5
+    f[x > 1] = arccos(1./x[x > 1]) / (x[x > 1]**2 - 1)**0.5
     return f
 
 def L(x, tau):
-    return log(x / (hypot(tau, x) + tau))
+    return log(x / ((tau**2+x**2)**0.5 + tau))
 
 def T(x, tau):
     x = x + 0j
-    tx2diff = sqrt(tau**2 - x**2)
-    x2diff = sqrt(x**2 - 1)
+    tx2diff = (tau**2 - x**2)**0.5
+    x2diff = (x**2 - 1)**0.5
     t = arctan(tx2diff / x2diff) - arctan(tx2diff / (tau*x2diff))
     t /= x2diff
-    t[x == 1] = sqrt((tau-1) / (tau+1))
+    t[x == 1] = ((tau-1) / (tau+1))**0.5
     # the imaginary parts of the two arctans cancel out
     return t
 
@@ -430,4 +430,4 @@ def Sigma_s(rs, delta_c, rho_c):
     return rs * delta_c * rho_c
 
 def delta(c):
-    return 200. * c**3 / (3 * (log(1+c) - c / (1+c)))
+    return 200. * c**3 / (3 * (log(1.+c) - c / (1.+c)))

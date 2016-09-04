@@ -348,11 +348,13 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
             e2 = e2_varlist[:,index][[0,1,2,3],:].T
             srcm = srcm_varlist[(index)]
             tile = tile_varlist[(index)]
-            
+
             if len(srcNr) != 0:
                 srcPZ = np.array([srcPZ_a,]  *len(srcNr))
             else:
                 srcPZ = np.zeros((0, len(srcPZ_a)), dtype=np.float64)
+            
+            #srcPZ = shear.import_spec_cat_pz(catmatch[kidscatname][1], catmatch, srcNr)
             
             if 'covariance' in purpose:
                 # These lists will contain the final
@@ -704,6 +706,7 @@ if __name__ == '__main__':
     zsrcbins = np.arange(0.025,3.5,0.05)
     Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
                         for y in zsrcbins])
+
     #import matplotlib.pyplot as pl
     if cat_version == 3:
         if wizz == 'False':
@@ -711,32 +714,89 @@ if __name__ == '__main__':
                 path_kidscats, kidscatname2, kidscat_end, specz_file,
                 src_selection, cat_version)
             srcPZ_a, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, \
-                                     weights=spec_weight, density=1)
+                                                weights=spec_weight, density=1)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
-            #pl.plot(np.arange(0.025,3.5,0.05), srcPZ_a, color='black')#, label='0.1-0.9')
-            #src_selection['Z_B'] = ['self', np.array([ 0.005,  1.2])]
-            #srcNZ, spec_weight = shear.import_spec_cat(path_kidscats, kidscatname2,\
-            #                                       kidscat_end, src_selection, \
-            #                                        cat_version)
-            #srcPZ_b, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, \
-            #                             weights=spec_weight, density=1)
-            #print src_selection
-            #srcPZ_b = srcPZ_b/srcPZ_b.sum()
-            #pl.plot(np.arange(0.025,3.5,0.05), srcPZ_b, color='red', label='0.005-1.2')
-            #pl.legend()
-            #pl.savefig('/data2/dvornik/test/n_z_comparison_0p9_1p2.pdf')
-            #pl.show()
-        
-            #pl.plot(np.arange(0.025,3.5,0.05), (srcPZ_b-srcPZ_a)/srcPZ_b, color='black')
-            #pl.show()
+            """
+            Nbootstraps=1000
+            rand_nums = np.random.random_integers(0,len(srcNZ)-1, [Nbootstraps, len(srcNZ)])
+            
+            srcPZ_a = np.zeros([Nbootstraps, 70])
+            for i, rand in enumerate(rand_nums):
+                srcPZ_b, bins = np.histogram(srcNZ[rand], range=[0.025, 3.5], bins=70, \
+                                     weights=spec_weight[rand], density=1)
+                srcPZ_a[i,:] = srcPZ_b/srcPZ_b.sum()
+
+            nz_percentiles = np.array(map(lambda v: [v[1], v[2]-v[1], v[1]-v[0]], zip(*np.percentile(srcPZ_a, [16, 50, 84], axis=0))))
+            print nz_percentiles
+            pl.plot(np.linspace(0.025, 3.5, 70), nz_percentiles[:,0])
+            pl.fill_between(np.linspace(0.025, 3.5, 70), nz_percentiles[:,0]+nz_percentiles[:,1], nz_percentiles[:,0]-nz_percentiles[:,2])
+            pl.show()
+            np.savetxt('/data2/dvornik/test/tests_paper/data_nz.txt', nz_percentiles)
+            """
+            
+            """
+            #srcPZ_b, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, density=1)
+            #srcPZ_a = srcNZ/srcNZ.sum()
+            srcPZ_a = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), srcNZ)
+            
+            
+            #pl.plot(srcNZ)
+            srcPZ_a = srcPZ_a/srcPZ_a.sum()
+            pl.plot(srcPZ_a)
+            #pl.plot(np.linspace(0.025, 3.5, 70), srcPZ_a)
+            pl.show()
+            np.savetxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt', srcPZ_a)
+            """
+            #srcPZ_a = np.genfromtxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt')
+            
         if wizz == 'True':
             srcPZ_a = shear.import_spec_wizz(path_kidscats, kidscatname2,\
                                             kidscat_end, src_selection, \
                                             cat_version, filename_var, Nsplits)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
-            #pl.plot(np.arange(0.025,3.5,0.05), srcPZ_a, color='red')
-            #pl.show()
-    #quit()
+
+    # Calculation of average m correctionf for KiDS-450
+    if cat_version == 3:
+        # Values are hardcoded, if image simulations give
+        # different results this must be changed!
+        print('\nCalculating average m correction...')
+        
+        m_corr = np.unique(srcm_varlist)
+        m_selection = {}
+        dlsods = np.zeros(m_corr.shape)
+        
+        for i, m in enumerate(m_corr):
+            srcm_i = srcm_varlist[srcm_varlist == m]
+            if m == -0.0165984884074:
+                m_selection['Z_B'] = ['self', np.array([0.1, 0.2])]
+            if m == -0.0107643100825:
+                m_selection['Z_B'] = ['self', np.array([0.2, 0.3])]
+            if m == -0.0163154916657:
+                m_selection['Z_B'] = ['self', np.array([0.3, 0.4])]
+            if m == -0.00983059386823:
+                m_selection['Z_B'] = ['self', np.array([0.4, 0.5])]
+            if m == -0.0050563715617:
+                m_selection['Z_B'] = ['self', np.array([0.5, 0.6])]
+            if m == -0.00931232658151:
+                m_selection['Z_B'] = ['self', np.array([0.6, 0.7])]
+            if m == -0.0135538269718:
+                m_selection['Z_B'] = ['self', np.array([0.7, 0.8])]
+            if m == -0.0286749355629:
+                m_selection['Z_B'] = ['self', np.array([0.8, 0.9])]
+        
+            srcNZ_m, spec_weight_m = shear.import_spec_cat(path_kidscats, kidscatname2,\
+                                                        kidscat_end, m_selection, \
+                                                        cat_version)
+            srcPZ_m, bins_m = np.histogram(srcNZ_m, range=[0.025, 3.5], bins=70, \
+                                                weights=spec_weight_m, density=1)
+            srcPZ_m = srcPZ_m/srcPZ_m.sum()
+            dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
+                                Dcsbins, srcPZ_m, cat_version))
+            
+        srcm_varlist = np.average(m_corr, weights=dlsods)
+        srcm_varlist = srcm_varlist * np.ones(srcNr_varlist.shape)
+
+
     # Printing the made choices
 
     print

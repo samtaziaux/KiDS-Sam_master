@@ -101,6 +101,7 @@ def main():
         gammax = np.zeros([Nobsbins,nRbins])
         wk2 = np.zeros([Nobsbins,nRbins])
         srcm = np.zeros([Nobsbins,nRbins])
+        Nsrc = np.zeros([Nobsbins,nRbins])
 
     ESDt_tot = np.zeros([Nobsbins,nRbins])
     ESDx_tot = np.zeros([Nobsbins,nRbins])
@@ -252,12 +253,15 @@ def main():
                     Cs_N1 = sheardat_N1['Cs']
                     Ss_N1 = sheardat_N1['Ss']
                     Zs_N1 = sheardat_N1['Zs']
+                    if Cs_N1.size == 0:
+                        continue
                     
                     e1 = sheardat_N1['e1'][:,blindcatnum]
                     e2 = sheardat_N1['e2'][:,blindcatnum]
                     lfweight = sheardat_N1['lfweight'][:,blindcatnum]
                     srcmlist = sheardat_N1['bias_m']
                     variance = sheardat_N1['variance(e[A,B,C,D])'][0]
+    
 
                     e1 = np.reshape(e1,[len(e1),1])
                     e2 = np.reshape(e2,[len(e2),1])
@@ -273,6 +277,7 @@ def main():
                     wk2[N1] = wk2[N1] + np.sum(lfweights*Zs_N1,axis=0)
                     # The total weight (lensfit weight + lensing efficiency)
                     srcm[N1] = srcm[N1] + np.sum(lfweights*Zs_N1*srcmlists,axis=0)
+                    Nsrc[N1] = Nsrc[N1] + np.sum(np.ones(srcmlists.shape),axis=0)
                     
                     for N2 in xrange(Nobsbins):
                         
@@ -304,7 +309,8 @@ def main():
                         Cs_N2 = np.array(sheardat_N2['Cs'])
                         Ss_N2 = np.array(sheardat_N2['Ss'])
                         Zs_N2 = np.array(sheardat_N2['Zs'])
-                    
+                        if Cs_N1.size == 0:
+                            continue
                         for R1 in xrange(nRbins):
                             for R2 in range(nRbins):
 
@@ -345,7 +351,7 @@ def main():
             shear.write_stack(filenameESD, filename_N1, Rcenters, Runit, ESDt_tot[N1], ESDx_tot[N1], \
                               error_tot[N1], bias_tot[N1], h, \
                               variance, wk2[N1], np.diagonal(cov[N1,N1,:,:]), \
-                              blindcat, blindcats, blindcatnum, \
+                              Nsrc[N1], blindcat, blindcats, blindcatnum, \
                               galIDs_matched, galIDs_matched_infield)
         
         for N1 in xrange(Nobsbins):

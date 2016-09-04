@@ -7,9 +7,8 @@ import numpy as np
 inf = np.inf # Infinity
 nan = np.nan # Not a number
 
-
-def read_config(config_file, version='0.5.7', Om=0.315, Ol=0.685, Ok=0, h=0.7,
-                lensid_file=None, folder='./'):
+    
+def read_config(config_file):
 
     blindcats = np.array(['A', 'B', 'C', 'D'])
 

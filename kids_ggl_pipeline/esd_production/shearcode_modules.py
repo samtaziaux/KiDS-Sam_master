@@ -123,11 +123,10 @@ def input_variables():
         path_output = '%s/%s%s' \
             %(path_output, output_var, filename_addition)
     else:
-        output_var = str(lens_binning[binname][1])
-        output_var = '_'.join(output_var.split())
-        output_var = output_var.replace('.', 'p').replace('[','')\
-            .replace(']','').replace('-','m')
-        path_output = '%s/%s%s%s' \
+        output_var = lens_binning[binname][1]
+        output_var = '_'.join(map(str, output_var))
+        output_var = output_var.replace('.', 'p').replace('-','m')
+        path_output = '%s/%s_%s%s' \
             %(path_output, binname, output_var, filename_addition)
 
     path_catalogs = '%s/catalogs' %(path_output.rsplit('/',1)[0])

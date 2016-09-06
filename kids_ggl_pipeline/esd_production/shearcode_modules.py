@@ -246,13 +246,14 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
                                              sellims[0], sellims[1])
                 var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
                                                      sellims[0], sellims[1])
-                #plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
-                                                          #sellims[0], selname, \
-                                                          #sellims[1])
-                plottitle = '$\mathrm{{{0}\,{1:g}}} \leq'.format(
-                                plottitle, sellims[0])
-                plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(
-                                plottitle, selname, sellims[1])
+                plottitle = '%s %g $\leq$ %s $<$ %g,'%(plottitle, \
+                                                          sellims[0], selname, \
+                                                          sellims[1])
+                                                          
+                #plottitle = '$\mathrm{{{0}\,{1:g}}} \leq'.format(
+                #                plottitle, sellims[0])
+                #plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(
+                #                plottitle, selname, sellims[1])
         
     return filename_var, var_print, plottitle
 
@@ -277,7 +278,7 @@ def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnu
                                              sellims[binnum], sellims[binnum+1])
             var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
                                                 sellims[binnum], sellims[binnum+1])
-            plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
+            plottitle = '%s %g $\leq$ %s $<$ %g,'%(plottitle, \
                                                 sellims[binnum], selname, \
                                                 sellims[binnum+1])
 
@@ -1694,8 +1695,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
         Nsubplot = 100*Nrows+10*Ncolumns+Nplot
         plt.subplot(Nsubplot)
 
-        if Nplot == int(Ncolumns/2+1):
-            plt.title(plottitle, fontsize=title_size)
+        plt.suptitle(plottitle, fontsize=title_size)
 
     else:
         # Plot and print ESD profile to a file

@@ -394,7 +394,6 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     A, z, Mstar, Rrange, angles = theta
     #print Mstar
     Mstar = 10**Mstar
-
     
     # some auxiliaries
     G = 4.51835939627e-30

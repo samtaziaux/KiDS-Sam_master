@@ -69,9 +69,6 @@ Ok                  0               # must be Ok = 0
 # Reduced Hubble constant.
 h                   1.0             # h = H_0/100 km/s/Mpc
 
-## epsilon additon: z_s > z_l + z_epsilon, optional
-z_epsilon           0.2             # Default = 0.2
-
 
 ######################
 ### ESD Production ###
@@ -157,6 +154,10 @@ lens_limits2      Nfof           self       5,inf
 # range [0.1, 0.9] with 0.1 increment.
 # Format: src_limits[i]    <param>      <limit(s)>
 src_limits1           Z_B        0.1,0.9
+
+# allow for a gap between the source and lens redshifts;
+# i.e., only select sources such that z_s > z_l + z_epsilon (optional)
+z_epsilon           0.2             # Default = 0.2
 
 
 ########################

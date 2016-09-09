@@ -102,7 +102,7 @@ def main():
 
             filename_N1 = filename_var.replace('binnum', '%i'%(N1+1))
             filenameESD = shear.define_filename_results(path_results, purpose, \
-                                                        filename_N1, \
+                                                        filename_N1.replace('_bin_%i'%(N1+1), ''), \
                                                         filename_addition, \
                                                         Nsplit, blindcat)
             if 'No' in binname:
@@ -124,6 +124,7 @@ def main():
     # Creating the ueber-matrix plot
     filename_N1 = filename_var.replace('_binnum', 's')
     filename_cov = filename_var.replace('_binnum', 's')
+    filename_cov = filename_cov.replace('_bins', '')
     filenamecov = '%s/%s_matrix_%s.txt'%(path_results, filename_cov, blindcat)
     
     # The Group bins

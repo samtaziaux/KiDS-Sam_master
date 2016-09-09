@@ -418,7 +418,7 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     #esd_tot = [esd for esd in izip(esd_mdm)]
     esd_mdm = _array(esd_mdm)
 
-    out = [esd_mdm, 0]
+    out = [esd_mdm]
     return out
 
 

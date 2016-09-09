@@ -86,7 +86,7 @@ def fiducial4(theta, R, h=1, Om=0.315, Ol=0.685):
                                                              esd_host,
                                                              esd_central)])
     Mavg = ( fsat * Msat**(2./3.) + (1-fsat) * Mcentral**(2./3.) )**(3./2.)
-    out = [esd_total, esd_sat, esd_host, esd_central, Mavg, 0]
+    out = [esd_total, esd_sat, esd_host, esd_central, Mavg]
     return out
 
 
@@ -172,7 +172,7 @@ def fiducial4_2halo(theta, R, h=1, Om=0.315, Ol=0.685):
                                                              esd_central,
                                                              esd_2halo)])
     Mavg = ( fsat * Msat**(2./3.) + (1-fsat) * Mcentral**(2./3.) )**(3./2.)
-    out = [esd_total, esd_sat, esd_host, esd_central, esd_2halo, Mavg, 0]
+    out = [esd_total, esd_sat, esd_host, esd_central, esd_2halo, Mavg]
     return out
 
 
@@ -258,7 +258,7 @@ def fiducial_auto(theta, R, h=1, Om=0.315, Ol=0.685):
                                                              esd_central,
                                                              esd_2halo)])
     Mavg = ( fsat * Msat**(2./3.) + (1-fsat) * Mcentral**(2./3.) )**(3./2.)
-    out = [esd_total, esd_sat, esd_host, esd_central, esd_2halo, Mavg, 0]
+    out = [esd_total, esd_sat, esd_host, esd_central, esd_2halo, Mavg]
     return out
 
 
@@ -349,7 +349,7 @@ def fiducial4_auto(theta, R, h=1, Om=0.315, Ol=0.685):
                                                              esd_central,
                                                              esd_2halo)])
     Mavg = ( fsat * Msat**(2./3.) + (1-fsat) * Mcentral**(2./3.) )**(3./2.)
-    out = [esd_total, esd_sat, esd_host, esd_central, esd_2halo, Mavg, 0]
+    out = [esd_total, esd_sat, esd_host, esd_central, esd_2halo, Mavg]
     return out
 
 
@@ -380,7 +380,7 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
                    in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
 
-    out = [esd_central, 0]
+    out = [esd_central]
     return out
 
 def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
@@ -840,5 +840,5 @@ def satellites(theta, R):
                     for x in _izip(R, rs_host, Rsat,
                         n_Rsat, sigma_host, Rranges)])
 
-    out = [esd_sat + esd_host, esd_sat, esd_host, 0]
+    out = [esd_sat + esd_host, esd_sat, esd_host]
     return out

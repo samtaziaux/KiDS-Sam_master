@@ -92,6 +92,16 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 ---
 Update log:
 
+**2016 September 9** - Release v1.3.0. Features:
+- More user friendly output folder and file structure.
+- Added m-correction to the ESD production.
+- Added user selectable epsilon cut (z_s > z_l + epsilon).
+- Proper paths to catalogues as used in Leiden.
+- Solved problems when plotting data.
+- Conversion from physical units to comoving units when using halo.py model.
+- Solved problems with saving the progress of MCMC chains.
+- Various bug fixes.
+
 **2016 June 10** - Release v1.2.3. Features:
 - Bug fixes to compatibility issues with Numpy and blinding when running bootstrap.
 

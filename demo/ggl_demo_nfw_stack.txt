@@ -69,7 +69,7 @@ Ok                  0               # must be Ok = 0
 # Reduced Hubble constant.
 h                   1.0             # h = H_0/100 km/s/Mpc
 
-## epsilon additon: z_s > z_l + z_epsilon
+## epsilon additon: z_s > z_l + z_epsilon, optional
 z_epsilon           0.2             # Default = 0.2
 
 

@@ -588,6 +588,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file):
     print
 
     if os.path.isfile(outname):
+        print '(in shear_plus_covariance)',
         print 'This output already exists:', outname
         print
         quit()

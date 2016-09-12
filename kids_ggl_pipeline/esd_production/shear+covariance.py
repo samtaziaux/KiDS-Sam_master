@@ -594,6 +594,7 @@ if __name__ == '__main__':
     print
     
     if os.path.isfile(outname):
+        print '(in shear+covariance)',
         print 'This output already exists:', outname
         print
         quit()

@@ -95,6 +95,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file):
 
     # Stop if the output already exists.
     if os.path.isfile(outname):
+        print '(in combine_splits)',
         print 'This output already exists:', outname
         print
         quit()

@@ -64,6 +64,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file):
 
     # Stop if the output already exists.
     if os.path.isfile(filenamecov):
+        print '(in combine_covariance_plus_bootstrap)',
         print 'This output already exists:', filenameESD
         print 'This output already exists:', filenamecov
         print

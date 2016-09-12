@@ -33,23 +33,23 @@ beta = -0.37 # Used to calculate m
 inf = np.inf
 
 
-def input_variables():
+def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
 
-    # Input for the codes
-    try:
-        Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
-        Nsplits = int(sys.argv[2]) # The number cores/splits
-        binnum = int(sys.argv[3]) # The number of this particular observable bin
-        blindcat = str(sys.argv[4]) # The number of this blind KiDS catalog
-        config_file = str(sys.argv[5]) # The path to the configuration file
-    except:
-        Nsplit = 1 # The number of this particular core/split
-        Nsplits = 1 # The number cores/splits
-        binnum = 1 # The number of this particular observable bin
-        blindcat = 'D' # The number of this particular blind KiDS catalog
-        config_file = str(sys.argv[1]) # The path to the configuration file
+    ## Input for the codes
+    #try:
+        #Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
+        #Nsplits = int(sys.argv[2]) # The number cores/splits
+        #binnum = int(sys.argv[3]) # The number of this particular observable bin
+        #blindcat = str(sys.argv[4]) # The number of this blind KiDS catalog
+        #config_file = str(sys.argv[5]) # The path to the configuration file
+    #except:
+        #Nsplit = 1 # The number of this particular core/split
+        #Nsplits = 1 # The number cores/splits
+        #binnum = 1 # The number of this particular observable bin
+        #blindcat = 'D' # The number of this particular blind KiDS catalog
+        #config_file = str(sys.argv[1]) # The path to the configuration file
 
-        print 'Warning: Input not found!'
+        #print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
     path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
@@ -76,12 +76,12 @@ def input_variables():
     if filename_addition == 'None':
         filename_addition = ''
     else:
-        filename_addition = '_%s'%filename_addition
-    
+        filename_addition = '_{0}'.format(filename_addition)
+
     # Binnning information of the lenses
     obsbins = define_obsbins(1, lens_binning, [], [])
     binname, lens_binning, Nobsbins, binmin, binmax = obsbins
-    
+
     # Defining the lens-ID lens selection/binning
     if 'None' not in lensid_file:
         selection = define_lensid_selection(lensid_file, lens_selection, \

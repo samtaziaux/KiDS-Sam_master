@@ -56,6 +56,7 @@ def main():
     # Printing the covariance matrix to a text file
     filename_N1 = filename_var.replace('_binnum', 's')
     filename_cov = filename_var.replace('_binnum', 's')
+    filename_cov = filename_cov.replace('_bins', '')
     #filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
     #                        filename_cov, filename_addition, blindcat)
     filenamecov = '%s/%s_matrix_%s.txt'%(path_results, filename_cov, blindcat)

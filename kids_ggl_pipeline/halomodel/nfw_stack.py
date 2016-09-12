@@ -392,10 +392,12 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     _izip = izip
 
     A, z, Mstar, Rrange, angles = theta
-   
+    #print Mstar
+    Mstar = 10**Mstar
+    
     # some auxiliaries
-    c = 4.51835939627e-30
-    G = 9.71561189026e-09
+    G = 4.51835939627e-30
+    c = 9.71561189026e-09
     H0 = 3.24077928947e-18
 
     #H = [H0 * np.sqrt(Om*(1+zi)**3 + Ol) for zi in izip(z)]
@@ -403,8 +405,13 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     #Cd = [(c * Hi) / (G * 6) for Hi in izip(H)]
     Cd = (c * H0) / (G * 6)
 
-    esd_mdm = [(Ai * Mi * Cd)**0.5 / (4 * Ri[1:])
+    #print Cd
+    #print R
+    
+    esd_mdm = [(Ai * Mi * Cd)**0.5 / (4 * Ri[1:] * 1e6) # Mpc to pc
                     for Ai, Mi, Ri in izip(A, Mstar, R)]
+    
+    print esd_mdm
     
     """
     # more parameters

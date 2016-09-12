@@ -98,7 +98,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file):
         print '(in combine_splits)',
         print 'This output already exists:', outname
         print
-        quit()
+        return
 
     # Load the first split 
     if ('random' in purpose):

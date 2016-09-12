@@ -19,6 +19,7 @@ from astropy import constants as const, units as u
 inf = np.inf # Infinity
 nan = np.nan # Not a number
 
+
 def main(nsplit, nsplits, nobsbin, blindcat, config_file):
 
     # Input parameters
@@ -68,7 +69,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file):
         print 'This output already exists:', filenameESD
         print 'This output already exists:', filenamecov
         print
-        quit()
+        return
 
     # Importing all GAMA data, and the information
     # on radial bins and lens-field matching.

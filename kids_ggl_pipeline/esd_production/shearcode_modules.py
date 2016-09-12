@@ -483,7 +483,7 @@ def define_Rbins(path_Rbins, Runit):
     
     if Rconst == -999:
         print '*** Unit of radial bins not recognized! ***'
-        quit()
+        raise SystemExit()
         
     [Rmin, Rmax, Rbins] = [r*Rconst for r in [Rmin, Rmax, Rbins]]
 
@@ -534,7 +534,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
             randomcat = pyfits.open(randomcatname)[1].data
         except:
             print 'Could not import random catalogue: ', randomcatname
-            quit()
+            raise SystemExit()
 
         galRAlist = randomcat['ra'][Ncatmin : Ncatmax]
         galDEClist = randomcat['dec'][Ncatmin : Ncatmax]
@@ -859,7 +859,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
     except:
         print
         print('Cannot run The-wiZZ, please check the required files.')
-        quit()
+        raise SystemExit()
 
 
     if os.path.isfile('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(\
@@ -932,7 +932,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
                 path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
             else:
                 print('Cannot locate The-wiZZ in the pipeline instalation.')
-                quit()
+                raise SystemExit()
 
             ps = []
             codename = '%spdf_maker.py'%(path_shearcodes)
@@ -948,7 +948,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
             except:
                 print
                 print('Cannot run The-wiZZ, please check the required files.')
-                quit()
+                raise SystemExit()
 
 
             # Reading in the calculated Z_S from The-wiZZ output file

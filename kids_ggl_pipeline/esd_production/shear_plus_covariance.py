@@ -591,7 +591,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file):
         print '(in shear_plus_covariance)',
         print 'This output already exists:', outname
         print
-        quit()
+        return
 
 
     # Printing a placeholder file, that tells other codes \

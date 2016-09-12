@@ -597,7 +597,7 @@ if __name__ == '__main__':
         print '(in shear+covariance)',
         print 'This output already exists:', outname
         print
-        quit()
+        raise SystemExit()
 
     
     # Printing a placeholder file, that tells other codes \

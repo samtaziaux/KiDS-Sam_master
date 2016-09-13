@@ -34,7 +34,7 @@ inf = np.inf
 
 
 def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
-
+    
     ## Input for the codes
     #try:
         #Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
@@ -61,6 +61,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     print
     print 'Running:', purpose
 
+    blindcat = blindcat[0]
     # Defining the number of the blind KiDS catalogue
     if blindcat == 'A':
         blindcatnum = 0
@@ -120,6 +121,10 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     #                                                 '', src_selection)
     if ('ID' in lens_selection) & ('No' in binname):
         output_var = 'IDs_from_file'
+        path_output = '%s/%s%s' \
+            %(path_output, output_var, filename_addition)
+    elif ('ID' not in lens_selection) & ('No' in binname):
+        output_var = 'No_bins'
         path_output = '%s/%s%s' \
             %(path_output, output_var, filename_addition)
     else:
@@ -310,6 +315,9 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
             filename_var_bins = '%s_%s_bin_%s'%(filename_var, purpose, \
                                              binnum)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
+        else:
+            filename_var_bins = '%s_No_bins'%(filename_var)
+            var_print = '%s No bins,'%(var_print)
         # Lens selection
         filename_var_lens, var_print, x = define_filename_sel(filename_var, \
                                                          var_print, '', \
@@ -1571,7 +1579,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
                                   array= [variance]*len(galIDlist)))
 
     cols = pyfits.ColDefs(fitscols)
-    tbhdu = pyfits.new_table(cols)
+    tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
     #	print
     if os.path.isfile(filename):

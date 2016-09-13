@@ -43,6 +43,9 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
     srcNr_varlist, srcRA_varlist, srcDEC_varlist, w_varlist, \
         e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a = srclists
 
+    gallists, srclists = [], []
+    gc.collect()
+
     if 'catalog' in purpose:
         # These lists will contain the final output
         """
@@ -302,7 +305,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                 time.sleep(30) # wait before continuing the calculation
             """
             kidscatN = kidscatN+1
-#def define_lenssel(gamacat, centering, lens_selection, lens_binning,
+            #def define_lenssel(gamacat, centering, lens_selection, lens_binning,
                    #binname, binnum, binmin, binmax, Dcllist):
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \
@@ -810,7 +813,15 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file):
                 Dallist, Dcllist)
     # source information
     srclists = (srcNr_varlist, srcRA_varlist, srcDEC_varlist, w_varlist,
-                e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a)
+              e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a)
+
+
+    galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
+        Dallist, Dcllist = [], [], [], [], [], [], []
+    srcNr_varlist, srcRA_varlist, srcDEC_varlist, w_varlist, \
+        e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a = [], \
+                                            [], [], [], [], [], [], [], []
+    gc.collect()
 
     """
     if 'catalog' in purpose:

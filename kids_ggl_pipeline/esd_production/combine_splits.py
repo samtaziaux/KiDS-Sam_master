@@ -179,7 +179,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file):
 
     # Writing the combined columns to a combined fits file
     cols=pyfits.ColDefs(combcol)
-    tbhdu=pyfits.new_table(cols)
+    tbhdu=pyfits.BinTableHDU.from_columns(cols)
 
     if os.path.isfile(outname):
         os.remove(outname)

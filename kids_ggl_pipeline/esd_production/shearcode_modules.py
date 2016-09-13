@@ -1572,7 +1572,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
                                   array= [variance]*len(galIDlist)))
 
     cols = pyfits.ColDefs(fitscols)
-    tbhdu = pyfits.new_table(cols)
+    tbhdu = pyfits.BinTableHDU.from_columns(cols)
 
     #	print
     if os.path.isfile(filename):

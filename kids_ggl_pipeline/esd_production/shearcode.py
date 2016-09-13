@@ -173,6 +173,9 @@ def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
 
 def run_esd(config_file):
 
+    np.seterr(divide='ignore', over='ignore', under='ignore',
+          invalid='ignore')
+          
     # Input for the codes
     kids_path, gama_path, specz_file, Om, Ol, Ok, h, z_epsilon,\
         folder, filename, purpose, Rbins, \

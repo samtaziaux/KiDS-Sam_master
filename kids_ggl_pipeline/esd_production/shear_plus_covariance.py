@@ -302,7 +302,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                 time.sleep(30) # wait before continuing the calculation
             """
             kidscatN = kidscatN+1
-#def define_lenssel(gamacat, centering, lens_selection, lens_binning,
+            #def define_lenssel(gamacat, centering, lens_selection, lens_binning,
                    #binname, binnum, binmin, binmax, Dcllist):
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \

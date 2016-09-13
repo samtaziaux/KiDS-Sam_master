@@ -63,10 +63,11 @@ def main():
                             
     # Stop if the output already exists.
     if os.path.isfile(filenamecov):
+        print '(in combine_covariance+bootstrap)',
         print 'This output already exists:', filenameESD
         print 'This output already exists:', filenamecov
         print
-        quit()
+        raise SystemExit()
     
     # Importing all GAMA data, and the information
     # on radial bins and lens-field matching.
@@ -322,7 +323,7 @@ def main():
                     # This message should be a lot more explicit
                     print('ERROR: Not all fields are analysed! '\
                                   'Please restart shear code!')
-                    quit()
+                    raise SystemExit()
             
             # Calculating the final output values of the accompanying shear data
             ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], \

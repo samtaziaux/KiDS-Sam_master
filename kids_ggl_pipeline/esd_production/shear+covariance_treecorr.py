@@ -71,7 +71,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
     if cat_version == 2:
         print('Cannot use TreeCorr on older KiDS catalogue (older than KiDS-450)!')
         print('Quiting...')
-        quit()
+        raise SystemExit()
 
 
     if cat_version == 3:
@@ -367,7 +367,7 @@ if __name__ == '__main__':
     if os.path.isfile(outname):
         print 'This output already exists:', outname
         print
-        quit()
+        raise SystemExit()
 
     
     # Printing a placeholder file, that tells other codes \

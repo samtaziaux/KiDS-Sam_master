@@ -2,11 +2,12 @@
 
 """
 # Part of the module to determine the shear
-# as a function of radius from a galaxy.    
+# as a function of radius from a galaxy.
 """
 
 # Import the necessary libraries
 import astropy.io.fits as pyfits
+import multiprocessing as mp
 import numpy as np
 import distance
 import sys
@@ -27,30 +28,21 @@ inf = np.inf # Infinity
 nan = np.nan # Not a number
 
 
-def loop_multi(Nsplit, output, outputnames, gamacat, centering, \
-               lens_selection, lens_binning, binname, binnum, \
-               binmin, binmax, filename_var, filename):
-    
-    q1 = multi.Queue()
-    procs = []
-    #chunk = int(np.ceil(len(R)/float(nprocs)))
-    
-    for j in xrange(Nsplit):
-    
-        work = multi.Process(target=loop, args=(j, output, outputnames, \
-                                                gamacat, centering, \
-                                                lens_selection, lens_binning, \
-                                                binname, binnum, binmin, \
-                                                binmax, filename_var, filename))
-        procs.append(work)
-        work.start()
+def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
+         gallists, lens_selection, lens_binning, binname, binnum,
+         binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
+         filename_var,
+         filename, cat_version, blindcat, srclists, path_splits,
+         splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
+         variance):
 
-    return
+    # galaxy information
+    galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
+        Dallist, Dcllist = gallists
+    # source information
+    srcNr_varlist, srcRA_varlist, srcDEC_varlist, w_varlist, \
+        e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a = srclists
 
-def loop(Nsplit, output, outputnames, gamacat, centering, \
-         lens_selection, lens_binning, binname, binnum, \
-         binmin, binmax, filename_var, filename):
-    
     if 'catalog' in purpose:
         # These lists will contain the final output
         """
@@ -75,29 +67,27 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
             'lfweight_A^2*k^2', 'lfweight_B^2*k^2', \
             'lfweight_C^2*k^2', 'lfweight_D^2*k^2', 'Nsources', \
             'bias_m_A', 'bias_m_B', 'bias_m_C', 'bias_m_D']
-            
+
         output = np.zeros([len(outputnames), len(galIDlist), nRbins])
-    
+
     # Start of the reduction of one KiDS field
     kidscatN = 0
-    
+
     if cat_version == 2:
         for kidscatname in splitkidscats[Nsplit]:
-        
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 80: # If it is too high...
                 print 'Waiting: More memory required'
                 time.sleep(30) # wait before continuing the calculation
-            
+
             kidscatN = kidscatN+1
-            
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, \
                                            binnum, binmin, binmax)
-                                           
+
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
-            
+
             # Find the selected lenses that lie in this KiDS field
             if 'catalog' in purpose:
                 galIDmask = np.in1d(galIDlist, matched_galIDs)
@@ -107,49 +97,50 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
             [gallist[galIDmask] for gallist in [galIDlist, galRAlist, \
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
-            
+
             print 'Analysing part %i/%i, process %i: %s (contains %i objects)'\
                     %(kidscatN, len(splitkidscats[Nsplit]), \
                       Nsplit+1, kidscatname, len(galIDs))
-            
+
             if ('random' in purpose):
                 print '	of catalog:', Ncat+1
-        
+
             # Split the list of lenses into chunks of 100 max.
-            lenssplits = np.append(np.arange(0, len(galIDs), 100), len(galIDs))
-            
+            # why 100? trying a few more here
+            lenssplits = np.append(np.arange(0, len(galIDs), 500), len(galIDs))
+
             # Import and mask all used data from the sources in this KiDS field
-            
+
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
-            shear.import_kidscat(path_kidscats, kidscatname, \
-                                    kidscat_end, src_selection, cat_version)
-            
+                shear.import_kidscat(path_kidscats, kidscatname,
+                                     kidscat_end, src_selection, cat_version)
+
             if 'covariance' in purpose:
                 # These lists will contain the final
                 # covariance output [Noutput, Nsrc, NRbins]
                 outputnames = ['Cs', 'Ss', 'Zs']
                 output = [Cs_out, Ss_out, Zs_out] = np.zeros([len(outputnames),\
                                                         len(w.T[0]), nRbins])
-            
-            
+
             for l in xrange(len(lenssplits)-1):
                 print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), \
                                             lenssplits[l], '-', lenssplits[l+1]
-                
+
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
-                Dal_split, galweights_split = [galIDs[lenssplits[l] : lenssplits[l+1]], \
-                                               galRAs[lenssplits[l] : lenssplits[l+1]], \
-                                               galDECs[lenssplits[l] : lenssplits[l+1]], \
-                                               galZs[lenssplits[l] : lenssplits[l+1]], \
-                                               Dcls[lenssplits[l] : lenssplits[l+1]], \
-                                               Dals[lenssplits[l] : lenssplits[l+1]], \
-                                               galweights[lenssplits[l] : lenssplits[l+1]]]
+                    Dal_split, galweights_split = \
+                        [galIDs[lenssplits[l]:lenssplits[l+1]], \
+                         galRAs[lenssplits[l]:lenssplits[l+1]], \
+                         galDECs[lenssplits[l]:lenssplits[l+1]], \
+                         galZs[lenssplits[l]:lenssplits[l+1]], \
+                         Dcls[lenssplits[l]:lenssplits[l+1]], \
+                         Dals[lenssplits[l]:lenssplits[l+1]], \
+                         galweights[lenssplits[l]:lenssplits[l+1]]]
 
                 # Create a mask for the complete list of lenses,
                 # that only highlights the lenses in this lens split
                 galIDmask_split = np.in1d(galIDlist, galID_split)
-                        
+
                 # Calculate the projected distance (srcR) and the
                 # shear (gamma_t and gamma_x) of all lens-source pairs.
                 srcR, incosphi, insinphi = shear.calc_shear(Dal_split, \
@@ -157,18 +148,19 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
                                                             e1, e2, Rmin, Rmax)
-                                               
+
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
-                k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, \
-                                                Dcsbins, srcPZ, cat_version, Dc_epsilon)
+                k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split,
+                                                Dcsbins, srcPZ, cat_version,
+                                                Dc_epsilon)
                 Nsrc = np.ones(np.shape(k))
 
                 # Mask all invalid lens-source pairs using
                 # the value of the radius
-                srcR = np.ma.filled(np.ma.array(srcR, mask = kmask, \
-                                                fill_value = 0))
-                    
+                srcR = np.ma.filled(np.ma.array(srcR, mask=kmask, \
+                                                fill_value=0))
+
                 # Create an lfweight matrix that can be
                 # masked according to lens-source distance
                 w_meshed_A, foo = np.meshgrid(w.T[0],np.zeros(len(k)))
@@ -178,18 +170,18 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 w_meshed = [w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D]
                 w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D = [], [], [], []
                 foo = [] # Remove unused lists
-                
+
                 # Start the reduction of one radial bin
                 for r in xrange(nRbins):
-                    
+
                     # Masking the data of all lens-source pairs
                     # according to the radial binning
                     Rmask = np.logical_not((Rbins[r] < srcR) \
                                            & (srcR < Rbins[r+1]))
                     kmask = [] # Remove unused lists
-                    
+
                     if np.sum(Rmask) != np.size(Rmask):
-                        
+
                         incosphilist = np.ma.filled(np.ma.array(incosphi, \
                                                                 mask = Rmask, \
                                                                 fill_value = 0))
@@ -204,7 +196,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                                             mask = Rmask, \
                                                             fill_value = 0)) \
                                           for u in w_meshed])
-                        
+
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
@@ -250,7 +242,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                 output[o, : ,r][galIDmask_split] = \
                                 output[o, : ,r][galIDmask_split] + \
                                 output_onebin[o]
-                    
+
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weighted Cs, Ss and Zs
@@ -266,11 +258,11 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                                              insinphilist, \
                                                              klist, \
                                                              galweights_split)
-                            
+
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
                                 output[o, : ,r] = output[o, : ,r] + output_onebin[o]
-    
+
             # Write the final output of this split to a fits file
             if 'covariance' in purpose:
                 filename = shear.define_filename_splits(path_splits, purpose, \
@@ -282,11 +274,11 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm)
         if ('random' in purpose):
-	    
+
             if os.path.isfile(filename):
                 os.remove(filename)
                 print 'Placeholder:', filename, 'is removed.'
-            
+
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, Nsplit+1, \
@@ -299,9 +291,9 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
 
 
     if cat_version == 3:
-        
+
         for kidscatname in splitkidscats[Nsplit]:
-    
+
             index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
             """
             memfrac = memory.test() # Check which fraction of the memory is full
@@ -315,10 +307,10 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \
                                            binmin, binmax, Dcllist)
-            
+
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
-            
+
             # Find the selected lenses that lie in this KiDS field
             if 'catalog' in purpose:
                 galIDmask = np.in1d(galIDlist, matched_galIDs)
@@ -328,18 +320,19 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
             [gallist[galIDmask] for gallist in [galIDlist, galRAlist, \
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
-            
+
             print 'Analysing part %i/%i, process %i: %s (contains %i objects)'\
                             %(kidscatN, len(splitkidscats[Nsplit]), \
                               Nsplit+1, kidscatname, len(galIDs))
             if ('random' in purpose):
                 print '	of catalog:', Ncat+1
-            
+
             # Split the list of lenses into chunks of 100 max.
-            lenssplits = np.append(np.arange(0, len(galIDs), 100), len(galIDs))
-            
+            # why 100? trying larger numbers (CS)
+            lenssplits = np.append(np.arange(0, len(galIDs), 500), len(galIDs))
+
             # Import and mask all used data from the sources in this KiDS field
-            
+
             srcNr = srcNr_varlist[(index)]
             srcRA = srcRA_varlist[(index)]
             srcDEC = srcDEC_varlist[(index)]
@@ -353,19 +346,19 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 srcPZ = np.array([srcPZ_a,]  *len(srcNr))
             else:
                 srcPZ = np.zeros((0, len(srcPZ_a)), dtype=np.float64)
-            
+
             #srcPZ = shear.import_spec_cat_pz(catmatch[kidscatname][1], catmatch, srcNr)
-            
+
             if 'covariance' in purpose:
                 # These lists will contain the final
                 # covariance output [Noutput, Nsrc, NRbins]
                 outputnames = ['Cs', 'Ss', 'Zs']
                 output = [Cs_out, Ss_out, Zs_out] = \
                         np.zeros([len(outputnames), len(w.T[0]), nRbins])
-        
+
             for l in xrange(len(lenssplits)-1):
                 print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
-                
+
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
                 Dal_split, galweights_split = [galIDs[lenssplits[l] : lenssplits[l+1]], \
@@ -379,7 +372,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 # Create a mask for the complete list of lenses,
                 # that only highlights the lenses in this lens split
                 galIDmask_split = np.in1d(galIDlist, galID_split)
-                        
+
                 # Calculate the projected distance (srcR) and the shear
                 # (gamma_t and gamma_x) of all lens-source pairs.
                 srcR, incosphi, insinphi = shear.calc_shear(Dal_split, \
@@ -387,7 +380,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
                                                             e1, e2, Rmin, Rmax)
-                                               
+
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
                 k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, \
@@ -397,7 +390,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 # the value of the radius
                 srcR = np.ma.filled(np.ma.array(srcR, mask = kmask, \
                                                 fill_value = 0))
-                
+
                 # Create an lfweight matrix that can be
                 # masked according to lens-source distance
                 w_meshed_A, foo = np.meshgrid(w.T[0],np.zeros(len(k)))
@@ -407,7 +400,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 w_meshed = [w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D]
                 w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D = [], [], [], []
                 foo = [] # Remove unused lists
-                
+
                 # Start the reduction of one radial bin
                 for r in xrange(nRbins):
                     # Masking the data of all lens-source pairs according
@@ -415,9 +408,9 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                     Rmask = np.logical_not((Rbins[r] < srcR) \
                                         & (srcR < Rbins[r+1]))
                     kmask = [] # Remove unused lists
-                    
+
                     if np.sum(Rmask) != np.size(Rmask):
-                        
+
                         incosphilist = np.ma.filled(np.ma.array(incosphi, \
                                                                 mask = Rmask, \
                                                                 fill_value = 0))
@@ -432,8 +425,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                                             mask = Rmask, \
                                                             fill_value = 0)) \
                                           for u in w_meshed])
-                        
-                        
+
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
@@ -480,7 +472,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                 output[o, : ,r][galIDmask_split] = \
                                 output[o, : ,r][galIDmask_split] + \
                                 output_onebin[o]
-                    
+
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weighted Cs, Ss and Zs
@@ -496,11 +488,11 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                                                              insinphilist, \
                                                              klist, \
                                                              galweights_split)
-                    
+
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
                                 output[o, : ,r] = output[o, : ,r] + output_onebin[o]
-        
+
             # Write the final output of this split to a fits file
             if 'covariance' in purpose:
                 filename = shear.define_filename_splits(path_splits, purpose, \
@@ -511,13 +503,13 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm)
-            
+
         if ('random' in purpose):
-	    
+
             if os.path.isfile(filename):
                 os.remove(filename)
                 print 'Placeholder:', filename, 'is removed.'
-    	    
+
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, Nsplit+1, \
@@ -531,7 +523,9 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
     return
 
 
-if __name__ == '__main__':
+#if __name__ == '__main__':
+
+def main(nsplit, nsplits, nobsbin, blindcat, config_file):
 
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
@@ -539,7 +533,7 @@ if __name__ == '__main__':
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
-        shear.input_variables()
+        shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
     print 'Step 1: Create split catalogues in parallel'
     print
@@ -592,14 +586,14 @@ if __name__ == '__main__':
                                             Nsplit, blindcat)
     print 'Requested file:', outname
     print
-    
+
     if os.path.isfile(outname):
-        print '(in shear+covariance)',
+        print '(in shear_plus_covariance)',
         print 'This output already exists:', outname
         print
-        raise SystemExit()
+        return
 
-    
+
     # Printing a placeholder file, that tells other codes \
     #    that this catalog is being written.
     if ('random' in purpose):
@@ -609,7 +603,7 @@ if __name__ == '__main__':
                                                 filename_var, i+1, \
                                                 Nsplits, filename_addition, \
                                                 blindcat)
-    	
+
             with open(filename, 'w') as file:
                 print >>file, ''
             print 'Placeholder:', filename, 'is written.'
@@ -619,11 +613,11 @@ if __name__ == '__main__':
     # Importing all GAMA data, and the information
     # on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
-    Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
-    galweightlist, galZlist, Dcllist, Dallist = \
-    shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats, \
-                      centering, purpose, Ncat, O_matter, O_lambda, Ok, h, \
-                      lens_weights, filename_addition, cat_version)
+        Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
+        galweightlist, galZlist, Dcllist, Dallist = \
+        shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats,
+                          centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
+                          lens_weights, filename_addition, cat_version)
 
     # Calculate the source variance
 
@@ -638,7 +632,7 @@ if __name__ == '__main__':
         for kidscatname in kidscats:
             i += 1
             print '	%i/%i:'%(i, len(kidscats)), kidscatname
-        
+
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
             shear.import_kidscat(path_kidscats, kidscatname, kidscat_end, \
@@ -649,18 +643,19 @@ if __name__ == '__main__':
             e1_varlist = np.hstack([e1_varlist, e1.T])
             e2_varlist = np.hstack([e2_varlist, e2.T])
 
+    # these are dummy variables if cat_version==2
+    srcNr_varlist = np.array([])
+    srcRA_varlist = np.array([])
+    srcDEC_varlist = np.array([])
+    srcm_varlist = np.array([])
+    tile_varlist = np.array([])
+    srcPZ_a = np.array([])
     if cat_version == 3:
-        srcNr_varlist = np.array([])
-        srcRA_varlist = np.array([])
-        srcDEC_varlist = np.array([])
-        srcm_varlist = np.array([])
-        tile_varlist = np.array([])
-        
         kidscatname2 = np.array([])
         for i in xrange(len(kidscats)):
             kidscatname2 = np.append(kidscatname2, \
                                      kidscats[i].rsplit('-', 1)[0])
-        
+
         kidscatname2 = np.unique(kidscatname2)
 
         print 'Importing KiDS catalogs from: %s'%path_kidscats
@@ -668,18 +663,18 @@ if __name__ == '__main__':
         for kidscatname in kidscatname2:
             i += 1
             print '	%i/%i:'%(i, len(kidscatname2)), kidscatname
-            
+
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
             shear.import_kidscat(path_kidscats, kidscatname, \
                                  kidscat_end, src_selection, cat_version)
-            
+
             srcNr_varlist = np.append(srcNr_varlist, srcNr)
             srcRA_varlist = np.append(srcRA_varlist, srcRA)
             srcDEC_varlist = np.append(srcDEC_varlist, srcDEC)
             srcm_varlist = np.append(srcm_varlist, srcm)
             tile_varlist = np.append(tile_varlist, tile)
-            
+
             # Make ellipticity- and lfweight-lists for the variance calculation
             w_varlist = np.hstack([w_varlist, w.T])
             e1_varlist = np.hstack([e1_varlist, e1.T])
@@ -709,7 +704,6 @@ if __name__ == '__main__':
                         for y in zsrcbins])
     Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
 
-    #import matplotlib.pyplot as pl
     if cat_version == 3:
         if wizz == 'False':
             srcNZ, spec_weight = shear.import_spec_cat(
@@ -721,7 +715,7 @@ if __name__ == '__main__':
             """
             Nbootstraps=1000
             rand_nums = np.random.random_integers(0,len(srcNZ)-1, [Nbootstraps, len(srcNZ)])
-            
+
             srcPZ_a = np.zeros([Nbootstraps, 70])
             for i, rand in enumerate(rand_nums):
                 srcPZ_b, bins = np.histogram(srcNZ[rand], range=[0.025, 3.5], bins=70, \
@@ -735,13 +729,12 @@ if __name__ == '__main__':
             pl.show()
             np.savetxt('/data2/dvornik/test/tests_paper/data_nz.txt', nz_percentiles)
             """
-            
+
             """
             #srcPZ_b, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, density=1)
             #srcPZ_a = srcNZ/srcNZ.sum()
             srcPZ_a = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), srcNZ)
-            
-            
+
             #pl.plot(srcNZ)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
             pl.plot(srcPZ_a)
@@ -750,7 +743,7 @@ if __name__ == '__main__':
             np.savetxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt', srcPZ_a)
             """
             #srcPZ_a = np.genfromtxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt')
-            
+
         if wizz == 'True':
             srcPZ_a = shear.import_spec_wizz(path_kidscats, kidscatname2,\
                                             kidscat_end, src_selection, \
@@ -762,11 +755,11 @@ if __name__ == '__main__':
         # Values are hardcoded, if image simulations give
         # different results this must be changed!
         print('\nCalculating average m correction...')
-        
+
         m_corr = np.unique(srcm_varlist)
         m_selection = {}
         dlsods = np.zeros(m_corr.shape)
-        
+
         for i, m in enumerate(m_corr):
             srcm_i = srcm_varlist[srcm_varlist == m]
             if m == -0.0165984884074:
@@ -785,7 +778,7 @@ if __name__ == '__main__':
                 m_selection['Z_B'] = ['self', np.array([0.7, 0.8])]
             if m == -0.0286749355629:
                 m_selection['Z_B'] = ['self', np.array([0.8, 0.9])]
-        
+
             srcNZ_m, spec_weight_m = shear.import_spec_cat(path_kidscats, kidscatname2,\
                                                         kidscat_end, specz_file, m_selection, \
                                                         cat_version)
@@ -794,7 +787,7 @@ if __name__ == '__main__':
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
             dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
                                 Dcsbins, srcPZ_m, cat_version, Dc_epsilon))
-    
+
         srcm_varlist = np.average(m_corr, weights=dlsods)
         srcm_varlist = srcm_varlist * np.ones(srcNr_varlist.shape)
 
@@ -808,29 +801,84 @@ if __name__ == '__main__':
 
     output = 0
     outputnames = 0
-                          
+
     # Split up the list of KiDS fields, for parallel obsbins
     splitkidscats = np.array(shear.split(kidscats, Nsplits))
-    
+
+    # galaxy information
+    gallists = (galIDlist, galRAlist, galDEClist, galZlist, galweightlist,
+                Dallist, Dcllist)
+    # source information
+    srclists = (srcNr_varlist, srcRA_varlist, srcDEC_varlist, w_varlist,
+                e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a)
+
+    """
     if 'catalog' in purpose:
-        calculation = loop_multi(Nsplits, output, outputnames, gamacat, \
-                                 centering, lens_selection, lens_binning, \
-                                 binname, binnum, binmin, binmax, filename_var, filename)
+        if Nsplits == 1:
+            out = loop(purpose, Nsplits, 0, output, outputnames, gamacat,
+                       centering, gallists, lens_selection, lens_binning,
+                       binname, binnum, binmin, binmax, Rbins, Rcenters,
+                       Rmin, Rmax,
+                       Runit, nRbins, Rconst, filename_var, filename, cat_version,
+                       blindcat, srclists, path_splits, splitkidscats,
+                       catmatch, Dcsbins, Dc_epsilon, filename_addition, variance)
+        else:
+            pool = mp.Pool(processes=Nsplits)
+            out = [pool.apply_async(loop, args=(
+                        purpose,Nsplits,j,output,outputnames,gamacat,centering,
+                        gallists,lens_selection,lens_binning,binname,binnum,
+                        binmin,binmax,Rbins,Rcenters,Rmin,Rmax,Runit,nRbins,Rconst,
+                        filename_var,filename,cat_version,blindcat,srclists,
+                        path_splits,splitkidscats,catmatch,Dcsbins,
+                        Dc_epsilon,filename_addition,variance))
+                   for j in xrange(Nsplits)]
+            pool.close()
+            pool.join()
+            for i in out:
+                i.get()
+    """
 
-    if 'covariance' in purpose:
+    if 'covariance' in purpose or 'catalog' in purpose:
         for i in xrange(Nobsbins):
-            filename_var = shear.define_filename_var(purpose, centering, \
-                                                     binname, i+1, Nobsbins, \
-                                                     lens_selection, lens_binning, \
-                                                     src_selection, \
-                                                     lens_weights, name_Rbins, \
-                                                     O_matter, O_lambda, Ok, h)
-                                                     
-            binname, lens_binning, Nobsbins, binmin, binmax = \
-            shear.define_obsbins(i+1, lens_binning, lenssel_binning, gamacat)
-            calculation = loop_multi(Nsplits, output, outputnames, gamacat, \
-                                     centering, lens_selection, lens_binning, \
-                                     binname, i, binmin, binmax, filename_var, filename)
+            if 'covariance' in purpose:
+                filename_var = shear.define_filename_var(
+                    purpose, centering, binname, i+1, Nobsbins, lens_selection,
+                    lens_binning, src_selection, lens_weights, name_Rbins,
+                    O_matter, O_lambda, Ok, h)
+
+                binname, lens_binning, Nobsbins, binmin, binmax = \
+                    shear.define_obsbins(i+1, lens_binning, lenssel_binning,
+                                         gamacat)
+            #calculation = loop_multi(Nsplits, output, outputnames, gamacat, \
+                                     #centering, lens_selection, lens_binning, \
+                                     #binname, i, binmin, binmax, filename_var, filename)
+            if Nsplits == 1:
+                out = loop(purpose, Nsplits, 0, output, outputnames, gamacat,
+                           centering, gallists, lens_selection, lens_binning,
+                           binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
+                           Runit, nRbins, Rconst, filename_var, filename, cat_version,
+                           blindcat, srclists, path_splits, splitkidscats, catmatch,
+                           Dcsbins, Dc_epsilon, filename_addition, variance)
+            else:
+                pool = mp.Pool(processes=Nsplits)
+                out = [pool.apply_async(loop, args=(
+                               purpose,Nsplits,j,output,outputnames,gamacat,
+                               centering,
+                               gallists,lens_selection,lens_binning,binname,
+                               i,binmin,binmax,Rbins,Rcenters,Rmin,Rmax,Runit,nRbins,
+                               Rconst,filename_var,filename,cat_version,blindcat,
+                               srclists,
+                               path_splits,splitkidscats,catmatch,Dcsbins,
+                               Dc_epsilon,filename_addition,variance))
+                       for j in xrange(Nsplits)]
+                pool.close()
+                pool.join()
+                for i in out:
+                    i.get()
+            if 'catalog' in purpose:
+                break
+
+    return
 
 
-
+## END OF FILE ##

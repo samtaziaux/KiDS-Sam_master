@@ -5,6 +5,7 @@
 """
 
 import astropy.io.fits as pyfits
+import multiprocessing as mp
 import numpy as np
 import sys
 import os
@@ -14,7 +15,12 @@ import subprocess as sub
 import shlex
 
 # local
+import combine_covariance_plus_bootstrap as combine_covboot
+import combine_splits
+import plot_covariance_plus_bootstrap as plot_covboot
+import shear_plus_covariance as shearcov
 import shearcode_modules as shear
+import stack_shear_plus_bootstrap as stack_shearboot
 import distance
 import esd_utils
 
@@ -41,18 +47,21 @@ def define_runparams(purpose, lens_binning, ncores, blindcats):
     nobsbin = nobsbins # Starting value
 
     # Prepare the values for nsplits and nobsbins
-    nsplits = ncores#/nobsbins
-
-    if nsplits == 0:
-        nsplits = 1
+    # this new variable is redundant
+    #nsplits = ncores#/nobsbins
+    #if nsplits == 0:
+        #nsplits = 1
+    if ncores == 0:
+        ncores = 1
     nsplit = 1 # Starting value
 
     # Names of the blind catalogs
     blindcat = blindcats[0]
 
-    return nruns, nsplits, nsplit, nobsbins, nobsbin, blindcat
+    #return nruns, nsplits, nsplit, nobsbins, nobsbin, blindcat
+    return nruns, ncores, nsplit, nobsbins, nobsbin, blindcat
 
-    
+
 def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                    blindcat, blindcats, config_file):
 
@@ -64,91 +73,100 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         path_shearcodes = directory + '/'
     if 'esd_production' in indirectory:
         path_shearcodes = 'esd_production'
-    
-    """
-    # Creating the splits
-    for n in xrange(nruns):
-        ps = []
-        for nobsbin in np.arange(nobsbins)+1:
 
-            for nsplit in np.arange(nsplits)+1:
-                
-                splitsname = 'python -W ignore %sshear+covariance.py' \
-                             %(path_shearcodes)
-                splitsname += ' %i %i %i %s %s &' \
-                              %(nsplit, nsplits, nobsbin,
-                                blindcat, config_file)
-                p = sub.Popen(shlex.split(splitsname))
-                ps.append(p)
-        for p in ps:
-            p.wait()
-    """
-    
-    for n in xrange(nruns):
-        ps = []
-        splitsname = 'python -W ignore %sshear+covariance.py'%(path_shearcodes)
-        splitsname += ' %i %i %i %s %s &'%(nsplit, nsplits, nobsbin, \
-                                           blindcat, config_file)
-        p = sub.Popen(shlex.split(splitsname))
-        ps.append(p)
-        for p in ps:
-            p.wait()
-    
+    # it's easier to debug if we don't use multiprocessing, so it will
+    # only be used if it is asked for
+    if nruns > 1:
+        pool = mp.Pool(processes=nruns)
+        out = [pool.apply_async(shearcov.main,
+                                args=(nsplit,nsplits,nobsbin,blindcat,
+                                      config_file))
+               for n in xrange(nruns)]
+        pool.close()
+        pool.join()
+        for i in out:
+            i.get()
+    else:
+        out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file)
+
     # Combine the splits according to the purpose
 
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
-        ps = []
-        codename = '%scombine_splits.py'%(path_shearcodes)
-        runname = 'python -W ignore %s'%codename
-        runname += ' %i %i %i %s %s &' \
-                %(nsplit, nsplits, nobsbin, blindcat, config_file)
-        p = sub.Popen(shlex.split(runname))
-        ps.append(p)
-        for p in ps:
-            p.wait()
+        #ps = []
+        #codename = '%scombine_splits.py'%(path_shearcodes)
+        #runname = 'python -W ignore %s'%codename
+        #runname += ' %i %i %i %s %s &' \
+                #%(nsplit, nsplits, nobsbin, blindcat, config_file)
+        #p = sub.Popen(shlex.split(runname))
+        #ps.append(p)
+        #for p in ps:
+            #p.wait()
+        combine_splits.main(nsplit, nsplits, nobsbin, blindcat, config_file)
 
     # Stacking the lenses into an ESD profile
-    if ('bootstrap' in purpose) or ('catalog' in purpose):
-        runblinds('%sstack_shear+bootstrap.py' \
-                  %(path_shearcodes), blindcats,
-                    nsplit, nsplits, nobsbin, config_file, purpose)
+    if 'bootstrap' in purpose or 'catalog' in purpose:
+        #runblinds('%sstack_shear+bootstrap.py' \
+                  #%(path_shearcodes), blindcats,
+                    #nsplit, nsplits, nobsbin, config_file, purpose)
+        runblinds(stack_shearboot.main, blindcats, nsplit, nsplits, nobsbin,
+                  config_file, purpose)
 
     # Creating the analytical/bootstrap covariance and ESD profiles
-    if ('bootstrap' in purpose) or ('covariance' in purpose):
-        runblinds('%scombine_covariance+bootstrap.py' \
-                  %(path_shearcodes), blindcats,
-                    nsplit, nsplits, nobsbin, config_file, purpose)
-    
+    if 'bootstrap' in purpose or 'covariance' in purpose:
+        #runblinds('%scombine_covariance+bootstrap.py' \
+                  #%(path_shearcodes), blindcats,
+                    #nsplit, nsplits, nobsbin, config_file, purpose)
+        runblinds(combine_covboot.main, blindcats, nsplit, nsplits, nobsbin,
+                  config_file, purpose)
+
     # Plotting the analytical/bootstrap covariance and ESD profiles
-    if ('bootstrap' in purpose) or ('covariance' in purpose):
-        runblinds('%splot_covariance+bootstrap.py' \
-                  %(path_shearcodes), blindcats,
-                    nsplit, nsplits, nobsbin, config_file, 'covariance')
-    
+    if 'bootstrap' in purpose or 'covariance' in purpose:
+        #runblinds('%splot_covariance+bootstrap.py' \
+                  #%(path_shearcodes), blindcats,
+                    #nsplit, nsplits, nobsbin, config_file, 'covariance')
+        runblinds(plot_covboot.main, blindcats, nsplit, nsplits, nobsbin,
+                  config_file, purpose)
+
     return
-    
-    
-def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
-    
-    if 'bootstrap' in purpose:
-        ps = []
-        for blindcat in blindcats:
-            runname = 'python -W ignore %s'%codename
-            runname += ' %i %i %i %s %s &' \
-                %(nsplit, nsplits, nobsbin, blindcat, config_file)
-            p = sub.Popen(shlex.split(runname))
-            p.wait()
+
+
+#def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
+def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
+
+    # this allows for a single blindcat to have a name with more than one letter
+    #if hasattr(blindcats, '__iter__') and len(blindcats) > 1:
+    if len(blindcats) > 1:
+        pool = mp.Pool(len(blindcats))
+
+    #if 'bootstrap' in purpose:
+        #ps = []
+        #for blindcat in blindcats:
+            #runname = 'python -W ignore %s'%codename
+            #runname += ' %i %i %i %s %s &' \
+                #%(nsplit, nsplits, nobsbin, blindcat, config_file)
+            #p = sub.Popen(shlex.split(runname))
+            #p.wait()
+    #else:
+        #ps = []
+        #for blindcat in blindcats:
+            #runname = 'python -W ignore %s'%codename
+            #runname += ' %i %i %i %s %s &' \
+                #%(nsplit, nsplits, nobsbin, blindcat, config_file)
+            #p = sub.Popen(shlex.split(runname))
+            #ps.append(p)
+        #for p in ps:
+            #p.wait()
+    if len(blindcats) > 1:
+        out = [pool.apply_async(func, args=(nsplit,nsplits,nobsbin,
+                                            blindcat,config_file))
+               for blindcat in blindcats]
+        pool.close()
+        pool.join()
+        for i in out:
+            i.get()
     else:
-        ps = []
-        for blindcat in blindcats:
-            runname = 'python -W ignore %s'%codename
-            runname += ' %i %i %i %s %s &' \
-                %(nsplit, nsplits, nobsbin, blindcat, config_file)
-            p = sub.Popen(shlex.split(runname))
-            ps.append(p)
-        for p in ps:
-            p.wait()
+        func(nsplit, nsplits, nobsbin, blindcats, config_file)
 
     return
 
@@ -169,7 +187,7 @@ def run_esd(config_file):
     # Define the initial parameters for this shearcode run
     runparams = define_runparams(purpose, lens_binning, ncores, blindcats)
     nruns, nsplits, nsplit, nobsbins, nobsbin, blindcat = runparams
-    
+
     # Excecute the parallelized shearcode run
     run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                    blindcat, blindcats, config_file)

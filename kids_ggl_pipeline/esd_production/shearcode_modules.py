@@ -33,23 +33,23 @@ beta = -0.37 # Used to calculate m
 inf = np.inf
 
 
-def input_variables():
+def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
 
-    # Input for the codes
-    try:
-        Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
-        Nsplits = int(sys.argv[2]) # The number cores/splits
-        binnum = int(sys.argv[3]) # The number of this particular observable bin
-        blindcat = str(sys.argv[4]) # The number of this blind KiDS catalog
-        config_file = str(sys.argv[5]) # The path to the configuration file
-    except:
-        Nsplit = 1 # The number of this particular core/split
-        Nsplits = 1 # The number cores/splits
-        binnum = 1 # The number of this particular observable bin
-        blindcat = 'D' # The number of this particular blind KiDS catalog
-        config_file = str(sys.argv[1]) # The path to the configuration file
+    ## Input for the codes
+    #try:
+        #Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
+        #Nsplits = int(sys.argv[2]) # The number cores/splits
+        #binnum = int(sys.argv[3]) # The number of this particular observable bin
+        #blindcat = str(sys.argv[4]) # The number of this blind KiDS catalog
+        #config_file = str(sys.argv[5]) # The path to the configuration file
+    #except:
+        #Nsplit = 1 # The number of this particular core/split
+        #Nsplits = 1 # The number cores/splits
+        #binnum = 1 # The number of this particular observable bin
+        #blindcat = 'D' # The number of this particular blind KiDS catalog
+        #config_file = str(sys.argv[1]) # The path to the configuration file
 
-        print 'Warning: Input not found!'
+        #print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
     path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
@@ -76,12 +76,12 @@ def input_variables():
     if filename_addition == 'None':
         filename_addition = ''
     else:
-        filename_addition = '_%s'%filename_addition
-    
+        filename_addition = '_{0}'.format(filename_addition)
+
     # Binnning information of the lenses
     obsbins = define_obsbins(1, lens_binning, [], [])
     binname, lens_binning, Nobsbins, binmin, binmax = obsbins
-    
+
     # Defining the lens-ID lens selection/binning
     if 'None' not in lensid_file:
         selection = define_lensid_selection(lensid_file, lens_selection, \
@@ -483,7 +483,7 @@ def define_Rbins(path_Rbins, Runit):
     
     if Rconst == -999:
         print '*** Unit of radial bins not recognized! ***'
-        quit()
+        raise SystemExit()
         
     [Rmin, Rmax, Rbins] = [r*Rconst for r in [Rmin, Rmax, Rbins]]
 
@@ -534,7 +534,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
             randomcat = pyfits.open(randomcatname)[1].data
         except:
             print 'Could not import random catalogue: ', randomcatname
-            quit()
+            raise SystemExit()
 
         galRAlist = randomcat['ra'][Ncatmin : Ncatmax]
         galDEClist = randomcat['dec'][Ncatmin : Ncatmax]
@@ -859,7 +859,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
     except:
         print
         print('Cannot run The-wiZZ, please check the required files.')
-        quit()
+        raise SystemExit()
 
 
     if os.path.isfile('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(\
@@ -932,7 +932,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
                 path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
             else:
                 print('Cannot locate The-wiZZ in the pipeline instalation.')
-                quit()
+                raise SystemExit()
 
             ps = []
             codename = '%spdf_maker.py'%(path_shearcodes)
@@ -948,7 +948,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
             except:
                 print
                 print('Cannot run The-wiZZ, please check the required files.')
-                quit()
+                raise SystemExit()
 
 
             # Reading in the calculated Z_S from The-wiZZ output file

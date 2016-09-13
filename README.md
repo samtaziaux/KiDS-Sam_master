@@ -92,7 +92,7 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 ---
 Update log:
 
-**2016 September 9** - Release v1.3.0. Features:
+**2016 September 13** - Release v1.3.0. Features:
 - More user friendly output folder and file structure.
 - Added m-correction to the ESD production.
 - Added user selectable epsilon cut (z_s > z_l + epsilon).

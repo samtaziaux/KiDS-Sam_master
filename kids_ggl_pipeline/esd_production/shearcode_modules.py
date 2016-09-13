@@ -34,7 +34,7 @@ inf = np.inf
 
 
 def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
-
+    
     ## Input for the codes
     #try:
         #Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
@@ -61,6 +61,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     print
     print 'Running:', purpose
 
+    blindcat = blindcat[0]
     # Defining the number of the blind KiDS catalogue
     if blindcat == 'A':
         blindcatnum = 0

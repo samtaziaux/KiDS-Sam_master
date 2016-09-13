@@ -123,6 +123,10 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         output_var = 'IDs_from_file'
         path_output = '%s/%s%s' \
             %(path_output, output_var, filename_addition)
+    elif ('ID' not in lens_selection) & ('No' in binname):
+        output_var = 'No_bins'
+        path_output = '%s/%s%s' \
+            %(path_output, output_var, filename_addition)
     else:
         output_var = lens_binning[binname][1]
         output_var = '_'.join(map(str, output_var))
@@ -311,6 +315,9 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
             filename_var_bins = '%s_%s_bin_%s'%(filename_var, purpose, \
                                              binnum)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
+        else:
+            filename_var_bins = '%s_No_bins'%(filename_var)
+            var_print = '%s No bins,'%(var_print)
         # Lens selection
         filename_var_lens, var_print, x = define_filename_sel(filename_var, \
                                                          var_print, '', \

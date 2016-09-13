@@ -11,6 +11,7 @@ import numpy as np
 import distance
 import sys
 import os
+import shutil
 import time
 import shearcode_modules as shear
 from astropy import constants as const, units as u
@@ -28,7 +29,7 @@ def main():
     cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, \
-    path_kidscats, path_gamacat, specz_file = shear.input_variables()
+    path_kidscats, path_gamacat, specz_file, z_epsilon = shear.input_variables()
 
     print 'Final step: Plot the ESD profiles and correlation matrix'
     print
@@ -101,7 +102,7 @@ def main():
 
             filename_N1 = filename_var.replace('binnum', '%i'%(N1+1))
             filenameESD = shear.define_filename_results(path_results, purpose, \
-                                                        filename_N1, \
+                                                        filename_N1.replace('_bin_%i'%(N1+1), ''), \
                                                         filename_addition, \
                                                         Nsplit, blindcat)
             if 'No' in binname:
@@ -121,12 +122,10 @@ def main():
             #print "Failed to create ESD Plot of:", filenameESD
 
     # Creating the ueber-matrix plot
-    filename_N1 = filename_var.replace('binnumof', 's')
-    filename_cov = filename_var.replace('binnumof', 's')
-    filename_cov = filename_cov.partition('_Z_B')[0]
-    filenamecov = '%s/%s_matrix_%s%s_%s.txt'%(path_results, purpose, \
-                                              filename_cov, filename_addition, \
-                                              blindcat)
+    filename_N1 = filename_var.replace('_binnum', 's')
+    filename_cov = filename_var.replace('_binnum', 's')
+    filename_cov = filename_cov.replace('_bins', '')
+    filenamecov = '%s/%s_matrix_%s.txt'%(path_results, filename_cov, blindcat)
     
     # The Group bins
     if binname == 'No': # If there is no binning
@@ -136,12 +135,12 @@ def main():
                                             (lens_binning.values()[0])[1][0], \
                                             (lens_binning.values()[0])[1][-1])
 
-    try:
-        shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, \
+    #try:
+    shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, \
                                      plotstyle_matrix, binname, \
                                      lens_binning, Rbins, Runit, h)
-    except:
-        print "Failed to create Matrix Plot of", filenamecov
+    #except:
+    #    print "Failed to create Matrix Plot of", filenamecov
     
     # Addapted the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.
@@ -157,9 +156,12 @@ def main():
         filelist = os.listdir(path_splits)
 
         for filename in filelist:
-            os.remove('%s/%s'%(path_splits, filename))
-    
-    
+            #os.remove('%s/%s'%(path_splits, filename))
+            try:
+                os.remove('%s/%s'%(path_splits, filename))
+            except OSError:
+                shutil.rmtree('%s/%s'%(path_splits, filename))
+
     return
     
 main()

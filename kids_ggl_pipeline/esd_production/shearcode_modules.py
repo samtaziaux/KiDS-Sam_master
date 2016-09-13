@@ -52,7 +52,7 @@ def input_variables():
         print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, \
+    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
         path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
         lensid_file, lens_weights, lens_binning, lens_selection, \
         src_selection, cat_version, wizz, blindcats = \
@@ -106,41 +106,36 @@ def input_variables():
     if os.path.isfile(path_Rbins): # from a file
         name_Rbins = path_Rbins.split('.')[0]
         name_Rbins = name_Rbins.split('/')[-1]
-        name_Rbins = 'Rbins~%s%s'%(name_Rbins, Runit)
+        name_Rbins = 'Rbins~%s_%s'%(name_Rbins, Runit)
     else:
-        name_Rbins = path_Rbins.replace(',', '~')
-        name_Rbins = 'Rbins%s%s'%(name_Rbins, Runit)
+        name_Rbins = path_Rbins.replace(',', '_')
+        name_Rbins = 'Rbins%s_%s'%(name_Rbins, Runit)
 
     # Creating all necessary folders
 
     # Path containing the output folders
     output_var = ''
     var_print = ''
-    output_var, var_print, x = define_filename_sel(output_var, var_print,\
-                                                     '', src_selection)
-    output_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(output_var, name_Rbins, \
-                                               O_matter, O_lambda, Ok, h)
+    #output_var, var_print, x = define_filename_sel(output_var, var_print,\
+    #                                                 '', src_selection)
+    if ('ID' in lens_selection) & ('No' in binname):
+        output_var = 'IDs_from_file'
+        path_output = '%s/%s%s' \
+            %(path_output, output_var, filename_addition)
+    else:
+        output_var = lens_binning[binname][1]
+        output_var = '_'.join(map(str, output_var))
+        output_var = output_var.replace('.', 'p').replace('-','m')
+        path_output = '%s/%s_%s%s' \
+            %(path_output, binname, output_var, filename_addition)
 
-    output_var = output_var.replace('.', 'p')
-    output_var = output_var.replace('-', 'm')
-    output_var = output_var.replace('~', '-')
-    output_var = output_var.split('_', 1)[1]
-
-    path_output = '%s/output_%s_bins_%s%s' \
-                  %(path_output, binname, output_var, filename_addition)
     path_catalogs = '%s/catalogs' %(path_output.rsplit('/',1)[0])
 
     # Path to the output splits and results
-    path_splits = '%s/splits_%s' %(path_output, purpose)
-    path_results = '%s/results_%s' %(path_output, purpose)
-    #print path_splits
-    
-    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
+    path_splits = '%s/splits_%s' %(path_output, purpose) #'%s/splits_%s' %(path_output, purpose)
+    path_results = path_output #'%s/results_%s' %(path_output, purpose)
 
-        #print 'Nsplit:', Nsplit
-        #print 'blindcat:', blindcat
-        #print 'binnum:', binnum
-        #print 'Nobsbins:', Nobsbins
+    if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
 
         for path in [path_output, path_catalogs, path_splits, path_results]:
             if not os.path.isdir(path):
@@ -150,11 +145,6 @@ def input_variables():
 
     if 'catalog' in purpose:
 
-    #    print 'Nsplit:', Nsplit
-    #    print 'blindcat:', blindcat
-    #    print 'binnum:', binnum
-    #    print 'Nobsbins:', Nobsbins
-        
         # Path to the output splits and results
         path_splits = '%s/splits_%s'%(path_catalogs, purpose)
         path_results = '%s/results_%s'%(path_catalogs, purpose)
@@ -208,7 +198,7 @@ def input_variables():
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon
 
 
 # Defining the lensID lens selection/binning
@@ -235,32 +225,34 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, 
 # Define the part of the filename and plottitle
 # that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
-
+    
     selnames = np.sort(selection.keys())
     for selname in selnames:
         sellims = (selection[selname])[1]
+        selname = selname.replace('_','')
 
         if 'ID' in selname:
-            filename_var = '%s_%ss%g'%(filename_var, selname, len(sellims))
+            filename_var = '%s~%ss_%g'%(filename_var, selname, len(sellims))
             var_print = '%s #%ss = %g,'%(var_print, selname, len(sellims))
             plottitle = '%s $\#$ %ss = %g,'%(plottitle, selname, len(sellims))
         else:
             if len(sellims) == 1:
-                filename_var = '%s_%s%g'%(filename_var, selname, sellims[0])
+                filename_var = '%s~%s_%g'%(filename_var, selname, sellims[0])
                 var_print = '%s %s = %g,'%(var_print, selname, sellims[0])
                 plottitle = '%s %s = %g,'%(plottitle, selname, sellims[0])
             else:
-                filename_var = '%s_%s%g~%g'%(filename_var, selname, \
+                filename_var = '%s~%s_%g_%g'%(filename_var, selname, \
                                              sellims[0], sellims[1])
                 var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
                                                      sellims[0], sellims[1])
-                #plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
-                                                          #sellims[0], selname, \
-                                                          #sellims[1])
-                plottitle = '$\mathrm{{{0}\,{1:g}}} \leq'.format(
-                                plottitle, sellims[0])
-                plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(
-                                plottitle, selname, sellims[1])
+                plottitle = '%s %g $\leq$ %s $<$ %g,'%(plottitle, \
+                                                          sellims[0], selname, \
+                                                          sellims[1])
+                                                          
+                #plottitle = '$\mathrm{{{0}\,{1:g}}} \leq'.format(
+                #                plottitle, sellims[0])
+                #plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(
+                #                plottitle, selname, sellims[1])
         
     return filename_var, var_print, plottitle
 
@@ -285,7 +277,7 @@ def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnu
                                              sellims[binnum], sellims[binnum+1])
             var_print = '%s %s-limit: %g - %g,'%(var_print, selname, \
                                                 sellims[binnum], sellims[binnum+1])
-            plottitle = '%s %g $\leq$ %s $\leq$ %g,'%(plottitle, \
+            plottitle = '%s %g $\leq$ %s $<$ %g,'%(plottitle, \
                                                 sellims[binnum], selname, \
                                                 sellims[binnum+1])
 
@@ -305,8 +297,9 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
     if 'catalog' in purpose:
         if centering == 'Cen':
             filename_var = 'Cen'
-        
-        var_print = 'Galaxy catalogue,'
+
+        filename_var_bins = '_'
+        filename_var_lens = '~'
 
     else: # Binnning information of the groups
 
@@ -314,65 +307,76 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
         if 'No' not in binname: # If there is binning
             if 'ID' in binname:
                 binname = 'ID'
-            filename_var = '%s_%sbin%sof%i'%(filename_var, binname, \
-                                             binnum, Nobsbins)
+            filename_var_bins = '%s_%s_bin_%s'%(filename_var, purpose, \
+                                             binnum)
             var_print = '%s %i %s-bins,'%(var_print, Nobsbins, binname)
-            #filename_var, var_print, x = \
-            #    define_filename_sel_bin(filename_var, var_print, '', lens_binning, binnum, Nobsbins)
         # Lens selection
-        filename_var, var_print, x = define_filename_sel(filename_var, \
+        filename_var_lens, var_print, x = define_filename_sel(filename_var, \
                                                          var_print, '', \
                                                          lens_selection)
     
         weightname = lens_weights.keys()[0]
         if weightname != 'None':
-            filename_var = '%s_lw~%s'%(filename_var, weightname)
+            filename_var_lens = '%s_lw~%s'%(filename_var_lens, weightname)
             var_print = '%s Lens weights: %s,'%(var_print, weightname)
     
     # Source selection
-    filename_var, var_print, x = define_filename_sel(filename_var, var_print,\
+    filename_var_source, var_print, x = define_filename_sel(filename_var, var_print,\
                                                      '', src_selection)
     
-    filename_var = '%s_%s_Om%g_Ol%g_Ok%g_h%g'%(filename_var, name_Rbins, \
+    filename_var_cosmo = '%s_Om_%g~Ol_%g~Ok_%g~h_%g'%(filename_var, \
                                                O_matter, O_lambda, Ok, h)
+    filename_var_radial = '%s_%s'%(filename_var, name_Rbins)
     cosmo_print = ('    %s, Omatter=%g, Olambda=%g, Ok=%g, h=%g'%(name_Rbins, \
                                                     O_matter, \
                                                     O_lambda, Ok, \
                                                     h)).replace('~', '-')
 
-    # Replace points with p and minus with m
+    filename_var_bins = filename_var_bins.split('_', 1)[1]
+    filename_var_lens = filename_var_lens.split('~', 1)[1]
+    filename_var_cosmo = filename_var_cosmo.split('_', 1)[1]
+    filename_var_radial = filename_var_radial.split('_', 1)[1]
+    filename_var_source = filename_var_source.split('~', 1)[1]
+
+    if 'catalog' in purpose:
+        filename_var = '%s~%s/%s/%s'%(filename_var_source,\
+                                    filename_var_cosmo,filename_var_radial,\
+                                    purpose)
+    else:
+        filename_var = '%s/%s~%s/%s/%s/%s'%(filename_var_lens,filename_var_source,\
+                                    filename_var_cosmo,filename_var_radial,\
+                                    purpose,filename_var_bins)
+
     filename_var = filename_var.replace('.', 'p')
     filename_var = filename_var.replace('-', 'm')
     filename_var = filename_var.replace('~', '-')
-    filename_var = filename_var.split('_', 1)[1]
-
+    
     if 'covariance' not in purpose:
         print 'Chosen %s-configuration: '%purpose
         print var_print
         print cosmo_print
         print
-
+    
     return filename_var
 
 
 def define_filename_splits(path_splits, purpose, filename_var, \
                            Nsplit, Nsplits, filename_addition, blindcat):
+    
     # Defining the names of the shear/random catalog
     if 'covariance' in purpose:
-        filename_var = filename_var.partition('_Z_B')[0]
-        splitname = '%s/%s_%s%s_%s.fits'%(path_splits, purpose, filename_var, \
-                                          filename_addition, Nsplit)
+        splitname = '%s/%s_%s.fits'%(path_splits, filename_var, Nsplit)
                                         # Here Nsplit = kidscatname
     if 'bootstrap' in purpose:
-        filename_var = filename_var.partition('_Z_B')[0]
-        splitname = '%s/%s_%s%s_%s.fits'%(path_splits, purpose, filename_var, \
-                                          filename_addition, blindcat)
-    if 'catalog' in purpose:
-        splitname = '%s/%s_%s%s_split%iof%i.fits'%(path_splits, purpose, \
-                                                   filename_var, \
-                                                   filename_addition, \
-                                                   Nsplit, Nsplits)
+        splitname = '%s/%s_%s.fits'%(path_splits, purpose, blindcat)
 
+    if 'catalog' in purpose:
+        splitname = '%s/%s_%s_split%iof%i.fits'%(path_splits, purpose, \
+                                                   filename_var, \
+                                                   Nsplit, Nsplits)
+    new_path = '/'.join(splitname.split('/')[:-1])
+    if not os.path.isdir(new_path):
+       os.makedirs(new_path)
     return splitname
 
 
@@ -383,10 +387,18 @@ def define_filename_results(path_results, purpose, filename_var, \
         resultname = '%s/%s_%s%s.fits'%(path_results, purpose, \
                                         filename_var, filename_addition)
     else:
-        filename_var = filename_var.partition('_Z_B')[0]
-        resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, \
-                                          filename_addition, blindcat)
-
+        #filename_var = filename_var.partition('purpose')[0]
+        #resultname = '%s/%s_%s%s_%s.txt'%(path_results, purpose, filename_var, \
+        #                                           filename_addition, blindcat)
+        if 'catalog' in purpose:
+            filename_var = filename_var.replace('shear','shearcatalog')
+    
+        resultname = '%s/%s_%s.txt'%(path_results, filename_var, blindcat)
+    
+    new_path = '/'.join(resultname.split('/')[:-1])
+    if not os.path.isdir(new_path):
+        os.makedirs(new_path)
+    
     return resultname
 
 
@@ -737,8 +749,9 @@ def split(seq, size): # Split up the list of KiDS fields for parallel processing
 
 def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
                     src_selection, cat_version):
+    filename = '../*specweight.cat'
     if specz_file is None:
-        specz_file = os.path.join(path_kidscats, '*specweight.cat')
+        specz_file = os.path.join(path_kidscats, filename)
     files = glob(specz_file)
     if len(files) == 0:
         msg = 'Spec-z file {0} not found.'.format(filename)
@@ -1289,45 +1302,21 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
 
 
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
-def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
+def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
     
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
     DlsoDs = (Dcsbins-Dcls)/Dcsbins
-    Dcls = [] # Empty unused lists
-    Dcsbins = []
 
     # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
     #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
     #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
-    DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
     if cat_version == 3:
-        cond = np.array(np.where(DlsoDs == 0.0))
-        
-        cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-
-        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        
-        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-
-        DlsoDs[(cond[0], cond[1])] = 0.0
-        DlsoDs[(cond2[0], cond2[1])] = 0.0
-        DlsoDs[(cond3[0], cond3[1])] = 0.0
-        DlsoDs[(cond4[0], cond4[1])] = 0.0
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+    else:
+        DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
     DlsoDsmask = [] # Empty unused lists
 
@@ -1342,6 +1331,8 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
     DlsoDs = [] # Empty unused lists
     Dals = []
 
+    Dcls = [] # Empty unused lists
+    Dcsbins = []
     # Create the mask that removes all sources with k not between 0 and infinity
     kmask = np.logical_not((0. < k) & (k < inf))
 
@@ -1351,48 +1342,25 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version):
 
 
 # Weigth for average m correction in KiDS-450
-def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version):
+def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
     
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
     DlsoDs = (Dcsbins-Dcls)/Dcsbins
-    Dcls = [] # Empty unused lists
-    Dcsbins = []
     
     # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
     #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
     #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
-    DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
     if cat_version == 3:
-        cond = np.array(np.where(DlsoDs == 0.0))
-        
-        cond = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond2 = cond + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond3 = cond2 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-        cond4 = cond3 + np.array((np.ones(cond[0].size, dtype=np.int32), \
-                                np.zeros(cond[1].size, dtype=np.int32)))
-                                
-        cond[0][cond[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond2[0][cond2[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond3[0][cond4[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-        cond4[0][cond3[0] >= DlsoDs.shape[0]-1] = DlsoDs.shape[0]-1
-                                
-        cond[1][cond[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond2[1][cond2[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond3[1][cond3[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-        cond4[1][cond4[1] >= DlsoDs.shape[1]-1] = DlsoDs.shape[1]-1
-                                
-        DlsoDs[(cond[0], cond[1])] = 0.0
-        DlsoDs[(cond2[0], cond2[1])] = 0.0
-        DlsoDs[(cond3[0], cond3[1])] = 0.0
-        DlsoDs[(cond4[0], cond4[1])] = 0.0
-    
-    DlsoDsmask = [] # Empty unused lists
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+    else:
+        DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
 
+    DlsoDsmask = [] # Empty unused lists
+    Dcls = [] # Empty unused lists
+    Dcsbins = []
     # Matrix multiplication that sums over P(z),
     # to calculate <Dls/Ds> for each lens-source pair
     DlsoDs = np.dot(srcPZ, DlsoDs).T
@@ -1726,8 +1694,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
         Nsubplot = 100*Nrows+10*Ncolumns+Nplot
         plt.subplot(Nsubplot)
 
-        if Nplot == int(Ncolumns/2+1):
-            plt.title(plottitle, fontsize=title_size)
+        plt.suptitle(plottitle, fontsize=title_size)
 
     else:
         # Plot and print ESD profile to a file

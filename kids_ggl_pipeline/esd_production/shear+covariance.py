@@ -161,7 +161,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
                 k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, \
-                                                Dcsbins, srcPZ, cat_version)
+                                                Dcsbins, srcPZ, cat_version, Dc_epsilon)
                 Nsrc = np.ones(np.shape(k))
 
                 # Mask all invalid lens-source pairs using
@@ -391,7 +391,7 @@ def loop(Nsplit, output, outputnames, gamacat, centering, \
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
                 k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, \
-                                                Dcsbins, srcPZ, cat_version)
+                                                Dcsbins, srcPZ, cat_version, Dc_epsilon)
                 Nsrc = np.ones(np.shape(k))
                 # Mask all invalid lens-source pairs using
                 # the value of the radius
@@ -538,7 +538,7 @@ if __name__ == '__main__':
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file = \
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
         shear.input_variables()
 
     print 'Step 1: Create split catalogues in parallel'
@@ -592,7 +592,7 @@ if __name__ == '__main__':
                                             Nsplit, blindcat)
     print 'Requested file:', outname
     print
-
+    
     if os.path.isfile(outname):
         print 'This output already exists:', outname
         print
@@ -706,6 +706,7 @@ if __name__ == '__main__':
     zsrcbins = np.arange(0.025,3.5,0.05)
     Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
                         for y in zsrcbins])
+    Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
 
     #import matplotlib.pyplot as pl
     if cat_version == 3:
@@ -785,14 +786,14 @@ if __name__ == '__main__':
                 m_selection['Z_B'] = ['self', np.array([0.8, 0.9])]
         
             srcNZ_m, spec_weight_m = shear.import_spec_cat(path_kidscats, kidscatname2,\
-                                                        kidscat_end, m_selection, \
+                                                        kidscat_end, specz_file, m_selection, \
                                                         cat_version)
             srcPZ_m, bins_m = np.histogram(srcNZ_m, range=[0.025, 3.5], bins=70, \
                                                 weights=spec_weight_m, density=1)
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
             dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
-                                Dcsbins, srcPZ_m, cat_version))
-            
+                                Dcsbins, srcPZ_m, cat_version, Dc_epsilon))
+    
         srcm_varlist = np.average(m_corr, weights=dlsods)
         srcm_varlist = srcm_varlist * np.ones(srcNr_varlist.shape)
 

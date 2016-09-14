@@ -27,6 +27,35 @@ import shearcode_modules as shear
 inf = np.inf # Infinity
 nan = np.nan # Not a number
 
+def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
+               gallists, lens_selection, lens_binning, binname, binnum,
+               binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
+               filename_var,
+               filename, cat_version, blindcat, srclists, path_splits,
+               splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
+               variance):
+    
+    q1 = multi.Queue()
+    procs = []
+    #chunk = int(np.ceil(len(R)/float(nprocs)))
+    
+    for j in xrange(Nsplits):
+        
+        work = multi.Process(target=loop, args=(purpose, Nsplits, j, output, outputnames, gamacat, centering,
+                                                gallists, lens_selection, lens_binning, binname, binnum,
+                                                binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
+                                                filename_var,
+                                                filename, cat_version, blindcat, srclists, path_splits,
+                                                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
+                                                variance))
+        procs.append(work)
+        work.start()
+    
+    for j in xrange(Nsplits):
+        work.join()
+    
+    return
+
 
 def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          gallists, lens_selection, lens_binning, binname, binnum,
@@ -823,71 +852,32 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file):
                                             [], [], [], [], [], [], [], []
     gc.collect()
 
-    """
     if 'catalog' in purpose:
-        if Nsplits == 1:
-            out = loop(purpose, Nsplits, 0, output, outputnames, gamacat,
-                       centering, gallists, lens_selection, lens_binning,
-                       binname, binnum, binmin, binmax, Rbins, Rcenters,
-                       Rmin, Rmax,
-                       Runit, nRbins, Rconst, filename_var, filename, cat_version,
-                       blindcat, srclists, path_splits, splitkidscats,
-                       catmatch, Dcsbins, Dc_epsilon, filename_addition, variance)
-        else:
-            pool = mp.Pool(processes=Nsplits)
-            out = [pool.apply_async(loop, args=(
-                        purpose,Nsplits,j,output,outputnames,gamacat,centering,
-                        gallists,lens_selection,lens_binning,binname,binnum,
-                        binmin,binmax,Rbins,Rcenters,Rmin,Rmax,Runit,nRbins,Rconst,
-                        filename_var,filename,cat_version,blindcat,srclists,
-                        path_splits,splitkidscats,catmatch,Dcsbins,
-                        Dc_epsilon,filename_addition,variance))
-                   for j in xrange(Nsplits)]
-            pool.close()
-            pool.join()
-            for i in out:
-                i.get()
-    """
+        out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
+                 centering, gallists, lens_selection, lens_binning,
+                 binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
+                 Runit, nRbins, Rconst, filename_var, filename, cat_version,
+                 blindcat, srclists, path_splits, splitkidscats, catmatch,
+                 Dcsbins, Dc_epsilon, filename_addition, variance)
 
-    if 'covariance' in purpose or 'catalog' in purpose:
+    if 'covariance' in purpose:
         for i in xrange(Nobsbins):
-            if 'covariance' in purpose:
-                filename_var = shear.define_filename_var(
+            
+            filename_var = shear.define_filename_var(
                     purpose, centering, binname, i+1, Nobsbins, lens_selection,
                     lens_binning, src_selection, lens_weights, name_Rbins,
                     O_matter, O_lambda, Ok, h)
 
-                binname, lens_binning, Nobsbins, binmin, binmax = \
+            binname, lens_binning, Nobsbins, binmin, binmax = \
                     shear.define_obsbins(i+1, lens_binning, lenssel_binning,
                                          gamacat)
-            #calculation = loop_multi(Nsplits, output, outputnames, gamacat, \
-                                     #centering, lens_selection, lens_binning, \
-                                     #binname, i, binmin, binmax, filename_var, filename)
-            if Nsplits == 1:
-                out = loop(purpose, Nsplits, 0, output, outputnames, gamacat,
-                           centering, gallists, lens_selection, lens_binning,
-                           binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-                           Runit, nRbins, Rconst, filename_var, filename, cat_version,
-                           blindcat, srclists, path_splits, splitkidscats, catmatch,
-                           Dcsbins, Dc_epsilon, filename_addition, variance)
-            else:
-                pool = mp.Pool(processes=Nsplits)
-                out = [pool.apply_async(loop, args=(
-                               purpose,Nsplits,j,output,outputnames,gamacat,
-                               centering,
-                               gallists,lens_selection,lens_binning,binname,
-                               i,binmin,binmax,Rbins,Rcenters,Rmin,Rmax,Runit,nRbins,
-                               Rconst,filename_var,filename,cat_version,blindcat,
-                               srclists,
-                               path_splits,splitkidscats,catmatch,Dcsbins,
-                               Dc_epsilon,filename_addition,variance))
-                       for j in xrange(Nsplits)]
-                pool.close()
-                pool.join()
-                for i in out:
-                    i.get()
-            if 'catalog' in purpose:
-                break
+            
+            out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
+                                 centering, gallists, lens_selection, lens_binning,
+                                 binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
+                                 Runit, nRbins, Rconst, filename_var, filename, cat_version,
+                                 blindcat, srclists, path_splits, splitkidscats, catmatch,
+                                 Dcsbins, Dc_epsilon, filename_addition, variance)
 
     return
 

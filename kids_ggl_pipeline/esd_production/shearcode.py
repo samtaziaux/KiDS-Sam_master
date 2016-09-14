@@ -18,7 +18,7 @@ import shlex
 import combine_covariance_plus_bootstrap as combine_covboot
 import combine_splits
 import plot_covariance_plus_bootstrap as plot_covboot
-import shear_plus_covariance as shearcov
+import shear_plus_covariance_process as shearcov
 import shearcode_modules as shear
 import stack_shear_plus_bootstrap as stack_shearboot
 import distance
@@ -136,37 +136,42 @@ def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
 
     # this allows for a single blindcat to have a name with more than one letter
     #if hasattr(blindcats, '__iter__') and len(blindcats) > 1:
-    if len(blindcats) > 1:
-        pool = mp.Pool(len(blindcats))
+    if 'bootstrap' in purpose:
+        for blindcat in blindcats:
+            func(nsplit, nsplits, nobsbin, blindcat, config_file)
 
-    #if 'bootstrap' in purpose:
-        #ps = []
-        #for blindcat in blindcats:
-            #runname = 'python -W ignore %s'%codename
-            #runname += ' %i %i %i %s %s &' \
-                #%(nsplit, nsplits, nobsbin, blindcat, config_file)
-            #p = sub.Popen(shlex.split(runname))
-            #p.wait()
-    #else:
-        #ps = []
-        #for blindcat in blindcats:
-            #runname = 'python -W ignore %s'%codename
-            #runname += ' %i %i %i %s %s &' \
-                #%(nsplit, nsplits, nobsbin, blindcat, config_file)
-            #p = sub.Popen(shlex.split(runname))
-            #ps.append(p)
-        #for p in ps:
-            #p.wait()
-    if len(blindcats) > 1:
-        out = [pool.apply_async(func, args=(nsplit,nsplits,nobsbin,
-                                            blindcat,config_file))
-               for blindcat in blindcats]
-        pool.close()
-        pool.join()
-        for i in out:
-            i.get()
     else:
-        func(nsplit, nsplits, nobsbin, blindcats, config_file)
+        if len(blindcats) > 1:
+            pool = mp.Pool(len(blindcats))
+
+        #if 'bootstrap' in purpose:
+            #ps = []
+            #for blindcat in blindcats:
+                #runname = 'python -W ignore %s'%codename
+                #runname += ' %i %i %i %s %s &' \
+                    #%(nsplit, nsplits, nobsbin, blindcat, config_file)
+                #p = sub.Popen(shlex.split(runname))
+                #p.wait()
+        #else:
+            #ps = []
+            #for blindcat in blindcats:
+                #runname = 'python -W ignore %s'%codename
+                #runname += ' %i %i %i %s %s &' \
+                    #%(nsplit, nsplits, nobsbin, blindcat, config_file)
+                #p = sub.Popen(shlex.split(runname))
+                #ps.append(p)
+            #for p in ps:
+                #p.wait()
+        if len(blindcats) > 1:
+            out = [pool.apply_async(func, args=(nsplit,nsplits,nobsbin,
+                                            blindcat,config_file))
+                   for blindcat in blindcats]
+            pool.close()
+            pool.join()
+            for i in out:
+                i.get()
+        else:
+            func(nsplit, nsplits, nobsbin, blindcats, config_file)
 
     return
 

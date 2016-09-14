@@ -91,6 +91,9 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 
 ---
 Update log:
+
+**2016 September 14** - Release v1.3.1. Features:
+- Solved problems with multiprocessing.
     
 **2016 September 13** - Release v1.3.0. Features:
 - More user friendly output folder and file structure.

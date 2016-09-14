@@ -61,15 +61,14 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     print
     print 'Running:', purpose
 
-    blindcat = blindcat[0]
     # Defining the number of the blind KiDS catalogue
-    if blindcat == 'A':
+    if blindcat[0] == 'A':
         blindcatnum = 0
-    if blindcat == 'B':
+    if blindcat[0] == 'B':
         blindcatnum = 1
-    if blindcat == 'C':
+    if blindcat[0] == 'C':
         blindcatnum = 2
-    if blindcat == 'D':
+    if blindcat[0] == 'D':
         blindcatnum = 3
 
 

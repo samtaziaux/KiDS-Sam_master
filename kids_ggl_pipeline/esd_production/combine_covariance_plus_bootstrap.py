@@ -20,7 +20,7 @@ inf = np.inf # Infinity
 nan = np.nan # Not a number
 
 
-def main(nsplit, nsplits, nobsbin, blindcat, config_file):
+def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \

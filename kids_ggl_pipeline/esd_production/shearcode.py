@@ -87,7 +87,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         for i in out:
             i.get()
     else:
-        out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file)
+        out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
 
     # Combine the splits according to the purpose
 
@@ -102,7 +102,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         #ps.append(p)
         #for p in ps:
             #p.wait()
-        combine_splits.main(nsplit, nsplits, nobsbin, blindcat, config_file)
+        combine_splits.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
 
     # Stacking the lenses into an ESD profile
     if 'bootstrap' in purpose or 'catalog' in purpose:
@@ -133,12 +133,15 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
 #def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
 def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
-
+    
+    # This allows STDIN to work in child processes
+    fn = sys.stdin.fileno()
+    
     # this allows for a single blindcat to have a name with more than one letter
     #if hasattr(blindcats, '__iter__') and len(blindcats) > 1:
     if 'bootstrap' in purpose:
         for blindcat in blindcats:
-            func(nsplit, nsplits, nobsbin, blindcat, config_file)
+            func(nsplit, nsplits, nobsbin, blindcat, config_file, fn)
 
     else:
         if len(blindcats) > 1:
@@ -164,14 +167,14 @@ def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
                 #p.wait()
         if len(blindcats) > 1:
             out = [pool.apply_async(func, args=(nsplit,nsplits,nobsbin,
-                                            blindcat,config_file))
+                                            blindcat,config_file, fn))
                    for blindcat in blindcats]
             pool.close()
             pool.join()
             for i in out:
                 i.get()
         else:
-            func(nsplit, nsplits, nobsbin, blindcats, config_file)
+            func(nsplit, nsplits, nobsbin, blindcats, config_file, fn)
 
     return
 

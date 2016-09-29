@@ -28,7 +28,7 @@ def run_emcee(hm_options, sampling_options, args):
     datafile, datacols, covfile, covcols, \
         exclude_bins, output, sampler, nwalkers, nsteps, nburn, \
         thin, k, threads, sampler_type, update_freq = sampling_options
-
+    
     #function = cloud.serialization.cloudpickle.dumps(model)
     #del model
     #print function

@@ -23,7 +23,7 @@ nan = np.nan # Not a number
 
 def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     
-    # This allows STDIN to work in child processes    
+    # This allows STDIN to work in child processes
     sys.stdin = os.fdopen(fn)
 
     # Input parameters
@@ -150,7 +150,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # 6.4.2016 - Andrej D.
 
     # Remove the used splits
-    if (Nsplit==1) and (blindcat==blindcats[0]):
+    if (Nsplit==1) and (blindcat==blindcats[-1]):
         time.sleep(3) # Wait untill all blinds are done.
         msg = '\nWarning: do you want to delete split files? [y/n] \n'
         answer = raw_input(msg)

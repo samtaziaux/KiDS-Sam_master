@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 # local
-import nfw, nfw_stack, satellites, halo
+import nfw, nfw_stack, satellites, halo, halo_decorated
 
 
 def read_config(config_file, version='0.5.7'):
@@ -177,6 +177,8 @@ def read_function(module, function):
         function = getattr(nfw_stack, function)
     elif module == 'halo':
         function = getattr(halo, function)
+    elif module == 'halo_decorated':
+        function = getattr(halo_decorated, function)
     elif module == 'models':
         function = getattr(models, function)
     print 'Successfully imported {0}'.format(function)

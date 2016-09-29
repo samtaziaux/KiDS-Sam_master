@@ -7,7 +7,7 @@ Da by an opening angle 'theta' on the sky will give its actual size 'x'.
 
 """
 
-import pyfits
+import astropy.io.fits as pyfits
 from scipy import integrate
 import numpy as np
 import sys

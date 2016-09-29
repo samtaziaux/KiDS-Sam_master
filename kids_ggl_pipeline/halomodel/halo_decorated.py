@@ -309,7 +309,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     sigma_8, H0, omegam, omegab_h2, omegav, n, \
         z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
         fc_nsat, alpha_s, b_0, b_1, b_2, \
-        alpha_star, beta_gas, r_t0, r_c0, p_off, r_off, bias, \
+        alpha_star, beta_gas, r_t0, r_c0, p_off, r_off, bias, A_cen, \
         M_bin_min, M_bin_max, \
         Mstar, \
         centrals, satellites, miscentering, taylor_procedure, include_baryons, \
@@ -342,6 +342,8 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         fc_nsat = np.array([fc_nsat]*M_bin_min.size)
     if not np.iterable(Mstar):
         Mstar = np.array([Mstar]*M_bin_min.size)
+    if not np.iterable(A_cen):
+        A_cen = np.array([A_cen]*M_bin_min.size)
 
 
     concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i))\
@@ -463,6 +465,14 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                         for hmf_i, i in _izip(hmf, hod_mass)])
     else:
         pop_s = np.zeros(hod_mass.shape)
+
+    # Decorated HOD decoration
+
+    delta_pop_c = _array([A_cen_i * np.fmin(pop_c_i, 1.0-pop_c_i) for A_cen_i, pop_c_i in _izip(A_cen, pop_c)])
+    pop_c[0] = pop_c[0] - delta_pop_c[0]
+    pop_c[1] = pop_c[1] + delta_pop_c[1]
+
+
     #print 'satellites =', time() - to
     pop_g = pop_c + pop_s
 
@@ -869,7 +879,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #print 'out_esd_tot_inter =', time() - to
 
     #print np.nan_to_num(out_esd_tot_inter)
-    print np.log10(effective_mass), bias_out, bias_out/bias.T[0]
+    print np.log10(effective_mass), bias_out, bias_out/bias.T[0], A_cen
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
 
     # Add other outputs as needed. Total ESD should always be first!

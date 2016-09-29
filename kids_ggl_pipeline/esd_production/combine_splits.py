@@ -24,7 +24,7 @@ beta = -0.37 # Used to calculate m
 inf = np.inf
 
 
-def main(Nsplit, Nsplits, binnum, blindcat, config_file):
+def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \

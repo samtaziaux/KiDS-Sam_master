@@ -528,7 +528,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
 #if __name__ == '__main__':
 
-def main(nsplit, nsplits, nobsbin, blindcat, config_file):
+def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \

@@ -879,7 +879,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                  blindcat, srclists, path_splits, splitkidscats, catmatch,
                                  Dcsbins, Dc_epsilon, filename_addition, variance)
 
-    return
+    return 0
 
 
 ## END OF FILE ##

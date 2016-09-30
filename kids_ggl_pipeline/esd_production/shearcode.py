@@ -76,11 +76,12 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
     # it's easier to debug if we don't use multiprocessing, so it will
     # only be used if it is asked for
+
     if nruns > 1:
         pool = mp.Pool(processes=nruns)
         out = [pool.apply_async(shearcov.main,
                                 args=(nsplit,nsplits,nobsbin,blindcat,
-                                      config_file))
+                                      config_file, 0))
                for n in xrange(nruns)]
         pool.close()
         pool.join()
@@ -88,7 +89,10 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
             i.get()
     else:
         out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
-
+    
+    if out == 0:
+        print('Splits finished.')
+    
     # Combine the splits according to the purpose
 
     # Combining the catalog splits to a single output
@@ -105,7 +109,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         combine_splits.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
 
     # Stacking the lenses into an ESD profile
-    if 'bootstrap' in purpose or 'catalog' in purpose:
+    if ('bootstrap' in purpose) or ('catalog' in purpose):
         #runblinds('%sstack_shear+bootstrap.py' \
                   #%(path_shearcodes), blindcats,
                     #nsplit, nsplits, nobsbin, config_file, purpose)
@@ -113,7 +117,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                   config_file, purpose)
 
     # Creating the analytical/bootstrap covariance and ESD profiles
-    if 'bootstrap' in purpose or 'covariance' in purpose:
+    if ('bootstrap' in purpose) or ('covariance' in purpose):
         #runblinds('%scombine_covariance+bootstrap.py' \
                   #%(path_shearcodes), blindcats,
                     #nsplit, nsplits, nobsbin, config_file, purpose)
@@ -121,7 +125,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                   config_file, purpose)
 
     # Plotting the analytical/bootstrap covariance and ESD profiles
-    if 'bootstrap' in purpose or 'covariance' in purpose:
+    if ('bootstrap' in purpose) or ('covariance' in purpose):
         #runblinds('%splot_covariance+bootstrap.py' \
                   #%(path_shearcodes), blindcats,
                     #nsplit, nsplits, nobsbin, config_file, 'covariance')

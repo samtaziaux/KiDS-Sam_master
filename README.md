@@ -92,6 +92,12 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 ---
 Update log:
 
+**2016 September 30** - Release v1.3.3. Features:
+- Solved bug when pipeline stopped in the middle of calculation without any errors.
+
+**2016 September 29** - Release v1.3.2. Features:
+- Solved some issues when installing pipeline and running demo config files.
+
 **2016 September 14** - Release v1.3.1. Features:
 - Solved problems with multiprocessing.
     

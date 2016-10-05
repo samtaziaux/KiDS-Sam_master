@@ -23,7 +23,7 @@ or, if you chose to download the `.zip` file,
 
 where for instance `<version>=1.0.0`.
 
-**c)**From within the same folder, run
+**c)** From within the same folder, run
 
         python setup.py install
 
@@ -87,7 +87,7 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 - Always check how many cores are available in your machine before running in parallel.
 - **Contribute!**
  
-
+If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenuniv.nl`), Margot Brouwer (`brouwer@strw.leidenuniv.nl`) and Cristóbal Sifón (`sifon@strw.leidenuniv.nl`).
 
 ---
 Update log:

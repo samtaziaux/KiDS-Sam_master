@@ -92,6 +92,9 @@ If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenun
 ---
 Update log:
 
+**2016 October 6** - Release v1.3.4. Features:
+- Bug fixes.
+
 **2016 September 30** - Release v1.3.3. Features:
 - Solved bug when pipeline stopped in the middle of calculation without any errors.
 

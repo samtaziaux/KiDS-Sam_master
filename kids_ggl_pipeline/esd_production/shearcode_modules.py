@@ -375,7 +375,7 @@ def define_filename_splits(path_splits, purpose, filename_var, \
         splitname = '%s/%s_%s.fits'%(path_splits, filename_var, Nsplit)
                                         # Here Nsplit = kidscatname
     if 'bootstrap' in purpose:
-        splitname = '%s/%s_%s.fits'%(path_splits, purpose, blindcat)
+        splitname = '%s/%s_%s_%s.fits'%(path_splits, purpose, filename_var, blindcat)
 
     if 'catalog' in purpose:
         splitname = '%s/%s_%s_split%iof%i.fits'%(path_splits, purpose, \

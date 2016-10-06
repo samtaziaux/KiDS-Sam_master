@@ -99,27 +99,26 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                           lenssel_binning, gamacat, Dcllist)
 
     # These lists will contain the final ESD profile
-    esd_shape = (Nobsbins, nRbins)
     if 'covariance' in purpose:
-        gammat = np.zeros(esd_shape)
-        gammax = np.zeros(esd_shape)
-        wk2 = np.zeros(esd_shape)
-        srcm = np.zeros(esd_shape)
-        Nsrc = np.zeros(esd_shape)
-    ESDt_tot = np.zeros(esd_shape)
-    ESDx_tot = np.zeros(esd_shape)
-    error_tot = np.zeros(esd_shape)
-    bias_tot = np.zeros(esd_shape)
+        gammat = np.zeros([Nobsbins,nRbins])
+        gammax = np.zeros([Nobsbins,nRbins])
+        wk2 = np.zeros([Nobsbins,nRbins])
+        srcm = np.zeros([Nobsbins,nRbins])
+        Nsrc = np.zeros([Nobsbins,nRbins])
+
+    ESDt_tot = np.zeros([Nobsbins,nRbins])
+    ESDx_tot = np.zeros([Nobsbins,nRbins])
+    error_tot = np.zeros([Nobsbins,nRbins])
+    bias_tot = np.zeros([Nobsbins,nRbins])
 
     # These lists will contain the final covariance matrix
-    cov_shape = (Nobsbins, Nobsbins, nRbins, nRbins)
-    radius1 = np.zeros(cov_shape)
-    radius2 = np.zeros(cov_shape)
-    bin1 = np.zeros(cov_shape)
-    bin2 = np.zeros(cov_shape)
-    cov = np.zeros(cov_shape)
-    cor = np.zeros(cov_shape)
-    covbias = np.zeros(cov_shape)
+    radius1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    radius2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    bin1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    bin2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    cov = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    cor = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    covbias = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
 
 
     # The calculation of the covariance starts
@@ -156,11 +155,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             # Uploading the shear profile
             ESD = np.loadtxt(filenameESD).T
-            #ESDt_tot[N1] = ESD[1]
-            #ESDx_tot[N1] = ESD[2]
-            #error_tot[N1] = ESD[3]
-            #bias_tot[N1] = ESD[4]
-            ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = ESD[1:5]
+            ESDt_tot[N1] = ESD[1]
+            ESDx_tot[N1] = ESD[2]
+            error_tot[N1] = ESD[3]
+            bias_tot[N1] = ESD[4]
+            #ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = ESD[1:5]
 
             for N2 in xrange(Nobsbins):
 
@@ -248,17 +247,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     # Calculating the relevant quantities for each field
 
                     # The tangential shear
-                    gammat[N1] = gammat[N1] + \
-                        np.sum(lfweights*(Cs_N1*e1+Ss_N1*e2), axis=0)
+                    gammat[N1] = gammat[N1] + np.sum(lfweights*(Cs_N1*e1+Ss_N1*e2),axis=0)
                     # The cross shear
-                    gammax[N1] = gammax[N1] + \
-                        np.sum(lfweights*(-Ss_N1*e1+Cs_N1*e2), axis=0)
-                    wk2[N1] = wk2[N1] + np.sum(lfweights*Zs_N1, axis=0)
+                    gammax[N1] = gammax[N1] + np.sum(lfweights*(-Ss_N1*e1+Cs_N1*e2),axis=0)
+                    wk2[N1] = wk2[N1] + np.sum(lfweights*Zs_N1,axis=0)
                     # The total weight (lensfit weight + lensing efficiency)
-                    srcm[N1] = srcm[N1] + \
-                        np.sum(lfweights*Zs_N1*srcmlists, axis=0)
-                    Nsrc[N1] = Nsrc[N1] + \
-                        np.sum(np.ones(srcmlists.shape), axis=0)
+                    srcm[N1] = srcm[N1] + np.sum(lfweights*Zs_N1*srcmlists,axis=0)
+                    Nsrc[N1] = Nsrc[N1] + np.sum(np.ones(srcmlists.shape),axis=0)
 
                     for N2 in xrange(Nobsbins):
 
@@ -283,14 +278,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         if Cs_N1.size == 0:
                             continue
                         # The new covariance matrix
-                        if 'covariance' in purpose:
-                            for R1 in xrange(nRbins):
-                                for R2 in xrange(nRbins):
-                                    cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + \
-                                        np.sum(variance[blindcatnum] * \
-                                               (lfweight**2) * \
-                                               (Cs_N1[:,R1]*Cs_N2[:,R2] + \
-                                                Ss_N1[:,R1]*Ss_N2[:,R2]))
+                        for R1 in xrange(nRbins):
+                            for R2 in range(nRbins):
+                                
+                                if 'covariance' in purpose:
+                                    cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2]))
 
                 else:
                     # This message should be a lot more explicit
@@ -347,20 +339,19 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             for N2 in xrange(Nobsbins):
                 for R1 in xrange(nRbins):
                     for R2 in xrange(nRbins):
+                        
                         radius1[N1,N2,R1,R2] = Rcenters[R1]
                         radius2[N1,N2,R1,R2] = Rcenters[R2]
                         bin1[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N1]
                         bin2[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N2]
 
-                        if (0. < error_tot[N1,R1]) & \
-                                (error_tot[N1,R1] < inf) \
-                                and (0. < error_tot[N2,R2]) & \
-                                (error_tot[N2,R2] < inf):
-                            cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2] / \
-                                ((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
-                            covbias[N1,N2,R1,R2] = bias_tot[N1,R1] * \
-                                bias_tot[N2,R2]
-
+                        if (0. < error_tot[N1,R1])&(error_tot[N1,R1] < inf) \
+                            and (0. < error_tot[N2,R2])&(error_tot[N2,R2] < inf):
+        
+                            cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
+            
+                            covbias[N1,N2,R1,R2] = bias_tot[N1,R1]*bias_tot[N2,R2]
+                
                         else:
                             cov[N1,N2,R1,R2] = -999
                             cor[N1,N2,R1,R2] = -999

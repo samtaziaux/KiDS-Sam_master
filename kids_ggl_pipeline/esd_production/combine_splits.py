@@ -51,9 +51,9 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
         binname = 'None'
         lens_binning = {'None': ['self', np.array([])]}
-        if Nsplits < Nobsbins:
-            Nsplits = Nobsbins
-            Nsplit = binnum-1
+        #if Nsplits < Nobsbins:
+        #    Nsplits = Nobsbins
+        #    Nsplit = binnum-1
 
         if centering == 'Cen':
             lens_selection = {'rank%s'%centering: ['self', np.array([1])]}
@@ -107,7 +107,6 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         shearcatname = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, 1, Nsplits, \
                                                     filename_addition, blindcat)
-
     shearcat = pyfits.open(shearcatname)
     sheardat = shearcat[1].data
 

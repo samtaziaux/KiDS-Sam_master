@@ -33,6 +33,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_gamacat, specz_file, z_epsilon = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
     
+    blindcat = blindcat[0]
+
     # Path to the output splits and results
     path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
     
@@ -123,6 +125,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
 
+    
     galIDlist = sheardat['ID'] # ID of all galaxies in the shear catalog
     gammatlist = sheardat['gammat_%s'%blindcat] # Shear profile of each galaxy
     gammaxlist = sheardat['gammax_%s'%blindcat] # Cross profile of each galaxy
@@ -160,8 +163,52 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Nkidsfields-1 (Nbootstraps times)
         bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
                                                    [Nbootstraps, len(kidscats)])
-    
+        """
+        # Proper
+        matched = {}
+        for i, kidscat in enumerate(kidscats):
+            matched[(np.float64(catmatch[kidscat][1].split('_')[1].replace('m', '-').replace('p', '.')), np.float64(catmatch[kidscat][1].split('_')[2].replace('m', '-').replace('p', '.')))] = kidscat, i
         
+        n_patches = 2
+        
+        result = []
+        for i in matched.keys():
+            x_coord, y_coord = i
+            result_i = []
+            #result_i.append(matched[(x_coord, y_coord)][1])
+            #for x,y in [(x_coord+i,y_coord+j) for i in (0,1) for j in (0,1)]:# if i != 0 or j != 0]:
+            for x,y in [(x_coord+i,y_coord) for i in (0,1)]:
+                if (x,y) in matched:
+                    result_i.append(matched[(x,y)][1])
+                    del matched[(x,y)]
+            result.append(result_i)
+        
+        
+        
+        result_final = [x for x in result if x != []]
+        print result_final
+        print len(result_final)
+        print len(np.unique(result_final))
+        result = np.array([np.array(xi) for xi in result_final if len(xi)==n_patches])
+        print result
+
+        rands = np.random.random_integers(0, len(result)-1, [Nbootstraps,len(result)]).flatten()
+        print rands
+        bootstrap_nums2 = result[rands]
+        bootstrap_nums2 = np.concatenate(bootstrap_nums2).ravel()
+        bootstrap_nums = bootstrap_nums2.reshape((Nbootstraps,-1))
+        print bootstrap_nums.shape
+        
+        # Naively
+        n_patches = 4
+        #rands = np.random.random_integers(0,(len(kidscats)/n_patches-n_patches),[Nbootstraps, len(kidscats)/n_patches]).flatten()
+        #print rands
+        #print rands.shape
+        #bootstrap_nums = np.array([n_patches*rands+i for i in xrange(n_patches)]).reshape(Nbootstraps, n_patches*(len(kidscats)/n_patches))
+        #print bootstrap_nums.shape
+        print bootstrap_nums
+        #quit()
+        """
     else:
         Nbootstraps = 1
 

@@ -107,9 +107,6 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         shearcatname = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, 1, Nsplits, \
                                                     filename_addition, blindcat)
-    print shearcatname
-    print filename_var
-    print Nsplits
     shearcat = pyfits.open(shearcatname)
     sheardat = shearcat[1].data
 

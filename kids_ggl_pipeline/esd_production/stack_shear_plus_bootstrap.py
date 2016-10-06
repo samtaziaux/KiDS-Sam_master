@@ -33,6 +33,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_gamacat, specz_file, z_epsilon = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
     
+    blindcat = blindcat[0]
+
     # Path to the output splits and results
     path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
     
@@ -123,6 +125,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Ncat is the number of existing randoms
         print 'Number of existing random catalogs:', Ncat
 
+    
     galIDlist = sheardat['ID'] # ID of all galaxies in the shear catalog
     gammatlist = sheardat['gammat_%s'%blindcat] # Shear profile of each galaxy
     gammaxlist = sheardat['gammax_%s'%blindcat] # Cross profile of each galaxy
@@ -158,8 +161,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Selecting the random fields (must be the same for all observable bins)
         # Select Nkidsfields random KiDS fields between 0 and
         # Nkidsfields-1 (Nbootstraps times)
-        #bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
-        #                                           [Nbootstraps, len(kidscats)])
+        bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
+                                                   [Nbootstraps, len(kidscats)])
         """
         # Proper
         matched = {}

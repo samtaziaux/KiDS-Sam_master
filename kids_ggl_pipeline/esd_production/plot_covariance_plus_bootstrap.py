@@ -24,7 +24,7 @@ nan = np.nan # Not a number
 def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     
     # This allows STDIN to work in child processes
-    sys.stdin = os.fdopen(fn)
+    #sys.stdin = os.fdopen(fn)
 
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
@@ -151,13 +151,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Remove the used splits
     if (Nsplit==1) and (blindcat==blindcats[-1]):
-        time.sleep(3) # Wait untill all blinds are done.
-        msg = '\nWarning: do you want to delete split files? [y/n] \n'
-        answer = raw_input(msg)
-        if len(answer) == 0:
-            exit()
-        if answer.lower() not in ('y', 'yes'):
-            exit()
+        #time.sleep(3) # Wait untill all blinds are done.
+        #msg = '\nWarning: do you want to delete split files? [y/n] \n'
+        #answer = raw_input(msg)
+        #if len(answer) == 0:
+        #    exit()
+        #if answer.lower() not in ('y', 'yes'):
+        #    exit()
         filelist = os.listdir(path_splits)
 
         for filename in filelist:

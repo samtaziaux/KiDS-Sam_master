@@ -106,9 +106,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                                         lenssel_binning, \
                                                         gamacat, Dcllist)
 
-            filename_N1 = filename_var.replace('binnum', '%i'%(N1+1))
+            filename_var_N1 = filename_var.replace('binnum', '%i'%(N1+1))
+            filename_N1 = shear.define_filename_results(path_results, purpose, \
+                                            filename_var_N1, filename_addition, \
+                                            Nsplit, blindcat)
+                                            
             filenameESD = shear.define_filename_results(path_results, purpose, \
-                                                        filename_N1.replace('_bin_%i'%(N1+1), ''), \
+                                                        filename_var_N1.replace('_bin_%i'%(N1+1), ''), \
                                                         filename_addition, \
                                                         Nsplit, blindcat)
             if 'No' in binname:
@@ -117,18 +121,18 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 plotlabel = r'%g $\leq$ %s $\textless$ %g'%(binmin, \
                                             binname.replace('_', ''), binmax)
             
-            try:
-                shear.define_plot(filenameESD, plotlabel, plottitle1, \
+            #try:
+            print filename_N1
+            shear.define_plot(filename_N1, plotlabel, plottitle1, \
                                   plotstyle, subplots, N1+1, Runit, h)
-            except:
-                pass
+            #except:
+            #    pass
         #try:
         shear.write_plot(filenameESD, plotstyle)
         #except:
             #print "Failed to create ESD Plot of:", filenameESD
 
     # Creating the ueber-matrix plot
-    filename_N1 = filename_var.replace('_binnum', 's')
     filename_cov = filename_var.replace('_binnum', 's')
     filename_cov = filename_cov.replace('_bins', '')
     filenamecov = '%s/%s_matrix_%s.txt'%(path_results, filename_cov, blindcat)

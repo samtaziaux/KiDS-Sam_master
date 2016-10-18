@@ -31,6 +31,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
             shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
+    blindcat = blindcat[0]
 
     if 'bootstrap' in purpose:
         print('Step 4: Combine the bootstrap samples into the ESD '\
@@ -196,7 +197,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         if sum(ESD_mask) > 0:
                             cov[N1,N2,R1,R2] = np.cov((ESDt_N1[:, R1])[ESD_mask],
                                                       (ESDt_N2[:, R2])[ESD_mask],
-                                                      bias=1)[0,1]
+                                                      bias=1)[0,1] #N2 = N1!
+                        #if N1!=N2:
+                        #    cov[N1,N2,R1,R2] = 0.0
 
 
     if 'covariance' in purpose: # Calculating the covariance
@@ -288,7 +291,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     # This message should be a lot more explicit
                     print('ERROR: Not all fields are analysed! '\
                                   'Please restart shear code!')
-                    quit()
+                    exit()
 
             # Calculating the final output values of the
             # accompanying shear data

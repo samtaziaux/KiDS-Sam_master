@@ -204,7 +204,7 @@ def run_emcee(hm_options, sampling_options, args):
         exit()
 
     # set up starting point for all walkers
-    po = starting * numpy.random.uniform(0.99, 1.01, size=(nwalkers,ndim))
+    po = starting * numpy.random.uniform(0.9, 1.1, size=(nwalkers,ndim))
     lnprior = zeros(ndim)
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a

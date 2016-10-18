@@ -812,7 +812,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         sur_den4[i][(sur_den4[i] <= 0.0) | (sur_den4[i] >= 1e20)] = np.nan
         sur_den4[i] = fill_nan(sur_den4[i])
     """
-    
+
     """
     # Excess surface density
     """
@@ -874,7 +874,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     # Add other outputs as needed. Total ESD should always be first!
     return [out_esd_tot_inter, np.log10(effective_mass), bias_out]
-    #return d_sur_den3, d_sur_den4, pointmass
+    #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass
 
 if __name__ == '__main__':
     print 0

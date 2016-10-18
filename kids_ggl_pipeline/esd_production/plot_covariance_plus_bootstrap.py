@@ -37,6 +37,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     print 'Final step: Plot the ESD profiles and correlation matrix'
     print
+
+    blindcat = blindcat[0]
     
     # Plot settings:
 
@@ -148,7 +150,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     
     # Addapted the removal of splits. They might be useful for sanity checks.
     # 6.4.2016 - Andrej D.
-
+    
     # Remove the used splits
     if (Nsplit==1) and (blindcat==blindcats[-1]):
         #time.sleep(3) # Wait untill all blinds are done.
@@ -159,7 +161,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         #if answer.lower() not in ('y', 'yes'):
         #    exit()
         filelist = os.listdir(path_splits)
-
+        
         for filename in filelist:
             #os.remove('%s/%s'%(path_splits, filename))
             try:

@@ -122,7 +122,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                             binname.replace('_', ''), binmax)
             
             #try:
-            print filename_N1
             shear.define_plot(filename_N1, plotlabel, plottitle1, \
                                   plotstyle, subplots, N1+1, Runit, h)
             #except:

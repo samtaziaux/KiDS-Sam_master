@@ -54,7 +54,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
     for j in xrange(Nsplits):
         work.join()
     
-    return
+    return 0
 
 
 def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
@@ -879,7 +879,12 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                  blindcat, srclists, path_splits, splitkidscats, catmatch,
                                  Dcsbins, Dc_epsilon, filename_addition, variance)
 
-    return 0
+    if out == 0:
+        print('Splits finished properly.')
+    else:
+        print('Splits not finished properly, please restart the pipeline.')
+        exit()
+    return 
 
 
 ## END OF FILE ##

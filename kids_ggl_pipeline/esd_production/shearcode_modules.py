@@ -382,8 +382,23 @@ def define_filename_splits(path_splits, purpose, filename_var, \
                                                    filename_var, \
                                                    Nsplit, Nsplits)
     new_path = '/'.join(splitname.split('/')[:-1])
-    if not os.path.isdir(new_path):
-       os.makedirs(new_path)
+    #if not os.path.isdir(new_path):
+        #os.makedirs(new_path)
+    while True:
+        #print True
+        if not os.path.isdir(new_path):
+            try:
+                os.makedirs(new_path)
+                break
+            except OSError, e:
+                if e.errno != 17:
+                    raise
+                time.sleep(2)
+                pass
+        else:
+            break
+
+
     return splitname
 
 
@@ -403,9 +418,22 @@ def define_filename_results(path_results, purpose, filename_var, \
         resultname = '%s/%s_%s.txt'%(path_results, filename_var, blindcat)
     
     new_path = '/'.join(resultname.split('/')[:-1])
-    if not os.path.isdir(new_path):
-        os.makedirs(new_path)
-    
+    #if not os.path.isdir(new_path):
+        #os.makedirs(new_path)
+    while True:
+        #print True
+        if not os.path.isdir(new_path):
+            try:
+                os.makedirs(new_path)
+                break
+            except OSError, e:
+                if e.errno != 17:
+                    raise
+                time.sleep(2)
+                pass
+        else:
+            break
+
     return resultname
 
 

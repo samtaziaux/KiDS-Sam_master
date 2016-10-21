@@ -128,8 +128,8 @@ def run_emcee(hm_options, sampling_options, args):
 
     # are we just running a demo?
     if args.demo:
-        import pylab
         from matplotlib import cm
+        import matplotlib.pylab as pylab
         def plot_demo(ax, Ri, gt, gt_err, f):
             Ri = Ri[1:]
             ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
@@ -184,7 +184,7 @@ def run_emcee(hm_options, sampling_options, args):
             else:
                 for ax in axes:
                     ax.set_yscale('log')
-        fig.tight_layout(w_pad=0.01)
+        #fig.tight_layout(w_pad=0.01)
         pylab.show()
         fig, axes = pylab.subplots(figsize=(10,8), nrows=cov.shape[0],
                                    ncols=cov.shape[0])
@@ -199,7 +199,7 @@ def run_emcee(hm_options, sampling_options, args):
                 for n, axmn in enumerate(axm):
                     axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
                             cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
-        fig.tight_layout()
+        #fig.tight_layout()
         pylab.show()
         exit()
 

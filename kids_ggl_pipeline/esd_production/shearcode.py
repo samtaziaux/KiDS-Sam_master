@@ -90,10 +90,8 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     else:
         out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     
-    if out == 0:
-        print('Splits finished.')
-    
     # Combine the splits according to the purpose
+
 
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
@@ -107,7 +105,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         #for p in ps:
             #p.wait()
         combine_splits.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
-
+    
     # Stacking the lenses into an ESD profile
     if ('bootstrap' in purpose) or ('catalog' in purpose):
         #runblinds('%sstack_shear+bootstrap.py' \
@@ -115,7 +113,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                     #nsplit, nsplits, nobsbin, config_file, purpose)
         runblinds(stack_shearboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
-
+    
     # Creating the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
         #runblinds('%scombine_covariance+bootstrap.py' \

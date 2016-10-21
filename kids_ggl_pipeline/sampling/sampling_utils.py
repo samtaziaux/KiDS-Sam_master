@@ -82,6 +82,10 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     # reshape back into the desired shape (with the right axes order)
     icov = icov.reshape((Nobsbins,Nrbins,Nobsbins,Nrbins))
     icov = icov.transpose(2,0,3,1)
+    
+    # Hartlap correction
+    #icov = (45.0 - Nrbins - 2.0)/(45.0 - 1.0)*icov
+    
     return cov, icov, likenorm, esd_err, cov2d
 
 def read_config(config_file, version='0.5.7',

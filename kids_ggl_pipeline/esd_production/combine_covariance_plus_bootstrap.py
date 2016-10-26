@@ -93,7 +93,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # (for the bin creation)
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
-                                           Dcllist)
+                                           Dcllist, h)
 
     binname, lens_binning, Nobsbins, \
     binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
@@ -308,7 +308,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection,
                                            lens_binning, binname, N1+1,
-                                           binmin, binmax, Dcllist)
+                                           binmin, binmax, Dcllist, h)
 
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]

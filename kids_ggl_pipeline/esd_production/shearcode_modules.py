@@ -1225,7 +1225,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                 
                 # Importing the binning file
                 if obsfile == 'self':
-                    obslist = define_obslist(binname, gamacat, Dcllist)
+                    obslist = define_obslist(binname, gamacat, 0.7, Dcllist)
                 else:
                     print 'Using %s from %s' %(binname, obsfile)
                     obscat = pyfits.open(obsfile)[1].data
@@ -1262,7 +1262,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
 
 
 # Corrections on GAMA catalog observables
-def define_obslist(obsname, gamacat, Dcllist=[]):
+def define_obslist(obsname, gamacat, h, Dcllist=[]):
 
     obslist = gamacat[obsname]
 
@@ -1279,7 +1279,7 @@ def define_obslist(obsname, gamacat, Dcllist=[]):
 
         # Fluxscale, needed for stellar mass correction
         fluxscalelist = gamacat['fluxscale']
-        corr_list = np.log10(fluxscalelist)# - 2*np.log10(h/0.7)
+        corr_list = np.log10(fluxscalelist) - 2*np.log10(h/0.7)
         obslist = obslist + corr_list
 
     return obslist
@@ -1288,7 +1288,7 @@ def define_obslist(obsname, gamacat, Dcllist=[]):
 # Masking the lenses according to the appropriate
 # lens selection and the current KiDS field
 def define_lenssel(gamacat, centering, lens_selection, lens_binning,
-                   binname, binnum, binmin, binmax, Dcllist):
+                   binname, binnum, binmin, binmax, Dcllist, h):
 
     lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
@@ -1300,7 +1300,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_selection[param][0]
         # Importing the binning file
         if obsfile == 'self':
-            obslist = define_obslist(param, gamacat, Dcllist)
+            obslist = define_obslist(param, gamacat, h, Dcllist)
         else:
             print 'Using %s from %s'%(param, obsfile)
             bincat = pyfits.open(obsfile)[1].data
@@ -1319,9 +1319,9 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_binning[binname][0]
         if obsfile == 'self':
             if 'ID' in binname:
-                obslist = define_obslist('ID', gamacat, Dcllist)
+                obslist = define_obslist('ID', gamacat, h, Dcllist)
             else:
-                obslist = define_obslist(binname, gamacat, Dcllist)
+                obslist = define_obslist(binname, gamacat, h, Dcllist)
         else:
             print 'Using %s from %s'%(binname, obsfile)
             bincat = pyfits.open(obsfile)[1].data

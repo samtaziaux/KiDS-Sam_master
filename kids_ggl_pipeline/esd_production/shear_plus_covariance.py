@@ -86,7 +86,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, \
-                                           binnum, binmin, binmax)
+                                           binnum, binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -309,7 +309,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                    #binname, binnum, binmin, binmax, Dcllist):
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \
-                                           binmin, binmax, Dcllist)
+                                           binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -692,7 +692,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
-                                           Dcllist)
+                                           Dcllist, h)
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     binname, lens_binning, Nobsbins, binmin, binmax = \

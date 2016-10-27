@@ -33,7 +33,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                filename_var,
                filename, cat_version, blindcat, srclists, path_splits,
                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-               variance):
+               variance, h):
     
     q1 = multi.Queue()
     procs = []
@@ -47,7 +47,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                                                 filename_var,
                                                 filename, cat_version, blindcat, srclists, path_splits,
                                                 splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-                                                variance))
+                                                variance, h))
         procs.append(work)
         work.start()
     
@@ -63,7 +63,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance):
+         variance, h):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -858,7 +858,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                  Runit, nRbins, Rconst, filename_var, filename, cat_version,
                  blindcat, srclists, path_splits, splitkidscats, catmatch,
-                 Dcsbins, Dc_epsilon, filename_addition, variance)
+                 Dcsbins, Dc_epsilon, filename_addition, variance, h)
 
     if 'covariance' in purpose:
         for i in xrange(Nobsbins):
@@ -877,7 +877,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                  binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                                  Runit, nRbins, Rconst, filename_var, filename, cat_version,
                                  blindcat, srclists, path_splits, splitkidscats, catmatch,
-                                 Dcsbins, Dc_epsilon, filename_addition, variance)
+                                 Dcsbins, Dc_epsilon, filename_addition, variance, h)
 
     if out == 0:
         print('Splits finished properly.')

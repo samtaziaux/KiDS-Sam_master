@@ -34,7 +34,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance):
+         variance, h):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -82,7 +82,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             while memfrac > 80: # If it is too high...
                 print 'Waiting: More memory required'
                 time.sleep(30) # wait before continuing the calculation
-
+            
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, \
@@ -869,7 +869,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                            binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                            Runit, nRbins, Rconst, filename_var, filename, cat_version,
                            blindcat, srclists, path_splits, splitkidscats, catmatch,
-                           Dcsbins, Dc_epsilon, filename_addition, variance)
+                           Dcsbins, Dc_epsilon, filename_addition, variance, h)
             else:
                 pool = mp.Pool(processes=Nsplits)
                 out = [pool.apply_async(loop, args=(

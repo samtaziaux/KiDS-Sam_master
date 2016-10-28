@@ -1284,7 +1284,7 @@ def define_obslist(obsname, gamacat, h, Dcllist=[]):
 
         # Fluxscale, needed for stellar mass correction
         fluxscalelist = gamacat['fluxscale']
-        corr_list = np.log10(fluxscalelist) - 2.*np.log10(h/0.7)
+        corr_list = np.log10(fluxscalelist)# - 2.*np.log10(h/0.7)
         obslist = obslist + corr_list
 
     return obslist

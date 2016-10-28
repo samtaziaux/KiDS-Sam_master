@@ -451,7 +451,7 @@ def esd_mdm_An(theta, R, h=0.7, Om=0.315, Ol=0.685):
     #print Cd
     #print R
     
-    esd_mdm = [((Mi * Cd)**0.5 / 4) * (Ai * (Ri[1:]*1e6)**(-1*n)) # Mpc to pc
+    esd_mdm = [((Mi * Cd)**0.5 / 4) * (Ai * (Ri[1:]*1e6)**(-1*ni)) # Mpc to pc
                     for Ai, ni, Mi, Ri in izip(A, n, Mstar, R)]
     #print esd_mdm
     

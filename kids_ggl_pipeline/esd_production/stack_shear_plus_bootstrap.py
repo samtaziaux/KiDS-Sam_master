@@ -10,7 +10,6 @@ debug = False
 # Import the necessary libraries
 import astropy.io.fits as pyfits
 import numpy as np
-import distance
 import sys
 import os
 import time
@@ -28,7 +27,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
-        path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
+        path_results, purpose, O_matter, O_lambda, h, filename_addition, Ncat, \
         splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
         path_gamacat, specz_file, z_epsilon = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
@@ -56,7 +55,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                              Nobsbins, lens_selection, lens_binning, \
                                              src_selection, lens_weights, \
                                              name_Rbins, O_matter, \
-                                             O_lambda, Ok, h)
+                                             O_lambda, h)
 
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
@@ -75,7 +74,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                              {'None': np.array([])}, {'None': np.array([])}, \
                                              src_selection, ['None', ''], \
                                              name_Rbins, O_matter, \
-                                             O_lambda, Ok, h)
+                                             O_lambda, h)
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
@@ -100,7 +99,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
     galweightlist, galZlist, Dcllist, Dallist = shear.import_data(path_Rbins, \
     Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, \
+    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, h, \
     lens_weights, filename_addition, cat_version)
     
     # The bootstrap lens-field matching is used to prevent duplicated lenses.
@@ -118,7 +117,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                              Nobsbins, lens_selection, lens_binning, \
                                              src_selection, lens_weights, \
                                              name_Rbins, O_matter, \
-                                             O_lambda, Ok, h)
+                                             O_lambda, h)
 
     if 'random' in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)

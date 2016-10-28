@@ -8,7 +8,6 @@
 # Import the necessary libraries
 import astropy.io.fits as pyfits
 import numpy as np
-import distance
 import sys
 import os
 import time
@@ -26,7 +25,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
             lens_selection, lens_weights, binname, Nobsbins, src_selection, \
             cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
-            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+            path_splits, path_results, purpose, O_matter, O_lambda, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, \
             blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
             shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
@@ -44,7 +43,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
                     'binnum', Nobsbins, lens_selection, lens_binning, src_selection, \
-                    lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
+                    lens_weights, name_Rbins, O_matter, O_lambda, h)
     if ('random' or 'star') in purpose:
         filename_var = '{0:d}_{1}'.format(Ncat, filename_var)
         # Ncat is the number of existing randoms
@@ -79,7 +78,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
                 path_Rbins, Runit, path_gamacat, path_kidscats, centering,
-                purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
+                purpose, Ncat, O_matter, O_lambda, h, lens_weights,
                 filename_addition, cat_version)
 
     galIDlist_matched = np.array([], dtype=np.int32)
@@ -130,7 +129,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             filename_N1 = shear.define_filename_var(
                 purpose, centering, binname, N1+1, Nobsbins, lens_selection,
                 lens_binning, src_selection, lens_weights, name_Rbins,
-                O_matter, O_lambda, Ok, h)
+                O_matter, O_lambda, h)
 
             if ('random' or 'star') in purpose:
                 filename_N1 = '{0:d}_{1}'.format(Ncat, filename_N1)
@@ -167,7 +166,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 filename_N2 = shear.define_filename_var(
                     purpose, centering, binname, N2+1, Nobsbins,
                     lens_selection, lens_binning, src_selection, lens_weights,
-                    name_Rbins, O_matter, O_lambda, Ok, h)
+                    name_Rbins, O_matter, O_lambda, h)
 
                 if ('random' or 'star') in purpose:
                     filename_N2 = '{0:d}_{1}'.format(Ncat, filename_N2)
@@ -208,7 +207,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             filename_N1 = shear.define_filename_var(
                 purpose, centering, binname, N1+1, Nobsbins, lens_selection,
                 lens_binning, src_selection, lens_weights, name_Rbins,
-                O_matter, O_lambda, Ok, h)
+                O_matter, O_lambda, h)
             if ('random' or 'star') in purpose:
                 filename_N1 = '{0:d}_{1}'.format(Ncat, filename_N1)
 
@@ -264,7 +263,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                             purpose, centering, binname, N2+1, Nobsbins,
                             lens_selection, lens_binning, src_selection,
                             lens_weights, name_Rbins, O_matter, O_lambda,
-                            Ok, h)
+                            h)
 
                         if ('random' or 'star') in purpose:
                             filename_N2 = '{0:d}_{1}'.format(Ncat, filename_N2)

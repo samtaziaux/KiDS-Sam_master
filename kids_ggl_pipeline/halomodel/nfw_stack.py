@@ -384,10 +384,9 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
     return out
 
 
-def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
+def esd_mdm(theta, R, h=0.7, Om=0.315, Ol=0.685):
     # local variables are accessed much faster than global ones
     _array = array
-    _cM_duffy08 = cM_duffy08
     _cumsum = cumsum
     _delta = delta
     _izip = izip
@@ -399,7 +398,7 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     # some auxiliaries
     G = 4.51835939627e-30
     c = 9.71561189026e-09
-    H0 = 3.24077928947e-18
+    H0 = h * 3.24077928947e-18
 
     #H = [H0 * np.sqrt(Om*(1+zi)**3 + Ol) for zi in izip(z)]
 
@@ -409,7 +408,7 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     #print Cd
     #print R
     
-    esd_mdm = [(Ai * Mi * Cd)**0.5 / (4 * Ri[1:] * 1e6) # Mpc to pc
+    esd_mdm = [Ai * (Mi * Cd)**0.5 / (4 * Ri[1:] * 1e6) # Mpc to pc
                     for Ai, Mi, Ri in izip(A, Mstar, R)]
     #print esd_mdm
     
@@ -428,6 +427,48 @@ def esd_mdm(theta, R, h=1, Om=0.315, Ol=0.685):
     out = [esd_mdm]
     return out
 
+def esd_mdm_An(theta, R, h=0.7, Om=0.315, Ol=0.685):
+    # local variables are accessed much faster than global ones
+    _array = array
+    _cumsum = cumsum
+    _delta = delta
+    _izip = izip
+
+    A, n, z, Mstar, Rrange, angles = theta
+    #print Mstar
+    Mstar = 10**Mstar
+    
+    # some auxiliaries
+    G = 4.51835939627e-30
+    c = 9.71561189026e-09
+    H0 = h * 3.24077928947e-18
+
+    #H = [H0 * np.sqrt(Om*(1+zi)**3 + Ol) for zi in izip(z)]
+
+    #Cd = [(c * Hi) / (G * 6) for Hi in izip(H)]
+    Cd = (c * H0) / (G * 6)
+
+    #print Cd
+    #print R
+    
+    esd_mdm = [((Mi * Cd)**0.5 / 4) * (Ai * (Ri[1:]*1e6)**(-1*n)) # Mpc to pc
+                    for Ai, ni, Mi, Ri in izip(A, n, Mstar, R)]
+    #print esd_mdm
+    
+    """
+    # more parameters
+    rs_cent = (Mcentral / aux) ** (1./3) / ccentral
+    sigma_central = rs_cent * _delta(ccentral) * rho_m
+    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2)
+                 for Mi, Ri in izip(Mstar, R)]
+    """
+
+    # central signal
+    #esd_tot = [esd for esd in izip(esd_mdm)]
+    esd_mdm = _array(esd_mdm)
+
+    out = [esd_mdm]
+    return out
 
 
 def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):

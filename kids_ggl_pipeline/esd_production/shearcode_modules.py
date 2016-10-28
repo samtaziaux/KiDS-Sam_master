@@ -587,7 +587,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         # Distance in pc/h, where h is the dimensionless Hubble constant
         #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
         #                            for z in galZlist])
-        cosmo = LambdaCDM(H0=h*10., Om0=O_matter, Ode0=O_lambda)
+        cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
         Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
 
     else: # Rbins in a multiple of degrees

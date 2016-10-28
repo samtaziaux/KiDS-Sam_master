@@ -709,8 +709,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     #                    for y in zsrcbins])
     #Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
 
-    cosmo = LambdaCDM(H0=h*10., Om0=O_matter, Ode0=O_lambda)
-    Dcsbins = (cosmo.comoving_distance(zsrcbins).to('pc')).value
+    cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+    Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
     Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     if cat_version == 3:

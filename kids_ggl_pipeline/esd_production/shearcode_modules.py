@@ -1437,9 +1437,9 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
                       np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*\
                       np.cos(np.radians(galRA-srcRA))) # in radians
     incosphi = ((-np.cos(np.radians(galDEC))*(np.arctan(np.tan(np.radians(galRA-srcRA)))))**2-\
-                (np.arctan(np.tan(np.radians(galDEC-srcDEC))))**2)/(theta)**2
-    insinphi = 2*(-np.cos(np.radians(galDEC))*\
-                (np.arctan(np.tan(np.radians(galRA-srcRA)))))*np.arctan(np.tan(np.radians(galDEC-srcDEC)))/(theta)**2
+                (np.radians(galDEC-srcDEC))**2)/(theta)**2
+    insinphi = 2.0*(-np.cos(np.radians(galDEC))*\
+                (np.arctan(np.tan(np.radians(galRA-srcRA)))))*np.radians(galDEC-srcDEC)/(theta)**2
 
     incosphi = incosphi.T
     insinphi = insinphi.T

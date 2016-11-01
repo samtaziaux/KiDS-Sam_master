@@ -362,6 +362,8 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
     _izip = izip
 
     central_profile, fc_central, Mcentral, z, Mstar, Rrange, angles = theta
+    Mstar = 10**Mstar
+    
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
 
     # some auxiliaries
@@ -371,6 +373,7 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
     # more parameters
     rs_cent = (Mcentral / aux) ** (1./3) / ccentral
     sigma_central = rs_cent * _delta(ccentral) * rho_m
+
     pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2)
                  for Mi, Ri in izip(Mstar, R)]
 
@@ -392,8 +395,10 @@ def esd_mdm(theta, R, h=0.7, Om=0.315, Ol=0.685):
     _izip = izip
 
     A, z, Mstar, Rrange, angles = theta
-    #print Mstar
     Mstar = 10**Mstar
+
+    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2)
+                 for Mi, Ri in izip(Mstar, R)]
     
     # some auxiliaries
     G = 4.51835939627e-30
@@ -435,7 +440,6 @@ def esd_mdm_An(theta, R, h=0.7, Om=0.315, Ol=0.685):
     _izip = izip
 
     A, n, z, Mstar, Rrange, angles = theta
-    #print Mstar
     Mstar = 10**Mstar
     
     # some auxiliaries

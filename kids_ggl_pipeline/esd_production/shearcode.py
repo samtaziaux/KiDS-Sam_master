@@ -76,7 +76,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
     # it's easier to debug if we don't use multiprocessing, so it will
     # only be used if it is asked for
-
+    
     if nruns > 1:
         pool = mp.Pool(processes=nruns)
         out = [pool.apply_async(shearcov.main,
@@ -91,7 +91,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     
     # Combine the splits according to the purpose
-
+    
 
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
@@ -121,7 +121,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                     #nsplit, nsplits, nobsbin, config_file, purpose)
         runblinds(combine_covboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
-
+    
     # Plotting the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
         #runblinds('%splot_covariance+bootstrap.py' \

@@ -14,8 +14,10 @@ import sys
 import os
 import time
 import multiprocessing as multi
+from scipy.interpolate import interp1d
 
 from astropy import constants as const, units as u
+from itertools import izip
 import memory_test as memory
 import time
 import gc
@@ -67,10 +69,10 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
-        Dallist, Dcllist = gallists
+        Dallist, Dcllist, z_epsilon = gallists
     # source information
     srcNr_varlist, srcRA_varlist, srcDEC_varlist, w_varlist, \
-        e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a = srclists
+        e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_varlist, k_interpolated = srclists
 
     gallists, srclists = [], []
     gc.collect()
@@ -373,12 +375,15 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             e2 = e2_varlist[:,index][[0,1,2,3],:].T
             srcm = srcm_varlist[(index)]
             tile = tile_varlist[(index)]
+            srcZB = srcPZ_varlist[(index)]
 
+            """
             if len(srcNr) != 0:
                 srcPZ = np.array([srcPZ_a,]  *len(srcNr))
             else:
                 srcPZ = np.zeros((0, len(srcPZ_a)), dtype=np.float64)
-
+            """
+            
             #srcPZ = shear.import_spec_cat_pz(catmatch[kidscatname][1], catmatch, srcNr)
 
             if 'covariance' in purpose:
@@ -401,6 +406,9 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                                Dals[lenssplits[l] : lenssplits[l+1]], \
                                                galweights[lenssplits[l] : lenssplits[l+1]]]
 
+                galZ_split_2, srcZB_2 = np.meshgrid(galZ_split, srcZB)
+                src_mask = np.logical_not(srcZB_2 >= galZ_split_2+z_epsilon).T
+                
                 # Create a mask for the complete list of lenses,
                 # that only highlights the lenses in this lens split
                 galIDmask_split = np.in1d(galIDlist, galID_split)
@@ -415,12 +423,16 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
-                k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, \
-                                                Dcsbins, srcPZ, cat_version, Dc_epsilon)
+                #k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split, \
+                #                                Dcsbins, srcPZ, cat_version, Dc_epsilon)
+                k = k_interpolated(galZ_split_2).T
+                
                 Nsrc = np.ones(np.shape(k))
                 # Mask all invalid lens-source pairs using
                 # the value of the radius
-                srcR = np.ma.filled(np.ma.array(srcR, mask = kmask, \
+                #new_mask = np.logical_or(kmask,src_mask)
+                
+                srcR = np.ma.filled(np.ma.array(srcR, mask = src_mask, \
                                                 fill_value = 0))
 
                 # Create an lfweight matrix that can be
@@ -682,6 +694,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     srcm_varlist = np.array([])
     tile_varlist = np.array([])
     srcPZ_a = np.array([])
+    srcPZ_varlist = np.array([])
     if cat_version == 3:
         kidscatname2 = np.array([])
         for i in xrange(len(kidscats)):
@@ -706,6 +719,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             srcDEC_varlist = np.append(srcDEC_varlist, srcDEC)
             srcm_varlist = np.append(srcm_varlist, srcm)
             tile_varlist = np.append(tile_varlist, tile)
+            srcPZ_varlist = np.append(srcPZ_varlist, srcPZ)
 
             # Make ellipticity- and lfweight-lists for the variance calculation
             w_varlist = np.hstack([w_varlist, w.T])
@@ -738,12 +752,39 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     if cat_version == 3:
         if wizz == 'False':
+            print('\nCalculating the lensing efficiency ...')
+            """
             srcNZ, spec_weight = shear.import_spec_cat(
                 path_kidscats, kidscatname2, kidscat_end, specz_file,
                 src_selection, cat_version)
             srcPZ_a, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, \
                                                 weights=spec_weight, density=1)
             srcPZ_a = srcPZ_a/srcPZ_a.sum()
+            """
+            
+            srclims = src_selection['Z_B'][1]
+            sigma_selection = {}
+            # 10 lens redshifts for calculation of Sigma_crit
+            lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
+            lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+                                      for y in lens_redshifts])
+            lens_angular = lens_comoving/(1.0+lens_redshifts)
+            k = np.zeros_like(lens_redshifts)
+            
+            for i in xrange(lens_redshifts.size):
+                sigma_selection['Z_B'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
+                srcNZ_k, spec_weight_k = shear.import_spec_cat(path_kidscats, kidscatname2,\
+                                        kidscat_end, specz_file, sigma_selection, \
+                                        cat_version)
+                
+                srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, \
+                                weights=spec_weight_k, density=1)
+                srcPZ_k = srcPZ_k/srcPZ_k.sum()
+                k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
+                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
+            
+            k_interpolated = interp1d(lens_redshifts, k, kind='cubic')
+            
             """
             Nbootstraps=1000
             rand_nums = np.random.random_integers(0,len(srcNZ)-1, [Nbootstraps, len(srcNZ)])
@@ -775,12 +816,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             np.savetxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt', srcPZ_a)
             """
             #srcPZ_a = np.genfromtxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt')
-
-        if wizz == 'True':
-            srcPZ_a = shear.import_spec_wizz(path_kidscats, kidscatname2,\
-                                            kidscat_end, src_selection, \
-                                            cat_version, filename_var, Nsplits)
-            srcPZ_a = srcPZ_a/srcPZ_a.sum()
+        if wizz == True:
+            print('\nThe-wiZZ is not yet supported, quitting ...')
+            exit()
 
     # Calculation of average m correctionf for KiDS-450
     if cat_version == 3:
@@ -810,10 +848,12 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 m_selection['Z_B'] = ['self', np.array([0.7, 0.8])]
             if m == -0.0286749355629:
                 m_selection['Z_B'] = ['self', np.array([0.8, 0.9])]
-
+        
+        
             srcNZ_m, spec_weight_m = shear.import_spec_cat(path_kidscats, kidscatname2,\
-                                                        kidscat_end, specz_file, m_selection, \
-                                                        cat_version)
+                                kidscat_end, specz_file, m_selection, \
+                                cat_version)
+                                                        
             srcPZ_m, bins_m = np.histogram(srcNZ_m, range=[0.025, 3.5], bins=70, \
                                                 weights=spec_weight_m, density=1)
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
@@ -839,10 +879,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # galaxy information
     gallists = (galIDlist, galRAlist, galDEClist, galZlist, galweightlist,
-                Dallist, Dcllist)
+                Dallist, Dcllist, z_epsilon)
     # source information
     srclists = (srcNr_varlist, srcRA_varlist, srcDEC_varlist, w_varlist,
-              e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_a)
+              e1_varlist, e2_varlist, srcm_varlist, tile_varlist, srcPZ_varlist, k_interpolated)
 
 
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \

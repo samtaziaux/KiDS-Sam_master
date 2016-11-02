@@ -796,12 +796,13 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
                 filename, files[0])
     spec_cat = pyfits.open(files[0], memmap=True)[1].data
     
+
     Z_S = spec_cat['z_spec']
     spec_weight = spec_cat['spec_weight']
     manmask = spec_cat['MASK']
     
     srcmask = (manmask==0)
-    
+
     # We apply any other cuts specified by the user for Z_B
     srclims = src_selection['Z_B'][1]
     if len(srclims) == 1:
@@ -1352,7 +1353,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
         DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
     else:
         DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
-    
+
     DlsoDsmask = [] # Empty unused lists
 
     # Matrix multiplication that sums over P(z),
@@ -1373,7 +1374,6 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
 
     gc.collect()
     return k, kmask
-
 
 
 # Weigth for average m correction in KiDS-450
@@ -1404,7 +1404,6 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
     return DlsoDs
 
 
-
 # Calculate the projected distance (srcR) and the
 # shear (gamma_t and gamma_x) of every lens-source pair
 def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
@@ -1419,18 +1418,17 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
                             np.cos(np.radians(galRA-srcRA))+\
                             np.sin(np.radians(galDEC))*\
                             np.sin(np.radians(srcDEC)))
-
+    
     # Masking all lens-source pairs that have a
     # relative distance beyond the maximum distance Rmax
     Rmask = np.logical_not((Rmin < srcR) & (srcR < Rmax))
-
-
+    
     galRA = np.ma.filled(np.ma.array(galRA, mask = Rmask, fill_value = 0))
     srcRA = np.ma.filled(np.ma.array(srcRA, mask = Rmask, fill_value = 0))
     galDEC = np.ma.filled(np.ma.array(galDEC, mask = Rmask, fill_value = 0))
     srcDEC = np.ma.filled(np.ma.array(srcDEC, mask = Rmask, fill_value = 0))
     srcR = np.ma.filled(np.ma.array(srcR, mask = Rmask, fill_value = 0)).T
-
+    
     # Calculation the sin/cos of the angle (phi)
     # between the gal and its surrounding galaxies
     theta = np.arccos(np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC))+\
@@ -1553,7 +1551,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
-
+    
     galweights = np.reshape(galweights, [len(galweights), 1])
 
     # For each radial bin of each lens we calculate
@@ -1655,7 +1653,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
 
     with open(filename, 'a') as file:
         for R in xrange(len(Rcenters)):
-
+            
             if not (0 < error_tot[R] and error_tot[R]<inf):
                 ESDt_tot[R] = int(-999)
                 ESDx_tot[R] = int(-999)
@@ -1664,7 +1662,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
                 wk2_tot[R] = int(-999)
                 w2k2_tot[R] = int(-999)
                 Nsrc[R] = int(-999)
-
+            
             print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g   %.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R], Nsrc[R])
 
     print 'Written: ESD profile data:', filename

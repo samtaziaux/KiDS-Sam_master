@@ -1,0 +1,85 @@
+##############################################################
+##############################################################
+##
+##  Unit test configuration file for the KiDS-GGL pipeline
+##
+##  Update log:
+##     2015-09-24 created by Cristobal Sifon
+##
+##
+##############################################################
+##############################################################
+
+KiDS_path           KiDS_cat
+KiDS_version        3
+
+# this entry is optional, but make sure that the specz catalog is in the right place!
+specz_file          /disks/shear10/KiDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat
+
+# Full path to the GAMA catalogue fits file.
+GAMA_path           unit_test_GAMA_cat.fits
+
+
+## cosmology ##
+
+# Matter density at z=0.
+Om                  0.315           # 0 < Om <= 1
+# Dark energy density at z=0.
+Ol                  0.685           # must be Ol = 1 - Om
+# Curvature energy density. (NOT IMPLEMENTED)
+Ok                  0               # must be Ok = 0
+# Reduced Hubble constant.
+h                   1.0             # h = H_0/100 km/s/Mpc
+
+
+######################
+### ESD Production ###
+######################
+
+## Algorithm ##
+
+# Folder where all ESD-related files will be stored. Will be created if it does not exist.
+ESD_output_folder     unit_test_results
+
+# Suffix for the output files (optional)
+ESD_output_filename   None
+
+ESD_purpose           shearcatalog
+# Also run:
+#ESD_purpose           shearbootstrap
+#ESD_purpose           shearcovariance
+
+
+#Rbins                 10,20,2000
+#Runit                 kpc
+
+Rbins                 20,0.1,100
+Runit                 arcmin
+ncores                1
+
+## Lens selection
+
+lensID_file        None
+
+# DO NOT BIN!
+lens_weights      None
+
+lens_binning      None
+
+
+lens_limits1      lim           self   0.0,2.0
+
+
+## Source selection
+
+
+src_limits1           Z_B        0.1,0.9
+kids_blinds            A
+
+
+z_epsilon           0.2             # Default = 0.2
+
+
+
+
+

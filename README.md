@@ -92,6 +92,11 @@ If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenun
 ---
 Update log:
 
+**2016 November 11** - Release v1.4.0. Features:
+- Major bug fix in calculating Sigma_crit and tangential shear (inproper removal of sources in front of the lens).
+- Added unit test.
+- Solved some problems with multiprocessing.
+
 **2016 October 6** - Release v1.3.4. Features:
 - Bug fixes.
 

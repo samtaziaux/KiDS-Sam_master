@@ -52,9 +52,10 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                                                 variance))
         procs.append(work)
         work.start()
-    
-    for j in xrange(Nsplits):
         work.join()
+    
+    #for j in xrange(Nsplits):
+    #    work.join()
     
     return 0
 

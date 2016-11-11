@@ -163,9 +163,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Nkidsfields-1 (Nbootstraps times)
         bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
                                                    [Nbootstraps, len(kidscats)])
-        
-        # Proper
         """
+        # Proper
+        
         import matplotlib.pyplot as pl
         import collections
         

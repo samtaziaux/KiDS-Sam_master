@@ -550,6 +550,12 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
 
     galIDlist = gamacat['ID'] # IDs of all galaxies
+    if galIDlist.size != np.unique(galIDlist).size:
+        print('Dear user, you have confused me with non unique IDs for your lenses.')
+        print('I will refrain to keep running (it takes me a lot of energy)')
+        print('till you make sure that each lens has its own ID.')
+        print('I am not a communist code. Sorry for the inconvenience.')
+        raise SystemExit()
     
     if centering == 'Cen':
         galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)

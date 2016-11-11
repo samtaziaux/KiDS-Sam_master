@@ -52,9 +52,10 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                                                 variance))
         procs.append(work)
         work.start()
-    
-    for j in xrange(Nsplits):
         work.join()
+    
+    #for j in xrange(Nsplits):
+    #    work.join()
     
     return 0
 
@@ -783,7 +784,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
                             Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
             
-            k_interpolated = interp1d(lens_redshifts, k, kind='cubic')
+            k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
             
             """
             Nbootstraps=1000
@@ -818,7 +819,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             #srcPZ_a = np.genfromtxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt')
         if wizz == True:
             print('\nThe-wiZZ is not yet supported, quitting ...')
-            exit()
+            raise SystemExit()
 
     # Calculation of average m correctionf for KiDS-450
     if cat_version == 3:
@@ -923,7 +924,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         print('Splits finished properly.')
     else:
         print('Splits not finished properly, please restart the pipeline.')
-        exit()
+        raise SystemExit()
     return 
 
 

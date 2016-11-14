@@ -429,37 +429,55 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
     return out
 
 
-def central_nfw_brouwer(theta, R, h=0.7, Om=0.315, Ol=0.685):
+def central_nfw_brouwer(theta, R, h=1, Om=0.315, Ol=0.685):
     # local variables are accessed much faster than global ones
     _array = array
     _cM_duffy08 = cM_duffy08
     _cumsum = cumsum
     _delta = delta
     _izip = izip
-
-    central_profile, fc_central, Mcentral, z, Mstar, Rrange, angles = theta
-    Mstar = 10**Mstar
+    _linspace = linspace
     
+    #sat_profile, central_profile, fsat, fc_sat,
+    #logMsat1, logMsat2, fc_central1, fc_central2,
+    #logMcentral1, logMcentral2, z, Mstar, Rrange, angles = theta
+    central_profile, fc_central, logMcentral, z, Mstar, Rrange, angles = theta
+    
+    if not np.iterable(fc_central):
+        fc_central = np.array([fc_central])
+    if not np.iterable(logMcentral):
+        logMcentral = np.array([logMcentral])
+        Rrange = np.array([Rrange])
+    if not np.iterable(z):
+        z = np.array([z])
+    if not np.iterable(Mstar):
+        Mstar = np.array([Mstar])
+    
+    Mcentral = 10.0**_array(logMcentral)
+    Mstar = 10.0**Mstar
+    fc_central = fc_central
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
-
+    
     # some auxiliaries
     rho_m = density_average(z, h, Om, Ol)
-    aux = 200*rho_m * 4*3.14159265/3
-
+    aux = 200.0 * rho_m * 4*3.14159265/3
+    
     # more parameters
-    rs_cent = (Mcentral / aux) ** (1./3) / ccentral
+    r_vir = (Mcentral / aux) ** (1./3.)
+    rs_cent = (Mcentral / aux) ** (1./3.) / ccentral
     sigma_central = rs_cent * _delta(ccentral) * rho_m
-
-    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2)
+    pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2.) \
                  for Mi, Ri in izip(Mstar, R)]
+    pointmass = _array(pointmass)
 
     # central signal
-    esd_central = [pm + central_profile(Ri[1:]/rs, sigma)
-                   for pm, Ri, rs, sigma
-                   in izip(pointmass, R, rs_cent, sigma_central)]
+    esd_central = [pm + central_profile(Ri[1:]/rs, sigma) for pm, Ri,\
+                                rs, sigma in izip(pointmass, R, rs_cent, sigma_central)]
     esd_central = _array(esd_central)
 
-    out = [esd_central]
+    # Output ESD and parameters
+    out = [esd_central, pointmass]
+    
     return out
 
 
@@ -863,7 +881,7 @@ def nfw_off(theta, R, h=1, Om=0.315, Ol=0.685):
         Mstar = np.array([Mstar])
     
     #Msat = 10.0**_array([logMsat1, logMsat2])
-    Mcentral = 10.0**logMcentral #_array([logMcentral1, logMcentral2])
+    Mcentral = 10.0**_array(logMcentral) #_array([logMcentral1, logMcentral2])
     alpha = alpha_in #_array([alpha_in1, alpha_in2])
     f_off = f_off_in #_array([f_off_in1, f_off_in2])
     
@@ -927,7 +945,8 @@ def nfw_off(theta, R, h=1, Om=0.315, Ol=0.685):
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_host, pointmass, Mavg]
     #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
-    print logMcentral, alpha_in, f_off_in
+    #print logMcentral, alpha_in, f_off_in
+    
     return out
 
 

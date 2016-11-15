@@ -13,8 +13,10 @@ import sys
 import os
 import time
 from scipy.interpolate import interp1d
+import distance
 
 from astropy import constants as const, units as u
+from astropy.cosmology import LambdaCDM
 from itertools import izip
 import memory_test as memory
 import time
@@ -47,7 +49,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                                                 filename_var,
                                                 filename, cat_version, blindcat, srclists, path_splits,
                                                 splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-                                                variance, q1))
+                                                variance, h, q1))
         procs.append(work)
         work.start()
         #work.join()
@@ -73,7 +75,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance, q1):
+         variance, h, q1):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -530,7 +532,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
-        path_splits, path_results, purpose, O_matter, O_lambda, h, \
+        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
@@ -572,7 +574,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
     binnum, Nobsbins, lens_selection, lens_binning, src_selection, lens_weights, \
-    name_Rbins, O_matter, O_lambda, h)
+    name_Rbins, O_matter, O_lambda, Ok, h)
 
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat+1, filename_var)
@@ -616,7 +618,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = \
         shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats,
-                          centering, purpose, Ncat, O_matter, O_lambda, h,
+                          centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
                           lens_weights, filename_addition, cat_version)
 
     # Calculate the source variance
@@ -703,13 +705,14 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # to a range in source distances Ds (in pc/h)
     zsrcbins = np.arange(0.025,3.5,0.05)
     
-    #Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
-    #                    for y in zsrcbins])
-    #Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
+    Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+                        for y in zsrcbins])
+    Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
 
-    cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-    Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
-    Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
+    #This needs to be tested!
+    #cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+    #Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    #Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     if cat_version == 3:
         if wizz == 'False':

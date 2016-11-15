@@ -164,6 +164,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
                                                    [Nbootstraps, len(kidscats)])
         """
+        Need to properly implement this! 
         # Proper
         
         import matplotlib.pyplot as pl

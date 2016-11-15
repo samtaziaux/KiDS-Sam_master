@@ -78,15 +78,23 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     # only be used if it is asked for
     
     if nruns > 1:
-        pool = mp.Pool(processes=nruns)
-        out = [pool.apply_async(shearcov.main,
-                                args=(nsplit,nsplits,nobsbin,blindcat,
-                                      config_file, 0))
-               for n in xrange(nruns)]
-        pool.close()
-        pool.join()
-        for i in out:
-            i.get()
+        #pool = mp.Pool(processes=nruns)
+        #out = [pool.apply_async(shearcov.main,
+        #                        args=(nsplit,nsplits,nobsbin,blindcat,
+        #                              config_file, 0))
+        #       for n in xrange(nruns)]
+        #pool.close()
+        #pool.join()
+        #for i in out:
+        #    i.get()
+        
+        # This is only for randoms, and because child processes are not allowed
+        # to spawn new child processes, this needs to be run like this.
+        for n in xrange(nruns):
+            out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
+        
+        
+        
     else:
         out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     

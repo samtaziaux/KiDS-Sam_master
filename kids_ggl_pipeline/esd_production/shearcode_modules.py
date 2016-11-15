@@ -539,7 +539,7 @@ def define_Rbins(path_Rbins, Runit):
 def import_gamacat(path_gamacat, centering, purpose, Ncat, \
                     O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
-    randomcatname = 'gen_ran_out.randoms.fits'
+    randomcatname = 'RandomsWindowedV01.fits'
     directory = os.path.dirname(os.path.realpath(path_gamacat))
     randomcatname = directory + '/' + randomcatname
     
@@ -568,18 +568,25 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
     if 'random' in purpose:
         # Determine RA and DEC for the random/star catalogs
         # The first item that will be chosen from the catalog
-        Ncatmin = Ncat * len(galIDlist)
+        Ncatmin = Ncat # * len(galIDlist)
         # The last item that will be chosen from the catalog
-        Ncatmax = (Ncat+1) * len(galIDlist)
+        #Ncatmax = (Ncat+1) * len(galIDlist)
         try:
             randomcat = pyfits.open(randomcatname)[1].data
         except:
             print 'Could not import random catalogue: ', randomcatname
+            print('Make sure that the random catalogue is next to the GAMA catalogue!')
             raise SystemExit()
 
-        galRAlist = randomcat['ra'][Ncatmin : Ncatmax]
-        galDEClist = randomcat['dec'][Ncatmin : Ncatmax]
+        galIDlist_random = randomcat['CATAID']
+        slice = np.in1d(galIDlist_random, galIDlist)
+        step = 792 #len(galIDlist_random[slice])/len(galIDlist)
+        # This is hardcoded for this set of randoms.
+        Ncatmax = step*len(galIDlist)
 
+        galRAlist = randomcat['RA'][slice][Ncatmin:Ncatmax:step]
+        galDEClist = randomcat['DEC'][slice][Ncatmin:Ncatmax:step]
+        
     #Defining the lens weights
     weightname = lens_weights.keys()[0]
     if 'No' not in weightname:
@@ -590,6 +597,8 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
     # Defining the comoving and angular distance to the galaxy center
     if 'pc' in Runit: # Rbins in a multiple of pc
         galZlist = gamacat['Z'] # Central Z of the galaxy
+        if 'random' in purpose:
+            galZlist = randomcat['Z'][slice][Ncatmin:Ncatmax:step]
         Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
                             for z in galZlist])
         # Distance in pc/h, where h is the dimensionless Hubble constant

@@ -46,16 +46,13 @@ KiDS_version        3
 # this entry is optional
 specz_file          /disks/shear10/KiDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat
 
-# Full path to the GAMA catalogue fits file.
+# Full path to the GAMA catalogue fits file, or to another lens catalog.
+# This catalog should have columns (containing your lens information) with the following names: 
+# 'ID', 'RA', 'DEC', (optional: 'Z', if Runit = *pc), and your lens parameters (used for the selection).
 GAMA_path           /disks/shear10/brouwer_veersemeer/MergedCatalogues/GAMACatalogue_1.0.fits
 
 # Optional usage of The-wiZZ to estimate source redshifts. Default value is 'False'.
-The-wiZZ            True
-
-# Full path to a fits file with your custom lens catalogue (supersedes GAMA catalog).
-# This catalog should have columns (containing your lens information) with the following names: 
-# 'ID', 'RA', 'DEC', (optional: 'Z', if Runit = *pc), and your lens parameters (used for the selection).
-# lens_catalog      ../../../../MergedCatalogues/troughs.fits
+The-wiZZ            False
 
 
 ## cosmology ##
@@ -73,6 +70,17 @@ h                   1.0             # h = H_0/100 km/s/Mpc
 ######################
 ### ESD Production ###
 ######################
+
+## The production of the ESD is started using the following command:
+##
+## kids-ggl -c ggl_demo_nfw_stack.config --esd
+##
+## This will only run the ESD Production part of the config file, and output:
+## 1) The shearcatalog (as a fits file) if you specified 'shearcatalog' as your purpose.
+## 2) The ESD profile (as txt files) of the lens sample (for each separate bin).
+## 3) The covariance matrix (as a txt file) if you specified 'shearcovariance' or 'shearbootstrap' as you purpose.
+##
+## The input lens sample and the output folder that are used for the ESD profiles must be specified below.
 
 ## Algorithm ##
 
@@ -170,7 +178,7 @@ z_epsilon           0.2             # Default = 0.2
 ## Sifon et al. (2015, MNRAS, 454, 3938). All files are located in this demo folder,
 ## such that the results should be reproducible by running
 ##
-##      python kids-ggl.py -c ggl_demo_nfw_stack.config --sampler --demo
+##      kids_ggl -c ggl_demo_nfw_stack.config --sampler --demo
 ##
 ## (the initial values have been set to the best fits reported in the paper).
 

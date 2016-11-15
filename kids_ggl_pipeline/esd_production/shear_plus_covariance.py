@@ -9,13 +9,14 @@
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
-import distance
 import sys
 import os
 import time
 import multiprocessing as multi
 
 from astropy import constants as const, units as u
+from astropy.cosmology import LambdaCDM
+
 import memory_test as memory
 import time
 import gc
@@ -34,7 +35,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance):
+         variance, h):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -82,11 +83,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             while memfrac > 80: # If it is too high...
                 print 'Waiting: More memory required'
                 time.sleep(30) # wait before continuing the calculation
-
+            
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, \
-                                           binnum, binmin, binmax)
+                                           binnum, binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -309,7 +310,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                    #binname, binnum, binmin, binmax, Dcllist):
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \
-                                           binmin, binmax, Dcllist)
+                                           binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -533,7 +534,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
-        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        path_splits, path_results, purpose, O_matter, O_lambda, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
@@ -575,7 +576,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
     binnum, Nobsbins, lens_selection, lens_binning, src_selection, lens_weights, \
-    name_Rbins, O_matter, O_lambda, Ok, h)
+    name_Rbins, O_matter, O_lambda, h)
 
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat+1, filename_var)
@@ -619,7 +620,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = \
         shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats,
-                          centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
+                          centering, purpose, Ncat, O_matter, O_lambda, h,
                           lens_weights, filename_addition, cat_version)
 
     # Calculate the source variance
@@ -692,7 +693,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
-                                           Dcllist)
+                                           Dcllist, h)
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     binname, lens_binning, Nobsbins, binmin, binmax = \
@@ -701,11 +702,16 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
 
     # We translate the range in source redshifts
-    # to a range in source distances Ds
+    # to a range in source distances Ds (in pc/h)
     zsrcbins = np.arange(0.025,3.5,0.05)
-    Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
-                        for y in zsrcbins])
-    Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
+    
+    #Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+    #                    for y in zsrcbins])
+    #Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
+
+    cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+    Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     if cat_version == 3:
         if wizz == 'False':
@@ -855,7 +861,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 filename_var = shear.define_filename_var(
                     purpose, centering, binname, i+1, Nobsbins, lens_selection,
                     lens_binning, src_selection, lens_weights, name_Rbins,
-                    O_matter, O_lambda, Ok, h)
+                    O_matter, O_lambda, h)
 
                 binname, lens_binning, Nobsbins, binmin, binmax = \
                     shear.define_obsbins(i+1, lens_binning, lenssel_binning,
@@ -869,7 +875,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                            binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                            Runit, nRbins, Rconst, filename_var, filename, cat_version,
                            blindcat, srclists, path_splits, splitkidscats, catmatch,
-                           Dcsbins, Dc_epsilon, filename_addition, variance)
+                           Dcsbins, Dc_epsilon, filename_addition, variance, h)
             else:
                 pool = mp.Pool(processes=Nsplits)
                 out = [pool.apply_async(loop, args=(

@@ -7,7 +7,6 @@
 
 import astropy.io.fits as pyfits
 import numpy as np
-import distance
 import sys
 import os
 import time
@@ -30,7 +29,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
-        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        path_splits, path_results, purpose, O_matter, O_lambda, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
         shear.input_variables(Nsplit, Nsplits, binnum, blindcat, config_file)
@@ -69,7 +68,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
                                              'binnum', Nobsbins, \
                                              lens_selection, lens_binning, src_selection, \
                                              lens_weights, name_Rbins, \
-                                             O_matter, O_lambda, Ok, h)
+                                             O_matter, O_lambda, h)
 
     splitslist = np.array([])
     # Find all created random splits

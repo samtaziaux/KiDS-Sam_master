@@ -12,16 +12,16 @@ import fnmatch
 import shlex
 import subprocess as sub
 import time
-from astropy import constants as const, units as u
 from glob import glob
+
+from astropy import constants as const, units as u
+from astropy.cosmology import LambdaCDM
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib import gridspec
 from matplotlib import rc, rcParams
 
-
-import distance
 import esd_utils
 
 # Important constants(very preliminary!)
@@ -52,7 +52,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         #print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
+    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, h, z_epsilon, \
         path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
         lensid_file, lens_weights, lens_binning, lens_selection, \
         src_selection, cat_version, wizz, blindcats = \
@@ -173,7 +173,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
                                            Nobsbins, lens_selection, lens_binning, \
                                            src_selection, lens_weights, \
                                            name_Rbins, O_matter, \
-                                           O_lambda, Ok, h)
+                                           O_lambda, h)
         path_randomsplits = '%s/splits_%s'%(path_catalogs, purpose)
         
         for Ncat in xrange(100):
@@ -200,7 +200,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
-        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        path_splits, path_results, purpose, O_matter, O_lambda, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon
 
@@ -291,7 +291,7 @@ def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnu
 # Defining the part of the filename that contains the chosen variables
 def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                         lens_selection, lens_binning, src_selection, lens_weights, \
-                        name_Rbins, O_matter, O_lambda, Ok, h):
+                        name_Rbins, O_matter, O_lambda, h):
     
     # Define the list of variables for the output filename
 
@@ -331,12 +331,12 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
     filename_var_source, var_print, x = define_filename_sel(filename_var, var_print,\
                                                      '', src_selection)
     
-    filename_var_cosmo = '%s_Om_%g~Ol_%g~Ok_%g~h_%g'%(filename_var, \
-                                               O_matter, O_lambda, Ok, h)
+    filename_var_cosmo = '%s_Om_%g~Ol_%g~h_%g'%(filename_var, \
+                                               O_matter, O_lambda, h)
     filename_var_radial = '%s_%s'%(filename_var, name_Rbins)
-    cosmo_print = ('    %s, Omatter=%g, Olambda=%g, Ok=%g, h=%g'%(name_Rbins, \
+    cosmo_print = ('    %s, Omatter=%g, Olambda=%g, h=%g'%(name_Rbins, \
                                                     O_matter, \
-                                                    O_lambda, Ok, \
+                                                    O_lambda, \
                                                     h)).replace('~', '-')
 
     filename_var_bins = filename_var_bins.split('_', 1)[1]
@@ -440,7 +440,7 @@ def define_filename_results(path_results, purpose, filename_var, \
 # Importing all GAMA and KiDS data, and
 # information on radial bins and lens-field matching.
 def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-                purpose, Ncat, O_matter, O_lambda, Ok, h, \
+                purpose, Ncat, O_matter, O_lambda, h, \
                 lens_weights, filename_addition, cat_version):
 
     # Import R-range
@@ -450,7 +450,7 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, \
     Dcllist, Dallist = import_gamacat(path_gamacat, centering, purpose, Ncat, \
-    O_matter, O_lambda, Ok, h, Runit, lens_weights)
+    O_matter, O_lambda, h, Runit, lens_weights)
     
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
@@ -537,7 +537,7 @@ def define_Rbins(path_Rbins, Runit):
 
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
 def import_gamacat(path_gamacat, centering, purpose, Ncat, \
-                    O_matter, O_lambda, Ok, h, Runit, lens_weights):
+                    O_matter, O_lambda, h, Runit, lens_weights):
 
     randomcatname = 'RandomsWindowedV01.fits'
     directory = os.path.dirname(os.path.realpath(path_gamacat))
@@ -602,6 +602,10 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
                             for z in galZlist])
         # Distance in pc/h, where h is the dimensionless Hubble constant
+        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
+        #                            for z in galZlist])
+        cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+        Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
 
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
@@ -1241,7 +1245,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                 
                 # Importing the binning file
                 if obsfile == 'self':
-                    obslist = define_obslist(binname, gamacat, Dcllist)
+                    obslist = define_obslist(binname, gamacat, 0.7, Dcllist)
                 else:
                     print 'Using %s from %s' %(binname, obsfile)
                     obscat = pyfits.open(obsfile)[1].data
@@ -1278,15 +1282,18 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
 
 
 # Corrections on GAMA catalog observables
-def define_obslist(obsname, gamacat, Dcllist=[]):
+def define_obslist(obsname, gamacat, h, Dcllist=[]):
 
     obslist = gamacat[obsname]
 
     if 'AngSep' in obsname and len(Dcllist) > 0:
         print 'Applying cosmology correction to "AngSep"'
 
-        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
-                            for z in gamacat['Z']])
+        #Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
+        #                    for z in gamacat['Z']])
+        cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
+        Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
+        
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list
 
@@ -1295,7 +1302,7 @@ def define_obslist(obsname, gamacat, Dcllist=[]):
 
         # Fluxscale, needed for stellar mass correction
         fluxscalelist = gamacat['fluxscale']
-        corr_list = np.log10(fluxscalelist)# - 2*np.log10(h/0.7)
+        corr_list = np.log10(fluxscalelist) - 2.*np.log10(h/0.7)
         obslist = obslist + corr_list
 
     return obslist
@@ -1304,7 +1311,7 @@ def define_obslist(obsname, gamacat, Dcllist=[]):
 # Masking the lenses according to the appropriate
 # lens selection and the current KiDS field
 def define_lenssel(gamacat, centering, lens_selection, lens_binning,
-                   binname, binnum, binmin, binmax, Dcllist):
+                   binname, binnum, binmin, binmax, Dcllist, h):
 
     lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
@@ -1316,7 +1323,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_selection[param][0]
         # Importing the binning file
         if obsfile == 'self':
-            obslist = define_obslist(param, gamacat, Dcllist)
+            obslist = define_obslist(param, gamacat, h, Dcllist)
         else:
             print 'Using %s from %s'%(param, obsfile)
             bincat = pyfits.open(obsfile)[1].data
@@ -1335,9 +1342,9 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         obsfile = lens_binning[binname][0]
         if obsfile == 'self':
             if 'ID' in binname:
-                obslist = define_obslist('ID', gamacat, Dcllist)
+                obslist = define_obslist('ID', gamacat, h, Dcllist)
             else:
-                obslist = define_obslist(binname, gamacat, Dcllist)
+                obslist = define_obslist(binname, gamacat, h, Dcllist)
         else:
             print 'Using %s from %s'%(binname, obsfile)
             bincat = pyfits.open(obsfile)[1].data

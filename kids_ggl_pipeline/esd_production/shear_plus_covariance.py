@@ -621,7 +621,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = \
         shear.import_data(path_Rbins, Runit, path_gamacat, path_kidscats,
-                          centering, purpose, Ncat, O_matter, O_lambda, h,
+                          centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
                           lens_weights, filename_addition, cat_version)
 
     # Calculate the source variance
@@ -863,7 +863,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 filename_var = shear.define_filename_var(
                     purpose, centering, binname, i+1, Nobsbins, lens_selection,
                     lens_binning, src_selection, lens_weights, name_Rbins,
-                    O_matter, O_lambda, h)
+                    O_matter, O_lambda, Ok, h)
 
                 binname, lens_binning, Nobsbins, binmin, binmax = \
                     shear.define_obsbins(i+1, lens_binning, lenssel_binning,

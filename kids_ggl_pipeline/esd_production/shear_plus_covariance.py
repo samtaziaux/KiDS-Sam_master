@@ -9,13 +9,15 @@
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
-import distance
 import sys
 import os
 import time
 import multiprocessing as multi
+import distance
 
 from astropy import constants as const, units as u
+from astropy.cosmology import LambdaCDM
+
 import memory_test as memory
 import time
 import gc
@@ -34,7 +36,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance):
+         variance, h):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -82,11 +84,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             while memfrac > 80: # If it is too high...
                 print 'Waiting: More memory required'
                 time.sleep(30) # wait before continuing the calculation
-
+            
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, \
-                                           binnum, binmin, binmax)
+                                           binnum, binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -309,7 +311,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                    #binname, binnum, binmin, binmax, Dcllist):
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \
-                                           binmin, binmax, Dcllist)
+                                           binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -692,7 +694,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
-                                           Dcllist)
+                                           Dcllist, h)
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     binname, lens_binning, Nobsbins, binmin, binmax = \
@@ -701,11 +703,17 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
 
     # We translate the range in source redshifts
-    # to a range in source distances Ds
+    # to a range in source distances Ds (in pc/h)
     zsrcbins = np.arange(0.025,3.5,0.05)
+    
     Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
                         for y in zsrcbins])
     Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
+
+    #This needs to be tested!
+    #cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+    #Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    #Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     if cat_version == 3:
         if wizz == 'False':
@@ -869,7 +877,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                            binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                            Runit, nRbins, Rconst, filename_var, filename, cat_version,
                            blindcat, srclists, path_splits, splitkidscats, catmatch,
-                           Dcsbins, Dc_epsilon, filename_addition, variance)
+                           Dcsbins, Dc_epsilon, filename_addition, variance, h)
             else:
                 pool = mp.Pool(processes=Nsplits)
                 out = [pool.apply_async(loop, args=(

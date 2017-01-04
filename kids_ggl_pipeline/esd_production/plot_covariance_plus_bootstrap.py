@@ -8,7 +8,6 @@
 # Import the necessary libraries
 import astropy.io.fits as pyfits
 import numpy as np
-import distance
 import sys
 import os
 import shutil
@@ -82,7 +81,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering,
                                            lens_selection, 'None',
-                                           'None', 0, -inf, inf, Dcllist)
+                                           'None', 0, -inf, inf, Dcllist, h)
     # Mask the galaxies in the shear catalog, 
     # WITHOUT binning (for the bin creation)
     binname, lens_binning, \

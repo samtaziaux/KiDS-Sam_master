@@ -10,7 +10,6 @@ debug = False
 # Import the necessary libraries
 import astropy.io.fits as pyfits
 import numpy as np
-import distance
 import sys
 import os
 import time
@@ -147,7 +146,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     
     # Mask the galaxies in the shear catalog, WITHOUT binning
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, \
-                                           'None', 'None', 0, -inf, inf, Dcllist)
+                                           'None', 'None', 0, -inf, inf, Dcllist, h)
     # Defining the observable binnning range of the groups
     binname, lens_binning, Nobsbins, \
     binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
@@ -164,6 +163,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
                                                    [Nbootstraps, len(kidscats)])
         """
+        #Need to properly implement this!
         # Proper
         
         import matplotlib.pyplot as pl
@@ -258,7 +258,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Mask the galaxies in the shear catalog
         lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                        lens_binning, binname, binnum, \
-                                       binmin, binmax, Dcllist)
+                                       binmin, binmax, Dcllist, h)
 
         if debug:
             print 'lenssel:', sum(lenssel)

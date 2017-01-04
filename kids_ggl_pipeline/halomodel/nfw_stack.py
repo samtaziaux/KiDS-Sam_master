@@ -407,6 +407,8 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
     _izip = izip
 
     central_profile, fc_central, Mcentral, z, Mstar, Rrange, angles = theta
+    Mstar = 10**Mstar
+    
     ccentral = fc_central * _cM_duffy08(Mcentral, z, h)
 
     # some auxiliaries
@@ -416,6 +418,7 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
     # more parameters
     rs_cent = (Mcentral / aux) ** (1./3) / ccentral
     sigma_central = rs_cent * _delta(ccentral) * rho_m
+
     pointmass = [Mi / (3.14159265*(1e6*Ri[1:])**2)
                  for Mi, Ri in izip(Mstar, R)]
 
@@ -432,11 +435,11 @@ def central_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
 def central_nfw_brouwer(theta, R, h=1, Om=0.315, Ol=0.685):
     # local variables are accessed much faster than global ones
     _array = array
-    _cM_duffy08 = cM_duffy08
     _cumsum = cumsum
     _delta = delta
     _izip = izip
     _linspace = linspace
+    _cM_duffy08 = cM_duffy08
     
     #sat_profile, central_profile, fsat, fc_sat,
     #logMsat1, logMsat2, fc_central1, fc_central2,
@@ -477,6 +480,7 @@ def central_nfw_brouwer(theta, R, h=1, Om=0.315, Ol=0.685):
 
     # Output ESD and parameters
     out = [esd_central, pointmass]
+    #print logMcentral
     
     return out
 

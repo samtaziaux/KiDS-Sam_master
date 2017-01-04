@@ -9,14 +9,14 @@
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
-import distance
 import sys
 import os
 import time
-import multiprocessing as multi
 from scipy.interpolate import interp1d
+import distance
 
 from astropy import constants as const, units as u
+from astropy.cosmology import LambdaCDM
 from itertools import izip
 import memory_test as memory
 import time
@@ -35,29 +35,38 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                filename_var,
                filename, cat_version, blindcat, srclists, path_splits,
                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-               variance):
+               variance, h):
     
-    q1 = multi.Queue()
+    q1 = mp.Queue()
     procs = []
     #chunk = int(np.ceil(len(R)/float(nprocs)))
     
     for j in xrange(Nsplits):
         
-        work = multi.Process(target=loop, args=(purpose, Nsplits, j, output, outputnames, gamacat, centering,
+        work = mp.Process(target=loop, args=(purpose, Nsplits, j, output, outputnames, gamacat, centering,
                                                 gallists, lens_selection, lens_binning, binname, binnum,
                                                 binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
                                                 filename_var,
                                                 filename, cat_version, blindcat, srclists, path_splits,
                                                 splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-                                                variance))
+                                                variance, h, q1))
         procs.append(work)
         work.start()
-        work.join()
+        #work.join()
     
     #for j in xrange(Nsplits):
-    #    work.join()
+    work.join()
     
-    return 0
+    result = np.zeros(Nsplits)
+    for j in xrange(Nsplits):
+        result[j] = q1.get()
+    q1.close()
+    q1.join_thread()
+
+    if len(np.unique(result)) != len(result):
+        return 1
+    else:
+        return 0
 
 
 def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
@@ -66,7 +75,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance):
+         variance, h, q1):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -80,20 +89,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
     if 'catalog' in purpose:
         # These lists will contain the final output
-        """
-        outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', \
-                       'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', \
-                       'lfweight_A', 'lfweight_B', 'lfweight_C', 'lfweight_D', \
-                       'lfweight_A^2', 'lfweight_B^2', 'lfweight_C^2', \
-                       'lfweight_D^2', 'k', 'k^2', \
-                       'lfweight_A*k^2', 'lfweight_B*k^2', 'lfweight_C*k^2', \
-                       'lfweight_D*k^2', \
-                       'lfweight_A^2*k^4', 'lfweight_B^2*k^4', \
-                       'lfweight_C^2*k^4', 'lfweight_D^2*k^4', \
-                       'lfweight_A^2*k^2', 'lfweight_B^2*k^2', \
-                       'lfweight_C^2*k^2', 'lfweight_D^2*k^2', 'Nsources', \
-                       'bias_m_A', 'bias_m_B', 'bias_m_C', 'bias_m_D']
-        """
+        
         outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', \
             'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', \
             'k', 'k^2', \
@@ -118,7 +114,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, \
-                                           binnum, binmin, binmax)
+                                           binnum, binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -235,28 +231,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
-                            """
-                            output_onebin = [gammat_tot_A, gammax_tot_A, \
-                                             gammat_tot_B, gammax_tot_B, \
-                                             gammat_tot_C, gammax_tot_C, \
-                                             gammat_tot_D, gammax_tot_D, \
-                                             w_tot_A, w_tot_B, \
-                                             w_tot_C, w_tot_D, \
-                                             w2_tot_A, w2_tot_B, \
-                                             w2_tot_C, w2_tot_D, \
-                                             k_tot, k2_tot, \
-                                             wk2_tot_A, wk2_tot_B, \
-                                             wk2_tot_C, wk2_tot_D, \
-                                             w2k4_tot_A, w2k4_tot_B, \
-                                             w2k4_tot_C, w2k4_tot_D, \
-                                             w2k2_tot_A, w2k2_tot_B, \
-                                             w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-                                             srcm_tot_A, srcm_tot_B, \
-                                             srcm_tot_C, srcm_tot_D] = \
-                            shear.calc_shear_output(incosphilist, insinphilist,\
-                                                    e1, e2, Rmask, klist, \
-                                                    wlist, Nsrclist, srcm)
-                            """
+                            
                             output_onebin = [gammat_tot_A, gammax_tot_A, \
                                              gammat_tot_B, gammax_tot_B, \
                                              gammat_tot_C, gammax_tot_C, \
@@ -341,7 +316,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                    #binname, binnum, binmin, binmax, Dcllist):
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
                                            lens_binning, binname, binnum, \
-                                           binmin, binmax, Dcllist)
+                                           binmin, binmax, Dcllist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -410,6 +385,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                 galZ_split_2, srcZB_2 = np.meshgrid(galZ_split, srcZB)
                 src_mask = np.logical_not(srcZB_2 >= galZ_split_2+z_epsilon).T
                 
+                
                 # Create a mask for the complete list of lenses,
                 # that only highlights the lenses in this lens split
                 galIDmask_split = np.in1d(galIDlist, galID_split)
@@ -474,28 +450,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                         if 'catalog' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
-                            """
-                            output_onebin = [gammat_tot_A, gammax_tot_A, \
-                                             gammat_tot_B, gammax_tot_B, \
-                                             gammat_tot_C, gammax_tot_C, \
-                                             gammat_tot_D, gammax_tot_D, \
-                                             w_tot_A, w_tot_B, \
-                                             w_tot_C, w_tot_D, \
-                                             w2_tot_A, w2_tot_B, \
-                                             w2_tot_C, w2_tot_D, \
-                                             k_tot, k2_tot, \
-                                             wk2_tot_A, wk2_tot_B, \
-                                             wk2_tot_C, wk2_tot_D, \
-                                             w2k4_tot_A, w2k4_tot_B, \
-                                             w2k4_tot_C, w2k4_tot_D, \
-                                             w2k2_tot_A, w2k2_tot_B, \
-                                             w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-                                             srcm_tot_A, srcm_tot_B, \
-                                             srcm_tot_C, srcm_tot_D] = \
-                            shear.calc_shear_output(incosphilist, insinphilist,\
-                                                    e1, e2, Rmask, klist,\
-                                                    wlist, Nsrclist, srcm)
-                            """
+                            
                             output_onebin = [gammat_tot_A, gammax_tot_A, \
                                             gammat_tot_B, gammax_tot_B, \
                                             gammat_tot_C, gammax_tot_C, \
@@ -564,6 +519,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                 Rconst, output, outputnames, variance, \
                                 purpose, e1, e2, w, srcm)
             print 'Written:', filename
+
+    q1.put(Nsplit)
 
     return
 
@@ -736,7 +693,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
-                                           Dcllist)
+                                           Dcllist, h)
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     binname, lens_binning, Nobsbins, binmin, binmax = \
@@ -745,11 +702,17 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
 
     # We translate the range in source redshifts
-    # to a range in source distances Ds
+    # to a range in source distances Ds (in pc/h)
     zsrcbins = np.arange(0.025,3.5,0.05)
+    
     Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
                         for y in zsrcbins])
     Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
+
+    #This needs to be tested!
+    #cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+    #Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    #Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     if cat_version == 3:
         if wizz == 'False':
@@ -899,7 +862,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                  Runit, nRbins, Rconst, filename_var, filename, cat_version,
                  blindcat, srclists, path_splits, splitkidscats, catmatch,
-                 Dcsbins, Dc_epsilon, filename_addition, variance)
+                 Dcsbins, Dc_epsilon, filename_addition, variance, h)
 
     if 'covariance' in purpose:
         for i in xrange(Nobsbins):
@@ -918,7 +881,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                  binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                                  Runit, nRbins, Rconst, filename_var, filename, cat_version,
                                  blindcat, srclists, path_splits, splitkidscats, catmatch,
-                                 Dcsbins, Dc_epsilon, filename_addition, variance)
+                                 Dcsbins, Dc_epsilon, filename_addition, variance, h)
 
     if out == 0:
         print('Splits finished properly.')

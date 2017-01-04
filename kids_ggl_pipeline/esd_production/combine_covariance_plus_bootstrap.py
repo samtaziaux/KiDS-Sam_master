@@ -8,7 +8,6 @@
 # Import the necessary libraries
 import astropy.io.fits as pyfits
 import numpy as np
-import distance
 import sys
 import os
 import time
@@ -93,7 +92,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # (for the bin creation)
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
-                                           Dcllist)
+                                           Dcllist, h)
 
     binname, lens_binning, Nobsbins, \
     binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
@@ -263,8 +262,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         filename_N2 = shear.define_filename_var(
                             purpose, centering, binname, N2+1, Nobsbins,
                             lens_selection, lens_binning, src_selection,
-                            lens_weights, name_Rbins, O_matter, O_lambda,
-                            Ok, h)
+                            lens_weights, name_Rbins, O_matter, O_lambda, Ok,
+                            h)
 
                         if ('random' or 'star') in purpose:
                             filename_N2 = '{0:d}_{1}'.format(Ncat, filename_N2)
@@ -308,7 +307,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             lenssel = shear.define_lenssel(gamacat, centering, lens_selection,
                                            lens_binning, binname, N1+1,
-                                           binmin, binmax, Dcllist)
+                                           binmin, binmax, Dcllist, h)
 
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]

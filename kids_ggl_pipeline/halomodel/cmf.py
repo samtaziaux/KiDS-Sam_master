@@ -199,8 +199,11 @@ def nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
 def ncm_simple(mass_func, M, M_1, sigma):
     
     M_1 = 10.0**M_1
+    #"""
     nc = exp(-(log10(M)-log10(M_1))**2 / (2*(sigma**2))) / \
         ((2.0*pi)**0.5 * sigma * log(10))
+    #"""
+    #nc = 0.5 * (1.0+sp.erf((log10(M)-log10(M_1))/sigma))
     
     return nc
 

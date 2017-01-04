@@ -439,6 +439,7 @@ def central_nfw_brouwer(theta, R, h=1, Om=0.315, Ol=0.685):
     _delta = delta
     _izip = izip
     _linspace = linspace
+    _cM_duffy08 = cM_duffy08
     
     #sat_profile, central_profile, fsat, fc_sat,
     #logMsat1, logMsat2, fc_central1, fc_central2,
@@ -479,6 +480,7 @@ def central_nfw_brouwer(theta, R, h=1, Om=0.315, Ol=0.685):
 
     # Output ESD and parameters
     out = [esd_central, pointmass]
+    #print logMcentral
     
     return out
 

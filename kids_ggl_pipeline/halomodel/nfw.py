@@ -8,10 +8,23 @@ Functions
 ---------
     Call the following functions to get the different ESDs
         esd(x, sigma_s) -- Regular NFW
-        esd_offset(x, xoff, sigma_s)
-        esd_trunc5(x, tau, sigma_s) -- NFW drop3.14159265ng as 1/r^5 outside r_t
-        esd_trunc7(x, tau, sigma_s) -- NFW drop3.14159265ng as 1/r^7 outside r_t
+        esd_trunc5(x, tau, sigma_s) -- NFW dropping as 1/r^5 outside r_t
+        esd_trunc7(x, tau, sigma_s) -- NFW dropping as 1/r^7 outside r_t
         esd_sharp(x, tau, sigma_s) -- NFW sharply cut at r_t
+
+    For the offset ESD contributed by satellites to galaxy-galaxy lensing
+    measurements (or by centrals in satellite lensing), it's a bit
+    more complicated:
+        esd_offset(x, xoff, n, sigma_s, x_range, angles)
+    Here, angles is the azimuthal integration variable (Eq. 11 in Sifón
+    et al. 2015, MNRAS, 454, 3938), and x_range is the radial
+    integration variable to compute the enclosed surface density.
+    Good definitions for these two are
+        angles = numpy.linspace(0, 2*numpy.pi, 540)
+        x_range = numpy.logspace(1.01*logx.min(), 0.99*logxmax(), 2**7)
+        x_range = numpy.append(0, x_range)
+    where logx are the data points. The numbers 540 and 2**7 give good
+    enough accuracy while being computationally inexpensive.
 
     There are also functions to get the mass as a function of radius
         mass(x, sigma_s)
@@ -47,14 +60,13 @@ Parameters
                   functions nfw_trunc5, nfw_trunc7, nfw_sharp)
         sigma_s : float
                   Characteristic surface mass density, r_s * delta_c * rho_c,
-                  in Msun/pc^2
+                  in Msun/Mpc^2
 
 Notes
 -----
     -Remember that the "sharp" profile is only defined up to R=r_t!
 
 """
-#import numpy
 from itertools import izip
 from numpy import arctan, arctanh, arccos, array, cos, \
                   hypot, log, log10, logspace, \

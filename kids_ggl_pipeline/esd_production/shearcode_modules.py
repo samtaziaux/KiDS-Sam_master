@@ -120,11 +120,11 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     var_print = ''
     #output_var, var_print, x = define_filename_sel(output_var, var_print,\
     #                                                 '', src_selection)
-    if ('ID' in lens_binning) & ('No' in binname): #or ('ID' in lens_selection)
+    if ('ID' in lens_binning) & ('No' in binname):# or ('ID' in lens_selection)
         output_var = 'IDs_from_file'
         path_output = '%s/%s%s' \
             %(path_output, output_var, filename_addition)
-    elif ('ID' not in lens_binning) & ('No' in binname): #or ('ID' not in lens_selection)
+    elif ('ID' not in lens_binning) & ('No' in binname):# or ('ID' not in lens_selection)
         output_var = 'No_bins'
         path_output = '%s/%s%s' \
             %(path_output, output_var, filename_addition)
@@ -1676,7 +1676,15 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     else:
         filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2    Nsources'%(Runit)
 
-    index = np.where(np.logical_not((0 < error_tot[R]) & (error_tot[R] < inf)))
+    index = np.where(np.logical_not((0 < error_tot) & (error_tot < inf)))
+    ESDt_tot.setflags(write=True)
+    ESDx_tot.setflags(write=True)
+    error_tot.setflags(write=True)
+    bias_tot.setflags(write=True)
+    wk2_tot.setflags(write=True)
+    w2k2_tot.setflags(write=True)
+    Nsrc.setflags(write=True)
+    
     ESDt_tot[index] = int(-999)
     ESDx_tot[index] = int(-999)
     error_tot[index] = int(-999)
@@ -1688,26 +1696,8 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
-    np.savetxt(filename, data_out, delimiter='\t', header=filehead, comments='#')
+    np.savetxt(filename, data_out, delimiter='\t', header=filehead)
 
-    """
-    with open(filename, 'w') as file:
-        print >>file, filehead
-
-    with open(filename, 'a') as file:
-        for R in xrange(len(Rcenters)):
-            
-            if not (0 < error_tot[R] and error_tot[R]<inf):
-                ESDt_tot[R] = int(-999)
-                ESDx_tot[R] = int(-999)
-                error_tot[R] = int(-999)
-                bias_tot[R] = int(-999)
-                wk2_tot[R] = int(-999)
-                w2k2_tot[R] = int(-999)
-                Nsrc[R] = int(-999)
-            
-            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g   %.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R], Nsrc[R])
-    """
     print 'Written: ESD profile data:', filename
 
 

@@ -1676,6 +1676,15 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     else:
         filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2    Nsources'%(Runit)
 
+    index = np.where(np.logical_not((0 < error_tot[R]) & (error_tot[R] < inf)))
+    ESDt_tot[index] = int(-999)
+    ESDx_tot[index] = int(-999)
+    error_tot[index] = int(-999)
+    bias_tot[index] = int(-999)
+    wk2_tot[index] = int(-999)
+    w2k2_tot[index] = int(-999)
+    Nsrc[index] = int(-999)
+
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T

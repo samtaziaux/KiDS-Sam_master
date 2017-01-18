@@ -1676,6 +1676,12 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     else:
         filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2    Nsources'%(Runit)
 
+    data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
+                          bias_tot.T, variance*np.ones(bias_tot.shape).T, \
+                          wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
+    np.savetxt(filename, data_out, delimiter='\t', header=filehead, comments='#')
+
+    """
     with open(filename, 'w') as file:
         print >>file, filehead
 
@@ -1692,7 +1698,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
                 Nsrc[R] = int(-999)
             
             print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g   %.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R], Nsrc[R])
-
+    """
     print 'Written: ESD profile data:', filename
 
 

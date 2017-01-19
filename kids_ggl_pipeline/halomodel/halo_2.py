@@ -401,26 +401,26 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     in _izip(Pg_c, Pg_s, Pg_2h, rho_dm, rho_mean)])
 
 
+
     # Galaxy - galaxy spectra (for clustering)
     Pgg_2h = bias * _array([TwoHalo_gg(hmf_i, ngal_i, pop_g_i, k_range_lin,
                                rvir_range_lin_i, mass_range)[0]
                        for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
                        _izip(rvir_range_lin, hmf, ngal, pop_g)])
 
-    Pgg_c = F_k1 * _array([GG_cen_analy(hmf_i, u_k_i, rho_dm_i, pop_c_i,
+    Pgg_c = F_k1 * _array([GG_cen_analy(hmf_i, ncen_i,
                                    ngal_i, mass_range)
-                      for rho_dm_i, hmf_i, pop_c_i, ngal_i, u_k_i in\
-                      _izip(rho_dm, hmf, pop_c, ngal, u_k)])
+                      for hmf_i, ncen_i, ngal_i in\
+                      _izip(hmf, ncen, ngal)])
 
-    Pgg_s = F_k1 * _array([GG_sat_analy(hmf_i, u_k_i, uk_s_i, rho_dm_i,
-                                   pop_s_i, ngal_i, mass_range)
-                      for rho_dm_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i in\
-                      _izip(rho_dm, hmf, pop_s, ngal, u_k, uk_s)])
+    Pgg_s = F_k1 * _array([GG_sat_analy(hmf_i, uk_s_i, pop_s_i, ngal_i, beta_i, mass_range)
+                      for hmf_i, uk_s_i, pop_s_i, ngal_i, beta_i in\
+                      _izip(hmf, uk_s, pop_s, ngal, beta)])
 
-    Pgg_cs = F_k1 * _array([GG_cen_sat_analy(hmf_i, u_k_i, uk_s_i, rho_dm_i,
+    Pgg_cs = F_k1 * _array([GG_cen_sat_analy(hmf_i, uk_s_i, pop_c_i,
                                     pop_s_i, ngal_i, mass_range)
-                       for rho_dm_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i in\
-                       _izip(rho_dm, hmf, pop_s, ngal, u_k, uk_s)])
+                       for hmf_i, pop_c_i, pop_s_i, ngal_i, uk_s_i in\
+                       _izip(hmf, pop_c, pop_s, ngal, uk_s)])
 
 
 

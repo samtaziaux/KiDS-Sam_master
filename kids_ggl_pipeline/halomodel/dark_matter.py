@@ -178,9 +178,24 @@ def GM_cen_analy(mass_func, uk, rho_dm, population, ngal, m_x):
     return trapz(mass_func.dndlnm * population * uk,
                  m_x, axis=1) / (rho_dm*ngal)
 
+
 def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
     return trapz(mass_func.dndlnm * population * uk_m * uk_s,
                  m_x, axis=1) / (rho_dm*ngal)
+
+
+def GG_cen_analy(mass_func, ncen, ngal, m_x):
+    return ncen / (ngal**2.0)
+
+
+def GG_sat_analy(mass_func, uk_s, population_sat, ngal, beta, m_x):
+    return trapz(beta * mass_func.dndm * population_sat**2.0 * uk_s**2.0,
+                 m_x, axis=1) / (ngal**2.0)
+
+
+def GG_cen_sat_analy(mass_func, uk_s, population_cen, population_sat, ngal, m_x):
+    return trapz(2.0 * mass_func.dndm * population_sat * population_cen * uk_s,
+                 m_x, axis=1) / (ngal**2.0)
 
 
 def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):

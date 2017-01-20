@@ -165,11 +165,6 @@ def sigma(corr, rho_mean, r_i, r_x):
                   for rxi in r_x])
     #s2 = np.array([romberg(integ, 0, 1, args=(rxi,))
                    #for rxi in r_x])
-
-    #print s
-    #print s2
-    ##print s3
-    #print np.allclose(s, s2), ((s2 - s) / s).max()
     return 2.0 * rho_mean * s * r_x
 
 
@@ -199,6 +194,17 @@ def d_sigma(sigma, r_i, r_x):
     d_sig = ((2.0)*s - 10.0**(c(np.log10(r_x)))) 
 
     return d_sig
+
+
+def wp(corr, r_i, r_x):
+    _log10 = log10
+    c = UnivariateSpline(_log10(r_i), _log10(1+corr), s=0, ext=0)
+    
+    integ = lambda x, rxi: 10**c(_log10(rxi/x)) / (x**2 * (1-x**2)**0.5)
+    s = np.array([quad(integ, 0, 1, args=(rxi,), full_output=1)[0] for rxi in r_x])
+        
+    return 2.0 * s * r_x
+
 
 
 if __name__ == '__main__':

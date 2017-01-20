@@ -164,7 +164,7 @@ def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
     
     b_g = trapz(mass_func.dndlnm * population * \
                 Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
-                
+    
     return (exp(mass_func.power) * b_g), b_g
 
 
@@ -172,7 +172,7 @@ def TwoHalo_gg(mass_func, norm, population, k_x, r_x, m_x):
     
     b_g = trapz(mass_func.dndlnm * population * \
                 Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
-                
+    
     return (exp(mass_func.power) * b_g**2.0), b_g**2.0
 
 
@@ -428,9 +428,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                        for hmf_i, pop_c_i, pop_s_i, ngal_i, uk_s_i in\
                        _izip(hmf, pop_c, pop_s, ngal, uk_s)])
 
-    Pgg_k = _array([(rho_dm_i/rho_mean_i) * (Pgg_c_i + 2.0 * Pgg_cs_i + Pgg_s_i) + Pgg_2h_i
-                for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i, rho_dm_i, rho_mean_i
-                in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h, rho_dm, rho_mean)])
+    Pgg_k = _array([(Pgg_c_i + 2.0 * Pgg_cs_i + Pgg_s_i) + Pgg_2h_i
+                for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
+                in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
 
 
     # Normalized sattelites and centrals for sigma and d_sigma

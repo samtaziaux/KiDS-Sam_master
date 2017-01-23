@@ -173,6 +173,7 @@ def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 """
 # Spectrum 1-halo components for dark matter.
 """
+
 def MM_analy(mass_func, uk, rho_dm, m_x):
     return trapz(m_x * mass_func.dndlnm * uk**2.0,
              m_x, axis=1) / (rho_dm**2.0)

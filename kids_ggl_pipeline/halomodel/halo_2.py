@@ -48,7 +48,7 @@ from lens import power_to_corr, power_to_corr_multi, sigma, d_sigma, \
                  power_to_corr_ogata, wp
 from dark_matter import NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, \
                         GM_cen_spectrum, GM_sat_spectrum, delta_NFW, \
-                        GM_cen_analy, GM_sat_analy, GG_cen_analy, \
+                        MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy, \
                         GG_sat_analy, GG_cen_sat_analy, miscenter
 from cmf import *
 
@@ -431,6 +431,16 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     Pgg_k = _array([(Pgg_c_i + 2.0 * Pgg_cs_i + Pgg_s_i) + Pgg_2h_i
                 for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
                 in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
+     
+     
+    # Matter - matter spectra
+    Pmm_1h = F_k1 * _array([MM_analy(hmf_i, u_k_i, rho_dm_i, mass_range)
+                                       for hmf_i, u_k_i, rho_dm_i, beta_i in\
+                                       _izip(hmf, u_k, rho_dm, beta)])
+    
+    Pmm = _array([(rho_dm_i/rho_mean_i) * Pmm_1h_i + exp(hmf_i.power)
+                  for Pmm_1h_i, hmf_i, rho_dm_i, rho_mean_i
+                  in _izip(Pmm_1h, hmf, rho_dm, rho_mean)])
 
 
     # Normalized sattelites and centrals for sigma and d_sigma
@@ -443,6 +453,9 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
            for Pgg_k_i in _izip(Pgg_k)]
+           
+    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
+                        for Pmm_i in _izip(Pmm)]
 
     # For plotting parts - Andrej!
     """
@@ -465,6 +478,10 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     xi2_2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2_2[i] = power_to_corr_ogata(P_inter_2[i], rvir_range_3d)
+
+    xi2_3 = np.zeros((M_bin_min.size,rvir_range_3d.size))
+    for i in xrange(M_bin_min.size):
+        xi2_3[i] = power_to_corr_ogata(P_inter_3[i], rvir_range_3d)
 
     # For plotting parts - Andrej!
     """
@@ -496,6 +513,13 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         sur_den2_2[i][(sur_den2_2[i] <= 0.0) | (sur_den2_2[i] >= 1e20)] = np.nan
         sur_den2_2[i] = fill_nan(sur_den2_2[i])
         w_p[i] = sur_den2_2[i]/rho_mean[i]
+
+
+    sur_den2_3 = _array([sigma(xi2_3_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
+                   for xi2_3_i, rho_mean_i in _izip(xi2_3, rho_mean)])
+    for i in xrange(M_bin_min.size):
+        sur_den2_3[i][(sur_den2_3[i] <= 0.0) | (sur_den2_3[i] >= 1e20)] = np.nan
+        sur_den2_3[i] = fill_nan(sur_den2_3[i])
 
     # For plotting parts - Andrej!
     """
@@ -532,6 +556,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                            rvir_range_2d_i))
                      for sur_den2_2_i in _izip(sur_den2_2)]) / 1e12
 
+
+    d_sur_den2_3 = _array([np.nan_to_num(d_sigma(sur_den2_3_i,
+                                             rvir_range_3d_i,
+                                             rvir_range_2d_i))
+                       for sur_den2_3_i in _izip(sur_den2_3)]) / 1e12
+
     # For plotting parts - Andrej!
     """
     d_sur_den3 = _array([np.nan_to_num(d_sigma(sur_den2_i,
@@ -562,9 +592,17 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     
     out_esd_tot_inter_2 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
 
+
+    out_esd_tot_3 = _array([UnivariateSpline(rvir_range_2d_i,
+                                         np.nan_to_num(d_sur_den2_3_i), s=0)
+                        for d_sur_den2_3_i in _izip(d_sur_den2_3)])
+    
+    out_esd_tot_inter_3 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
+
     for i in xrange(M_bin_min.size):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
         out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
+        out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
 
     if include_baryons:
         pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0)/1e12 \
@@ -581,7 +619,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # Add other outputs as needed. Total ESD should always be first!
     #return [out_esd_tot_inter, np.log10(effective_mass), bias_out]
     #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass
-    return k_range, Pg_k, Pgg_k, rvir_range_3d, xi2, xi2_2, rvir_range_3d_i, sur_den2, sur_den2_2, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2
+    return k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3
 
 if __name__ == '__main__':
     print 0

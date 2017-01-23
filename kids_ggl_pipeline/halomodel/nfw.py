@@ -16,7 +16,7 @@ Functions
     measurements (or by centrals in satellite lensing), it's a bit
     more complicated:
         esd_offset(x, xoff, n, sigma_s, x_range, angles)
-    Here, angles is the azimuthal integration variable (Eq. 11 in Sifón
+    Here, angles is the azimuthal integration variable (Eq. 11 in Sifon
     et al. 2015, MNRAS, 454, 3938), and x_range is the radial
     integration variable to compute the enclosed surface density.
     Good definitions for these two are

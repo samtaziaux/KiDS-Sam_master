@@ -162,7 +162,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             # Select Nkidsfields random KiDS fields between 0 and
             # Nkidsfields-1 (Nbootstraps times)
             bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
-                                                   [Nbootstraps, len(kidscats)])
+                                                   [np.int(Nbootstraps), len(kidscats)])
         
         if n_boot != 1:
             print('Using {0} KiDS tiles for bootstrapping purposes.'.format(n_boot))
@@ -201,7 +201,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             result_final = [x for x in result if x != []]
             result = np.array([np.array(xi) for xi in result_final if len(xi)==n_patches])
             
-            rands = np.random.random_integers(0, len(result)-1, [Nbootstraps,len(result)]).flatten()
+            rands = np.random.random_integers(0, len(result)-1, [np.int(Nbootstraps),len(result)]).flatten()
             #print rands
             bootstrap_nums2 = result[rands]
             bootstrap_nums2 = np.concatenate(bootstrap_nums2).ravel()

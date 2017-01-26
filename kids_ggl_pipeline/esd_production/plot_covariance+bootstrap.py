@@ -29,7 +29,7 @@ def main():
     cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
     path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
     splitslist, blindcats, blindcat, blindcatnum, \
-    path_kidscats, path_gamacat, specz_file, z_epsilon = shear.input_variables()
+    path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot = shear.input_variables()
 
     print 'Final step: Plot the ESD profiles and correlation matrix'
     print

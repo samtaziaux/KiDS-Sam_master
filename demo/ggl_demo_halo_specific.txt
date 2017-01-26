@@ -77,6 +77,8 @@ hm_param          bias            fixed     1.0
 #hm_param          logM_step          fixed     0.01
 
 # Luminosity or stellar mass bins. Halo model (CLF/CMF) does not differentiate between the two, so be consistent.
+# The number of bins used is governed here. If one wants 3 bins, there should be 3 set of numbers for each parameter,
+# even if the bins are having the same mass limits!
 
 hm_params         logM_bin_min       fixed     9.0,9.5,10.0
 hm_params         logM_bin_max       fixed     9.5,10.0,10.5

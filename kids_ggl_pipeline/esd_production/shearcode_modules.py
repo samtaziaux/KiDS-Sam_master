@@ -57,7 +57,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
         path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
         lensid_file, lens_weights, lens_binning, lens_selection, \
-        src_selection, cat_version, wizz, blindcats = \
+        src_selection, cat_version, wizz, n_boot, blindcats = \
         esd_utils.read_config(config_file)
 
     print
@@ -204,7 +204,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot
 
 
 # Defining the lensID lens selection/binning
@@ -601,15 +601,15 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         galZlist = gamacat['Z'] # Central Z of the galaxy
         if 'random' in purpose:
             galZlist = randomcat['Z'][slice][Ncatmin:Ncatmax:step]
-        Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-                            for z in galZlist])
+        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
+        #                    for z in galZlist])
         # Distance in pc/h, where h is the dimensionless Hubble constant
-        Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-                                    for z in galZlist])
+        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
+        #                            for z in galZlist])
 
-        # This needs to be tested!
-        #cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-        #Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
+        # New method
+        cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+        Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
 
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
@@ -702,9 +702,9 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
         print "*** Using old lens-field matching procedure! ***"
     else:
         Rmax = Rmax + Rfield
-        print "*** Using new lens-field matching procedure ***"
-        print "(for 'early science' mode, select"\
-                " 'oldcatmatch' in 'ESD_output_filename')"
+        #print "*** Using new lens-field matching procedure ***"
+        #print "(for 'early science' mode, select"\
+        #        " 'oldcatmatch' in 'ESD_output_filename')"
 
     totgalIDs = np.array([])
 
@@ -1293,12 +1293,12 @@ def define_obslist(obsname, gamacat, h, Dcllist=[]):
     if 'AngSep' in obsname and len(Dcllist) > 0:
         print 'Applying cosmology correction to "AngSep"'
 
-        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
-                            for z in gamacat['Z']])
+        #Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
+        #                    for z in gamacat['Z']])
         
-        # This needs to be tested!
-        #cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
-        #Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
+        # New method
+        cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
+        Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
         
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list

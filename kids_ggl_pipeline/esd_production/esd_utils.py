@@ -24,6 +24,7 @@ def read_config(config_file):
     kids_path = 'None'
     specz_file = None
     z_epsilon = 0.2
+    n_boot = 1
     gama_path = 'None'
     filename = 'None'
     wizz = 'False'
@@ -79,6 +80,8 @@ def read_config(config_file):
             Runit = line[1]
         elif line[0] == 'ncores':
             ncores = int(line[1])
+        elif line[0] == 'nbootstraps':
+            n_boot = int(line[1])
 
         # Lens selection
         elif line[0] == 'lensID_file':
@@ -145,6 +148,6 @@ def read_config(config_file):
             Om, Ol, Ok, h, z_epsilon,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,
-            src_selection, cat_version, wizz, blindcats)
+            src_selection, cat_version, wizz, n_boot, blindcats)
 
     return out

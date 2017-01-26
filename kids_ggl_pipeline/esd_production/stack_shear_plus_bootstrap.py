@@ -29,7 +29,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
         path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
         splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
-        path_gamacat, specz_file, z_epsilon = \
+        path_gamacat, specz_file, z_epsilon, n_boot = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
     
     blindcat = blindcat[0]
@@ -156,89 +156,59 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Defining the number of bootstrap samples ( = 1 for normal shear stack)
     if 'bootstrap' in purpose:
         Nbootstraps = 1e5
-        
-        # Selecting the random fields (must be the same for all observable bins)
-        # Select Nkidsfields random KiDS fields between 0 and
-        # Nkidsfields-1 (Nbootstraps times)
-        bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
+        if n_boot == 1:
+            print('Using 1x1 KiDS tiles for bootstrapping purposes.')
+            # Selecting the random fields (must be the same for all observable bins)
+            # Select Nkidsfields random KiDS fields between 0 and
+            # Nkidsfields-1 (Nbootstraps times)
+            bootstrap_nums = np.random.random_integers(0,len(kidscats)-1,\
                                                    [Nbootstraps, len(kidscats)])
-        """
-        #Need to properly implement this!
-        # Proper
         
-        import matplotlib.pyplot as pl
-        import collections
+        if n_boot != 1:
+            print('Using {0} KiDS tiles for bootstrapping purposes.'.format(n_boot))
+            # Proper
         
-        matched = {}
-        coords = np.array([])
-        for i, kidscat in enumerate(kidscats):
-            matched[(np.float64(catmatch[kidscat][1].split('_')[1].replace('m', '-').replace('p', '.')), np.float64(catmatch[kidscat][1].split('_')[2].replace('m', '-').replace('p', '.')))] = kidscat, i
-            coords = np.append(coords, np.array([np.float64(catmatch[kidscat][1].split('_')[1].replace('m', '-').replace('p', '.')), np.float64(catmatch[kidscat][1].split('_')[2].replace('m', '-').replace('p', '.'))]))
+            #import matplotlib.pyplot as pl
+            import collections
+        
+            matched = {}
+            coords = np.array([])
+            for i, kidscat in enumerate(kidscats):
+                matched[(np.float64(catmatch[kidscat][1].split('_')[1].replace('m', '-').replace('p', '.')), np.float64(catmatch[kidscat][1].split('_')[2].replace('m', '-').replace('p', '.')))] = kidscat, i
+                coords = np.append(coords, np.array([np.float64(catmatch[kidscat][1].split('_')[1].replace('m', '-').replace('p', '.')), np.float64(catmatch[kidscat][1].split('_')[2].replace('m', '-').replace('p', '.'))]))
 
-        matched = collections.OrderedDict(sorted(matched.items()))
-        #print matched
-        coords = coords.reshape(-1, 2)
+            matched = collections.OrderedDict(sorted(matched.items()))
+            #print matched
+            coords = coords.reshape(-1, 2)
         
-        n_patches = 4
+            n_patches = 4
         
-        result = []
-        for m in matched.keys():
-            x_coord, y_coord = m
-            #x_coord, y_coord = x_coord+0.5, y_coord+0.5
-            result_i = []
-            plot_i = np.array([])
-            #result_i.append(matched[(x_coord, y_coord)][1])
-            for x,y in [(x_coord+i,y_coord+j) for i in (0,1) for j in (0,1)]:# if i != 0 or j != 0]:
-            #for x,y in [(x_coord+i,y_coord) for i in (0,1)]:
-                if (x,y) in matched:
-                    result_i.append(matched[(x,y)][1])
-                    plot_i = np.append(plot_i, np.array([x,y]))
-                    if len(result_i) == n_patches:
-                        del matched[(x,y)]
-            plot_i = plot_i.reshape(-1, 2)
-            try:
-                pl.plot(plot_i[:,0], plot_i[:,1], marker='x', ls='-')
-            except:
-                continue
-            result.append(result_i)
-        pl.show()
-        
-        
-        
-        
-        result_final = [x for x in result if x != []]
-        #print result_final
-        print len(result_final)
-        print len(np.unique(result_final))
-        result = np.array([np.array(xi) for xi in result_final if len(xi)==n_patches])
-        print result
-        print result.shape
-        print len(np.unique(result))
+            result = []
+            for m in matched.keys():
+                x_coord, y_coord = m
+                result_i = []
+                plot_i = np.array([])
+                for x,y in [(x_coord+i,y_coord+j) for i in (0,1) for j in (0,1)]:# if i != 0 or j != 0]:
+                #for x,y in [(x_coord+i,y_coord) for i in (0,1)]:
+                    if (x,y) in matched:
+                        result_i.append(matched[(x,y)][1])
+                        plot_i = np.append(plot_i, np.array([x,y]))
+                        if len(result_i) == n_patches:
+                            del matched[(x,y)]
+                result.append(result_i)
 
+        
+            result_final = [x for x in result if x != []]
+            result = np.array([np.array(xi) for xi in result_final if len(xi)==n_patches])
+            
+            rands = np.random.random_integers(0, len(result)-1, [Nbootstraps,len(result)]).flatten()
+            #print rands
+            bootstrap_nums2 = result[rands]
+            bootstrap_nums2 = np.concatenate(bootstrap_nums2).ravel()
+            bootstrap_nums = bootstrap_nums2.reshape((Nbootstraps,-1))
+            #print bootstrap_nums.shape
+        
 
-
-        rands = np.random.random_integers(0, len(result)-1, [Nbootstraps,len(result)]).flatten()
-        print rands
-        bootstrap_nums2 = result[rands]
-        bootstrap_nums2 = np.concatenate(bootstrap_nums2).ravel()
-        bootstrap_nums = bootstrap_nums2.reshape((Nbootstraps,-1))
-        print bootstrap_nums.shape
-        
-        
-        #bootstrap_nums = np.random.choice(result.flatten(), size=[Nbootstraps, len(result.flatten())], replace=True)
-        #print bootstrap_nums.shape
-        
-        
-        # Naively
-        n_patches = 4
-        #rands = np.random.random_integers(0,(len(kidscats)/n_patches-n_patches),[Nbootstraps, len(kidscats)/n_patches]).flatten()
-        #print rands
-        #print rands.shape
-        #bootstrap_nums = np.array([n_patches*rands+i for i in xrange(n_patches)]).reshape(Nbootstraps, n_patches*(len(kidscats)/n_patches))
-        #print bootstrap_nums.shape
-        print bootstrap_nums
-        #quit()
-        """
     else:
         Nbootstraps = 1
 

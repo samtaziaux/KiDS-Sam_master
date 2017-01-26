@@ -169,6 +169,9 @@ kids_blinds            A,B,C
 # i.e., only select sources such that z_s > z_l + z_epsilon (optional)
 z_epsilon           0.2             # Default = 0.2
 
+# if running shearbootstrap, select the number of patches to group in a regular patern (optional)
+nbootstraps         1               # Default = 1
+
 
 ########################
 ### Halo model setup ###

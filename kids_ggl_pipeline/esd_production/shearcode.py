@@ -198,7 +198,7 @@ def run_esd(config_file):
     kids_path, gama_path, specz_file, Om, Ol, Ok, h, z_epsilon,\
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, blindcats = \
+        lens_selection, src_selection, cat_version, wizz, n_boot, blindcats = \
         esd_utils.read_config(config_file)
 
     print '\n \n \n \n \n \n \n \n \n \n'

@@ -137,6 +137,7 @@ def read_header(hdr):
     val2 = []
     val3 = []
     val4 = []
+    exclude_bine = None
     file = open(hdr)
     for line in file:
         line = line.split()
@@ -163,12 +164,10 @@ def read_header(hdr):
             covfile = line[1]
         elif line[0] in ('covcol', 'covcols'):
             covcols = [int(i) for i in line[1].split(',')]
+        elif line[0] == 'exclude_bins':
+            exclude_bins = [int(i) for i in line[1].split(',')]
         elif line[0] == 'model':
             model = line[1]
-        elif line[0] == 'sat_profile':
-            sat_profile = line[1]
-        elif line[0] == 'group_profile':
-            group_profile = line[1]
         elif line[0] == 'metadata':
             meta_names.append(line[1].split(','))
             fits_format.append(line[2].split(','))
@@ -190,8 +189,9 @@ def read_header(hdr):
                 val3.append(float(line[4]))
                 val4.append(float(line[5]))
     file.close()
-    out = (array(params), prior_types, sat_profile, group_profile,
+    #out = (array(params), prior_types, sat_profile, group_profile,
+    out = (array(params), prior_types,
            array(val1), array(val2), array(val3), array(val4),
-           datafile, cols, covfile, covcols,
+           datafile, cols, covfile, covcols, exclude_bins,
            model, nwalkers, nsteps, nburn)
     return out

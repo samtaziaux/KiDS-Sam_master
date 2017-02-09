@@ -159,7 +159,7 @@ def run_emcee(hm_options, sampling_options, args):
         #residuals = esd - model[0]
         if 'model' in str(function):
             # model assumes comoving separations, changing data to accomodate for that
-            redshift_index = numpy.where(params == 'z')[0]
+            redshift_index = numpy.int(numpy.where(params == 'z')[0])
             redshift = array([val1[redshift_index]])
             esd = esd/(1.0+redshift.T)**2.0
             residuals = (esd - model[0])*(1.0+redshift.T)**2.0
@@ -406,7 +406,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     
     if 'model' in str(function):
         # model assumes comoving separations, changing data to accomodate for that
-        redshift_index = numpy.where(params == 'z')[0]
+        redshift_index = numpy.int(numpy.where(params == 'z')[0])
         redshift = array([v1[redshift_index]])
         esd = esd/(1.0+redshift.T)**2.0
         residuals = (esd - model[0])*(1.0+redshift.T)**2.0

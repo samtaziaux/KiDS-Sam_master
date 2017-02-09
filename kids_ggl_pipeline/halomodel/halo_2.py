@@ -200,7 +200,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     Ac2s = 0.56
     M_min = 5.
     M_max = 16.
-    M_step = 100
+    M_step = 200
     #centrals = 1
     #satellites = 1
 
@@ -232,7 +232,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     n_bins_obs = M_bin_min.size
     bias = np.array([bias]*k_range_lin.size).T
 
-    hod_mass = _array([_logspace(Mi, Mx, 100, endpoint=False,
+    hod_mass = _array([_logspace(Mi, Mx, 200, endpoint=False,
                                  dtype=np.longdouble)
                        for Mi, Mx in _izip(M_bin_min, M_bin_max)])
 
@@ -330,7 +330,17 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     effective_mass_bar = _array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range) * \
                                     (1.0 - baryons.f_dm(omegab, omegac))
                                  for z_i, hmf_i, pop_g_i in _izip(z, hmf, pop_g)])
-
+    """
+    import matplotlib.pyplot as pl
+    pl.plot(mass_range, pop_c[0])
+    pl.plot(mass_range, pop_s[0])
+    pl.plot(mass_range, pop_g[0])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.ylim([0.1, 100])
+    pl.xlim([1e10, 1e14])
+    pl.show()
+    """
 
     """
     # Power spectrum
@@ -619,7 +629,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # Add other outputs as needed. Total ESD should always be first!
     #return [out_esd_tot_inter, np.log10(effective_mass), bias_out]
     #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass
-    return k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3
+    return k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, rho_mean
 
 if __name__ == '__main__':
     print 0

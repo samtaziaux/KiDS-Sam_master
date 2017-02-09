@@ -482,6 +482,14 @@ def define_Rbins(path_Rbins, Runit):
         Rbins = np.append(Rrangefile[0],Rmax)
         Rcenters = Rrangefile[1]
         nRbins = len(Rcenters)
+    
+        print 'path_Rbins', path_Rbins
+        print 'Using: %i radial bins between %.1f and %.1f'%(nRbins, Rmin, Rmax)
+        print 'Rmin', Rmin
+        print 'Rmax', Rmax
+        print 'Rbins', Rbins
+        print 'Rcenters', Rcenters
+        print 'nRbins', nRbins
 
     else: # from a specified number (of bins)
         try:
@@ -524,15 +532,6 @@ def define_Rbins(path_Rbins, Runit):
         
     [Rmin, Rmax, Rbins] = [r*Rconst for r in [Rmin, Rmax, Rbins]]
 
-    """
-    print 'path_Rbins', path_Rbins
-    print 'Using: %i radial bins between %.1f and %.1f'%(nRbins, Rmin, Rmax)
-    print 'Rmin', Rmin
-    print 'Rmax', Rmax
-    print 'Rbins', Rbins
-    print 'Rcenters', Rcenters
-    print 'nRbins', nRbins
-    """
     
     return Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst
 

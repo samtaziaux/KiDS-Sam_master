@@ -170,8 +170,8 @@ def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
     # This works, but above more general, for different definition of
     # CLF/CMF.
     #func = lambda x: 0.5 * (sp.erf((np.log10(x/m_0(M, A, M_1, gamma_1,
-                                                   #gamma_2))) / \
-                                   #(sigma * (2.0**0.5))))
+    #                                               gamma_2))) / \
+    #                               (sigma * (2.0**0.5))))
     #nc = (func(m[-1]) - func(m[0]))
     return nc
 

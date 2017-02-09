@@ -534,7 +534,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon = \
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
     print 'Step 1: Create split catalogues in parallel'
@@ -705,33 +705,29 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # to a range in source distances Ds (in pc/h)
     zsrcbins = np.arange(0.025,3.5,0.05)
     
-    Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
-                        for y in zsrcbins])
-    Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
+    #Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+    #                    for y in zsrcbins])
+    #Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
 
-    #This needs to be tested!
-    #cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-    #Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
-    #Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
+    # New method
+    cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+    Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     if cat_version == 3:
         if wizz == 'False':
             print('\nCalculating the lensing efficiency ...')
-            """
-            srcNZ, spec_weight = shear.import_spec_cat(
-                path_kidscats, kidscatname2, kidscat_end, specz_file,
-                src_selection, cat_version)
-            srcPZ_a, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, \
-                                                weights=spec_weight, density=1)
-            srcPZ_a = srcPZ_a/srcPZ_a.sum()
-            """
             
             srclims = src_selection['Z_B'][1]
             sigma_selection = {}
             # 10 lens redshifts for calculation of Sigma_crit
             lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
-            lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
-                                      for y in lens_redshifts])
+            #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+            #                          for y in lens_redshifts])
+            cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+            lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
+    
+            
             lens_angular = lens_comoving/(1.0+lens_redshifts)
             k = np.zeros_like(lens_redshifts)
             
@@ -748,38 +744,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                             Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
             
             k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
-            
-            """
-            Nbootstraps=1000
-            rand_nums = np.random.random_integers(0,len(srcNZ)-1, [Nbootstraps, len(srcNZ)])
 
-            srcPZ_a = np.zeros([Nbootstraps, 70])
-            for i, rand in enumerate(rand_nums):
-                srcPZ_b, bins = np.histogram(srcNZ[rand], range=[0.025, 3.5], bins=70, \
-                                     weights=spec_weight[rand], density=1)
-                srcPZ_a[i,:] = srcPZ_b/srcPZ_b.sum()
-
-            nz_percentiles = np.array(map(lambda v: [v[1], v[2]-v[1], v[1]-v[0]], zip(*np.percentile(srcPZ_a, [16, 50, 84], axis=0))))
-            print nz_percentiles
-            pl.plot(np.linspace(0.025, 3.5, 70), nz_percentiles[:,0])
-            pl.fill_between(np.linspace(0.025, 3.5, 70), nz_percentiles[:,0]+nz_percentiles[:,1], nz_percentiles[:,0]-nz_percentiles[:,2])
-            pl.show()
-            np.savetxt('/data2/dvornik/test/tests_paper/data_nz.txt', nz_percentiles)
-            """
-
-            """
-            #srcPZ_b, bins = np.histogram(srcNZ, range=[0.025, 3.5], bins=70, density=1)
-            #srcPZ_a = srcNZ/srcNZ.sum()
-            srcPZ_a = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), srcNZ)
-
-            #pl.plot(srcNZ)
-            srcPZ_a = srcPZ_a/srcPZ_a.sum()
-            pl.plot(srcPZ_a)
-            #pl.plot(np.linspace(0.025, 3.5, 70), srcPZ_a)
-            pl.show()
-            np.savetxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt', srcPZ_a)
-            """
-            #srcPZ_a = np.genfromtxt('/net/zoom/data2/dvornik/test/tests_paper/data_pz.txt')
         if wizz == True:
             print('\nThe-wiZZ is not yet supported, quitting ...')
             raise SystemExit()

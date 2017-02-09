@@ -57,7 +57,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
         path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
         lensid_file, lens_weights, lens_binning, lens_selection, \
-        src_selection, cat_version, wizz, blindcats = \
+        src_selection, cat_version, wizz, n_boot, blindcats = \
         esd_utils.read_config(config_file)
 
     print
@@ -120,11 +120,11 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     var_print = ''
     #output_var, var_print, x = define_filename_sel(output_var, var_print,\
     #                                                 '', src_selection)
-    if ('ID' in lens_binning) & ('No' in binname): #or ('ID' in lens_selection)
+    if ('ID' in lens_binning) & ('No' in binname):# or ('ID' in lens_selection)
         output_var = 'IDs_from_file'
         path_output = '%s/%s%s' \
             %(path_output, output_var, filename_addition)
-    elif ('ID' not in lens_binning) & ('No' in binname): #or ('ID' not in lens_selection)
+    elif ('ID' not in lens_binning) & ('No' in binname):# or ('ID' not in lens_selection)
         output_var = 'No_bins'
         path_output = '%s/%s%s' \
             %(path_output, output_var, filename_addition)
@@ -204,7 +204,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot
 
 
 # Defining the lensID lens selection/binning
@@ -482,6 +482,14 @@ def define_Rbins(path_Rbins, Runit):
         Rbins = np.append(Rrangefile[0],Rmax)
         Rcenters = Rrangefile[1]
         nRbins = len(Rcenters)
+    
+        print 'path_Rbins', path_Rbins
+        print 'Using: %i radial bins between %.1f and %.1f'%(nRbins, Rmin, Rmax)
+        print 'Rmin', Rmin
+        print 'Rmax', Rmax
+        print 'Rbins', Rbins
+        print 'Rcenters', Rcenters
+        print 'nRbins', nRbins
 
     else: # from a specified number (of bins)
         try:
@@ -524,15 +532,6 @@ def define_Rbins(path_Rbins, Runit):
         
     [Rmin, Rmax, Rbins] = [r*Rconst for r in [Rmin, Rmax, Rbins]]
 
-    """
-    print 'path_Rbins', path_Rbins
-    print 'Using: %i radial bins between %.1f and %.1f'%(nRbins, Rmin, Rmax)
-    print 'Rmin', Rmin
-    print 'Rmax', Rmax
-    print 'Rbins', Rbins
-    print 'Rcenters', Rcenters
-    print 'nRbins', nRbins
-    """
     
     return Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst
 
@@ -601,15 +600,15 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
         galZlist = gamacat['Z'] # Central Z of the galaxy
         if 'random' in purpose:
             galZlist = randomcat['Z'][slice][Ncatmin:Ncatmax:step]
-        Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-                            for z in galZlist])
+        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
+        #                    for z in galZlist])
         # Distance in pc/h, where h is the dimensionless Hubble constant
-        Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-                                    for z in galZlist])
+        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
+        #                            for z in galZlist])
 
-        # This needs to be tested!
-        #cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-        #Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
+        # New method
+        cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+        Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
 
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
@@ -702,9 +701,9 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
         print "*** Using old lens-field matching procedure! ***"
     else:
         Rmax = Rmax + Rfield
-        print "*** Using new lens-field matching procedure ***"
-        print "(for 'early science' mode, select"\
-                " 'oldcatmatch' in 'ESD_output_filename')"
+        #print "*** Using new lens-field matching procedure ***"
+        #print "(for 'early science' mode, select"\
+        #        " 'oldcatmatch' in 'ESD_output_filename')"
 
     totgalIDs = np.array([])
 
@@ -1293,12 +1292,12 @@ def define_obslist(obsname, gamacat, h, Dcllist=[]):
     if 'AngSep' in obsname and len(Dcllist) > 0:
         print 'Applying cosmology correction to "AngSep"'
 
-        Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
-                            for z in gamacat['Z']])
+        #Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
+        #                    for z in gamacat['Z']])
         
-        # This needs to be tested!
-        #cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
-        #Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
+        # New method
+        cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
+        Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
         
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list
@@ -1676,22 +1675,27 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     else:
         filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2    Nsources'%(Runit)
 
-    with open(filename, 'w') as file:
-        print >>file, filehead
+    index = np.where(np.logical_not((0 < error_tot) & (error_tot < inf)))
+    ESDt_tot.setflags(write=True)
+    ESDx_tot.setflags(write=True)
+    error_tot.setflags(write=True)
+    bias_tot.setflags(write=True)
+    wk2_tot.setflags(write=True)
+    w2k2_tot.setflags(write=True)
+    Nsrc.setflags(write=True)
+    
+    ESDt_tot[index] = int(-999)
+    ESDx_tot[index] = int(-999)
+    error_tot[index] = int(-999)
+    bias_tot[index] = int(-999)
+    wk2_tot[index] = int(-999)
+    w2k2_tot[index] = int(-999)
+    Nsrc[index] = int(-999)
 
-    with open(filename, 'a') as file:
-        for R in xrange(len(Rcenters)):
-            
-            if not (0 < error_tot[R] and error_tot[R]<inf):
-                ESDt_tot[R] = int(-999)
-                ESDx_tot[R] = int(-999)
-                error_tot[R] = int(-999)
-                bias_tot[R] = int(-999)
-                wk2_tot[R] = int(-999)
-                w2k2_tot[R] = int(-999)
-                Nsrc[R] = int(-999)
-            
-            print >>file, '%.12g	%.12g	%.12g	%.12g	%.12g	%.12g   %.12g	%.12g   %.12g'%(Rcenters[R], ESDt_tot[R], ESDx_tot[R], error_tot[R], bias_tot[R], variance, wk2_tot[R], w2k2_tot[R], Nsrc[R])
+    data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
+                          bias_tot.T, variance*np.ones(bias_tot.shape).T, \
+                          wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
+    np.savetxt(filename, data_out, delimiter='\t', header=filehead)
 
     print 'Written: ESD profile data:', filename
 

@@ -73,7 +73,7 @@ def run_emcee(hm_options, sampling_options, args):
     jfixed = (prior_types == 'fixed') | (prior_types == 'read') | \
              (prior_types == 'function')
     jfree = ~jfixed
-    ndim = len(val1[(jfree)])
+    ndim = len(val1[numpy.where(jfree)])
     if len(starting) != ndim:
         msg = 'ERROR: Not all starting points defined for free parameters.'
         print msg
@@ -140,7 +140,7 @@ def run_emcee(hm_options, sampling_options, args):
                             #xy=(x,gti+20), ha='center', va='bottom',
                             #color='r')
             return
-        val1[jfree] = starting
+        val1[numpy.where(jfree)] = starting
         if params_join is not None:
             v1 = list(val1)
             for p in params_join:
@@ -159,7 +159,7 @@ def run_emcee(hm_options, sampling_options, args):
         #residuals = esd - model[0]
         if 'model' in str(function):
             # model assumes comoving separations, changing data to accomodate for that
-            redshift_index = numpy.where(params == 'z')[0]
+            redshift_index = numpy.int(numpy.where(params == 'z')[0])
             redshift = array([val1[redshift_index]])
             esd = esd/(1.0+redshift.T)**2.0
             residuals = (esd - model[0])*(1.0+redshift.T)**2.0
@@ -349,10 +349,10 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
 
     """
     _log = log
-    v1free = val1[jfree]
-    v2free = val2[jfree]
-    v3free = val3[jfree]
-    v4free = val4[jfree]
+    v1free = val1[numpy.where(jfree)]
+    v2free = val2[numpy.where(jfree)]
+    v3free = val3[numpy.where(jfree)]
+    v4free = val4[numpy.where(jfree)]
     if not isfinite(v1free.sum()):
         return -inf, fail_value
     j = (prior_types == 'normal')
@@ -382,7 +382,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     # all other types ('fixed', 'read') should not contribute to the prior
     # run the given model
     v1 = val1.copy()
-    v1[jfree] = theta
+    v1[numpy.where(jfree)] = theta
     if params_join is not None:
         v1j = list(v1)
         for p in params_join:
@@ -406,7 +406,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     
     if 'model' in str(function):
         # model assumes comoving separations, changing data to accomodate for that
-        redshift_index = numpy.where(params == 'z')[0]
+        redshift_index = numpy.int(numpy.where(params == 'z')[0])
         redshift = array([v1[redshift_index]])
         esd = esd/(1.0+redshift.T)**2.0
         residuals = (esd - model[0])*(1.0+redshift.T)**2.0

@@ -198,11 +198,12 @@ def run_esd(config_file):
     kids_path, gama_path, specz_file, Om, Ol, Ok, h, z_epsilon,\
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, blindcats = \
+        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
         esd_utils.read_config(config_file)
 
-    print '\n \n \n \n \n \n \n \n \n \n'
-    print 'Running:', purpose
+    print '\n \n \n \n \n'
+    print 'Running KiDS-GGL pipeline - signal extraction'
+    #print 'Running:', purpose
     print
 
     # Define the initial parameters for this shearcode run

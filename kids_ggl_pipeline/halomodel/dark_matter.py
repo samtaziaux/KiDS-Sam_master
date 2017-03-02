@@ -117,6 +117,7 @@ def Con(z, M, f):
 
     #c = c0 * (M/M0) ** b
 
+    #c = f * np.ones(M.shape)
     return c
 
 

@@ -27,7 +27,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
             path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, \
-            blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot = \
+            blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
             shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
     blindcat = blindcat[0]
@@ -196,9 +196,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         if sum(ESD_mask) > 0:
                             cov[N1,N2,R1,R2] = np.cov((ESDt_N1[:, R1])[ESD_mask],
                                                       (ESDt_N2[:, R2])[ESD_mask],
-                                                      bias=1)[0,1] #N2 = N1!
-                        #if N1!=N2:
-                        #    cov[N1,N2,R1,R2] = 0.0
+                                                      bias=1)[0,1]
+                        if cross_cov == False:
+                            if N1!=N2:
+                                cov[N1,N2,R1,R2] = 0.0
 
 
     if 'covariance' in purpose: # Calculating the covariance
@@ -285,6 +286,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                 
                                 if 'covariance' in purpose:
                                     cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2]))
+                                    if cross_cov == False:
+                                        if N1!=N2:
+                                            cov[N1,N2,R1,R2] = 0.0
 
                 else:
                     # This message should be a lot more explicit
@@ -330,6 +334,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     for R2 in xrange(nRbins):
                         cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] / \
                             (wk2[N1,R1]*wk2[N2,R2])
+    
 
     with open(filenamecov, 'w') as file:
         print >>file, '#', '%s_min[m]'%binname, '	', '%s_min[n]'%binname,'	','Radius[i](kpc/h%g)'%(h*100), '	','Radius[j](kpc/h%g)'%(h*100), '   ','covariance(h%g*M_sun/pc^2)^2'%(h*100), '	', 'correlation','	', 'bias(1+K[m,i])(1+K[n,j])'

@@ -29,7 +29,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
         path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
         splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
-        path_gamacat, specz_file, z_epsilon, n_boot = \
+        path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
     
     blindcat = blindcat[0]
@@ -205,7 +205,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             #print rands
             bootstrap_nums2 = result[rands]
             bootstrap_nums2 = np.concatenate(bootstrap_nums2).ravel()
-            bootstrap_nums = bootstrap_nums2.reshape((Nbootstraps,-1))
+            bootstrap_nums = bootstrap_nums2.reshape((np.int(Nbootstraps),-1))
             #print bootstrap_nums.shape
         
 

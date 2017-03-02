@@ -841,7 +841,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                            rvir_range_3d_i,
                                            rvir_range_2d_i))
                      for sur_den2_i in _izip(sur_den4)]) / 1e12
+                     
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    nu = spline(hmf[0].nu,hmf[0].M,k=5)
+                     
     """
+    
     #for i in xrange(len(M_bin_min)):
         #d_sur_den2[i][d_sur_den2[i] <= 0.0] = np.nan
         #d_sur_den2[i][d_sur_den2[i] >= 10.0**20.0] = np.nan
@@ -874,7 +879,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     # Add other outputs as needed. Total ESD should always be first!
     return [out_esd_tot_inter, np.log10(effective_mass), bias_out]
-    #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass
+    #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass, nu(1)
 
 if __name__ == '__main__':
     print 0

@@ -35,7 +35,8 @@ def run_emcee(hm_options, sampling_options, args):
 
     #pickle.dumps(function)
     #print 'pickled'
-
+    
+    print 'Running KiDS-GGL pipeline - sampler\n'
     if args.demo:
         print ' ** Running demo only **'
     elif isfile(output):
@@ -273,21 +274,21 @@ def run_emcee(hm_options, sampling_options, args):
             print >>hdr, af,
     except ImportError:
         pass
-    try:
-        print 'acor =', sampler.acor
-        print >>hdr, '\nacor =',
-        for ac in sampler.acor:
-            print >>hdr, ac,
-    except ImportError:
-        pass
-    # acor and get_autocorr_time() are the same
     #try:
-        #print 'acor_time =', sampler.get_autocorr_time()
-        #print >>hdr, '\nacor_time =',
-        #for act in sampler.get_autocorr_time():
-            #print >>hdr, act,
-    #except AttributeError:
+        #print 'acor =', sampler.acor
+        #print >>hdr, '\nacor =',
+        #for ac in sampler.acor:
+            #print >>hdr, ac,
+    #except ImportError:
         #pass
+    # acor and get_autocorr_time() are the same
+    try:
+        print 'acor =', sampler.get_autocorr_time()
+        print >>hdr, '\nacor_time =',
+        for act in sampler.get_autocorr_time(c=5):
+            print >>hdr, act,
+    except AttributeError:
+        pass
     print >>hdr, '\nFinished', ctime()
     hdr.close()
     print 'Saved to', hdrfile

@@ -57,7 +57,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
         path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
         lensid_file, lens_weights, lens_binning, lens_selection, \
-        src_selection, cat_version, wizz, n_boot, blindcats = \
+        src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
         esd_utils.read_config(config_file)
 
     print
@@ -204,7 +204,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov
 
 
 # Defining the lensID lens selection/binning

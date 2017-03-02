@@ -330,7 +330,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     effective_mass_bar = _array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range) * \
                                     (1.0 - baryons.f_dm(omegab, omegac))
                                  for z_i, hmf_i, pop_g_i in _izip(z, hmf, pop_g)])
-    """
+
     import matplotlib.pyplot as pl
     pl.plot(mass_range, pop_c[0])
     pl.plot(mass_range, pop_s[0])
@@ -340,6 +340,16 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     pl.ylim([0.1, 100])
     pl.xlim([1e10, 1e14])
     pl.show()
+    """
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    nu = spline(hmf[0].nu,hmf[0].M,k=5)
+
+    print nu(1)
+
+    pl.plot(hmf[0].nu, hmf[0].M)
+    pl.yscale('log')
+    pl.show()
+    quit()
     """
 
     """

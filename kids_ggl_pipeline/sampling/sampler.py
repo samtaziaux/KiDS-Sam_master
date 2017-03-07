@@ -205,7 +205,8 @@ def run_emcee(hm_options, sampling_options, args):
         exit()
 
     # set up starting point for all walkers
-    po = starting * numpy.random.uniform(0.9, 1.1, size=(nwalkers,ndim))
+    #po = starting * numpy.random.uniform(0.9, 1.1, size=(nwalkers,ndim))
+    po = sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, ndim, nwalkers)
     lnprior = zeros(ndim)
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
@@ -530,3 +531,66 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     #print 'autocorrelation length =', sampler.acor
     #print 'autocorrelation time =', sampler.get_autocorr_time()
     return metadata, nwritten
+
+
+def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, ndim, nwalkers):
+
+    # This creates a ball around a starting value,
+    # taking prior ranges into consideration.
+    # It takes intervals (max-min)/2 around a starting value.
+
+    v1free = val1[numpy.where(jfree)]
+    v2free = val2[numpy.where(jfree)]
+    v3free = val3[numpy.where(jfree)]
+    v4free = val4[numpy.where(jfree)]
+    params_free = params[numpy.where(jfree)]
+    prior_free = prior_types[numpy.where(jfree)]
+    
+    ball = numpy.zeros((nwalkers, ndim))
+    for n, j in enumerate(params_free):
+        if prior_free[n] == 'normal':
+            lims = (v4free[n] - v3free[n]) / 2.0
+            min = starting[n] - lims
+            max = starting[n] + lims
+            if min <= v3free[n]:
+                min = v3free[n]
+            if max >= v4free[n]:
+                max = v4free[n]
+            
+            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
+
+        if prior_free[n] == 'lognormal':
+            lims = (v4free[n] - v3free[n]) / 2.0
+            min = starting[n] - lims
+            max = starting[n] + lims
+            if min <= v3free[n]:
+                min = v3free[n]
+            if max >= v4free[n]:
+                max = v4free[n]
+            
+            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
+                        
+        if prior_free[n] == 'uniform':
+            lims = (v2free[n] - v1free[n]) / 2.0
+            min = starting[n] - lims
+            max = starting[n] + lims
+            if min <= v1free[n]:
+                min = v1free[n]
+            if max >= v2free[n]:
+                max = v2free[n]
+            
+            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
+    
+        if prior_free[n] == 'exp':
+            lims = (v3free[n] - v2free[n]) / 2.0
+            min = starting[n] - lims
+            max = starting[n] + lims
+            if min <= v2free[n]:
+                min = v2free[n]
+            if max >= v3free[n]:
+                max = v3free[n]
+            
+            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
+
+
+    return ball

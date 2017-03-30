@@ -67,7 +67,10 @@ Notes
     -Remember that the "sharp" profile is only defined up to R=r_t!
 
 """
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 from numpy import arctan, arctanh, arccos, array, cos, \
                   hypot, log, log10, logspace, \
                   meshgrid, ones, sum as nsum, transpose, zeros
@@ -218,7 +221,10 @@ def sigma_sharp(x, tau, sigma_s):
 def barsigma(x, sigma_s):
     s = ones(x.shape)
     s[x == 0] = 0
+    #try:
     s[x == 1] = 1 + log(0.5)
+    #except IndexError:
+        #pass
     j = (x > 0) & (x < 1)
     s[j] = arctanh(((1 - x[j])/(1 + x[j]))**0.5)
     s[j] = 2 * s[j] / (1 - x[j]**2)**0.5

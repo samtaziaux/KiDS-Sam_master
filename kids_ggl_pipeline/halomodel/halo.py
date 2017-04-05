@@ -358,20 +358,20 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #print 'hod_mass =', time() - to
     cosmology_params = _array([])
     for z_i in z:
-        cosmology_params = np.append(cosmology_params, {"sigma_8": sigma_8,
-                                     "H0": H0,"omegab_h2": omegab_h2,
-                                     "omegam": omegam, "omegav": omegav, "n": n,
-                                     "lnk_min": lnk_min ,"lnk_max": lnk_max,
-                                     "dlnk": k_step, "transfer_fit": "BBKS",
-                                     "z":np.float64(z_i),
-                                     "force_flat": True})
+        cosmology_params = np.append(cosmology_params, {'sigma_8': sigma_8,
+                                     'H0': H0,'omegab_h2': omegab_h2,
+                                     'omegam': omegam, 'omegav': omegav, 'n': n,
+                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
+                                     'dlnk': k_step, 'transfer_fit': 'CAMB',
+                                     'z':np.float64(z_i),
+                                     'force_flat': True})
     # Calculation
     # Tinker10 should also be read from theta!
     #to = time()
     #hmf = Mass_Function(M_min, M_max, M_step, "Tinker10", **cosmology_params)
     hmf = _array([])
     for i in cosmology_params:
-        hmf_temp = Mass_Function(M_min, M_max, M_step, "Tinker10", **i)
+        hmf_temp = Mass_Function(M_min, M_max, M_step, 'Tinker10', **i)
         hmf = np.append(hmf, hmf_temp)
     #print 'mass function =', time() - to
 

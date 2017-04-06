@@ -6,6 +6,7 @@
 """
 
 # Import the necessary libraries
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
@@ -108,7 +109,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
         for kidscatname in splitkidscats[Nsplit]:
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 80: # If it is too high...
-                print 'Waiting: More memory required'
+                print('Waiting: More memory required')
                 time.sleep(30) # wait before continuing the calculation
 
             kidscatN = kidscatN+1
@@ -129,12 +130,12 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
 
-            print 'Analysing part %i/%i, process %i: %s (contains %i objects)'\
+            print('Analysing part %i/%i, process %i: %s (contains %i objects)'\
                     %(kidscatN, len(splitkidscats[Nsplit]), \
-                      Nsplit+1, kidscatname, len(galIDs))
+                      Nsplit+1, kidscatname, len(galIDs)))
 
             if ('random' in purpose):
-                print '	of catalog:', Ncat+1
+                print('	of catalog:', Ncat+1)
 
             # Split the list of lenses into chunks of 100 max.
             # why 100? trying a few more here
@@ -154,8 +155,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                                         len(w.T[0]), nRbins])
 
             for l in xrange(len(lenssplits)-1):
-                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), \
-                                            lenssplits[l], '-', lenssplits[l+1]
+                print('Lens split %i/%i:'%(l+1, len(lenssplits)-1), \
+                                            lenssplits[l], '-', lenssplits[l+1])
 
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
@@ -287,7 +288,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
             if os.path.isfile(filename):
                 os.remove(filename)
-                print 'Placeholder:', filename, 'is removed.'
+                print('Placeholder:', filename, 'is removed.')
 
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
@@ -297,7 +298,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, \
                                 Rconst, output, outputnames, variance, \
                                 purpose, e1, e2, w, srcm)
-            print 'Written:', filename
+            print('Written:', filename)
 
 
     if cat_version == 3:
@@ -331,11 +332,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
 
-            print 'Analysing part %i/%i, process %i: %s (contains %i objects)'\
+            print('Analysing part %i/%i, process %i: %s (contains %i objects)'\
                             %(kidscatN, len(splitkidscats[Nsplit]), \
-                              Nsplit+1, kidscatname, len(galIDs))
+                              Nsplit+1, kidscatname, len(galIDs)))
             if ('random' in purpose):
-                print '	of catalog:', Ncat+1
+                print('	of catalog:', Ncat+1)
 
             # Split the list of lenses into chunks of 100 max.
             # why 100? trying larger numbers (CS)
@@ -370,7 +371,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                         np.zeros([len(outputnames), len(w.T[0]), nRbins])
 
             for l in xrange(len(lenssplits)-1):
-                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
+                print('Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1])
 
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
@@ -508,7 +509,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
             if os.path.isfile(filename):
                 os.remove(filename)
-                print 'Placeholder:', filename, 'is removed.'
+                print('Placeholder:', filename, 'is removed.')
 
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
@@ -518,7 +519,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, \
                                 Rconst, output, outputnames, variance, \
                                 purpose, e1, e2, w, srcm)
-            print 'Written:', filename
+            print('Written:', filename)
 
     q1.put(Nsplit)
 
@@ -537,8 +538,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
-    print 'Step 1: Create split catalogues in parallel'
-    print
+    print('Step 1: Create split catalogues in parallel')
+    print()
 
 
     if 'bootstrap' in purpose:
@@ -579,20 +580,20 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat+1, filename_var)
         # Ncat is the number of existing catalogs, we want to go one beyond
-        print 'Number of new catalog:', Ncat+1
+        print('Number of new catalog:', Ncat+1)
     #		print 'Splits already written: \n', splitslist
 
     # Stop if the catalog already exists.
     outname = shear.define_filename_results(path_results, purpose, \
                                             filename_var, filename_addition, \
                                             Nsplit, blindcat)
-    print 'Requested file:', outname
-    print
+    print('Requested file:', outname)
+    print()
 
     if os.path.isfile(outname):
-        print '(in shear_plus_covariance)',
-        print 'This output already exists:', outname
-        print
+        print('(in shear_plus_covariance)')
+        print('This output already exists:', outname)
+        print()
         return
 
 
@@ -606,9 +607,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                                 Nsplits, filename_addition, \
                                                 blindcat)
 
-            with open(filename, 'w') as file:
-                print >>file, ''
-            print 'Placeholder:', filename, 'is written.'
+            np.savetxt(filename, np.empty(0))
+            print('Placeholder:', filename, 'is written.')
 
     else:
         filename = 0
@@ -629,11 +629,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     e2_varlist = np.array([[]]*4)
 
     if cat_version == 2:
-        print 'Importing KiDS catalogs from: %s'%path_kidscats
+        print('Importing KiDS catalogs from: %s'%path_kidscats)
         i = 0
         for kidscatname in kidscats:
             i += 1
-            print '	%i/%i:'%(i, len(kidscats)), kidscatname
+            print('	%i/%i:'%(i, len(kidscats)), kidscatname)
 
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
@@ -661,11 +661,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
         kidscatname2 = np.unique(kidscatname2)
 
-        print 'Importing KiDS catalogs from: %s'%path_kidscats
+        print('Importing KiDS catalogs from: %s'%path_kidscats)
         i = 0
         for kidscatname in kidscatname2:
             i += 1
-            print '	%i/%i:'%(i, len(kidscatname2)), kidscatname
+            print('	%i/%i:'%(i, len(kidscatname2)), kidscatname)
 
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
@@ -795,10 +795,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Printing the made choices
 
-    print
-    print 'Using %s cores to create split catalogues'%Nsplits, \
-            ', - Center definition = %s'%centering
-    print
+    print()
+    print('Using %s cores to create split catalogues'%Nsplits, \
+            ', - Center definition = %s'%centering)
+    print()
 
     output = 0
     outputnames = 0

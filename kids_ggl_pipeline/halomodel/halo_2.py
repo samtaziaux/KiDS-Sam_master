@@ -25,6 +25,7 @@
 # Halo model code
 # Andrej Dvornik, 2014/2015
 
+from __future__ import print_function
 import multiprocessing as multi
 import numpy as np
 import mpmath as mp
@@ -45,7 +46,7 @@ from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, \
     gas_concentration, star_concentration, virial_mass, \
         virial_radius
 from lens import power_to_corr, power_to_corr_multi, sigma, d_sigma, \
-    power_to_corr_ogata, wp
+    power_to_corr_ogata, wp, wp_beta_correction
 from dark_matter import NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, \
     GM_cen_spectrum, GM_sat_spectrum, delta_NFW, \
         MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy, \
@@ -527,8 +528,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
         sur_den2_3[i][(sur_den2_3[i] <= 0.0) | (sur_den2_3[i] >= 1e20)] = np.nan
         sur_den2_3[i] = fill_nan(sur_den2_3[i])
     #"""
-    
-    
+
     """
     # Excess surface density
     """
@@ -595,7 +595,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                         
     out_esd_tot_inter = out_esd_tot_inter + pointmass
     
-    print sigma_c, A, M_1, gamma_1, gamma_2
+    print(sigma_c, A, M_1, gamma_1, gamma_2)
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
     
     # Add other outputs as needed. Total ESD should always be first!
@@ -628,4 +628,4 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #return [wp_out]
 
 if __name__ == '__main__':
-    print 0
+    print(0)

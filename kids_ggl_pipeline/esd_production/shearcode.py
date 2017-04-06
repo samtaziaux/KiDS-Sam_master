@@ -3,7 +3,7 @@
 """
 "Determine the shear as a function of radius from a galaxy."
 """
-
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
@@ -201,10 +201,10 @@ def run_esd(config_file):
         lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
         esd_utils.read_config(config_file)
 
-    print '\n \n \n \n \n'
-    print 'Running KiDS-GGL pipeline - signal extraction'
+    print('\n \n \n \n \n')
+    print('Running KiDS-GGL pipeline - signal extraction')
     #print 'Running:', purpose
-    print
+    print()
 
     # Define the initial parameters for this shearcode run
     runparams = define_runparams(purpose, lens_binning, ncores, blindcats)
@@ -215,7 +215,7 @@ def run_esd(config_file):
                    blindcat, blindcats, config_file)
 
     end_tot = (time.time()-start_tot)/60
-    print 'Finished in: %g minutes' %end_tot
-    print
+    print('Finished in: %g minutes' %end_tot)
+    print()
 
     return

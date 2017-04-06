@@ -8,6 +8,7 @@
 debug = False
 
 # Import the necessary libraries
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
@@ -44,10 +45,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
 
     if 'bootstrap' in purpose:
-        print 'Step 3: Stack the lenses and create bootstrap samples'
+        print('Step 3: Stack the lenses and create bootstrap samples')
     else:
-        print 'Step 3: Stack the lenses and create the ESD profile'
-    print
+        print('Step 3: Stack the lenses and create the ESD profile')
+    print()
     
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose.replace('catalog',''), \
@@ -60,13 +61,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
-        print 'Number of existing random catalogs:', Ncat
+        print('Number of existing random catalogs:', Ncat)
 
     filenameESD = shear.define_filename_results(path_results, purpose, \
                                                 filename_var, \
                                                 filename_addition, \
                                                 Nsplit, blindcat)
-    print 'Requested file:', filenameESD
+    print('Requested file:', filenameESD)
     
     # Define the list of variables for the input catalog
     filename_var = shear.define_filename_var('shearcatalog', centering, \
@@ -90,7 +91,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                                  Nsplit, blindcat)
 
     sheardat = pyfits.open(shearcatname)[1].data
-    print 'Importing:', shearcatname
+    print('Importing:', shearcatname)
 
 
     # Importing all GAMA data, and the information
@@ -122,7 +123,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if 'random' in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
-        print 'Number of existing random catalogs:', Ncat
+        print('Number of existing random catalogs:', Ncat)
 
     
     galIDlist = sheardat['ID'] # ID of all galaxies in the shear catalog
@@ -221,9 +222,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
                                               lenssel_binning, gamacat)
 
-        print
-        print '%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, \
-                                          binmin, binmax)
+        print()
+        print('%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, \
+                                          binmin, binmax))
         
         # Mask the galaxies in the shear catalog
         lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
@@ -231,8 +232,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                        binmin, binmax, Dcllist, h)
 
         if debug:
-            print 'lenssel:', sum(lenssel)
-            print 'galIDlist:', len(galIDlist)
+            print('lenssel:', sum(lenssel))
+            print('galIDlist:', len(galIDlist))
 
         [galIDs, gammats, gammaxs, \
          wk2s, w2k2s, srcms, Nsrcs] = [gallist[lenssel] for gallist in [galIDlist, \
@@ -245,9 +246,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
         galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
-        print 'Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), \
-                'of which overlap with KiDS.'
-        print
+        print('Selected:', len(galIDs), 'galaxies,', len(galIDs_matched), \
+                'of which overlap with KiDS.')
+        print()
 
         # Paths to the resulting files
         filename_bin = filename_var.replace('binnum', '%s'%(binnum))
@@ -279,7 +280,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
         # Taking the bootstrap samples
         if 'bootstrap' in purpose:
-            print 'Number of bootstraps: %g'%Nbootstraps
+            print('Number of bootstraps: %g'%Nbootstraps)
             # Randomly pick a number of fields equal to
             # the total number of fields and sum them
             shear_bootstrap = np.sum(field_shears[bootstrap_nums], 1)
@@ -321,7 +322,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # The summed quantities
         gammat, gammax, wk2, w2k2, srcm, Nsrc = [shear_sample[x] for x in xrange(6)]
         if debug:
-            print 'gammat:', gammat/1.e6
+            print('gammat:', gammat/1.e6)
 
          # Calculate the stacked final output
         output = np.array(shear.calc_stack(gammat, gammax, wk2, w2k2, srcm, \

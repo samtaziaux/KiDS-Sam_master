@@ -1,3 +1,4 @@
+from __future__ import print_function
 import imp
 import os
 from glob import glob
@@ -57,7 +58,7 @@ def read_config(config_file, version='0.5.7'):
                 msg += ' parameter file (%s). Value %s is invalid.' \
                        %(paramfile, line[1])
                 msg = ' Valid types are %s' %valid_types
-                print msg
+                print(msg)
                 exit()
             params.append(line[1])
             prior_types.append(line[2])
@@ -116,7 +117,7 @@ def read_config(config_file, version='0.5.7'):
         elif line[0] == 'hm_params':
             if line[2] != 'fixed':
                 msg = 'ERROR: Arrays can only contain fixed values.'
-                print msg
+                print(msg)
                 exit()
             param_types.append(line[0])
             params.append(line[1])
@@ -183,7 +184,7 @@ def read_function(module, function):
         function = getattr(halo_2, function)
     elif module == 'models':
         function = getattr(models, function)
-    print 'Successfully imported {0}'.format(function)
+    print('Successfully imported {0}'.format(function))
     #pickle.dumps(function)
     #print 'Pickled!'
     return function

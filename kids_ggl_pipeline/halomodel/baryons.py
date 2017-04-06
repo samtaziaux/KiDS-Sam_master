@@ -366,7 +366,7 @@ def GS_TwoHalo(mass_func, z, rho_stars, rho_mean, n, k_x, r_x, m_x,
           #Bias_Tinker10(mass_func,r_x) / m_x), m_x))
     #print (Integrate((mass_func.dndlnm * population * \
             #Bias_Tinker10(mass_func,r_x) / m_x), m_x)) / norm
-    print ("Two halo term calculated - stars.")
+    print("Two halo term calculated - stars.")
     return spec_ext * np.exp(mass_func.power)
 
 
@@ -504,7 +504,7 @@ def GGas_TwoHalo(mass_func, z, F, rho_gas, rho_mean, n, k_x, r_x, m_x,
           #Bias_Tinker10(mass_func,r_x) / m_x), m_x))
     #print Integrate((mass_func.dndlnm * population * \
            #Bias_Tinker10(mass_func,r_x) / m_x), m_x) / norm
-    print ("Two halo term calculated - gas.")
+    print("Two halo term calculated - gas.")
     return spec_ext*np.exp(mass_func.power)
 
 

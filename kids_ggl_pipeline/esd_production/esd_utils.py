@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from glob import glob
 import numpy as np
@@ -142,7 +143,7 @@ def read_config(config_file):
     try: # If a custom lens catalog was given
         if 'None' not in lens_catalog:
             gama_path = lens_catalog
-            print 'Lens catalog:', lens_catalog
+            print('Lens catalog:', lens_catalog)
     except:
         pass
         

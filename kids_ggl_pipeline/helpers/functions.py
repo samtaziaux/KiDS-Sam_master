@@ -13,7 +13,7 @@ def read_esdfiles(esdfiles):
     error_h = np.zeros(len(data_x))
     error_l = np.zeros(len(data_x))
     
-    print 'Imported ESD profiles: %i'%len(esdfiles)
+    print('Imported ESD profiles: %i'%len(esdfiles))
     
     for f in xrange(len(esdfiles)):
         # Load the text file containing the stacked profile
@@ -72,50 +72,22 @@ def make2dcov(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     return cov2d
 
 
-def make4dcov(err, nbins, nrbins, data_x):
+def make4dcov(cov2d, nbins, nrbins):
     # Creates 4d covariance out of standard 2d covariance, given bins.
     # Useful for combining measurements in conjunction with make2dcov
     
+    cov4d = cov2d.reshape((nbins,nrbins,nbins,nrbins))
+    cov4d = cov4d.transpose(2,0,3,1).flatten()
     
-    """
-    To be written! What is now only works for diagonals.
-    """
-    #cov = np.hstack(err)
-    #cov = np.identity(nbins*nrbins) * cov
-    #cov = cov.reshape(nbins,nrbins,nrbins,nrbins)#.transpose(0,2,1,3)
-    
-    cov_out = np.zeros((nbins, nbins, nrbins, nrbins))
-    radius1 = np.zeros((nbins, nbins, nrbins, nrbins))
-    radius2 = np.zeros((nbins, nbins, nrbins, nrbins))
-    bin1 = np.zeros((nbins, nbins, nrbins, nrbins))
-    bin2 = np.zeros((nbins, nbins, nrbins, nrbins))
-    bias = np.ones((nbins, nbins, nrbins, nrbins))
-    
-    index = 0
-    for N1 in xrange(nbins):
-        for N2 in xrange(nbins):
-            for R1 in xrange(nrbins):
-                for R2 in xrange(nrbins):
-                    if N1!=N2:
-                        cov_out[N1,N2,R1,R2] = 0.0
-                    if R1!=R2:
-                        cov_out[N1,N2,R1,R2] = 0.0
-                    else:
-                        cov_out[N1,N1,R1,R1] = err[N1][R1]**2.0
-                
-                    radius1[N1,N2,R1,R2] = data_x[R1]
-                    radius2[N1,N2,R1,R2] = data_x[R2]
-                    bin1[N1,N2,R1,R2] = xrange(nbins)[N1]
-                    bin2[N1,N2,R1,R2] = xrange(nbins)[N2]
-                    
-                    out_array[index,:] = bin1[N1,N2,R1,R2], bin2[N1,N2,R1,R2], radius1[N1,N2,R1,R2], radius2[N1,N2,R1,R2], cov_out[N1,N2,R1,R2], bias[N1,N2,R1,R2]
-                    print(out_array[index,:])
-                    index += 1
-    np.savetxt('/home/dvornik/GalaxyBias_link/tests/cov_test.txt', out_array)
-    return cov_out
+    return cov4d
 
 
+def make_block_diag_cov(*covs):
+        
+    import scipy.linalg
+    cov = scipy.linalg.block_diag(*covs)
 
+    return cov
 
 
 

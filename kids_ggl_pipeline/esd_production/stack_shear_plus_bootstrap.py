@@ -4,11 +4,10 @@
 # Part of the module to determine the shear
 # as a function of radius from a galaxy.
 """
-
+from __future__ import print_function
 debug = False
 
 # Import the necessary libraries
-from __future__ import print_function
 import astropy.io.fits as pyfits
 import numpy as np
 import sys

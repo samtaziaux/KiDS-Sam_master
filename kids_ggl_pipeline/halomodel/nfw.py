@@ -67,6 +67,8 @@ Notes
     -Remember that the "sharp" profile is only defined up to R=r_t!
 
 """
+from __future__ import division
+
 try:
     from itertools import izip
 except ImportError:

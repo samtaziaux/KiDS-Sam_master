@@ -275,7 +275,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     rvir_range_lin = _array([virial_radius(mass_range, rho_mean_i, 200.0)
                          for rho_mean_i in rho_mean])
     rvir_range = np.log10(rvir_range_lin)
-    rvir_range_3d = _logspace(-3.2, 4, 100, endpoint=True)
+    rvir_range_3d = _logspace(-3.2, 4, 200, endpoint=True)
     rvir_range_3d_i = _logspace(-2.5, 1.2, 25, endpoint=True)
     rvir_range_2d_i = R[0][1:]
     
@@ -623,7 +623,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
     wp_out = np.vstack((out_esd_tot_inter, out_esd_tot_inter_2))
     """
-    return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, rho_mean])
+    return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
     #return [gamma_out]
     #return [wp_out]
 

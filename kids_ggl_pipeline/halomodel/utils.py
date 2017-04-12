@@ -3,10 +3,14 @@ Auxiliary functions. This needs to be refactioned to use astropy.cosmology.
 This should also take input from the config file.
 
 """
+from __future__ import division, print_function
+
 import os
-#from astro import cosmology
 from astropy.cosmology import FlatLambdaCDM
-from itertools import izip
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 from numpy import array, exp, inf, loadtxt, median, pi
 from scipy.stats import rv_discrete
 
@@ -65,9 +69,9 @@ def r3d_from_2d(Rsat, n_Rsat, z, cgroup, Mgroup, n=300000,
     nfw_dist /= nfw_dist.sum()
     # draw random samples from a given distribution
     dist = rsample[numpy.digitize(numpy.random(n), numpy.cumsum(nfw_dist))]
-    print dist.shape
+    #print(dist.shape)
     rsat = dist[numpy.digitize(numpy.random(n), numpy.cumsum(n_Rsat))] / 1000.
-    print rsat.shape
+    #print(rsat.shape)
     return rsat
 
 def chi2(model, esd, esd_err):
@@ -144,10 +148,9 @@ def read_header(hdr):
         if len(line) == 0:
             continue
         if line[0] == 'acceptance_fraction':
-            print 'acceptance_fraction =',
-            print array(line[1].split(','))
+            print('acceptance_fraction =', array(line[1].split(',')))
         elif line[0] == 'acor':
-            print 'acor =', line[1]
+            print('acor =', line[1])
         elif line[0] == 'nwalkers':
             nwalkers = int(line[1])
         elif line[0] == 'nsteps':

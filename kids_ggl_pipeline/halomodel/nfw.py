@@ -33,10 +33,10 @@ Functions
         mass_sharp(x, tau, sigma_s)
 
     And the enclosed masses are returned by
-        mass_enclosed(x, sigma_s)
-        mass_enclosed_trunc5(x, tau, sigma_s)
-        mass_enclosed_trunc7(x, tau, sigma_s)
-        mass_enclosed_sharp(x, tau, sigma_s)
+        mass_enclosed(x, rs, sigma_s)
+        mass_enclosed_trunc5(x, rs, tau, sigma_s)
+        mass_enclosed_trunc7(x, rs, tau, sigma_s)
+        mass_enclosed_sharp(x, rs, tau, sigma_s)
 
     The surface densities can be obtained by calling
         sigma(x, sigma_s)
@@ -447,5 +447,5 @@ def T(x, tau):
 def Sigma_s(rs, delta_c, rho_c):
     return rs * delta_c * rho_c
 
-def delta(c):
-    return 200. * c**3 / (3 * (log(1.+c) - c / (1.+c)))
+def delta(c, overdensity=200.):
+    return overdensity * c**3 / (3 * (log(1.+c) - c / (1.+c)))

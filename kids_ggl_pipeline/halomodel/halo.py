@@ -285,7 +285,7 @@ def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
     b_g = trapz(mass_func.dndlnm * population * \
                 Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
                 
-    return (exp(mass_func.power) * b_g), b_g
+    return (mass_func.power * b_g), b_g
 
 
 def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
@@ -386,7 +386,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     rho_dm = np.zeros(z.shape)
     
     omegab = hmf[0].cosmo.Ob0
-    omegac = hmf[0].cosmo.Om0
+    omegac = hmf[0].cosmo.Om0-omegab
     omegav = hmf[0].cosmo.Ode0
     
     for i in xrange(z.size):

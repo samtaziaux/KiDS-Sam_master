@@ -38,6 +38,7 @@ from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d, UnivariateSpline
 from itertools import count, izip
 from time import time
+from astropy.cosmology import LambdaCDM
 
 from hmf import MassFunction
 
@@ -79,14 +80,14 @@ def memoize(function):
             memo[args] = rv
         return rv
     return wrapper
-
+"""
 #@memoize
 def Mass_Function(M_min, M_max, step, name, **cosmology_params):
     return MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step,
                         mf_fit=name, delta_h=200.0, delta_wrt='mean',
                         cut_fit=False, z2=None, nz=None, delta_c=1.686,
                         **cosmology_params)
-
+"""
 
 """
 # Components of density profile from Mohammed and Seljak 2014
@@ -357,38 +358,40 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                  dtype=np.longdouble)
                        for Mi, Mx in _izip(M_bin_min, M_bin_max)])
     #print 'hod_mass =', time() - to
-    cosmology_params = _array([])
+    transfer_params = _array([])
     for z_i in z:
-        cosmology_params = np.append(cosmology_params, {'sigma_8': sigma_8,
-                                     'H0': H0,'omegab_h2': omegab_h2,
-                                     'omegam': omegam, 'omegav': omegav, 'n': n,
-                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                     'dlnk': k_step, 'transfer_fit': 'CAMB',
-                                     'z':np.float64(z_i),
-                                     'force_flat': True})
+        transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
+                                    'n': n,
+                                    'lnk_min': lnk_min ,'lnk_max': lnk_max,
+                                    'dlnk': k_step, 'transfer_model': 'CAMB',
+                                    'z':np.float64(z_i)})
+
     # Calculation
     # Tinker10 should also be read from theta!
     #to = time()
-    #hmf = Mass_Function(M_min, M_max, M_step, "Tinker10", **cosmology_params)
     hmf = _array([])
-    for i in cosmology_params:
-        hmf_temp = Mass_Function(M_min, M_max, M_step, 'Tinker10', **i)
+    h = H0/100.0
+    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab_h2/(h**2.0), Om0=omegam, Ode0=omegav)
+    for i in transfer_params:
+        hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
+                                hmf_model='Tinker10', delta_h=200.0, delta_wrt='mean',
+                                delta_c=1.686,
+                                **i)
+        hmf_temp.update(cosmo_model=cosmo_model)
         hmf = np.append(hmf, hmf_temp)
-    #print 'mass function =', time() - to
 
     mass_func = np.zeros((z.size, mass_range.size))
     rho_mean = np.zeros(z.shape)
     rho_crit = np.zeros(z.shape)
     rho_dm = np.zeros(z.shape)
-
-    omegab = hmf[0].omegab
-    omegac = hmf[0].omegac
-    omegav = hmf[0].omegav
-    h = hmf[0].h
-
+    
+    omegab = hmf[0].cosmo.Ob0
+    omegac = hmf[0].cosmo.Om0
+    omegav = hmf[0].cosmo.Ode0
+    
     for i in xrange(z.size):
         mass_func[i] = hmf[i].dndlnm
-        rho_mean[i] = hmf[i].mean_dens_z
+        rho_mean[i] = hmf[i].mean_density
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
         rho_dm[i] = rho_mean[i] * baryons.f_dm(omegab, omegac)
 

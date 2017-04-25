@@ -35,6 +35,9 @@
 # path to the spec-z catalogue with the entry `specz_file`. If this
 # entry is not given, then it is assumed that the spec-z catalogue
 # is in the same location as the parent folder of individual patches.
+# If you want to run the pipeline on the mocks, then select the KiDS_version = 0,
+# and provide the full path and name of the used lightcone. Lenses in this case still
+# conform to the GAMA-like catalogue format.
 # The following paths work if you run the pipeline in Leiden.
 
 # Option 1:

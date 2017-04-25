@@ -625,6 +625,8 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat, \
 
 def run_kidscoord(path_kidscats, cat_version):
     # Finding the central coordinates of the KiDS fields
+    if cat_version == 0:
+        return run_kidscoord_mocks(path_kidscats, cat_version)
 
     # Load the names of all KiDS catalogues from the specified folder
     kidscatlist = os.listdir(path_kidscats)
@@ -689,6 +691,22 @@ def run_kidscoord(path_kidscats, cat_version):
             
                 kidscat_end = ''
 
+    gc.collect()
+    return kidscoord, kidscat_end
+
+
+def run_kidscoord_mocks(path_kidscats, cat_version):
+    if cat_version == 0:
+        kidscoord = dict()
+        tile = np.arange(100)
+        for i in xrange(10):
+            for j in xrange(10):
+                kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])] = [i+0.5, j+0.5, i*10+j]
+    
+        #kidscoord['mock'] = [5.0, 5.0, 1.0]
+                                           
+        kidscat_end = ''
+    
     gc.collect()
     return kidscoord, kidscat_end
 
@@ -835,6 +853,30 @@ def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
             (spec_cat['Z_B'] < srclims[1])
 
     return Z_S[srcmask], spec_weight[srcmask]
+
+
+
+def import_spec_cat_mocks(path_kidscats, kidscatname, kidscat_end, specz_file, \
+                    src_selection, cat_version):
+    
+    spec_cat = pyfits.open(path_kidscats, memmap=True)[1].data
+
+
+    Z_S = spec_cat['z_spectroscopic']
+    spec_weight = np.ones(Z_S.shape, dtype=np.float64)
+    
+    srcmask = (spec_weight==1)
+    
+    # We apply any other cuts specified by the user for Z_B
+    srclims = src_selection['z_photometric'][1]
+    if len(srclims) == 1:
+        srcmask *= (spec_cat['z_photometric'] == srclims[0])
+    else:
+        srcmask *= (srclims[0] <= spec_cat['z_photometric']) &\
+            (spec_cat['z_photometric'] < srclims[1])
+
+    return Z_S[srcmask], spec_weight[srcmask]
+
 
 
 """
@@ -1040,6 +1082,10 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
         kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
     
+    if cat_version == 0:
+        return import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
+                                 src_selection, cat_version)
+    
     # List of the ID's of all sources in the KiDS catalogue
     srcNr = kidscat['SeqNr']
     #srcNr = kidscat['SeqNr_field'] # If ever needed for p(z)
@@ -1160,6 +1206,57 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     e2 = e2[srcmask]
     tile = tile[srcmask]
 
+    return srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile
+
+
+def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
+                   src_selection, cat_version):
+    
+    # Full directory & name of the corresponding KiDS catalogue
+    kidscatfile = '%s'%path_kidscats
+    kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
+
+
+    srcRA = kidscat['x_arcmin']/60.0
+    srcDEC = kidscat['y_arcmin']/60.0
+    
+    srcNr = np.arange(srcRA.size, dtype=np.float64)
+
+    w = np.ones(srcNr.size, dtype=np.float64)
+    w = np.transpose(np.array([w, w, w, w]))
+    srcPZ = kidscat['z_photometric']
+    tile = np.ones(srcNr.size, dtype=np.float64)
+    for i in xrange(10):
+        for j in xrange(10):
+            cond = (srcRA > i) & (srcRA < i+1) & (srcDEC > j) & (srcDEC < j+1)
+            tile[cond] = i*10+j
+
+    srcm = np.zeros(srcNr.size, dtype=np.float64) # The multiplicative bias m
+
+    e1 = np.transpose(np.array([kidscat['eps_obs1'], kidscat['eps_obs1'], kidscat['eps_obs1'], kidscat['eps_obs1']]))
+    e2 = np.transpose(np.array([kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2']]))
+
+    srcmask = (srcm==0.0)
+    for param in src_selection.keys():
+        srclims = src_selection[param][1]
+        if len(srclims) == 1:
+            srcmask *= (kidscat[param] == srclims[0])
+
+    else:
+        srcmask *= (srclims[0] <= kidscat[param]) & \
+            (kidscat[param] < srclims[1])
+
+
+    srcNr = srcNr[srcmask]
+    srcRA = srcRA[srcmask]
+    srcDEC = srcDEC[srcmask]
+    w = w[srcmask]
+    srcPZ = srcPZ[srcmask]
+    srcm = srcm[srcmask]
+    e1 = e1[srcmask]
+    e2 = e2[srcmask]
+    tile = tile[srcmask]
+    
     return srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile
 
 

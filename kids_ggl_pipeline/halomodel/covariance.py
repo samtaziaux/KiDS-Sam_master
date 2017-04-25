@@ -80,12 +80,13 @@ def memoize(function):
             memo[args] = rv
         return rv
     return wrapper
-"""
+
 #@memoize
+"""
 def Mass_Function(M_min, M_max, step, name, **cosmology_params):
     return MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step,
-                        mf_fit=name, delta_h=200.0, delta_wrt='mean',
-                        cut_fit=False, z2=None, nz=None, delta_c=1.686,
+                        hmf_model=name, delta_h=200.0, delta_wrt='mean',
+                        delta_c=1.686,
                         **cosmology_params)
 """
 
@@ -177,7 +178,118 @@ def TwoHalo_gg(mass_func, norm, population, k_x, r_x, m_x):
     return (mass_func.power * b_g**2.0), b_g**2.0
 
 
-def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
+
+def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
+    
+    from kids_ggl_pipeline.esd_production.shearcode_modules import calc_Sigmacrit
+    import astropy.io.fits as fits
+    
+    zsrcbins = np.arange(0.025,3.5,0.05)
+    
+    Dcsbins = np.array((hmf[0].cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    Dc_epsilon = (hmf[0].cosmo.comoving_distance(z_epsilon).to('pc')).value
+
+    spec_cat = fits.open(spec_cat_path, memmap=True)[1].data
+    Z_S = spec_cat['z_spec']
+    spec_weight = spec_cat['spec_weight']
+    manmask = spec_cat['MASK']
+    srcmask = (manmask==0)
+
+    sigma_selection = {}
+    # 10 lens redshifts for calculation of Sigma_crit
+    lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
+    lens_comoving = np.array((hmf[0].cosmo.comoving_distance(lens_redshifts).to('pc')).value)
+            
+            
+    lens_angular = lens_comoving/(1.0+lens_redshifts)
+    k = np.zeros_like(lens_redshifts)
+            
+    for i in xrange(lens_redshifts.size):
+        srcmask *= (lens_redshifts[i]+z_epsilon <= spec_cat['Z_B']) & (spec_cat['Z_B'] < srclim)
+        srcNZ_k, spec_weight_k = Z_S[srcmask], spec_weight[srcmask]
+                    
+        srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, weights=spec_weight_k, density=1)
+        srcPZ_k = srcPZ_k/srcPZ_k.sum()
+        k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), Dcsbins, srcPZ_k, 3, Dc_epsilon)
+            
+    k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
+
+    return 1.0/k_interpolated(z_in)
+
+
+
+def cov_func(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross):
+    import progressbar
+    delta = np.eye(shape_noise.size)
+    
+    # the number of steps to fit into a half-period at high-k.
+    # 6 is better than 1e-4.
+    minsteps = 8
+    
+    # set min_k, 1e-6 should be good enough
+    mink = 1e-6
+    
+    temp_min_k = 1.0
+    
+    bar = progressbar.ProgressBar(maxval=rvir_range_2d_i.size*shape_noise.size*rvir_range_2d_i.size*shape_noise.size).start()
+    
+    for b_i, bin_i in enumerate(P_inter_2):
+        for b_j, bin_j in enumerate(P_inter_2):
+            for i, r_i in enumerate(rvir_range_2d_i):
+                for j, r_j in enumerate(rvir_range_2d_i):
+                    # getting maxk here is the important part. It must be a half multiple of
+                    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
+                    # cycles > 38 (for 1E-5 precision).
+                    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
+                    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
+                    # Now we calculate the requisite number of steps to have a good dk at hi-k.
+                    nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
+                    #nk = 10000
+                    
+                    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+                    
+                    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+                    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+                    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+                    
+                    P_gm_i = P_inter[b_i](lnk)
+                    P_gm_j = P_inter[b_j](lnk)
+                    
+                    P_gg_i = P_inter_2[b_i](lnk)
+                    P_gg_j = P_inter_2[b_j](lnk)
+                    
+                    P_mm_i = P_inter_3[b_i](lnk)
+                    P_mm_j = P_inter_3[b_j](lnk)
+                    
+                    
+                    # wp
+                    integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j])*(np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j])
+                    integ2 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j]))
+                    
+                    cov_wp[b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j] = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ1, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ2, dx=dlnk)
+                    
+                    # ESD
+                    integ3 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( np.sqrt(np.exp(P_mm_i) + shape_noise[b_i]* delta[b_i, b_j])*np.sqrt(np.exp(P_mm_j) + shape_noise[b_j]* delta[b_i, b_j]) * np.sqrt((np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j])) + np.exp(P_gm_i)*np.exp(P_gm_j) )
+                    integ4 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * (np.sqrt(np.exp(P_mm_i) + shape_noise[b_i]* delta[b_i, b_j])*np.sqrt(np.exp(P_mm_j) + shape_noise[b_j]* delta[b_i, b_j]))
+                    
+                    cov_esd[b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j] = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ3, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ4, dx=dlnk)
+                    
+                    # cross
+                    integ5 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (np.sqrt(np.exp(P_gm_i))*np.sqrt(np.exp(P_gm_j))) * np.sqrt((np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j])) )
+                    integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j]))
+                    
+                    cov_cross[b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j] = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk)
+                    
+                    
+                    
+                    
+                    bar.update((b_i+1)*(b_j+1)*(i+1)*(j+1))
+    bar.finish()
+    return cov_wp, cov_esd, cov_cross
+
+
+
+def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
           expansion=100, expansion_stars=160, n_bins=10000,
           lnk_min=-13., lnk_max=17.):
     np.seterr(divide='ignore', over='ignore', under='ignore', invalid='ignore')
@@ -264,11 +376,11 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     rho_mean = np.zeros(z.shape)
     rho_crit = np.zeros(z.shape)
     rho_dm = np.zeros(z.shape)
-    
+
     omegab = hmf[0].cosmo.Ob0
     omegac = hmf[0].cosmo.Om0-omegab
     omegav = hmf[0].cosmo.Ode0
-    
+
     for i in xrange(z.size):
         mass_func[i] = hmf[i].dndlnm
         rho_mean[i] = hmf[i].mean_density
@@ -282,7 +394,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     rvir_range_3d = _logspace(-3.2, 4, 200, endpoint=True)
     rvir_range_3d_i = _logspace(-2.5, 1.2, 25, endpoint=True)
     rvir_range_2d_i = R[0][1:]
-    
+
     # Calculating halo model
     
     if centrals:
@@ -325,7 +437,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     else:
         pop_s = np.zeros(hod_mass.shape)
     pop_g = pop_c + pop_s
-    
+
     ngal = _array([n_gal(hmf_i, pop_g_i , mass_range)
                    for hmf_i, pop_g_i in _izip(hmf, pop_g)])
         
@@ -336,36 +448,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     effective_mass_bar = _array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range) * \
                         (1.0 - baryons.f_dm(omegab, omegac))
                         for z_i, hmf_i, pop_g_i in _izip(z, hmf, pop_g)])
-    """
-    import matplotlib.pyplot as pl
-    pl.plot(mass_range, pop_c[0])
-    pl.plot(mass_range, pop_s[0])
-    pl.plot(mass_range, pop_g[0])
-                       
-    pl.plot(mass_range, pop_c[1])
-    pl.plot(mass_range, pop_s[1])
-    pl.plot(mass_range, pop_g[1])
-    
-    pl.plot(mass_range, pop_c[2])
-    pl.plot(mass_range, pop_s[2])
-    pl.plot(mass_range, pop_g[2])
-    
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.ylim([0.1, 100])
-    pl.xlim([1e10, 1e14])
-    pl.show()
-                       
-    from scipy.interpolate import InterpolatedUnivariateSpline as spline
-    nu = spline(hmf[0].nu,hmf[0].M,k=5)
-                       
-    print nu(1)
-                       
-    pl.plot(hmf[0].nu, hmf[0].M)
-    pl.yscale('log')
-    pl.show()
-    quit()
-    """
+
                    
     """
     # Power spectrum
@@ -466,7 +549,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
                     in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
                             
-    #"""
+
     # Matter - matter spectra
     Pmm_1h = F_k1 * _array([MM_analy(hmf_i, u_k_i, rho_dm_i, mass_range)
                     for hmf_i, u_k_i, rho_dm_i, beta_i in\
@@ -476,22 +559,16 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for Pmm_1h_i, hmf_i, rho_dm_i, rho_mean_i
                     in _izip(Pmm_1h, hmf, rho_dm, rho_mean)])
 
-    #"""
+
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                     for Pg_k_i in _izip(Pg_k)]
         
     P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
                     for Pgg_k_i in _izip(Pgg_k)]
-    #"""
+
     P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
                     for Pmm_i in _izip(Pmm)]
-    #"""
-                            
-                            
-    """
-    # Correlation functions
-    """
-                            
+
     xi2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
@@ -499,11 +576,6 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     xi2_2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2_2[i] = power_to_corr_ogata(P_inter_2[i], rvir_range_3d)
-    #"""
-    xi2_3 = np.zeros((M_bin_min.size,rvir_range_3d.size))
-    for i in xrange(M_bin_min.size):
-        xi2_3[i] = power_to_corr_ogata(P_inter_3[i], rvir_range_3d)
-    #"""
 
 
     """
@@ -511,7 +583,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     """
         
     sur_den2 = _array([sigma(xi2_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
-                        for xi2_i, rho_mean_i in _izip(xi2, rho_mean)])
+                           for xi2_i, rho_mean_i in _izip(xi2, rho_mean)])
     for i in xrange(M_bin_min.size):
         sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
         sur_den2[i] = fill_nan(sur_den2[i])
@@ -525,111 +597,97 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
         sur_den2_2[i] = fill_nan(sur_den2_2[i])
         w_p[i] = sur_den2_2[i]/rho_mean[i]
 
-    #"""
-    sur_den2_3 = _array([sigma(xi2_3_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
-                         for xi2_3_i, rho_mean_i in _izip(xi2_3, rho_mean)])
-    for i in xrange(M_bin_min.size):
-        sur_den2_3[i][(sur_den2_3[i] <= 0.0) | (sur_den2_3[i] >= 1e20)] = np.nan
-        sur_den2_3[i] = fill_nan(sur_den2_3[i])
-    #"""
-
-    """
-    # Excess surface density
-    """
-    #mass_range_dm = mass_range*baryons.f_dm(omegab, omegac)
-    #from dark_matter import av_delta_NFW
-    #NFW_d_sigma_av = (rho_dm/rho_mean) * \
-    #_array([av_delta_NFW(hmf.dndm, z, rho_mean, pop_c_i,
-    #mass_range,
-    #rvir_range_2d_i) / 1e12
-    #for pop_c_i in _izip(pop_c)])
-    
-    d_sur_den2 = _array([np.nan_to_num(d_sigma(sur_den2_i,
-                                               rvir_range_3d_i,
-                                               rvir_range_2d_i))
-                         for sur_den2_i in _izip(sur_den2)]) / 1e12
-    #"""
-    d_sur_den2_2 = _array([np.nan_to_num(d_sigma(sur_den2_2_i,
-                                                rvir_range_3d_i,
-                                                rvir_range_2d_i))
-                        for sur_den2_2_i in _izip(sur_den2_2)]) / 1e12
-                         
-    
-    d_sur_den2_3 = _array([np.nan_to_num(d_sigma(sur_den2_3_i,
-                                                 rvir_range_3d_i,
-                                                 rvir_range_2d_i))
-                        for sur_den2_3_i in _izip(sur_den2_3)]) / 1e12
-    #"""
-                         
-                         
-                         
-                         
-    out_esd_tot = _array([UnivariateSpline(rvir_range_2d_i,
-                        np.nan_to_num(d_sur_den2_i), s=0)
-                        for d_sur_den2_i in _izip(d_sur_den2)])
-                         
-    out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-        
-    #"""
-    out_esd_tot_2 = _array([UnivariateSpline(rvir_range_2d_i,
-                            np.nan_to_num(d_sur_den2_2_i), s=0)
-                            for d_sur_den2_2_i in _izip(d_sur_den2_2)])
-                         
-    out_esd_tot_inter_2 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-                         
-    
-    out_esd_tot_3 = _array([UnivariateSpline(rvir_range_2d_i,
-                            np.nan_to_num(d_sur_den2_3_i), s=0)
-                            for d_sur_den2_3_i in _izip(d_sur_den2_3)])
-                         
-    out_esd_tot_inter_3 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    #"""
-                         
-    for i in xrange(M_bin_min.size):
-        out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
-        out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
-
-    if include_baryons:
-        pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0)/1e12 \
-                        for Mi in izip(effective_mass_bar)])
-    else:
-        pointmass = _array([(10.0**Mi[0])/(np.pi*rvir_range_2d_i**2.0)/1e12 \
-                        for Mi in izip(Mstar)])
-                        
-    out_esd_tot_inter = out_esd_tot_inter + pointmass
-    
-    print(sigma_c, A, M_1, gamma_1, gamma_2)
-    #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
-    
-    # Add other outputs as needed. Total ESD should always be first!
-    
-    
-    # This is for w_p and esd
-    """
     sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
-    np.nan_to_num(wp_i), s=0)
-    for wp_i in _izip(w_p)])
-        
-    sur_den2_2_out_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    for i in xrange(M_bin_min.size):
-        sur_den2_2_out_inter[i] = sur_den2_2_out[i](rvir_range_2d_i)
-        
-    out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
-    wp_out = np.vstack((out_esd_tot_inter, sur_den2_2_out_inter))
-    """
-
-    # This is for ratio
-    #gamma_out = _array([gg_i/gm_i for gg_i, gm_i in _izip(out_esd_tot_inter_2, out_esd_tot_inter)])
+                                          np.nan_to_num(wp_i), s=0)
+                         for wp_i in _izip(w_p)])
     
-    # This is for esd_gg and esd_gm
-    """
-    out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
-    wp_out = np.vstack((out_esd_tot_inter, out_esd_tot_inter_2))
-    """
-    return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
-    #return [gamma_out]
-    #return [wp_out]
+    w_p_out = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
+    for i in xrange(M_bin_min.size):
+        w_p_out[i] = sur_den2_2_out[i](rvir_range_2d_i)
+
+
+
+
+    Pi_max = 100.0
+    
+    kids_area = 180* 3600.0 #To be in arminutes!
+    eff_density = 1.8 #8.53
+    kids_variance_squared = 0.076
+    z_kids = 0.6
+    
+    sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, '/home/dvornik/data2_dvornik/KidsCatalogues/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat') * hmf[0].cosmo.h
+    eff_density_in_mpc = eff_density / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
+    #shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z).value * (kids_variance_squared / eff_density_in_mpc) * 1.0/(3.0*10.0**8.0)
+    shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z).value * (eff_density_in_mpc) * 1.0/(3.0*10.0**8.0)
+    
+    radius = np.sqrt(kids_area/np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # conversion of area in deg^2 to Mpc/h!
+    
+    print(radius)
+    print(eff_density_in_mpc)
+    
+    #shape_noise = (4.7**2.0) *10.0**6.0 * 100.0 * 0.076 / (2.0 * 3.0*10.0**8.0)
+    print(shape_noise)
+    print(1.0/ngal)
+    #quit()
+
+
+    print(rvir_range_2d_i.shape)
+
+    cov_wp = np.empty((rvir_range_2d_i.size*M_bin_min.size, rvir_range_2d_i.size*M_bin_min.size))
+    cov_esd = np.empty((rvir_range_2d_i.size*M_bin_min.size, rvir_range_2d_i.size*M_bin_min.size))
+    cov_cross = np.empty((rvir_range_2d_i.size*M_bin_min.size, rvir_range_2d_i.size*M_bin_min.size))
+
+    delta = np.eye(rvir_range_2d_i.size*M_bin_min.size)
+
+    W = 2.0 * np.pi * radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
+    W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
+
+    cov_wp, cov_esd, cov_cross = cov_func(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross)
+
+
+    cor_wp = cov_wp/np.sqrt(np.outer(np.diag(cov_wp), np.diag(cov_wp.T)))
+    pl.imshow(cor_wp, interpolation='nearest')
+    pl.show()
+
+    cor_esd = cov_esd/np.sqrt(np.outer(np.diag(cov_esd), np.diag(cov_esd.T)))
+    pl.imshow(cor_esd, interpolation='nearest')
+    pl.show()
+
+
+    cor_cross = cov_cross/np.sqrt(np.outer(np.diag(cov_cross), np.diag(cov_cross.T)))
+    pl.imshow(cov_cross, interpolation='nearest')
+    pl.show()
+    
+
+
+    
+    return cov_wp, cov_esd, cov_cross, M_bin_min.size
+
 
 if __name__ == '__main__':
     print(0)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

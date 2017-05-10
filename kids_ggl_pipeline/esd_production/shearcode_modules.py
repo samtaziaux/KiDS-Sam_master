@@ -1840,7 +1840,10 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
         errorl[errorl>=data_y] = ((data_y[errorl>=data_y])*0.9999999999)
 
 
-        plt.ylim(1e-1,1e3)
+        if 'pc' in Runit:
+            plt.ylim(0.1, 1e3)
+        else:
+            plt.ylim(1e-3, 1)
 
         if plotstyle == 'log':
             plt.errorbar(data_x, data_y, yerr=[errorl,errorh], ls='', \

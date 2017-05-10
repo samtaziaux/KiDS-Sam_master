@@ -121,7 +121,13 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     combcol = []
 
     # Adding the lens ID's and the radial bins R
-    combcol.append(pyfits.Column(name='ID', format='J', array=sheardat['ID']))
+    if isinstance(sheardat['ID'][0], basestring):
+        fmt = '100A'
+    elif isinstance(sheardat['ID'][0], int):
+        fmt = 'J'
+    else:
+        fmt = 'E'
+    combcol.append(pyfits.Column(name='ID', format=fmt, array=sheardat['ID']))
     print 'Combining: ID'
 
     centers = ['Rmin', 'Rmax', 'Rcenter']

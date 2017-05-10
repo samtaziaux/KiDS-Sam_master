@@ -280,6 +280,8 @@ def run_emcee(hm_options, sampling_options, args):
             print >>hdr, ac,
     except ImportError:
         pass
+    except emcee.autocorr.AutocorrError:
+        pass
     # acor and get_autocorr_time() are the same
     #try:
         #print 'acor_time =', sampler.get_autocorr_time()

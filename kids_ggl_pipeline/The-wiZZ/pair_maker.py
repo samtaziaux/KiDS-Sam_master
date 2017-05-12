@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import _core_utils
 import _stomp_utils
@@ -8,6 +10,8 @@ import numpy as np
 import stomp
 import sys
 
+if sys.version_info[0] == 3:
+    xrange = range
 
 """
 This is the main program for running the pair finder and creating the data file

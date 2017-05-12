@@ -1,5 +1,7 @@
 ### TODO:
 ###     split core into two with one having the stomp calls and one not.
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 from astropy.cosmology import WMAP5
 from astropy.io import fits

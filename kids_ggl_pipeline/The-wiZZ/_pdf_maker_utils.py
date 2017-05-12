@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import _core_utils
 from copy import copy
@@ -9,6 +11,10 @@ import pickle
 import sys
 from _core_utils import redshift
 from __builtin__ import True
+
+if sys.version_info[0] == 3:
+    xrange = range
+
 
 def _create_linear_redshift_bin_edges(z_min, z_max, n_bins):
     

@@ -290,6 +290,16 @@ def run_emcee(hm_options, sampling_options, args):
             print >>hdr, act,
     except AttributeError:
         pass
+    except emcee.autocorr.AutocorrError:
+        pass
+    # acor and get_autocorr_time() are the same
+    #try:
+        #print 'acor_time =', sampler.get_autocorr_time()
+        #print >>hdr, '\nacor_time =',
+        #for act in sampler.get_autocorr_time():
+            #print >>hdr, act,
+    #except AttributeError:
+        #pass
     print >>hdr, '\nFinished', ctime()
     hdr.close()
     print 'Saved to', hdrfile

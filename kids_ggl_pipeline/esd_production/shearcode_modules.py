@@ -1699,7 +1699,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
     Rmax = Rbins[1:nRbins+1]/Rconst
 
     # Adding the radial bins
-    print 'galIDlist =', galIDlist, type(galIDlist[0])
+    print('galIDlist =', galIDlist, type(galIDlist[0]))
     if 'bootstrap' in purpose:
         fitscols.append(pyfits.Column(name = 'Bootstrap', format='20A', \
                                       array = galIDlist))

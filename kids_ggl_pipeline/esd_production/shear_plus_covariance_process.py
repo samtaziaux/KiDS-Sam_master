@@ -301,10 +301,10 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             print('Written:', filename)
 
 
-    if cat_version == 3:
+    if cat_version == 3 or cat_version == 0:
 
         for kidscatname in splitkidscats[Nsplit]:
-
+            
             index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
             """
             memfrac = memory.test() # Check which fraction of the memory is full
@@ -653,32 +653,32 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     tile_varlist = np.array([])
     srcPZ_a = np.array([])
     srcPZ_varlist = np.array([])
-    if cat_version == 3:
+
+    if cat_version == 3 or cat_version == 0:
         kidscatname2 = np.array([])
         for i in xrange(len(kidscats)):
             kidscatname2 = np.append(kidscatname2, \
                                      kidscats[i].rsplit('-', 1)[0])
-
         kidscatname2 = np.unique(kidscatname2)
-
+        
         print('Importing KiDS catalogs from: %s'%path_kidscats)
         i = 0
         for kidscatname in kidscatname2:
             i += 1
             print('	%i/%i:'%(i, len(kidscatname2)), kidscatname)
-
+            
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
             shear.import_kidscat(path_kidscats, kidscatname, \
                                  kidscat_end, src_selection, cat_version)
-
+                
             srcNr_varlist = np.append(srcNr_varlist, srcNr)
             srcRA_varlist = np.append(srcRA_varlist, srcRA)
             srcDEC_varlist = np.append(srcDEC_varlist, srcDEC)
             srcm_varlist = np.append(srcm_varlist, srcm)
             tile_varlist = np.append(tile_varlist, tile)
             srcPZ_varlist = np.append(srcPZ_varlist, srcPZ)
-
+                                 
             # Make ellipticity- and lfweight-lists for the variance calculation
             w_varlist = np.hstack([w_varlist, w.T])
             e1_varlist = np.hstack([e1_varlist, e1.T])
@@ -686,10 +686,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = [], [], [], \
                                                                 [], [], [], \
                                                                 [], [], []
-
+    
     # Calculating the variance of the ellipticity for this source selection
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist)
-
+    
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
@@ -748,6 +748,37 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         if wizz == True:
             print('\nThe-wiZZ is not yet supported, quitting ...')
             raise SystemExit()
+
+    if cat_version == 0:
+        print('\nCalculating the lensing efficiency ...')
+            
+        srclims = src_selection['z_photometric'][1]
+        sigma_selection = {}
+        # 10 lens redshifts for calculation of Sigma_crit
+        lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
+        #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+        #                          for y in lens_redshifts])
+        cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+        lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
+        
+            
+        lens_angular = lens_comoving/(1.0+lens_redshifts)
+        k = np.zeros_like(lens_redshifts)
+    
+        for i in xrange(lens_redshifts.size):
+            sigma_selection['z_photometric'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
+            srcNZ_k, spec_weight_k = shear.import_spec_cat_mocks(path_kidscats, kidscatname2,\
+                                    kidscat_end, specz_file, sigma_selection, \
+                                    cat_version)
+                    
+            srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, \
+                                            weights=spec_weight_k, density=1)
+            srcPZ_k = srcPZ_k/srcPZ_k.sum()
+            k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
+                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
+            
+        k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
+
 
     # Calculation of average m correctionf for KiDS-450
     if cat_version == 3:

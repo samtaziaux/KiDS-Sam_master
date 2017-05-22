@@ -137,7 +137,6 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                     #nsplit, nsplits, nobsbin, config_file, 'covariance')
         runblinds(plot_covboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
-
     return
 
 

@@ -46,6 +46,8 @@ def read_esdfiles(esdfiles):
 def make2dcov(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     # Creates 2d covariance out of KiDS-GGL pipeline output.
     # Useful for combining measurements in conjunction with make4dcov
+    # Return cov2d a 2D covariance and a per bin representation (cov)
+    
     cov = np.loadtxt(covfile, usecols=[covcols[0]])
     if len(covcols) == 2:
         cov /= np.loadtxt(covfile, usecols=[covcols[1]])
@@ -75,11 +77,13 @@ def make2dcov(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
 def make4dcov(cov2d, nbins, nrbins):
     # Creates 4d covariance out of standard 2d covariance, given bins.
     # Useful for combining measurements in conjunction with make2dcov
+    # Returns flattened and per bin representation (cov)
+
+    cov4d_i = cov2d.reshape((nbins,nrbins,nbins,nrbins))
+    cov4d = cov4d_i.transpose(2,0,3,1).flatten()
+    cov = cov4d.reshape((nbins,nbins,nrbins,nrbins))
     
-    cov4d = cov2d.reshape((nbins,nrbins,nbins,nrbins))
-    cov4d = cov4d.transpose(2,0,3,1).flatten()
-    
-    return cov4d
+    return cov4d, cov
 
 
 def make_block_diag_cov(*covs):

@@ -701,7 +701,7 @@ def run_kidscoord_mocks(path_kidscats, cat_version):
         tile = np.arange(100)
         for i in xrange(10):
             for j in xrange(10):
-                kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])] = [i+0.5, j+0.5, i*10+j]
+                kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])] = [i+0.5+150.0, j+0.5, path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])]
     
         #kidscoord['mock'] = [5.0, 5.0, 1.0]
                                            
@@ -758,6 +758,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
 
 
     kidscats = catmatch.keys() # The list of fields with lens centers in them
+    
     galIDs_infield = totgalIDs # The galaxies that have their centers in a field
 
 
@@ -1217,7 +1218,7 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
 
 
-    srcRA = kidscat['x_arcmin']/60.0
+    srcRA = (kidscat['x_arcmin']/60.0) + 150.0
     srcDEC = kidscat['y_arcmin']/60.0
     
     srcNr = np.arange(srcRA.size, dtype=np.float64)
@@ -1225,11 +1226,11 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     w = np.ones(srcNr.size, dtype=np.float64)
     w = np.transpose(np.array([w, w, w, w]))
     srcPZ = kidscat['z_photometric']
-    tile = np.ones(srcNr.size, dtype=np.float64)
+    tile = np.empty(srcNr.size, dtype=object)
     for i in xrange(10):
         for j in xrange(10):
-            cond = (srcRA > i) & (srcRA < i+1) & (srcDEC > j) & (srcDEC < j+1)
-            tile[cond] = i*10+j
+            cond = (srcRA > i+150.0) & (srcRA < i+1+150.0) & (srcDEC > j) & (srcDEC < j+1)
+            tile[cond] = path_kidscats.split('/', -1)[-1]+'-'+str(i*10+j)
 
     srcm = np.zeros(srcNr.size, dtype=np.float64) # The multiplicative bias m
 

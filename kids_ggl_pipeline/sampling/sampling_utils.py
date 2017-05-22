@@ -1,7 +1,9 @@
+from __future__ import division, print_function
+
 import numpy
 import os
 from glob import glob
-#from ConfigParser import SafeConfigParser
+
 
 def load_datapoints(datafile, datacols, exclude_bins=None):
     if isinstance(datafile, basestring):
@@ -30,7 +32,7 @@ def load_datapoints(datafile, datacols, exclude_bins=None):
         esd = numpy.array([[esdi[j] for j in xrange(len(esdi))
                             if j not in exclude_bins] for esdi in esd])
     return R, esd
-    #return R, numpy.absolute(esd)
+
 
 def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     cov = numpy.loadtxt(covfile, usecols=[covcols[0]])
@@ -46,13 +48,6 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     cov2d = cov2d.reshape((Nobsbins*(Nrbins+nexcl),
                            Nobsbins*(Nrbins+nexcl)))
     icov = numpy.linalg.inv(cov2d)
-    #import pylab
-    #from matplotlib import cm
-    #fig, axes = pylab.subplots(figsize=(12,12), ncols=2, nrows=2)
-    #axes[0][0].imshow(cov2d[::-1], interpolation='nearest', cmap=cm.jet,
-                      #vmin=0, vmax=500)
-    #axes[1][0].imshow(icov[::-1], interpolation='nearest', cmap=cm.jet,
-                      #vmin=-1, vmax=3.5)
     # are there any bins excluded?
     if exclude_bins is not None:
         for b in exclude_bins[::-1]:
@@ -73,26 +68,24 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     esd_err = numpy.sqrt(numpy.diag(cov2d)).reshape((Nobsbins,Nrbins))
     # invert
     icov = numpy.linalg.inv(cov2d)
-    #axes[0][1].imshow(cov2d[::-1], interpolation='nearest', cmap=cm.jet,
-                      #vmin=0, vmax=500)
-    #axes[1][1].imshow(icov[::-1], interpolation='nearest', cmap=cm.jet,
-                      #vmin=-1, vmax=3.5)
-    #fig.tight_layout()
-    #pylab.show()
     # reshape back into the desired shape (with the right axes order)
     icov = icov.reshape((Nobsbins,Nrbins,Nobsbins,Nrbins))
     icov = icov.transpose(2,0,3,1)
-    
+
     # Hartlap correction
     #icov = (45.0 - Nrbins - 2.0)/(45.0 - 1.0)*icov
-    
+
     return cov, icov, likenorm, esd_err, cov2d
 
-def read_config(config_file, version='0.5.7',
-                path_data='', path_covariance=''):
+
+def read_config(config_file, version='0.5.7', path_data='',
+                path_covariance=''):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
                    'fixed', 'read', 'function')
     exclude_bins = None
+    path = ''
+    path_data = ''
+    path_covariance = ''
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -100,10 +93,13 @@ def read_config(config_file, version='0.5.7',
         line = line.split()
         if len(line) == 0:
             continue
+        if line[0] == 'path':
+            path = line[1]
         if line[0] == 'path_data':
             path_data = line[1]
         if line[0] == 'data':
-            datafiles = line[1]
+            datafiles = os.path.join(path_data, line[1]).replace(
+                '<path>', path)
             datacols = [int(i) for i in line[2].split(',')]
             if len(datacols) not in (2,3):
                 msg = 'datacols must have either two or three elements'
@@ -113,7 +109,8 @@ def read_config(config_file, version='0.5.7',
         if line[0] == 'path_covariance':
             path_covariance = line[1]
         elif line[0] == 'covariance':
-            covfile = line[1]
+            covfile = os.path.join(path_covariance, line[1]).replace(
+                '<path>', path)
             covcols = [int(i) for i in line[2].split(',')]
             if len(covcols) not in (1,2):
                 msg = 'covcols must have either one or two elements'
@@ -145,11 +142,7 @@ def read_config(config_file, version='0.5.7',
             sampler_type = line[1]
         elif line[0] == 'update_freq':
             update_freq = int(line[1])
-    if path_data:
-        datafiles = os.path.join(path_data, datafiles)
     datafiles = sorted(glob(datafiles))
-    if path_covariance:
-        covfile = os.path.join(path_covariance, covfile)
     covfile = glob(covfile)
     if len(covfile) > 1:
         msg = 'ambiguous covariance filename'
@@ -163,12 +156,10 @@ def read_config(config_file, version='0.5.7',
     return out
 
 def read_function(function):
-    print 'Reading function', function
+    print('Reading function', function)
     function_path = function.split('.')
     if len(function_path) < 2:
-        msg = 'ERROR: the parent module(s) must be given with'
-        msg += 'a function'
-        print msg
+        print('ERROR: the parent module(s) must be given with a function')
         exit()
     else:
         module = __import__(function)

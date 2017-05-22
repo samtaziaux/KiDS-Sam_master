@@ -33,10 +33,10 @@ Functions
         mass_sharp(x, tau, sigma_s)
 
     And the enclosed masses are returned by
-        mass_enclosed(x, sigma_s)
-        mass_enclosed_trunc5(x, tau, sigma_s)
-        mass_enclosed_trunc7(x, tau, sigma_s)
-        mass_enclosed_sharp(x, tau, sigma_s)
+        mass_enclosed(x, rs, sigma_s)
+        mass_enclosed_trunc5(x, rs, tau, sigma_s)
+        mass_enclosed_trunc7(x, rs, tau, sigma_s)
+        mass_enclosed_sharp(x, rs, tau, sigma_s)
 
     The surface densities can be obtained by calling
         sigma(x, sigma_s)
@@ -67,7 +67,12 @@ Notes
     -Remember that the "sharp" profile is only defined up to R=r_t!
 
 """
-from itertools import izip
+from __future__ import division
+
+try:
+    from itertools import izip
+except ImportError:
+    izip = zip
 from numpy import arctan, arctanh, arccos, array, cos, \
                   hypot, log, log10, logspace, \
                   meshgrid, ones, sum as nsum, transpose, zeros
@@ -218,7 +223,10 @@ def sigma_sharp(x, tau, sigma_s):
 def barsigma(x, sigma_s):
     s = ones(x.shape)
     s[x == 0] = 0
+    #try:
     s[x == 1] = 1 + log(0.5)
+    #except IndexError:
+        #pass
     j = (x > 0) & (x < 1)
     s[j] = arctanh(((1 - x[j])/(1 + x[j]))**0.5)
     s[j] = 2 * s[j] / (1 - x[j]**2)**0.5
@@ -441,5 +449,5 @@ def T(x, tau):
 def Sigma_s(rs, delta_c, rho_c):
     return rs * delta_c * rho_c
 
-def delta(c):
-    return 200. * c**3 / (3 * (log(1.+c) - c / (1.+c)))
+def delta(c, overdensity=200.):
+    return overdensity * c**3 / (3 * (log(1.+c) - c / (1.+c)))

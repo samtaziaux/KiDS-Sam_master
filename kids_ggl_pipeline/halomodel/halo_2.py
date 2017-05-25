@@ -282,6 +282,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     rvir_range_3d = _logspace(-3.2, 4, 200, endpoint=True)
     rvir_range_3d_i = _logspace(-2.5, 1.2, 25, endpoint=True)
     rvir_range_2d_i = R[0][1:]
+    rvir_range_2d_i = np.unique(rvir_range_2d_i)
     
     # Calculating halo model
     
@@ -466,7 +467,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
                     in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
                             
-    #"""
+    """
     # Matter - matter spectra
     Pmm_1h = F_k1 * _array([MM_analy(hmf_i, u_k_i, rho_dm_i, mass_range)
                     for hmf_i, u_k_i, rho_dm_i, beta_i in\
@@ -476,16 +477,16 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for Pmm_1h_i, hmf_i, rho_dm_i, rho_mean_i
                     in _izip(Pmm_1h, hmf, rho_dm, rho_mean)])
 
-    #"""
+    """
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                     for Pg_k_i in _izip(Pg_k)]
         
     P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
                     for Pgg_k_i in _izip(Pgg_k)]
-    #"""
+    """
     P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
                     for Pmm_i in _izip(Pmm)]
-    #"""
+    """
                             
                             
     """
@@ -499,11 +500,11 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     xi2_2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2_2[i] = power_to_corr_ogata(P_inter_2[i], rvir_range_3d)
-    #"""
+    """
     xi2_3 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2_3[i] = power_to_corr_ogata(P_inter_3[i], rvir_range_3d)
-    #"""
+    """
 
 
     """
@@ -525,13 +526,13 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
         sur_den2_2[i] = fill_nan(sur_den2_2[i])
         w_p[i] = sur_den2_2[i]/rho_mean[i]
 
-    #"""
+    """
     sur_den2_3 = _array([sigma(xi2_3_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
                          for xi2_3_i, rho_mean_i in _izip(xi2_3, rho_mean)])
     for i in xrange(M_bin_min.size):
         sur_den2_3[i][(sur_den2_3[i] <= 0.0) | (sur_den2_3[i] >= 1e20)] = np.nan
         sur_den2_3[i] = fill_nan(sur_den2_3[i])
-    #"""
+    """
 
     """
     # Excess surface density
@@ -548,7 +549,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                                rvir_range_3d_i,
                                                rvir_range_2d_i))
                          for sur_den2_i in _izip(sur_den2)]) / 1e12
-    #"""
+    """
     d_sur_den2_2 = _array([np.nan_to_num(d_sigma(sur_den2_2_i,
                                                 rvir_range_3d_i,
                                                 rvir_range_2d_i))
@@ -559,7 +560,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                                  rvir_range_3d_i,
                                                  rvir_range_2d_i))
                         for sur_den2_3_i in _izip(sur_den2_3)]) / 1e12
-    #"""
+    """
                          
                          
                          
@@ -570,7 +571,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                          
     out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
         
-    #"""
+    """
     out_esd_tot_2 = _array([UnivariateSpline(rvir_range_2d_i,
                             np.nan_to_num(d_sur_den2_2_i), s=0)
                             for d_sur_den2_2_i in _izip(d_sur_den2_2)])
@@ -583,12 +584,12 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                             for d_sur_den2_3_i in _izip(d_sur_den2_3)])
                          
     out_esd_tot_inter_3 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    #"""
+    """
                          
     for i in xrange(M_bin_min.size):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
-        out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
+        #out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
+        #out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
 
     if include_baryons:
         pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0)/1e12 \
@@ -606,7 +607,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     
     
     # This is for w_p and esd
-    """
+    #"""
     sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
     np.nan_to_num(wp_i), s=0)
     for wp_i in _izip(w_p)])
@@ -617,7 +618,9 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
         
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
     wp_out = np.vstack((out_esd_tot_inter, sur_den2_2_out_inter))
-    """
+    #wp_out = wp_out.flatten()
+    #print(wp_out)
+    #"""
 
     # This is for ratio
     #gamma_out = _array([gg_i/gm_i for gg_i, gm_i in _izip(out_esd_tot_inter_2, out_esd_tot_inter)])
@@ -627,9 +630,9 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
     wp_out = np.vstack((out_esd_tot_inter, out_esd_tot_inter_2))
     """
-    return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
+    #return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
     #return [gamma_out]
-    #return [wp_out]
+    return [wp_out]
 
 if __name__ == '__main__':
     print(0)

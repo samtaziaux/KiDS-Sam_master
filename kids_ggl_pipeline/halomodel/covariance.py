@@ -216,7 +216,89 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     return 1.0/k_interpolated(z_in)
 
 
-def calc_cov(params):
+def survey_variance(mass_func, W_p, k_range):
+    
+    P_lin = mass_func.power
+    
+    integ1 = W_p(np.exp(k_range)) * np.exp(k_range)**2.0
+    v_w = 4.0*np.pi * simps(integ1, np.exp(k_range))
+    
+    integ2 = W_p(np.exp(k_range))**2.0 * np.exp(k_range)**2.0 * P_lin
+    sigma = (1.0 / (2.0*np.pi**2.0 * v_w**2.0)) * simps(integ2, np.exp(k_range))
+    
+    return sigma
+
+
+def halo_model_integrals(mass_func, uk, bias, rho_mean, ngal, population_cen, population_sat, m_x, x):
+    
+    if x == 'g':
+        integ1 = mass_func.dndm * bias * (population_cen + population_cen * population_sat * uk)
+        I = trapz(integ1, m_x, axis=1)/ngal
+    
+    if x == 'm':
+        integ2 = mass_func.dndm * bias * uk * m_x
+        I = trapz(integ2, m_x, axis=1)/rho_mean
+
+    if x == 'gg':
+        integ3 = mass_func.dndm * bias * (population_cen + population_cen * population_sat * uk)**2.0
+        I = trapz(integ3, m_x, axis=1)/(ngal**2.0)
+
+    if x == 'gm':
+        integ4 = mass_func.dndm * bias * uk * m_x * (population_cen + population_cen * population_sat * uk)
+        I = trapz(integ4, m_x, axis=1)/(rho_mean*ngal)
+
+    return I
+
+
+def calc_cov_ssc(params):
+    
+    b_i, b_j, i, j, rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g = params
+    r_i, r_j = rvir_range_2d_i[i], rvir_range_2d_i[j]
+    
+    delta = np.eye(b_g.size)
+    
+    # the number of steps to fit into a half-period at high-k.
+    # 6 is better than 1e-4.
+    minsteps = 8
+    
+    # set min_k, 1e-6 should be good enough
+    mink = 1e-6
+    
+    temp_min_k = 1.0
+    
+    # getting maxk here is the important part. It must be a half multiple of
+    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
+    # cycles > 38 (for 1E-5 precision).
+    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
+    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
+    # Now we calculate the requisite number of steps to have a good dk at hi-k.
+    nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
+    #nk = 10000
+    
+    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+    
+    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    
+    #(68./21.-deriv/3.)*ps_2h_fid+hsv[i][j]-(galaxy_bias[0][i]+galaxy_bias[1][i])*ps_tot
+    # wp
+    
+    a = 0
+    
+    # ESD
+    
+    b = 0
+    
+    # cross
+    
+    c = 0
+    
+
+    return b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j, [a, b, c]
+
+
+def calc_cov_gauss(params):
     
     b_i, b_j, i, j, rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal = params
     r_i, r_j = rvir_range_2d_i[i], rvir_range_2d_i[j]
@@ -275,8 +357,7 @@ def calc_cov(params):
     return b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j, [a, b, c]
 
 
-def cov_func(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross):
-    #import progressbar
+def cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross):
 
     b_i = xrange(len(P_inter_2))
     b_j = xrange(len(P_inter_2))
@@ -288,29 +369,12 @@ def cov_func(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_
         i.extend([rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal])
     
     pool = multi.Pool(processes=12)
-    for i, j, val in pool.map(calc_cov, paramlist):
+    for i, j, val in pool.map(calc_cov_gauss, paramlist):
         #print(i, j, val)
         cov_wp[i,j] = val[0]
         cov_esd[i,j] = val[1]
         cov_cross[i,j] = val[2]
 
-    #print(cov_wp)
-
-    
-    #bar = progressbar.ProgressBar(maxval=rvir_range_2d_i.size*shape_noise.size*rvir_range_2d_i.size*shape_noise.size).start()
-    """
-    for b_i, bin_i in enumerate(P_inter_2):
-        for b_j, bin_j in enumerate(P_inter_2):
-            for i, r_i in enumerate(rvir_range_2d_i):
-                for j, r_j in enumerate(rvir_range_2d_i):
-                    
-                    cov_wp[b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j], cov_esd[b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j], cov_cross[b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j] = calc_cov(b_i, b_j, r_i, r_j, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, delta, minsteps, mink, temp_min_k)
-    """
-                    
-                    
-                    
-                    #bar.update((b_i+1)*(b_j+1)*(i+1)*(j+1))
-    #bar.finish()
     return cov_wp, cov_esd, cov_cross
 
 
@@ -594,57 +658,60 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
                     for Pmm_i in _izip(Pmm)]
-
-    xi2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
-    for i in xrange(M_bin_min.size):
-        xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
-
-    xi2_2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
-    for i in xrange(M_bin_min.size):
-        xi2_2[i] = power_to_corr_ogata(P_inter_2[i], rvir_range_3d)
-
-
-    """
-    # Projected surface density
-    """
-        
-    sur_den2 = _array([sigma(xi2_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
-                           for xi2_i, rho_mean_i in _izip(xi2, rho_mean)])
-    for i in xrange(M_bin_min.size):
-        sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
-        sur_den2[i] = fill_nan(sur_den2[i])
-
-    sur_den2_2 = _array([rho_mean_i * wp(xi2_2_i, rvir_range_3d, rvir_range_3d_i)
-                         for xi2_2_i, rho_mean_i in _izip(xi2_2, rho_mean)])
-
-    w_p = np.zeros((M_bin_min.size,rvir_range_3d_i.size))
-    for i in xrange(M_bin_min.size):
-        sur_den2_2[i][(sur_den2_2[i] <= 0.0) | (sur_den2_2[i] >= 1e20)] = np.nan
-        sur_den2_2[i] = fill_nan(sur_den2_2[i])
-        w_p[i] = sur_den2_2[i]/rho_mean[i]
-
-    sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
-                                          np.nan_to_num(wp_i), s=0)
-                         for wp_i in _izip(w_p)])
+                    
+            
+    # Evaluate halo model integrals needed for SSC
     
-    w_p_out = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    for i in xrange(M_bin_min.size):
-        w_p_out[i] = sur_den2_2_out[i](rvir_range_2d_i)
+    I_g = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
+                                   for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                   _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                   
+    I_m = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                    
+    I_gg = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                    
+    I_gm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    
+    I_inter_g = [UnivariateSpline(k_range, np.log(I_g_i), s=0, ext=0)
+               for I_g_i in _izip(I_g)]
+               
+    I_inter_m = [UnivariateSpline(k_range, np.log(I_m_i), s=0, ext=0)
+                for I_m_i in _izip(I_m)]
+                 
+    I_inter_gg = [UnivariateSpline(k_range, np.log(I_gg_i), s=0, ext=0)
+                for I_gg_i in _izip(I_gg)]
+                 
+    I_inter_gm = [UnivariateSpline(k_range, np.log(I_gm_i), s=0, ext=0)
+                for I_gm_i in _izip(I_gm)]
+    
+    P_lin_inter = [UnivariateSpline(k_range, np.log(hmf_i.power), s=0, ext=0)
+                for hmf_i in hmf]
+               
+    k3P_lin_inter = [UnivariateSpline(k_range, np.log(k_range_lin**3.0 * hmf_i.power), s=0, ext=0)
+                for hmf_i in hmf]
+                
+    dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
 
 
-
+    # Start covariance calculations (and for now set survey details)
 
     Pi_max = 100.0
     
     kids_area = 180 * 3600.0 #500 #To be in arminutes!
-    eff_density = 2.34#8.53 #1.5#8.53
+    eff_density = 1.4#2.34#8.53 #1.5#8.53
     kids_variance_squared = 0.076#0.275#0.076
     z_kids = 0.6
     
     sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, '/home/dvornik/data2_dvornik/KidsCatalogues/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat') * hmf[0].cosmo.h
     eff_density_in_mpc = eff_density / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
-    shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (kids_variance_squared / eff_density_in_mpc)/ (3.0*10.0**8.0)
-    #shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (eff_density_in_mpc) / (3.0*10.0**8.0)
+    #shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (kids_variance_squared / eff_density_in_mpc)/ (3.0*10.0**8.0)
+    shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (eff_density_in_mpc) / (3.0*10.0**8.0)
     
     radius = np.sqrt(kids_area/np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # conversion of area in deg^2 to Mpc/h!
     
@@ -667,24 +734,11 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     W = 2.0 * np.pi * radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-
-    cov_wp, cov_esd, cov_cross = cov_func(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross)
-
-    """
-    cor_wp = cov_wp/np.sqrt(np.outer(np.diag(cov_wp), np.diag(cov_wp.T)))
-    pl.imshow(cor_wp, interpolation='nearest')
-    pl.show()
-
-    cor_esd = cov_esd/np.sqrt(np.outer(np.diag(cov_esd), np.diag(cov_esd.T)))
-    pl.imshow(cor_esd, interpolation='nearest')
-    pl.show()
-
-
-    cor_cross = cov_cross/np.sqrt(np.outer(np.diag(cov_cross), np.diag(cov_cross.T)))
-    pl.imshow(cov_cross, interpolation='nearest')
-    pl.show()
-    """
-
+    survey_var = [survey_variance(hmf_i, W_p, k_range) for hmf_i in hmf]
+    
+    
+    
+    cov_wp, cov_esd, cov_cross = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross)
     
     return cov_wp, cov_esd, cov_cross, M_bin_min.size
 

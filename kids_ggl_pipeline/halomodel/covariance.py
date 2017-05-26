@@ -216,12 +216,15 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     return 1.0/k_interpolated(z_in)
 
 
-def survey_variance(mass_func, W_p, k_range):
+def survey_variance(mass_func, W_p, k_range, volume):
+    
+    # Seems to be about right! To be checked again!.
     
     P_lin = mass_func.power
     
-    integ1 = W_p(np.exp(k_range)) * np.exp(k_range)**2.0
-    v_w = 4.0*np.pi * simps(integ1, np.exp(k_range))
+    #integ1 = W_p(np.exp(k_range)) * np.exp(k_range)**2.0
+    #v_w = 4.0*np.pi * simps(integ1, np.exp(k_range))
+    v_w = volume
     
     integ2 = W_p(np.exp(k_range))**2.0 * np.exp(k_range)**2.0 * P_lin
     sigma = (1.0 / (2.0*np.pi**2.0 * v_w**2.0)) * simps(integ2, np.exp(k_range))
@@ -247,12 +250,16 @@ def halo_model_integrals(mass_func, uk, bias, rho_mean, ngal, population_cen, po
         integ4 = mass_func.dndm * bias * uk * m_x * (population_cen + population_cen * population_sat * uk)
         I = trapz(integ4, m_x, axis=1)/(rho_mean*ngal)
 
+    if x == 'mm':
+        integ5 = mass_func.dndm * bias * (uk * m_x)**2.0
+        I = trapz(integ5, m_x, axis=1)/(rho_mean**2.0)
+
     return I
 
 
 def calc_cov_ssc(params):
     
-    b_i, b_j, i, j, rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g = params
+    b_i, b_j, i, j, rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var = params
     r_i, r_j = rvir_range_2d_i[i], rvir_range_2d_i[j]
     
     delta = np.eye(b_g.size)
@@ -281,21 +288,75 @@ def calc_cov_ssc(params):
     Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
     Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
     
-    #(68./21.-deriv/3.)*ps_2h_fid+hsv[i][j]-(galaxy_bias[0][i]+galaxy_bias[1][i])*ps_tot
+    P_gm_i = Pgm[b_i](lnk)
+    P_gm_j = Pgm[b_j](lnk)
+    
+    P_gg_i = Pgg[b_i](lnk)
+    P_gg_j = Pgg[b_j](lnk)
+    
+    P_lin_i = P_lin[b_i](lnk)
+    P_lin_j = P_lin[b_j](lnk)
+    
+    dP_lin_i = dlnP_lin[b_i](lnk)
+    dP_lin_j = dlnP_lin[b_j](lnk)
+    
+    Ig_i = I_g[b_i](lnk)
+    Ig_j = I_g[b_j](lnk)
+    
+    Im_i = I_m[b_i](lnk)
+    Im_j = I_m[b_j](lnk)
+    
+    Igg_i = I_gg[b_i](lnk)
+    Igg_j = I_gg[b_j](lnk)
+    
+    Igm_i = I_gm[b_i](lnk)
+    Igm_j = I_gm[b_j](lnk)
+    
+    # Responses
+    ps_deriv_gg = (68.0/21.0 - (1.0/3.0)*np.sqrt(dP_lin_i)*np.sqrt(dP_lin_j)) * np.sqrt(np.exp(P_lin_i))*np.sqrt(np.exp(P_lin_j)) * np.exp(Ig_i)*np.exp(Ig_j) + np.sqrt(np.exp(Igg_i))*np.sqrt(np.exp(Igg_j)) - 2.0 * np.sqrt(b_g[b_i]*b_g[b_j]) * np.sqrt(np.exp(P_gg_i))*np.sqrt(np.exp(P_gg_j))
+    
+    ps_deriv_gm = (68.0/21.0 - (1.0/3.0)*np.sqrt(dP_lin_i)*np.sqrt(dP_lin_j)) * np.sqrt(np.exp(P_lin_i))*np.sqrt(np.exp(P_lin_j)) * np.exp(Ig_i)*np.exp(Im_j) + np.sqrt(np.exp(Igm_i))*np.sqrt(np.exp(Igm_j)) - np.sqrt(b_g[b_i]*b_g[b_j]) * np.sqrt(np.exp(P_gm_i))*np.sqrt(np.exp(P_gm_j))
+    
     # wp
     
-    a = 0
+    integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * ps_deriv_gg * ps_deriv_gg
+    a = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ1, dx=dlnk)
     
     # ESD
     
-    b = 0
+    integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * ps_deriv_gm * ps_deriv_gm
+    b = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ2, dx=dlnk)
     
     # cross
     
-    c = 0
+    integ3 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * ps_deriv_gg * ps_deriv_gm
+    c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ3, dx=dlnk)
     
 
     return b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j, [a, b, c]
+
+
+def cov_ssc(rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, cov_wp, cov_esd, cov_cross):
+    
+    print('Calculating the super-sample covariance ...')
+    
+    b_i = xrange(len(Pgm))
+    b_j = xrange(len(Pgm))
+    i = xrange(len(rvir_range_2d_i))
+    j = xrange(len(rvir_range_2d_i))
+    
+    paramlist = [list(tup) for tup in itertools.product(b_i,b_j,i,j)]
+    for i in paramlist:
+        i.extend([rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var])
+
+    pool = multi.Pool(processes=12)
+    for i, j, val in pool.map(calc_cov_ssc, paramlist):
+        #print(i, j, val)
+        cov_wp[i,j] = val[0]
+        cov_esd[i,j] = val[1]
+        cov_cross[i,j] = val[2]
+    
+    return cov_wp, cov_esd, cov_cross
 
 
 def calc_cov_gauss(params):
@@ -358,6 +419,8 @@ def calc_cov_gauss(params):
 
 
 def cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross):
+
+    print('Calculating the Gaussian part of the covariance ...')
 
     b_i = xrange(len(P_inter_2))
     b_j = xrange(len(P_inter_2))
@@ -697,7 +760,26 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
                 for hmf_i in hmf]
                 
     dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
-
+    
+    
+    # Testing the response code! Seems ok, compared to the Takada & Hu.
+    """
+    I_mm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
+                   for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                   _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
+                  for I_mm_i in _izip(I_mm)]
+    
+    
+    ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_range))*np.sqrt(dlnk3P_lin_interdlnk[0](k_range))) * np.sqrt(np.exp(P_lin_inter[0](k_range)))*np.sqrt(np.exp(P_lin_inter[0](k_range))) * np.exp(I_inter_m[0](k_range))*np.exp(I_inter_m[0](k_range)) + np.sqrt(np.exp(I_inter_mm[0](k_range)))*np.sqrt(np.exp(I_inter_mm[0](k_range))) )/ (np.exp(P_inter_3[0](k_range)))
+    import matplotlib.pyplot as pl
+    pl.plot(k_range_lin, ps_deriv_mm)
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.xlim([0.01, 10])
+    pl.show()
+    quit()
+    """
 
     # Start covariance calculations (and for now set survey details)
 
@@ -734,13 +816,18 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     W = 2.0 * np.pi * radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    survey_var = [survey_variance(hmf_i, W_p, k_range) for hmf_i in hmf]
+    survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
     
     
+    #cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
+    cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
+    cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
     
-    cov_wp, cov_esd, cov_cross = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross)
+    cov_wp_tot = cov_wp_gauss + cov_wp_ssc
+    cov_esd_tot = cov_esd_gauss + cov_esd_ssc
+    cov_cross_tot = cov_cross_gauss + cov_cross_ssc
     
-    return cov_wp, cov_esd, cov_cross, M_bin_min.size
+    return cov_wp_tot, cov_esd_tot, cov_cross_tot, M_bin_min.size
 
 
 if __name__ == '__main__':

@@ -35,7 +35,8 @@ import scipy
 from numpy import arange, array, exp, linspace, logspace, ones
 from scipy import special as sp
 from scipy.integrate import simps, trapz
-from scipy.interpolate import interp1d, UnivariateSpline
+from scipy.interpolate import interp1d, interp2d, UnivariateSpline, \
+    SmoothBivariateSpline, RectBivariateSpline
 from itertools import count, izip
 import itertools
 from time import time
@@ -255,30 +256,42 @@ def pt_kernel_f3(k1, k2, mu):
     trispec_matter_klim = 0.001
 
 
-    if ((1.0-mu) < trispec_matter_mulim) and (np.absolute(k1-k2) < trispec_matter_klim):
-        k_m = 0.0 #avoid nan in sqrt
-        mu_1m = 0.0   #undefined
-        alpha_m = 1.0
-        beta_m = 0.0  # undefined
+    if np.absolute(k1-k2) < trispec_matter_klim:
+        k_m = np.zeros(mu.shape) #avoid nan in sqrt
+        mu_1m = np.zeros(mu.shape)   #undefined
+        alpha_m = np.ones(mu.shape)
+        beta_m = np.zeros(mu.shape)  # undefined
     
     else:
+
         k_m = np.sqrt(k1*k1 + k2*k2 - 2.0*k1*k2*mu) # |k_-|
         mu_1m = (k2/k_m)*mu - (k1/k_m) # (k1*k_-)/[k1 k_-]
         alpha_m = pt_kernel_alpha(k_m, k1, mu_1m)
         beta_m = pt_kernel_beta(k1, k_m, mu_1m)
+    
+        k_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        mu_1m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        alpha_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        beta_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         
-            
-    if ((mu+1.0) < trispec_matter_mulim) and (np.absolute(k1-k2) < trispec_matter_klim):
-        k_p = 0.0 # avoid nan in sqrt
-        mu_1p = 0.0 # undefined
-        alpha_p = 1.0
-        beta_p = 0.0 # undefined
+
+    if np.absolute(k1-k2) < trispec_matter_klim:
+        k_p = np.zeros(mu.shape) # avoid nan in sqrt
+        mu_1p = np.zeros(mu.shape) # undefined
+        alpha_p = np.ones(mu.shape)
+        beta_p = np.zeros(mu.shape) # undefined
         
     else:
+
         k_p = np.sqrt(k1*k1 + k2*k2 + 2.0*k1*k2*mu) # |k_+|
         mu_1p = (k1/k_p) + mu*(k2/k_p) # (k1*k_+)/[k1 k_+]
         alpha_p = pt_kernel_alpha(k_p, k1, (-1.0)*mu_1p)
         beta_p = pt_kernel_beta(k1, k_p, (-1.0)*mu_1p)
+    
+        k_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        mu_1p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        alpha_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        beta_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         
             
     F2_plus=pt_kernel_f2(k1, k2, mu)
@@ -286,7 +299,7 @@ def pt_kernel_f3(k1, k2, mu):
     G2_plus=pt_kernel_g2(k1, k2, mu)
     G2_minus=pt_kernel_g2(k1, k2, (-1.)*mu)
 
-    return ((7.0/54.0)*(alpha_m*F2_minus+alpha_p*mu_1p)*F2_plus) + (4.//54.0)*(beta_m*G2_minus+beta_p*G2_plus) + (7.0/54.0)*(alpha_m*G2_minus+alpha_p*G2_plus))
+    return ((7.0/54.0)*(alpha_m*F2_minus+alpha_p*mu_1p*F2_plus) + (4.//54.0)*(beta_m*G2_minus+beta_p*G2_plus) + (7.0/54.0)*(alpha_m*G2_minus+alpha_p*G2_plus))
 
 
 def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
@@ -295,15 +308,16 @@ def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
     trispec_matter_klim = 0.001
     
     
-    if ((1.0-mu) < trispec_matter_mulim) and (np.absolute(k1-k2) < trispec_matter_klim):
-        k_m = 0.0 #avoid nan in sqrt
-        mu_1m = 0.0   #undefined
-        mu_2m = 0.0
-        p_m = 0.0
-        F2_1m = 0.0  # undefined
-        F2_2m = 0.0
+    if np.absolute(k1-k2) < trispec_matter_klim:
+        k_m = np.zeros(mu.shape) #avoid nan in sqrt
+        mu_1m = np.zeros(mu.shape)   #undefined
+        mu_2m = np.zeros(mu.shape)
+        p_m = np.zeros(mu.shape)
+        F2_1m = np.zeros(mu.shape)  # undefined
+        F2_2m = np.zeros(mu.shape)
     
     else:
+
         k_m = np.sqrt(k1*k1 + k2*k2 - 2.0*k1*k2*mu) # |k_-|
         mu_1m = (k2/k_m)*mu - (k1/k_m) # (k1*k_-)/[k1 k_-]
         mu_2m = (k2/k_m) - mu*(k1/k_m) # (k2*k_-)/[k2 k_-]
@@ -311,22 +325,37 @@ def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
         F2_1m = pt_kernel_f2(k1, k_m, mu_1m)
         F2_2m = pt_kernel_f2(k2, k_m, (-1.0)*mu_2m)
     
+        k_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        mu_1m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        mu_2m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        p_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        F2_1m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        F2_2m[((1.0-mu) < trispec_matter_mulim)] = 0.0
     
-    if ((mu+1.0) < trispec_matter_mulim) and (np.absolute(k1-k2) < trispec_matter_klim):
-        k_p = 0.0 #avoid nan in sqrt
-        mu_1p = 0.0   #undefined
-        mu_2p = 0.0
-        p_p = 0.0
-        F2_1p = 0.0  # undefined
-        F2_2p = 0.0
+
+    if np.absolute(k1-k2) < trispec_matter_klim:
+        k_p = np.zeros(mu.shape) #avoid nan in sqrt
+        mu_1p = np.zeros(mu.shape)   #undefined
+        mu_2p = np.zeros(mu.shape)
+        p_p = np.zeros(mu.shape)
+        F2_1p = np.zeros(mu.shape)  # undefined
+        F2_2p = np.zeros(mu.shape)
     
     else:
+
         k_p = np.sqrt(k1*k1 + k2*k2 - 2.0*k1*k2*mu) # |k_+|
         mu_1p = (k1/k_p) + mu*(k2/k_p) # (k1*k_+)/[k1 k_+]
         mu_2p = (k1/k_p)*mu + (k2/k_p) # (k2*k_+)/[k2 k_+]
         p_p = np.exp(P_lin_inter(np.log(k_p)))
         F2_1p = pt_kernel_f2(k1, k_p, mu_1p)
         F2_2p = pt_kernel_f2(k2, k_p, (-1.0)*mu_2p)
+    
+        k_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        mu_1p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        mu_2p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        p_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        F2_1p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        F2_2p[((mu+1.0) < trispec_matter_mulim)] = 0.0
 
 
     p1 = np.exp(P_lin_inter(np.log(k1)))
@@ -346,15 +375,18 @@ def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
 
 def bispec_parallel_pt(k1, k2, mu, P_lin_inter):
     
+    trispec_matter_mulim = 0.001
+    trispec_matter_klim = 0.001
+    
     p1 = np.exp(P_lin_inter(np.log(k1)))
     p2 = np.exp(P_lin_inter(np.log(k2)))
     
     term1 = 2.0 * pt_kernel_f2(k1, k2 ,mu)*p1*p2
     
-    if ((mu+1.0) < trispec_matter_mulim) and (np.absolute(k1-k2) < trispec_matter_klim):
-        k_p = 0.0
-        term2 = 0.0
-        term3 = 0.0
+    if np.absolute(k1-k2) < trispec_matter_klim:
+        k_p = np.zeros(mu.shape)
+        term2 = np.zeros(mu.shape)
+        term3 = np.zeros(mu.shape)
 
     else:
         k_p = np.sqrt(k1*k1 + k2*k2 - 2.0*k1*k2*mu)
@@ -363,26 +395,43 @@ def bispec_parallel_pt(k1, k2, mu, P_lin_inter):
         mu_2p = (k1/k_p)*mu + (k2/k_p) # (k2*k_+)/[k2 k_+]
         term2 = 2.0*pt_kernel_f2(k1, k_p, (-1.)*mu_1p)*p1*p_p
         term3 = 2.0*pt_kernel_f2(k2, k_p, (-1.)*mu_2p)*p2*p_p
+    
+        k_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        term2[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        term3[((mu+1.0) < trispec_matter_mulim)] = 0.0
 
-    return term1 + term2 + term4
+    return term1 + term2 + term3
+
 
 # These are integrated over 2PI to get the angular average, for each k1, k2 combination!
 def intg_for_trispec_matter_parallel_2h(k1, k2, x, P_lin_inter):
+    trispec_matter_mulim = 0.001
+    trispec_matter_klim = 0.001
     mu = np.cos(x)
-    if ((1.0-mu) < trispec_matter_mulim) and (np.absolute(k1-k2) < trispec_matter_klim):
-        k_m = 0.0
+    if np.absolute(k1-k2) < trispec_matter_klim:
+        k_m = np.zeros(mu.shape)
+        p_m = np.zeros(mu.shape)
     else:
         k_m = np.sqrt(k1*k1 + k2*k2 - 2.0*k1*k2*mu)
-    if ((mu+1.0) < trispec_matter_mulim) and (np.absolute(k1-k2) < trispec_matter_klim):
-        k_p = 0.0
+        p_m = np.exp(P_lin_inter(np.log(k_m)))
+        k_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+        p_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
+
+    if np.absolute(k1-k2) < trispec_matter_klim:
+        k_p = np.zeros(mu.shape)
+        p_p = np.zeros(mu.shape)
     else:
         k_p = np.sqrt(k1*k1 + k2*k2 - 2.0*k1*k2*mu)
-    return (np.exp(P_lin_inter(np.log(k_p))) + np.exp(P_lin_inter(np.log(k_m))))
+        p_p = np.exp(P_lin_inter(np.log(k_p)))
+        k_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+        p_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
+
+    return p_p + p_m
 
 
 def intg_for_trispec_matter_parallel_3h(k1, k2, x, P_lin_inter):
     mu = np.cos(x)
-    return (bispec_parallel_pt(k1, k2, mu, P_lin_inter) + bispec_parallel_pt(k1, k2, (-1.0)*mu, P_lin_inter))
+    return bispec_parallel_pt(k1, k2, mu, P_lin_inter) + bispec_parallel_pt(k1, k2, (-1.0)*mu, P_lin_inter)
 
 
 def intg_for_trispec_matter_parallel_4h(k1, k2, x, P_lin_inter):
@@ -390,6 +439,57 @@ def intg_for_trispec_matter_parallel_4h(k1, k2, x, P_lin_inter):
     return trispec_parallel_pt(k1, k2, mu, P_lin_inter)
 
 
+def trispectra_234h(k_range_lin, P_lin_inter, Im, Imm, Immm):
+    
+    trispec_2h = np.zeros((k_range_lin.size, k_range_lin.size))
+    trispec_3h = np.zeros((k_range_lin.size, k_range_lin.size))
+    trispec_4h = np.zeros((k_range_lin.size, k_range_lin.size))
+    
+    x = np.linspace(0.0, np.pi, 100, endpoint=True)
+    
+    for i, k1 in enumerate(k_range_lin):
+        for j, k2 in enumerate(k_range_lin):
+            trispec_2h[i,j] = 2.0 * np.cbrt(np.exp(Immm(np.log(k1)))) * np.cbrt(np.exp(Immm(np.log(k1)))) * np.cbrt(np.exp(Immm(np.log(k2)))) * np.exp(Im(np.log(k1))) * np.exp(P_lin_inter(np.log(k1))) + 2.0 * np.cbrt(np.exp(Immm(np.log(k1)))) * np.cbrt(np.exp(Immm(np.log(k2)))) * np.cbrt(np.exp(Immm(np.log(k2)))) * np.exp(Im(np.log(k2))) * np.exp(P_lin_inter(np.log(k2))) + np.exp(Imm(np.log(k1))) * np.exp(Imm(np.log(k2))) * trapz(intg_for_trispec_matter_parallel_2h(k1, k2, x, P_lin_inter), x)/np.pi
+            trispec_3h[i,j] = 2.0 * np.sqrt(np.exp(Imm(np.log(k1)))) * np.sqrt(np.exp(Imm(np.log(k2)))) * np.exp(Im(np.log(k1))) * np.exp(Im(np.log(k2))) * trapz(intg_for_trispec_matter_parallel_3h(k1, k2, x, P_lin_inter), x)/np.pi
+            trispec_4h[i,j] = np.exp(Im(np.log(k1)))**2.0 * np.exp(Im(np.log(k2)))**2.0 * trapz(intg_for_trispec_matter_parallel_4h(k1, k2, x, P_lin_inter), x)/np.pi
+
+    trispec_2h = np.nan_to_num(trispec_2h)
+    trispec_3h = np.nan_to_num(trispec_3h)
+    trispec_4h = np.nan_to_num(trispec_4h)
+
+
+    trispec_tot = trispec_2h + trispec_3h + trispec_4h
+    trispec_tot_interp = RectBivariateSpline(k_range_lin, k_range_lin, trispec_tot)
+
+    return trispec_tot_interp
+
+
+def trispectra_1h(k_range_lin, mass_func, uk, rho_mean, ngal, population_cen, population_sat, m_x, x):
+    
+    #trispec_1h = np.zeros((k_range_lin.size, k_range_lin.size))
+    
+    u_g = (population_cen + population_cen * population_sat * uk)
+    u_m = m_x * uk
+    norm_g = ngal
+    norm_m = rho_mean
+
+    if x == 'gmgm':
+        integ1 = mass_func.dndm * u_g * u_m
+        integ2 = mass_func.dndm * u_g * u_m
+        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_g*norm_m)), (trapz(integ2, m_x, axis=1)/(norm_g*norm_m)))
+    
+    if x == 'gggm':
+        integ1 = mass_func.dndm * u_g * u_g
+        integ2 = mass_func.dndm * u_g * u_m
+        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_g*norm_g)), (trapz(integ2, m_x, axis=1)/(norm_g*norm_m)))
+    
+    if x == 'gggg':
+        integ1 = mass_func.dndm * u_g * u_g
+        integ2 = mass_func.dndm * u_g * u_g
+        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_g*norm_g)), (trapz(integ2, m_x, axis=1)/(norm_g*norm_g)))
+
+    trispec_1h_interp = RectBivariateSpline(k_range_lin, k_range_lin, trispec_1h)
+    return trispec_1h_interp
 
 
 def halo_model_integrals(mass_func, uk, bias, rho_mean, ngal, population_cen, population_sat, m_x, x):
@@ -983,9 +1083,54 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
     
     
-    #cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
-    cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
-    cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
+    # Test non-Gaussian
+    I_mm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
+                   for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                   _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+        
+    I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
+                    for I_mm_i in _izip(I_mm)]
+                    
+    I_mmm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mmm')
+                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                    
+    I_inter_mmm = [UnivariateSpline(k_range, np.log(I_mmm_i), s=0, ext=0)
+                    for I_mmm_i in _izip(I_mmm)]
+
+    k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
+    k_temp_lin = np.exp(k_temp)
+    
+    
+    #test_1h = trispectra_1h(k_range_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, 'gggg')
+    #test_1h = test_1h(k_range_lin, k_range_lin)
+    import matplotlib.pyplot as pl
+    #pl.imshow(test_1h, interpolation='nearest')
+    #pl.show()
+    #print(test_1h)
+
+    test = trispectra_234h(k_temp_lin, P_lin_inter[0], I_inter_m[0], I_inter_mm[0], I_inter_mmm[0])
+    #test = test(k_range_lin, k_range_lin)
+    #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
+    
+    test_int = integrate_trispectra(k_range_lin, test, np.pi*radius**2.0*Pi_max)
+    
+    pl.imshow(test_int, interpolation='nearest')
+    pl.show()
+    print(test)
+    
+    
+    #pl.plot(k_range_lin, np.diag(test_1h))
+    pl.plot(k_temp_lin, np.diag(test))
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.show()
+    
+    quit()
+    cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
+    cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
+    #cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
+    #cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
     
     cov_wp_tot = cov_wp_gauss + cov_wp_ssc
     cov_esd_tot = cov_esd_gauss + cov_esd_ssc

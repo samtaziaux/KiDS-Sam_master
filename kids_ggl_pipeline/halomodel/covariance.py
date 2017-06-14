@@ -489,6 +489,11 @@ def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, populat
         integ2 = mass_func.dndm * u_g * u_g
         trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_g*norm_g)), (trapz(integ2, m_x, axis=1)/(norm_g*norm_g)))
 
+    if x == 'mmmm':
+        integ1 = mass_func.dndm * u_m * u_m
+        integ2 = mass_func.dndm * u_m * u_m
+        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_m*norm_m)), (trapz(integ2, m_x, axis=1)/(norm_m*norm_m)))
+
     #x,y = np.meshgrid(krange, krange)
     trispec_1h_interp = RectBivariateSpline(krange, krange, trispec_1h, kx=1, ky=1)
     #trispec_1h_interp = interp2d(krange, krange, trispec_1h)
@@ -547,8 +552,8 @@ def calc_cov_non_gauss(params):
     maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
     # Now we calculate the requisite number of steps to have a good dk at hi-k.
     nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
-    if nk > 1000:
-        nk = 1000
+    if nk > 10000:
+        nk = 10000
     
     lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
     
@@ -568,18 +573,19 @@ def calc_cov_non_gauss(params):
     Tgggm_j = Tgggm[b_j](np.exp(lnk), np.exp(lnk))
     Tgggg_j = Tgggg[b_j](np.exp(lnk), np.exp(lnk))
 
-    integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * np.sqrt(Tgggg_i * Tgggg_j) + b_g[b_i]*b_g[b_i]*b_g[b_j]*b_g[b_j]*np.sqrt(T234_i * T234_j)
-    integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * np.sqrt(Tgmgm_i * Tgmgm_j) + b_g[b_i]*b_g[b_j]*np.sqrt(T234_i * T234_j)
-    integ3 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * np.sqrt(Tgggm_i * Tgggm_j) + b_g[b_i]*b_g[b_j]*np.sqrt(b_g[b_i]*b_g[b_j])*np.sqrt(T234_i * T234_j)
+    integ1 = np.outer(np.exp(lnk)**(1.0) * sp.jv(0, np.exp(lnk) * r_i), np.exp(lnk)**(1.0) * sp.jv(0, np.exp(lnk) * r_j)) * (np.sqrt(Tgggg_i * Tgggg_j) + b_g[b_i]*b_g[b_i]*b_g[b_j]*b_g[b_j]*np.sqrt(T234_i * T234_j))
+    integ2 = np.outer(np.exp(lnk)**(1.0) * sp.jv(2, np.exp(lnk) * r_i), np.exp(lnk)**(1.0) * sp.jv(2, np.exp(lnk) * r_j)) * (np.sqrt(Tgmgm_i * Tgmgm_j) + b_g[b_i]*b_g[b_j]*np.sqrt(T234_i * T234_j))
+    integ3 = np.outer(np.exp(lnk)**(1.0) * sp.jv(0, np.exp(lnk) * r_i), np.exp(lnk)**(1.0) * sp.jv(2, np.exp(lnk) * r_j)) * (np.sqrt(Tgggm_i * Tgggm_j) + b_g[b_i]*b_g[b_j]*np.sqrt(b_g[b_i]*b_g[b_j])*np.sqrt(T234_i * T234_j))
 
-    I_wp = trapz(trapz(integ1, dx=dlnk, axis=0), dx=dlnk)/volume
-    I_esd = trapz(trapz(integ2, dx=dlnk, axis=0), dx=dlnk)/volume
-    I_cross = trapz(trapz(integ3, dx=dlnk, axis=0), dx=dlnk)/volume
+    T234_i, T234_j, Tgmgm_i, Tgmgm_j, Tgggm_i, Tgggm_j, Tgggg_i, Tgggg_j = [], [], [], [], [], [], [], []
+
+    I_wp = trapz(trapz(integ1, dx=dlnk, axis=0), dx=dlnk)/(4.0*np.pi*np.pi*volume)
+    I_esd = trapz(trapz(integ2, dx=dlnk, axis=0), dx=dlnk)/(4.0*np.pi*np.pi*volume)
+    I_cross = trapz(trapz(integ3, dx=dlnk, axis=0), dx=dlnk)/(4.0*np.pi*np.pi*volume)
 
     a = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_wp
     b = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_esd
     c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_cross
-    
     
     return b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j, [a, b, c]
 
@@ -1112,25 +1118,6 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
     
     
-    # Testing the response code! Seems ok, compared to the Takada & Hu.
-    """
-    I_mm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
-                   for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                   _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
-    I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
-                  for I_mm_i in _izip(I_mm)]
-    
-    
-    ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_range))*np.sqrt(dlnk3P_lin_interdlnk[0](k_range))) * np.sqrt(np.exp(P_lin_inter[0](k_range)))*np.sqrt(np.exp(P_lin_inter[0](k_range))) * np.exp(I_inter_m[0](k_range))*np.exp(I_inter_m[0](k_range)) + np.sqrt(np.exp(I_inter_mm[0](k_range)))*np.sqrt(np.exp(I_inter_mm[0](k_range))) )/ (np.exp(P_inter_3[0](k_range)))
-    import matplotlib.pyplot as pl
-    pl.plot(k_range_lin, ps_deriv_mm)
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.xlim([0.01, 10])
-    pl.show()
-    quit()
-    """
-
     # Start covariance calculations (and for now set survey details)
 
     Pi_max = 100.0
@@ -1184,9 +1171,9 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     I_inter_mmm = [UnivariateSpline(k_range, np.log(I_mmm_i), s=0, ext=0)
                     for I_mmm_i in _izip(I_mmm)]
     print('Halo integrals done.')
-    k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
+    k_temp = np.linspace(lnk_min, lnk_max, 300, endpoint=True)
     k_temp_lin = np.exp(k_temp)
-    
+    #"""
     global Tgggg, Tgggm, Tgmgm, T234h
     
     Tgggg = _array([trispectra_1h(k_range_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gggg')
@@ -1204,44 +1191,59 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     T234h = _array([trispectra_234h(k_temp_lin, P_lin_inter_i, I_inter_m_i, I_inter_mm_i, I_inter_mmm_i)
                     for P_lin_inter_i, I_inter_m_i, I_inter_mm_i, I_inter_mmm_i in
                     _izip(P_lin_inter, I_inter_m, I_inter_mm, I_inter_mmm)])
-    
+    #"""
     print('Trispectra done.')
+    """
+    ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_mm[0](k_temp)))*np.sqrt(np.exp(I_inter_mm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
     
-    #test_1h = trispectra_1h(k_range_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, 'gmgm')
-    #test_1h = test_1h(k_temp_lin, k_temp_lin)
-    #import matplotlib.pyplot as pl
+    test_1h = trispectra_1h(k_range_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, 'mmmm')
+    test_1h = test_1h(k_temp_lin, k_temp_lin)
+    import matplotlib.pyplot as pl
     #pl.imshow(test_1h, interpolation='nearest')
     #pl.show()
     #print(test_1h)
 
-    #test = trispectra_234h(k_temp_lin, P_lin_inter[0], I_inter_m[0], I_inter_mm[0], I_inter_mmm[0])
-    #test = bias_out[0]**2.0 * test(k_temp_lin, k_temp_lin)
+    test = trispectra_234h(k_temp_lin, P_lin_inter[0], I_inter_m[0], I_inter_mm[0], I_inter_mmm[0])
+    test = bias_out[0]**4.0 * test(k_temp_lin, k_temp_lin)
     #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
-    
+    test_tot = test_1h + test
 
     #pl.imshow(test + test_1h, interpolation='nearest')
     #pl.show()
     #print(test)
     
+    pl.plot(k_temp_lin, ps_deriv_mm)
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.xlim([0.01, 1.15])
+    pl.ylim([0.15, 3.1])
+    pl.show()
+    
     
     #pl.plot(k_range_lin, np.diag(test_1h))
-    #pl.plot(k_temp_lin, np.diag(test))
-    #pl.xscale('log')
+    pl.plot(k_temp_lin, np.sqrt(np.diag(test_tot/(np.pi*radius**2.0*Pi_max))/((np.exp(P_inter_3[0](np.log(k_temp_lin))))**2.0)), color='black')
+    pl.plot(k_temp_lin, np.sqrt(np.diag(test/(np.pi*radius**2.0*Pi_max))/((np.exp(P_inter_3[0](np.log(k_temp_lin))))**2.0)), color='orange', ls='-.')
+    pl.plot(k_temp_lin, np.sqrt(np.diag(test_1h/(np.pi*radius**2.0*Pi_max))/((np.exp(P_inter_3[0](np.log(k_temp_lin))))**2.0)), color='orange', ls='--')
+    pl.plot(k_temp_lin, np.sqrt((survey_var[0] * ps_deriv_mm**2.0)), color='blue')
+    pl.xscale('log')
+    pl.xlim([0.01, 1])
+    pl.ylim([0.0, 0.08])
     #pl.yscale('log')
-    #pl.show()
+    pl.show()
     
-    #quit()
-    cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
-    cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
-    #cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
-    #cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
+    quit()
+    """
+    #cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
+    #cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
+    cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
+    cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
     
-    cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_non_gauss(rvir_range_2d_i, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
-    #cov_non_gauss(rvir_range_2d_i, Tgmgm, Tgggg, Tgggm, T234h, b_g, volume, cov_wp, cov_esd, cov_cross)
+    cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
+    #cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
     
-    cov_wp_tot = cov_wp_gauss + cov_wp_ssc
-    cov_esd_tot = cov_esd_gauss + cov_esd_ssc
-    cov_cross_tot = cov_cross_gauss + cov_cross_ssc
+    cov_wp_tot = cov_wp_gauss + cov_wp_ssc + cov_wp_non_gauss
+    cov_esd_tot = cov_esd_gauss + cov_esd_ssc + cov_esd_non_gauss
+    cov_cross_tot = cov_cross_gauss + cov_cross_ssc + cov_cross_non_gauss
     
     return cov_wp_tot, cov_esd_tot, cov_cross_tot, M_bin_min.size
 

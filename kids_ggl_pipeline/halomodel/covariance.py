@@ -34,7 +34,7 @@ import matplotlib.pyplot as pl
 import scipy
 from numpy import arange, array, exp, linspace, logspace, ones
 from scipy import special as sp
-from scipy.integrate import simps, trapz
+from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, interp2d, UnivariateSpline, \
     SmoothBivariateSpline, RectBivariateSpline, interpn, RegularGridInterpolator
 from itertools import count, izip
@@ -232,8 +232,8 @@ def survey_variance(mass_func, W_p, k_range, volume):
     
     return sigma
 
-# Routines for T_xxxx - connected (non-Gaussian) part of the covariance
 
+# Routines for T_xxxx - connected (non-Gaussian) part of the covariance
 # This is following Pielorz et al. 2010 (see also Benjamin's implementation)
 def pt_kernel_alpha(k1, k2, mu):
     return 1.0 + ((k2/k1) * mu)
@@ -244,11 +244,11 @@ def pt_kernel_beta(k1, k2, mu):
 
 
 def pt_kernel_f2(k1, k2, mu):
-    return 5.0/7.0 + (2.0/7.0) * mu**2.0 + 0.5 * mu * (k1/k2 + k2/k1)
+    return 5.0/7.0 + ((2.0/7.0) * mu**2.0) + (0.5 * mu * (k1/k2 + k2/k1))
 
 
 def pt_kernel_g2(k1, k2, mu):
-    return 3.0/7.0 + (4.0/7.0) * mu**2.0 + 0.5 * mu * (k1/k2 + k2/k1)
+    return 3.0/7.0 + ((4.0/7.0) * mu**2.0) + (0.5 * mu * (k1/k2 + k2/k1))
 
 
 def pt_kernel_f3(k1, k2, mu):
@@ -256,26 +256,26 @@ def pt_kernel_f3(k1, k2, mu):
     trispec_matter_klim = 0.001
 
 
-    if np.absolute(k1-k2) < trispec_matter_klim:
+    if np.fabs(k1-k2) < trispec_matter_klim:
         k_m = np.zeros(mu.shape) #avoid nan in sqrt
         mu_1m = np.zeros(mu.shape)   #undefined
         alpha_m = np.ones(mu.shape)
         beta_m = np.zeros(mu.shape)  # undefined
     
     else:
-
+    
         k_m = np.sqrt(k1*k1 + k2*k2 - 2.0*k1*k2*mu) # |k_-|
         mu_1m = (k2/k_m)*mu - (k1/k_m) # (k1*k_-)/[k1 k_-]
         alpha_m = pt_kernel_alpha(k_m, k1, mu_1m)
         beta_m = pt_kernel_beta(k1, k_m, mu_1m)
-    
+        
         k_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         mu_1m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         alpha_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         beta_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         
 
-    if np.absolute(k1-k2) < trispec_matter_klim:
+    if np.fabs(k1-k2) < trispec_matter_klim:
         k_p = np.zeros(mu.shape) # avoid nan in sqrt
         mu_1p = np.zeros(mu.shape) # undefined
         alpha_p = np.ones(mu.shape)
@@ -287,7 +287,7 @@ def pt_kernel_f3(k1, k2, mu):
         mu_1p = (k1/k_p) + mu*(k2/k_p) # (k1*k_+)/[k1 k_+]
         alpha_p = pt_kernel_alpha(k_p, k1, (-1.0)*mu_1p)
         beta_p = pt_kernel_beta(k1, k_p, (-1.0)*mu_1p)
-    
+        
         k_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         mu_1p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         alpha_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
@@ -299,7 +299,7 @@ def pt_kernel_f3(k1, k2, mu):
     G2_plus=pt_kernel_g2(k1, k2, mu)
     G2_minus=pt_kernel_g2(k1, k2, (-1.)*mu)
 
-    return ((7.0/54.0)*(alpha_m*F2_minus+alpha_p*mu_1p*F2_plus) + (4.//54.0)*(beta_m*G2_minus+beta_p*G2_plus) + (7.0/54.0)*(alpha_m*G2_minus+alpha_p*G2_plus))
+    return ((7.0/54.0)*(alpha_m*F2_minus+alpha_p*mu_1p*F2_plus) + (4.0/54.0)*(beta_m*G2_minus+beta_p*G2_plus) + (7.0/54.0)*(alpha_m*G2_minus+alpha_p*G2_plus))
 
 
 def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
@@ -308,7 +308,7 @@ def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
     trispec_matter_klim = 0.001
     
     
-    if np.absolute(k1-k2) < trispec_matter_klim:
+    if np.fabs(k1-k2) < trispec_matter_klim:
         k_m = np.zeros(mu.shape) #avoid nan in sqrt
         mu_1m = np.zeros(mu.shape)   #undefined
         mu_2m = np.zeros(mu.shape)
@@ -324,16 +324,16 @@ def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
         p_m = np.exp(P_lin_inter(np.log(k_m)))
         F2_1m = pt_kernel_f2(k1, k_m, mu_1m)
         F2_2m = pt_kernel_f2(k2, k_m, (-1.0)*mu_2m)
-    
+        
         k_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         mu_1m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         mu_2m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         p_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         F2_1m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         F2_2m[((1.0-mu) < trispec_matter_mulim)] = 0.0
-    
+        
 
-    if np.absolute(k1-k2) < trispec_matter_klim:
+    if np.fabs(k1-k2) < trispec_matter_klim:
         k_p = np.zeros(mu.shape) #avoid nan in sqrt
         mu_1p = np.zeros(mu.shape)   #undefined
         mu_2p = np.zeros(mu.shape)
@@ -349,14 +349,14 @@ def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
         p_p = np.exp(P_lin_inter(np.log(k_p)))
         F2_1p = pt_kernel_f2(k1, k_p, mu_1p)
         F2_2p = pt_kernel_f2(k2, k_p, (-1.0)*mu_2p)
-    
+        
         k_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         mu_1p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         mu_2p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         p_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         F2_1p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         F2_2p[((mu+1.0) < trispec_matter_mulim)] = 0.0
-
+        
 
     p1 = np.exp(P_lin_inter(np.log(k1)))
     p2 = np.exp(P_lin_inter(np.log(k2)))
@@ -369,8 +369,9 @@ def trispec_parallel_pt(k1, k2, mu, P_lin_inter):
     term3 = 8.0 * p1*p2 * (F2_1p*F2_2p*p_p + F2_1m*F2_2m*p_m)
     term4 = 12.0 * (p1*p1*p2*F3_12 + p1*p2*p2*F3_21)
     
+    out = term1 + term2 + term3 + term4
 
-    return term1 +  term2 + term3 + term4
+    return out
 
 
 def bispec_parallel_pt(k1, k2, mu, P_lin_inter):
@@ -383,7 +384,7 @@ def bispec_parallel_pt(k1, k2, mu, P_lin_inter):
     
     term1 = 2.0 * pt_kernel_f2(k1, k2 ,mu)*p1*p2
     
-    if np.absolute(k1-k2) < trispec_matter_klim:
+    if np.fabs(k1-k2) < trispec_matter_klim:
         k_p = np.zeros(mu.shape)
         term2 = np.zeros(mu.shape)
         term3 = np.zeros(mu.shape)
@@ -395,20 +396,20 @@ def bispec_parallel_pt(k1, k2, mu, P_lin_inter):
         mu_2p = (k1/k_p)*mu + (k2/k_p) # (k2*k_+)/[k2 k_+]
         term2 = 2.0*pt_kernel_f2(k1, k_p, (-1.)*mu_1p)*p1*p_p
         term3 = 2.0*pt_kernel_f2(k2, k_p, (-1.)*mu_2p)*p2*p_p
-    
+        
         k_p[((mu+1.0) < trispec_matter_mulim)] = 0.0
         term2[((mu+1.0) < trispec_matter_mulim)] = 0.0
         term3[((mu+1.0) < trispec_matter_mulim)] = 0.0
-
+        
     return term1 + term2 + term3
 
 
 # These are integrated over 2PI to get the angular average, for each k1, k2 combination!
-def intg_for_trispec_matter_parallel_2h(k1, k2, x, P_lin_inter):
+def intg_for_trispec_matter_parallel_2h(x, k1, k2, P_lin_inter):
     trispec_matter_mulim = 0.001
     trispec_matter_klim = 0.001
     mu = np.cos(x)
-    if np.absolute(k1-k2) < trispec_matter_klim:
+    if np.fabs(k1-k2) < trispec_matter_klim:
         k_m = np.zeros(mu.shape)
         p_m = np.zeros(mu.shape)
     else:
@@ -417,7 +418,7 @@ def intg_for_trispec_matter_parallel_2h(k1, k2, x, P_lin_inter):
         k_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
         p_m[((1.0-mu) < trispec_matter_mulim)] = 0.0
 
-    if np.absolute(k1-k2) < trispec_matter_klim:
+    if np.fabs(k1-k2) < trispec_matter_klim:
         k_p = np.zeros(mu.shape)
         p_p = np.zeros(mu.shape)
     else:
@@ -429,72 +430,121 @@ def intg_for_trispec_matter_parallel_2h(k1, k2, x, P_lin_inter):
     return p_p + p_m
 
 
-def intg_for_trispec_matter_parallel_3h(k1, k2, x, P_lin_inter):
+def intg_for_trispec_matter_parallel_3h(x, k1, k2, P_lin_inter):
     mu = np.cos(x)
     return bispec_parallel_pt(k1, k2, mu, P_lin_inter) + bispec_parallel_pt(k1, k2, (-1.0)*mu, P_lin_inter)
 
 
-def intg_for_trispec_matter_parallel_4h(k1, k2, x, P_lin_inter):
+def intg_for_trispec_matter_parallel_4h(x, k1, k2, P_lin_inter):
     mu = np.cos(x)
     return trispec_parallel_pt(k1, k2, mu, P_lin_inter)
 
 
-def trispectra_234h(krange, P_lin_inter, Im, Imm, Immm):
+def trispectra_234h(krange, P_lin_inter, mass_func, uk, bias, rho_mean, m_x, k_x):
     
     trispec_2h = np.zeros((krange.size, krange.size))
     trispec_3h = np.zeros((krange.size, krange.size))
     trispec_4h = np.zeros((krange.size, krange.size))
     
-    x = np.linspace(0.0, np.pi, 100, endpoint=True)
+    # Evaluate u(k) on different k grid!
+    u_k = np.array([UnivariateSpline(k_x, uk[:,m], s=0, ext=0) for m in xrange(len(m_x))])
+    u_k_new = np.array([u_k[m](krange) for m in xrange(len(m_x))])
+    
+    def Im(i, mass_func, uk, bias, rho_mean, m_x):
+        integ = mass_func.dndm * bias * uk[:,i] * m_x
+        I = trapz(integ, m_x)/(rho_mean)
+        return I
+    
+    def Imm(i, j, mass_func, uk, bias, rho_mean, m_x):
+        integ = mass_func.dndm * bias * uk[:,i] * uk[:,j] * m_x**2.0
+        I = trapz(integ, m_x)/(rho_mean**2.0)
+        return I
+    
+    def Immm(i, j, k,  mass_func, uk, bias, rho_mean, m_x):
+        integ = mass_func.dndm * bias * uk[:,i] * uk[:,j] * uk[:,k] * m_x**3.0
+        I = trapz(integ, m_x)/(rho_mean**3.0)
+        return I
+    
+    x = np.linspace(0.0, 2.0*np.pi, 500, endpoint=True)
     
     for i, k1 in enumerate(krange):
         for j, k2 in enumerate(krange):
-            trispec_2h[i,j] = 2.0 * np.cbrt(np.exp(Immm(np.log(k1)))) * np.cbrt(np.exp(Immm(np.log(k1)))) * np.cbrt(np.exp(Immm(np.log(k2)))) * np.exp(Im(np.log(k1))) * np.exp(P_lin_inter(np.log(k1))) + 2.0 * np.cbrt(np.exp(Immm(np.log(k1)))) * np.cbrt(np.exp(Immm(np.log(k2)))) * np.cbrt(np.exp(Immm(np.log(k2)))) * np.exp(Im(np.log(k2))) * np.exp(P_lin_inter(np.log(k2))) + np.exp(Imm(np.log(k1))) * np.exp(Imm(np.log(k2))) * trapz(intg_for_trispec_matter_parallel_2h(k1, k2, x, P_lin_inter), x)/np.pi
-            trispec_3h[i,j] = 2.0 * np.sqrt(np.exp(Imm(np.log(k1)))) * np.sqrt(np.exp(Imm(np.log(k2)))) * np.exp(Im(np.log(k1))) * np.exp(Im(np.log(k2))) * trapz(intg_for_trispec_matter_parallel_3h(k1, k2, x, P_lin_inter), x)/np.pi
-            trispec_4h[i,j] = np.exp(Im(np.log(k1)))**2.0 * np.exp(Im(np.log(k2)))**2.0 * trapz(intg_for_trispec_matter_parallel_4h(k1, k2, x, P_lin_inter), x)/np.pi
-
+            trispec_2h[i,j] = 2.0 * Immm(i, j, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(i, mass_func, u_k_new, bias, rho_mean, m_x) * np.exp(P_lin_inter(np.log(k1))) + 2.0 * 2.0 * Immm(i, i, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(j, mass_func, u_k_new, bias, rho_mean, m_x) * np.exp(P_lin_inter(np.log(k2))) + (Imm(i, j, mass_func, u_k_new, bias, rho_mean, m_x)**2.0) * trapz(intg_for_trispec_matter_parallel_2h(x, k1, k2, P_lin_inter), x)/(2.0*np.pi)
+            trispec_3h[i,j] = 2.0 * Imm(i, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(i, mass_func, u_k_new, bias, rho_mean, m_x) * Im(j, mass_func, u_k_new, bias, rho_mean, m_x) * trapz(intg_for_trispec_matter_parallel_3h(x, k1, k2, P_lin_inter), x)/(2.0*np.pi)
+            trispec_4h[i,j] = (Im(i, mass_func, u_k_new, bias, rho_mean, m_x))**2.0 * (Im(j, mass_func, u_k_new, bias, rho_mean, m_x))**2.0 * trapz(intg_for_trispec_matter_parallel_4h(x, k1, k2, P_lin_inter), x)/(2.0*np.pi)
+    
+        #print(i)
     trispec_2h = np.nan_to_num(trispec_2h)
     trispec_3h = np.nan_to_num(trispec_3h)
     trispec_4h = np.nan_to_num(trispec_4h)
 
-    #x,y = np.meshgrid(krange, krange)
+
     trispec_tot = trispec_2h + trispec_3h + trispec_4h
+    trispec_tot = trispec_tot + trispec_tot.T - np.diag(trispec_tot.diagonal())
+    from scipy import signal
+    # Define kernel for convolution
+    kernel = np.array([[0,1,1],
+                       [1,0,1],
+                       [1,1,0]])
+
+    # Perform 2D convolution with input data and kernel
+    trispec_diag = np.diag(signal.convolve2d(trispec_tot.copy(), kernel, boundary='symm', mode='same')/kernel.sum())
+    trispec_tot = trispec_tot - np.diag(trispec_tot)*np.eye(krange.size) + trispec_diag*np.eye(krange.size)
+
     trispec_tot_interp = RectBivariateSpline(krange, krange, trispec_tot, kx=1, ky=1)
     #trispec_tot_interp = interp2d(krange, krange, trispec_tot)
 
     return trispec_tot_interp
 
 
-def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, population_sat, m_x, x):
+def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, population_sat, m_x, k_x, x):
     
-    #trispec_1h = np.zeros((k_range_lin.size, k_range_lin.size))
-    
-    u_g = (population_cen + population_cen * population_sat * uk)
-    u_m = m_x * uk
+    trispec_1h = np.zeros((krange.size, krange.size))
+
+    u_g_prod = (population_cen + population_cen * population_sat * uk)
+    u_m_prod = m_x * uk
     norm_g = ngal
     norm_m = rho_mean
-
+    
+    # Evaluate u(k) on different k grid!
+    u_g = np.array([UnivariateSpline(k_x, u_g_prod[:,m], s=0, ext=0) for m in xrange(len(m_x))])
+    u_m = np.array([UnivariateSpline(k_x, u_m_prod[:,m], s=0, ext=0) for m in xrange(len(m_x))])
+    
+    u_m_new = np.array([u_m[m](krange) for m in xrange(len(m_x))])
+    u_g_new = np.array([u_g[m](krange) for m in xrange(len(m_x))])
+    
     if x == 'gmgm':
-        integ1 = mass_func.dndm * u_g * u_m
-        integ2 = mass_func.dndm * u_g * u_m
-        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_g*norm_m)), (trapz(integ2, m_x, axis=1)/(norm_g*norm_m)))
+        for i, k1 in enumerate(krange):
+            for j, k2 in enumerate(krange):
+                vec1 = u_g_new[:,i] * u_m_new[:,i] / (norm_g*norm_m)
+                vec2 = u_g_new[:,j] * u_m_new[:,j] / (norm_g*norm_m)
+                integ = mass_func.dndm * vec1 * vec2
+                trispec_1h[i,j] = trapz(integ, m_x)
     
     if x == 'gggm':
-        integ1 = mass_func.dndm * u_g * u_g
-        integ2 = mass_func.dndm * u_g * u_m
-        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_g*norm_g)), (trapz(integ2, m_x, axis=1)/(norm_g*norm_m)))
+        for i, k1 in enumerate(krange):
+            for j, k2 in enumerate(krange):
+                vec1 = u_g_new[:,i] * u_g_new[:,i] / (norm_g*norm_g)
+                vec2 = u_g_new[:,j] * u_m_new[:,j] / (norm_g*norm_m)
+                integ = mass_func.dndm * vec1 * vec2
+                trispec_1h[i,j] = trapz(integ, m_x)
     
     if x == 'gggg':
-        integ1 = mass_func.dndm * u_g * u_g
-        integ2 = mass_func.dndm * u_g * u_g
-        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_g*norm_g)), (trapz(integ2, m_x, axis=1)/(norm_g*norm_g)))
+        for i, k1 in enumerate(krange):
+            for j, k2 in enumerate(krange):
+                vec1 = u_g_new[:,i] * u_g_new[:,i] / (norm_g*norm_g)
+                vec2 = u_g_new[:,j] * u_g_new[:,j] / (norm_g*norm_g)
+                integ = mass_func.dndm * vec1 * vec2
+                trispec_1h[i,j] = trapz(integ, m_x)
 
     if x == 'mmmm':
-        integ1 = mass_func.dndm * u_m * u_m
-        integ2 = mass_func.dndm * u_m * u_m
-        trispec_1h = np.outer((trapz(integ1, m_x, axis=1)/(norm_m*norm_m)), (trapz(integ2, m_x, axis=1)/(norm_m*norm_m)))
+        for i, k1 in enumerate(krange):
+            for j, k2 in enumerate(krange):
+                vec1 = u_m_new[:,i] * u_m_new[:,i] / (norm_m*norm_m)
+                vec2 = u_m_new[:,j] * u_m_new[:,j] / (norm_m*norm_m)
+                integ = mass_func.dndm * vec1 * vec2
+                trispec_1h[i,j] = trapz(integ, m_x)
 
-    #x,y = np.meshgrid(krange, krange)
     trispec_1h_interp = RectBivariateSpline(krange, krange, trispec_1h, kx=1, ky=1)
     #trispec_1h_interp = interp2d(krange, krange, trispec_1h)
     return trispec_1h_interp
@@ -579,9 +629,9 @@ def calc_cov_non_gauss(params):
 
     T234_i, T234_j, Tgmgm_i, Tgmgm_j, Tgggm_i, Tgggm_j, Tgggg_i, Tgggg_j = [], [], [], [], [], [], [], []
 
-    I_wp = trapz(trapz(integ1, dx=dlnk, axis=0), dx=dlnk)/(4.0*np.pi*np.pi*volume)
-    I_esd = trapz(trapz(integ2, dx=dlnk, axis=0), dx=dlnk)/(4.0*np.pi*np.pi*volume)
-    I_cross = trapz(trapz(integ3, dx=dlnk, axis=0), dx=dlnk)/(4.0*np.pi*np.pi*volume)
+    I_wp = trapz(trapz(integ1, dx=dlnk, axis=0), dx=dlnk)/volume#(4.0*np.pi*np.pi*volume)
+    I_esd = trapz(trapz(integ2, dx=dlnk, axis=0), dx=dlnk)/volume#(4.0*np.pi*np.pi*volume)
+    I_cross = trapz(trapz(integ3, dx=dlnk, axis=0), dx=dlnk)/volume#(4.0*np.pi*np.pi*volume)
 
     a = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_wp
     b = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_esd
@@ -1096,6 +1146,10 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     I_gm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
                                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
                                     _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                    
+    I_mm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
     
     I_inter_g = [UnivariateSpline(k_range, np.log(I_g_i), s=0, ext=0)
                for I_g_i in _izip(I_g)]
@@ -1108,6 +1162,9 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
                  
     I_inter_gm = [UnivariateSpline(k_range, np.log(I_gm_i), s=0, ext=0)
                 for I_gm_i in _izip(I_gm)]
+                
+    I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
+                for I_mm_i in _izip(I_mm)]
     
     P_lin_inter = [UnivariateSpline(k_range, np.log(hmf_i.power), s=0, ext=0)
                 for hmf_i in hmf]
@@ -1124,13 +1181,13 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     
     kids_area = 180 * 3600.0 #500 #To be in arminutes!
     eff_density = 1.4#2.34#8.53 #1.5#8.53
-    kids_variance_squared = 0.076#0.275#0.076
+    kids_variance_squared = 0.275#0.076
     z_kids = 0.6
     
     sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, '/home/dvornik/data2_dvornik/KidsCatalogues/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat') * hmf[0].cosmo.h
     eff_density_in_mpc = eff_density / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
-    #shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (kids_variance_squared / eff_density_in_mpc)/ (3.0*10.0**8.0)
-    shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (eff_density_in_mpc) / (3.0*10.0**8.0)
+    shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (kids_variance_squared / eff_density_in_mpc)/ (3.0*10.0**8.0)
+    #shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (eff_density_in_mpc) / (3.0*10.0**8.0)
     
     radius = np.sqrt(kids_area/np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # conversion of area in deg^2 to Mpc/h!
     
@@ -1153,99 +1210,120 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     W = 2.0 * np.pi * radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
+    survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max/100.0) for hmf_i in hmf]
     
     
     # Test non-Gaussian
-    I_mm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
-                   for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                   _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
-        
-    I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
-                    for I_mm_i in _izip(I_mm)]
-                    
-    I_mmm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mmm')
-                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
-                    
-    I_inter_mmm = [UnivariateSpline(k_range, np.log(I_mmm_i), s=0, ext=0)
-                    for I_mmm_i in _izip(I_mmm)]
+    
     print('Halo integrals done.')
-    k_temp = np.linspace(lnk_min, lnk_max, 300, endpoint=True)
+    lnk_min, lnk_max = np.log(0.01), np.log(10.0)
+    k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
     k_temp_lin = np.exp(k_temp)
-    #"""
+    """
     global Tgggg, Tgggm, Tgmgm, T234h
     
-    Tgggg = _array([trispectra_1h(k_range_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gggg')
+    Tgggg = _array([trispectra_1h(k_temp_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggg')
                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
                     _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
                     
-    Tgggm = _array([trispectra_1h(k_range_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gggm')
+    Tgggm = _array([trispectra_1h(k_temp_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggm')
                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
                     _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
                     
-    Tgmgm = _array([trispectra_1h(k_range_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gmgm')
+    Tgmgm = _array([trispectra_1h(k_temp_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gmgm')
                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
                     _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
     
     T234h = _array([trispectra_234h(k_temp_lin, P_lin_inter_i, I_inter_m_i, I_inter_mm_i, I_inter_mmm_i)
                     for P_lin_inter_i, I_inter_m_i, I_inter_mm_i, I_inter_mmm_i in
                     _izip(P_lin_inter, I_inter_m, I_inter_mm, I_inter_mmm)])
-    #"""
-    print('Trispectra done.')
     """
+    print('Trispectra done.')
+    #"""
+    shape_noise[0] = 0.0
+    test_gauss = np.zeros((len(k_temp_lin), len(k_temp_lin)))
+    delta = np.eye(len(k_temp_lin))
+    for i, k in enumerate(k_temp_lin):
+        for j, l in enumerate(k_temp_lin):
+            test_gauss[i,j] = 2.0 * ((np.sqrt(np.exp(P_inter_3[0](np.log(k)))) * np.sqrt(np.exp(P_inter_3[0](np.log(l))))) + delta[i,j]*shape_noise[0])**2.0
+
+    test_gauss = delta * test_gauss
+    #test_gauss = 2.0 * np.outer((np.exp(P_inter_3[0](k_temp)) + shape_noise[0]), (np.exp(P_inter_3[0](k_temp)) + shape_noise[0]).T)
+    
     ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_mm[0](k_temp)))*np.sqrt(np.exp(I_inter_mm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
     
-    test_1h = trispectra_1h(k_range_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, 'mmmm')
+    test_1h = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
     test_1h = test_1h(k_temp_lin, k_temp_lin)
     import matplotlib.pyplot as pl
     #pl.imshow(test_1h, interpolation='nearest')
     #pl.show()
     #print(test_1h)
 
-    test = trispectra_234h(k_temp_lin, P_lin_inter[0], I_inter_m[0], I_inter_mm[0], I_inter_mmm[0])
-    test = bias_out[0]**4.0 * test(k_temp_lin, k_temp_lin)
+    test = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], u_k[0], Bias_Tinker10(hmf[0], 0), rho_mean[0], mass_range, k_range_lin)
+    test = test(k_temp_lin, k_temp_lin)
     #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
     test_tot = test_1h + test
 
-    #pl.imshow(test + test_1h, interpolation='nearest')
-    #pl.show()
-    #print(test)
-    
-    pl.plot(k_temp_lin, ps_deriv_mm)
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.xlim([0.01, 1.15])
-    pl.ylim([0.15, 3.1])
+    pl.imshow(test, interpolation='nearest')
     pl.show()
+    #print(test)
+
+    #pl.plot(mass_range, hmf[0].dndm)
+    #pl.plot(mass_range, hmf[1].dndm)
+    #pl.plot(mass_range, hmf[2].dndm)
+    #pl.xscale('log')
+    #pl.yscale('log')
+    #pl.show()
     
+    #pl.plot(k_temp_lin, ps_deriv_mm)
+    #pl.xscale('log')
+    #pl.yscale('log')
+    #pl.xlim([0.01, 2.5])
+    #pl.ylim([0.15, 4])
+    #pl.xlabel('k [h/Mpc]')
+    #pl.ylabel(r'$\rm{d \ln} P(k) / \rm{d \delta_{b}}$')
+    #pl.savefig('/home/dvornik/GalaxyBias_link/data/ssc_mm.png', bbox_inches='tight')
+    #pl.show()
+
+
+    volume = np.pi*radius**2.0*Pi_max*10.0
+    index = np.argmin(np.abs(k_temp_lin - 1.01))
+    print(k_temp_lin[index])
+    print(index)
     
-    #pl.plot(k_range_lin, np.diag(test_1h))
-    pl.plot(k_temp_lin, np.sqrt(np.diag(test_tot/(np.pi*radius**2.0*Pi_max))/((np.exp(P_inter_3[0](np.log(k_temp_lin))))**2.0)), color='black')
-    pl.plot(k_temp_lin, np.sqrt(np.diag(test/(np.pi*radius**2.0*Pi_max))/((np.exp(P_inter_3[0](np.log(k_temp_lin))))**2.0)), color='orange', ls='-.')
-    pl.plot(k_temp_lin, np.sqrt(np.diag(test_1h/(np.pi*radius**2.0*Pi_max))/((np.exp(P_inter_3[0](np.log(k_temp_lin))))**2.0)), color='orange', ls='--')
-    pl.plot(k_temp_lin, np.sqrt((survey_var[0] * ps_deriv_mm**2.0)), color='blue')
+    denom = np.outer(np.exp(P_inter_3[0](k_temp)), np.exp(P_inter_3[0](k_temp)).T)
+    
+    pl.plot(k_temp_lin, np.sqrt((test_gauss / denom))[:,index], color='red')
+    pl.plot(k_temp_lin, np.sqrt((test_gauss + test_tot/volume)/denom)[:,index], color='black')
+    pl.plot(k_temp_lin, np.sqrt((test/volume)/denom)[:,index], color='orange', ls='-.')
+    pl.plot(k_temp_lin, np.sqrt((test_1h/volume)/denom)[:,index], color='orange', ls='--')
+    pl.plot(k_temp_lin, np.sqrt((survey_var[0]/10.0 * ps_deriv_mm * ps_deriv_mm)), color='blue')
     pl.xscale('log')
     pl.xlim([0.01, 1])
     pl.ylim([0.0, 0.08])
     #pl.yscale('log')
     pl.show()
     
+    # IT'S ALL IN THE NORMALIZATION BY THE SURVEY AREA/VOLUME!!!
+    
     quit()
-    """
+    #"""
     #cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
     #cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
     cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
     cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
     
-    cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
+    #cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), cov_esd.copy(), cov_cross.copy())
     #cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
     
-    cov_wp_tot = cov_wp_gauss + cov_wp_ssc + cov_wp_non_gauss
-    cov_esd_tot = cov_esd_gauss + cov_esd_ssc + cov_esd_non_gauss
-    cov_cross_tot = cov_cross_gauss + cov_cross_ssc + cov_cross_non_gauss
+    cov_wp_tot = cov_wp_gauss + cov_wp_ssc# + cov_wp_non_gauss
+    cov_esd_tot = cov_esd_gauss + cov_esd_ssc# + cov_esd_non_gauss
+    cov_cross_tot = cov_cross_gauss + cov_cross_ssc# + cov_cross_non_gauss
     
     return cov_wp_tot, cov_esd_tot, cov_cross_tot, M_bin_min.size
+    #return cov_wp_gauss, cov_esd_gauss, cov_cross_gauss, M_bin_min.size
+    #return cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss, M_bin_min.size
+    #return cov_wp_ssc, cov_esd_ssc, cov_cross_ssc, M_bin_min.size
 
 
 if __name__ == '__main__':

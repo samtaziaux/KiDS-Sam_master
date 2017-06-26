@@ -1104,9 +1104,9 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for hmf_i, pop_c_i, pop_s_i, ngal_i, uk_s_i in\
                     _izip(hmf, pop_c, pop_s, ngal, uk_s)])
                             
-    Pgg_k = _array([(Pgg_c_i + 2.0 * Pgg_cs_i + Pgg_s_i) + Pgg_2h_i
-                    for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
-                    in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
+    Pgg_k = _array([(rho_dm_i/rho_mean_i) * (Pgg_c_i + 2.0 * Pgg_cs_i + Pgg_s_i) + Pgg_2h_i
+                    for rho_dm_i, rho_mean_i, Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
+                    in _izip(rho_dm, rho_mean, Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
                             
 
     # Matter - matter spectra
@@ -1272,12 +1272,12 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     pl.show()
     #print(test)
 
-    pl.plot(mass_range, hmf[0].dndm)
-    pl.plot(mass_range, hmf[1].dndm)
-    pl.plot(mass_range, hmf[2].dndm)
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.show()
+    #pl.plot(mass_range, hmf[0].dndm)
+    #pl.plot(mass_range, hmf[1].dndm)
+    #pl.plot(mass_range, hmf[2].dndm)
+    #pl.xscale('log')
+    #pl.yscale('log')
+    #pl.show()
     
     #pl.plot(k_temp_lin, ps_deriv_mm)
     #pl.xscale('log')

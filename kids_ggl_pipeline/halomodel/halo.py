@@ -391,7 +391,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     
     for i in xrange(z.size):
         mass_func[i] = hmf[i].dndlnm
-        rho_mean[i] = hmf[i].mean_density
+        rho_mean[i] = hmf[i].mean_density0
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
         rho_dm[i] = rho_mean[i] * baryons.f_dm(omegab, omegac)
 

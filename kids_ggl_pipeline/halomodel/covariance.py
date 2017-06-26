@@ -942,7 +942,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     for i in xrange(z.size):
         mass_func[i] = hmf[i].dndlnm
-        rho_mean[i] = hmf[i].mean_density
+        rho_mean[i] = hmf[i].mean_density0
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
         rho_dm[i] = rho_mean[i] * baryons.f_dm(omegab, omegac)
 
@@ -1210,7 +1210,11 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
 
     W = 2.0 * np.pi * radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max/100.0) for hmf_i in hmf]
+    #survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
+    
+    W = 500.0**3.0 * sp.jv(1, k_range_lin*500.0) / (k_range_lin*500.0)
+    W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
+    survey_var = [survey_variance(hmf_i, W_p, k_range, 500.0**3.0) for hmf_i in hmf]
     
     
     # Test non-Gaussian
@@ -1268,12 +1272,12 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     pl.show()
     #print(test)
 
-    #pl.plot(mass_range, hmf[0].dndm)
-    #pl.plot(mass_range, hmf[1].dndm)
-    #pl.plot(mass_range, hmf[2].dndm)
-    #pl.xscale('log')
-    #pl.yscale('log')
-    #pl.show()
+    pl.plot(mass_range, hmf[0].dndm)
+    pl.plot(mass_range, hmf[1].dndm)
+    pl.plot(mass_range, hmf[2].dndm)
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.show()
     
     #pl.plot(k_temp_lin, ps_deriv_mm)
     #pl.xscale('log')
@@ -1286,22 +1290,29 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #pl.show()
 
 
-    volume = np.pi*radius**2.0*Pi_max*10.0
-    index = np.argmin(np.abs(k_temp_lin - 1.01))
+    volume = 500.0**3.0#np.pi*radius**2.0*Pi_max*2.0
+    index = np.argmin(np.abs(k_temp_lin - 0.1))
     print(k_temp_lin[index])
     print(index)
+    st = (k_temp_lin[index+1]-k_temp_lin[index-1])/k_temp_lin[index]
+    print(st)
+    Nmode = 0.5*(k_temp_lin[index]**2.0 * volume * st) / (2.0*np.pi)**2.0
     
     denom = np.outer(np.exp(P_inter_3[0](k_temp)), np.exp(P_inter_3[0](k_temp)).T)
     
-    pl.plot(k_temp_lin, np.sqrt((test_gauss / denom))[:,index], color='red')
+    pl.plot(k_temp_lin, np.sqrt(((test_gauss/Nmode) / denom))[:,index], color='red')
     pl.plot(k_temp_lin, np.sqrt((test_gauss + test_tot/volume)/denom)[:,index], color='black')
     pl.plot(k_temp_lin, np.sqrt((test/volume)/denom)[:,index], color='orange', ls='-.')
     pl.plot(k_temp_lin, np.sqrt((test_1h/volume)/denom)[:,index], color='orange', ls='--')
-    pl.plot(k_temp_lin, np.sqrt((survey_var[0]/10.0 * ps_deriv_mm * ps_deriv_mm)), color='blue')
+    pl.plot(k_temp_lin, np.sqrt((survey_var[0] * ps_deriv_mm * ps_deriv_mm)), color='blue')
     pl.xscale('log')
     pl.xlim([0.01, 1])
     pl.ylim([0.0, 0.08])
     #pl.yscale('log')
+    pl.xlabel('k [h/Mpc]')
+    pl.ylabel(r'$\rm{\sqrt{Cov/P(k)P(k\prime)}}$')
+    pl.title(r'$k\prime = 0.10 $')
+    pl.savefig('/home/dvornik/GalaxyBias_link/data/tot_mm.png', bbox_inches='tight')
     pl.show()
     
     # IT'S ALL IN THE NORMALIZATION BY THE SURVEY AREA/VOLUME!!!

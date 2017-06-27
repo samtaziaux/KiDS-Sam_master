@@ -78,7 +78,7 @@ def NFW_f(z, rho_mean, f, m_x, r_x, k_x, c=None):
         K = k_x*r_s
         bs, bc = sp.sici(K)
         asi, ac = sp.sici((1+c[i]) * K)
-        u_k[:,i] = 4 * pi * rho_mean * NFW_Dc(200.0, c[i]) * r_s**3 * \
+        u_k[:,i] = 4.0 * pi * rho_mean * NFW_Dc(200.0, c[i]) * r_s**3.0 * \
                    ((sin(K) * (asi - bs)) - \
                     (sin(c[i]*K) / ((1.0 + c[i]) * K)) + \
                     (cos(K) * (ac - bc))) / m_x[i]

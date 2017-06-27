@@ -177,9 +177,7 @@ def TwoHalo_gg(mass_func, norm, population, k_x, r_x, m_x):
     return (mass_func.power * b_g**2.0), b_g**2.0
 
 
-def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
-          expansion=100, expansion_stars=160, n_bins=10000,
-          lnk_min=-13., lnk_max=17.):
+def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     np.seterr(divide='ignore', over='ignore', under='ignore', invalid='ignore')
     # making them local doesn't seem to make any difference
     # but keeping for now
@@ -198,8 +196,8 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     simple_hod, smth1, smth2 = theta
     # hard-coded in the current version
     Ac2s = 0.56
-    M_min = 5.
-    M_max = 16.
+    M_min = 9. #5.
+    M_max = 16. #16.
     M_step = 200
     #centrals = 1
     #satellites = 1
@@ -463,11 +461,11 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for hmf_i, pop_c_i, pop_s_i, ngal_i, uk_s_i in\
                     _izip(hmf, pop_c, pop_s, ngal, uk_s)])
                             
-    Pgg_k = _array([(rho_dm_i/rho_mean_i) * (Pgg_c_i + 2.0 * Pgg_cs_i + Pgg_s_i) + Pgg_2h_i
+    Pgg_k = _array([(rho_dm_i/rho_mean_i) * (Pgg_c_i + 2.0 * Pgg_cs_i + (rho_dm_i/rho_mean_i) * Pgg_s_i) + Pgg_2h_i
                     for rho_dm_i, rho_mean_i, Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
                     in _izip(rho_dm, rho_mean, Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
                             
-    """
+    #"""
     # Matter - matter spectra
     Pmm_1h = F_k1 * _array([MM_analy(hmf_i, u_k_i, rho_dm_i, mass_range)
                     for hmf_i, u_k_i, rho_dm_i, beta_i in\
@@ -477,7 +475,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
                     for Pmm_1h_i, hmf_i, rho_dm_i, rho_mean_i
                     in _izip(Pmm_1h, hmf, rho_dm, rho_mean)])
 
-    """
+    #"""
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                     for Pg_k_i in _izip(Pg_k)]
         
@@ -607,7 +605,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     
     
     # This is for w_p and esd
-    #"""
+    """
     sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
     np.nan_to_num(wp_i), s=0)
     for wp_i in _izip(w_p)])
@@ -620,7 +618,7 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     wp_out = np.vstack((out_esd_tot_inter, sur_den2_2_out_inter))
     #wp_out = wp_out.flatten()
     #print(wp_out)
-    #"""
+    """
 
     # This is for ratio
     #gamma_out = _array([gg_i/gm_i for gg_i, gm_i in _izip(out_esd_tot_inter_2, out_esd_tot_inter)])
@@ -632,7 +630,8 @@ def gamma(theta, R, h=0.7, Om=0.315, Ol=0.685,
     """
     #return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
     #return [gamma_out]
-    return [wp_out]
+    #return [wp_out]
+    return [k_range, Pg_c, Pg_s, Pg_2h, Pg_k, Pgg_s, Pgg_cs, Pgg_2h, Pgg_k, Pmm_1h, [hmf[0].power, hmf[1].power, hmf[2].power], Pmm, rho_dm/rho_mean]
 
 if __name__ == '__main__':
     print(0)

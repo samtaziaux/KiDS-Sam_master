@@ -308,7 +308,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         #M_min, M_max, M_step, M_bin_min, M_bin_max, \
         #centrals, satellites, taylor_procedure, include_baryons, \
         #smth1, smth2 = theta
-    sigma_8, H0, omegam, omegab_h2, omegav, n, \
+    sigma_8, H0, omegam, omegab, omegav, n, \
         z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
         fc_nsat, alpha_s, b_0, b_1, b_2, \
         alpha_star, beta_gas, r_t0, r_c0, p_off, r_off, bias, \
@@ -371,7 +371,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #to = time()
     hmf = _array([])
     h = H0/100.0
-    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab_h2/(h**2.0), Om0=omegam, Ode0=omegav)
+    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav)
     for i in transfer_params:
         hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
                                 hmf_model='Tinker10', delta_h=200.0, delta_wrt='mean',

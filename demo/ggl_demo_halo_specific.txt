@@ -27,7 +27,7 @@ model             halo.model
 hm_param          sigma_8         fixed     0.8159
 hm_param          H0              fixed     67.74
 hm_param          omegam          fixed     0.3089
-hm_param          omegab_h2       fixed     0.02230
+hm_param          omegab          fixed     0.04860
 hm_param          omegav          fixed     0.6911
 hm_param          n               fixed     0.9667
 

@@ -195,7 +195,7 @@ def GG_cen_analy(mass_func, ncen, ngal, m_x):
 
 
 def GG_sat_analy(mass_func, uk_s, population_sat, ngal, beta, m_x):
-    return trapz(beta * mass_func.dndm * population_sat**2.0 * uk_s**2.0,
+    return trapz(beta * mass_func.dndm * population_sat**2.0 * uk_s * uk_s,
                  m_x, axis=1) / (ngal**2.0)
 
 

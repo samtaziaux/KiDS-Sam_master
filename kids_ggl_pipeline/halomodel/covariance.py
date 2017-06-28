@@ -501,7 +501,7 @@ def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, populat
     
     trispec_1h = np.zeros((krange.size, krange.size))
 
-    u_g_prod = (population_cen + population_cen * population_sat * uk)
+    u_g_prod = (population_cen + population_sat * uk)
     u_m_prod = m_x * uk
     norm_g = ngal
     norm_m = rho_mean
@@ -553,7 +553,7 @@ def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, populat
 def halo_model_integrals(mass_func, uk, bias, rho_mean, ngal, population_cen, population_sat, m_x, x):
     
     if x == 'g':
-        integ1 = mass_func.dndm * bias * (population_cen + population_cen * population_sat * uk)
+        integ1 = mass_func.dndm * bias * (population_cen + population_sat * uk)
         I = trapz(integ1, m_x, axis=1)/ngal
     
     if x == 'm':
@@ -561,11 +561,11 @@ def halo_model_integrals(mass_func, uk, bias, rho_mean, ngal, population_cen, po
         I = trapz(integ2, m_x, axis=1)/rho_mean
 
     if x == 'gg':
-        integ3 = mass_func.dndm * bias * (population_cen + population_cen * population_sat * uk)**2.0
+        integ3 = mass_func.dndm * bias * (population_cen * population_sat * uk + population_sat**2.0 * uk**2.0)
         I = trapz(integ3, m_x, axis=1)/(ngal**2.0)
 
     if x == 'gm':
-        integ4 = mass_func.dndm * bias * uk * m_x * (population_cen + population_cen * population_sat * uk)
+        integ4 = mass_func.dndm * bias * uk * m_x * (population_cen + population_sat * uk)
         I = trapz(integ4, m_x, axis=1)/(rho_mean*ngal)
 
     if x == 'mm':
@@ -934,7 +934,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     mass_func = np.zeros((z.size, mass_range.size))
     rho_mean = np.zeros(z.shape)
     rho_crit = np.zeros(z.shape)
-    rho_dm = np.zeros(z.shape)
+    #rho_dm = np.zeros(z.shape)
 
     omegab = hmf[0].cosmo.Ob0
     omegac = hmf[0].cosmo.Om0-omegab
@@ -944,7 +944,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
         mass_func[i] = hmf[i].dndlnm
         rho_mean[i] = hmf[i].mean_density0
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
-        rho_dm[i] = rho_mean[i] * baryons.f_dm(omegab, omegac)
+        #rho_dm[i] = rho_mean[i]# * baryons.f_dm(omegab, omegac)
 
 
     rvir_range_lin = _array([virial_radius(mass_range, rho_mean_i, 200.0)
@@ -1017,17 +1017,17 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
     # Fourier Transform of the NFW profile
-    u_k = _array([NFW_f(np.float64(z_i), rho_dm_i, np.float64(f_i), mass_range,\
+    u_k = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
                 rvir_range_lin_i, k_range_lin,\
-                c=concentration_i) for rvir_range_lin_i, rho_dm_i, z_i,\
+                c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
                 f_i, concentration_i in _izip(rvir_range_lin, \
-                rho_dm, z, f, concentration)])
+                rho_mean, z, f, concentration)])
                    
     # and of the NFW profile of the satellites
-    uk_s = _array([NFW_f(np.float64(z_i), rho_dm_i, np.float64(fc_nsat_i), \
+    uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
                 mass_range, rvir_range_lin_i, k_range_lin)
-                for rvir_range_lin_i, rho_dm_i, z_i, fc_nsat_i in \
-                _izip(rvir_range_lin, rho_dm, z, fc_nsat)])
+                for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
+                _izip(rvir_range_lin, rho_mean, z, fc_nsat)])
     uk_s = uk_s/uk_s[:,0][:,None]
                    
     # If there is miscentering to be accounted for
@@ -1036,13 +1036,13 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
             p_off = _array([p_off]*M_bin_min.size)
         if not np.iterable(r_off):
             r_off = _array([r_off]*M_bin_min.size)
-        u_k = _array([NFW_f(np.float64(z_i), rho_dm_i, np.float64(f_i), \
+        u_k = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), \
                             mass_range, rvir_range_lin_i, k_range_lin,
                             c=concentration_i) * miscenter(p_off_i, r_off_i, mass_range,
                             rvir_range_lin_i, k_range_lin,
                             c=concentration_i) for \
-                            rvir_range_lin_i, rho_dm_i, z_i, f_i, concentration_i, p_off_i, r_off_i
-                            in _izip(rvir_range_lin, rho_dm, z, f, concentration, p_off, r_off)])
+                            rvir_range_lin_i, rho_mean_i, z_i, f_i, concentration_i, p_off_i, r_off_i
+                            in _izip(rvir_range_lin, rho_mean, z, f, concentration, p_off, r_off)])
         u_k = u_k/u_k[:,0][:,None]
 
     # Galaxy - dark matter spectra (for lensing)
@@ -1058,31 +1058,30 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
         
         
     if centrals:
-        Pg_c = F_k1 * _array([GM_cen_analy(hmf_i, u_k_i, rho_dm_i, pop_c_i,
+        Pg_c = F_k1 * _array([GM_cen_analy(hmf_i, u_k_i, rho_mean_i, pop_c_i,
                     ngal_i, mass_range)
-                    for rho_dm_i, hmf_i, pop_c_i, ngal_i, u_k_i in\
-                    _izip(rho_dm, hmf, pop_c, ngal, u_k)])
+                    for rho_mean_i, hmf_i, pop_c_i, ngal_i, u_k_i in\
+                    _izip(rho_mean, hmf, pop_c, ngal, u_k)])
     else:
         Pg_c = np.zeros((n_bins_obs,n_bins))
     if satellites:
-        Pg_s = F_k1 * _array([GM_sat_analy(hmf_i, u_k_i, uk_s_i, rho_dm_i,
+        Pg_s = F_k1 * _array([GM_sat_analy(hmf_i, u_k_i, uk_s_i, rho_mean_i,
                     pop_s_i, ngal_i, mass_range)
-                    for rho_dm_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i in\
-                    _izip(rho_dm, hmf, pop_s, ngal, u_k, uk_s)])
+                    for rho_mean_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i in\
+                    _izip(rho_mean, hmf, pop_s, ngal, u_k, uk_s)])
     else:
         Pg_s = np.zeros((n_bins_obs,n_bins))
 
 
 
-    Pg_k = _array([(rho_dm_i/rho_mean_i) * (Pg_c_i + Pg_s_i) + Pg_2h_i
-                   for Pg_c_i, Pg_s_i, Pg_2h_i, rho_dm_i, rho_mean_i
-                   in _izip(Pg_c, Pg_s, Pg_2h, rho_dm, rho_mean)])
+    Pg_k = _array([(Pg_c_i + Pg_s_i) + Pg_2h_i
+                   for Pg_c_i, Pg_s_i, Pg_2h_i
+                   in _izip(Pg_c, Pg_s, Pg_2h)])
     
     
     
     # Galaxy - galaxy spectra (for clustering)
-    Pgg_2h = bias * _array([TwoHalo_gg(hmf_i, ngal_i, pop_g_i, k_range_lin,
-                    rvir_range_lin_i, mass_range)[0]
+    Pgg_2h = bias * _array([TwoHalo_gg(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i, mass_range)[0]
                     for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
                     _izip(rvir_range_lin, hmf, ngal, pop_g)])
     """
@@ -1095,28 +1094,27 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     """
     Pgg_c = np.zeros((n_bins_obs,n_bins))
     #beta = np.ones(M_bin_min.size)
-    Pgg_s = F_k1 * _array([GG_sat_analy(hmf_i, uk_s_i, pop_s_i, ngal_i, beta_i, mass_range)
-                    for hmf_i, uk_s_i, pop_s_i, ngal_i, beta_i in\
+    Pgg_s = F_k1 * _array([GG_sat_analy(hmf_i, u_k_i, pop_s_i, ngal_i, beta_i, mass_range)
+                    for hmf_i, u_k_i, pop_s_i, ngal_i, beta_i in\
                     _izip(hmf, uk_s, pop_s, ngal, beta)])
                             
-    Pgg_cs = F_k1 * _array([GG_cen_sat_analy(hmf_i, uk_s_i, pop_c_i,
-                    pop_s_i, ngal_i, mass_range)
-                    for hmf_i, pop_c_i, pop_s_i, ngal_i, uk_s_i in\
+    Pgg_cs = F_k1 * _array([GG_cen_sat_analy(hmf_i, u_k_i, pop_c_i, pop_s_i, ngal_i, mass_range)
+                    for hmf_i, pop_c_i, pop_s_i, ngal_i, u_k_i in\
                     _izip(hmf, pop_c, pop_s, ngal, uk_s)])
                             
-    Pgg_k = _array([(rho_dm_i/rho_mean_i) * (Pgg_c_i + 2.0 * Pgg_cs_i + (rho_dm_i/rho_mean_i) * Pgg_s_i) + Pgg_2h_i
-                    for rho_dm_i, rho_mean_i, Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
-                    in _izip(rho_dm, rho_mean, Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
+    Pgg_k = _array([(Pgg_c_i + (2.0 * Pgg_cs_i) + Pgg_s_i) + Pgg_2h_i
+                    for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
+                    in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
                             
-
+                            
     # Matter - matter spectra
-    Pmm_1h = F_k1 * _array([MM_analy(hmf_i, u_k_i, rho_dm_i, mass_range)
-                    for hmf_i, u_k_i, rho_dm_i, beta_i in\
-                    _izip(hmf, u_k, rho_dm, beta)])
+    Pmm_1h = F_k1 * _array([MM_analy(hmf_i, u_k_i, rho_mean_i, mass_range)
+                    for hmf_i, u_k_i, rho_mean_i, beta_i in\
+                    _izip(hmf, u_k, rho_mean, beta)])
                             
-    Pmm = _array([(rho_dm_i/rho_mean_i) * Pmm_1h_i + hmf_i.power
-                    for Pmm_1h_i, hmf_i, rho_dm_i, rho_mean_i
-                    in _izip(Pmm_1h, hmf, rho_dm, rho_mean)])
+    Pmm = _array([Pmm_1h_i + hmf_i.power
+                    for Pmm_1h_i, hmf_i
+                    in _izip(Pmm_1h, hmf)])
 
 
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
@@ -1279,15 +1277,15 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #pl.yscale('log')
     #pl.show()
     
-    #pl.plot(k_temp_lin, ps_deriv_mm)
-    #pl.xscale('log')
-    #pl.yscale('log')
-    #pl.xlim([0.01, 2.5])
-    #pl.ylim([0.15, 4])
-    #pl.xlabel('k [h/Mpc]')
-    #pl.ylabel(r'$\rm{d \ln} P(k) / \rm{d \delta_{b}}$')
-    #pl.savefig('/home/dvornik/GalaxyBias_link/data/ssc_mm.png', bbox_inches='tight')
-    #pl.show()
+    pl.plot(k_temp_lin, ps_deriv_mm)
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.xlim([0.01, 2.5])
+    pl.ylim([0.15, 4])
+    pl.xlabel('k [h/Mpc]')
+    pl.ylabel(r'$\rm{d \ln} P(k) / \rm{d \delta_{b}}$')
+    pl.savefig('/home/dvornik/GalaxyBias_link/data/ssc_mm.png', bbox_inches='tight')
+    pl.show()
 
 
     volume = 500.0**3.0#np.pi*radius**2.0*Pi_max*2.0

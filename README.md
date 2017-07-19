@@ -94,6 +94,11 @@ If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenun
 ---
 Update log:
 
+**2017 July 19** - Release v1.5.0. Features:
+- Updates to halo model to include CAMB and hmf 2.0.5 as defaults.
+- Added analytical covariance estimation to halo model (not quite done yet)
+- Changes to code to make it Python 3 ready
+
 **2016 November 11** - Release v1.4.0. Features:
 - Major bug fix in calculating Sigma_crit and tangential shear (inproper removal of sources in front of the lens).
 - Added unit test.

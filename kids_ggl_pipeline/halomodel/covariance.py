@@ -461,14 +461,14 @@ def trispectra_234h(krange, P_lin_inter, mass_func, uk, bias, rho_mean, m_x, k_x
     
     for i, k1 in enumerate(krange):
         for j, k2 in enumerate(krange):
-            #trispec_2h[i,j] = 2.0 * Immm(i, j, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(i, mass_func, u_k_new, bias, rho_mean, m_x) * np.exp(P_lin_inter(np.log(k1))) + 2.0 * 2.0 * Immm(i, i, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(j, mass_func, u_k_new, bias, rho_mean, m_x) * np.exp(P_lin_inter(np.log(k2))) + (Imm(i, j, mass_func, u_k_new, bias, rho_mean, m_x)**2.0) * trapz(intg_for_trispec_matter_parallel_2h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
-            #trispec_3h[i,j] = 2.0 * Imm(i, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(i, mass_func, u_k_new, bias, rho_mean, m_x) * Im(j, mass_func, u_k_new, bias, rho_mean, m_x) * trapz(intg_for_trispec_matter_parallel_3h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
-            #trispec_4h[i,j] = (Im(i, mass_func, u_k_new, bias, rho_mean, m_x))**2.0 * (Im(j, mass_func, u_k_new, bias, rho_mean, m_x))**2.0 * trapz(intg_for_trispec_matter_parallel_4h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
+            trispec_2h[i,j] = 2.0 * Immm(i, j, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(i, mass_func, u_k_new, bias, rho_mean, m_x) * np.exp(P_lin_inter(np.log(k1))) + 2.0 * 2.0 * Immm(i, i, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(j, mass_func, u_k_new, bias, rho_mean, m_x) * np.exp(P_lin_inter(np.log(k2))) + (Imm(i, j, mass_func, u_k_new, bias, rho_mean, m_x)**2.0) * trapz(intg_for_trispec_matter_parallel_2h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
+            trispec_3h[i,j] = 2.0 * Imm(i, j, mass_func, u_k_new, bias, rho_mean, m_x) * Im(i, mass_func, u_k_new, bias, rho_mean, m_x) * Im(j, mass_func, u_k_new, bias, rho_mean, m_x) * trapz(intg_for_trispec_matter_parallel_3h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
+            trispec_4h[i,j] = (Im(i, mass_func, u_k_new, bias, rho_mean, m_x))**2.0 * (Im(j, mass_func, u_k_new, bias, rho_mean, m_x))**2.0 * trapz(intg_for_trispec_matter_parallel_4h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
 
 
-            trispec_2h[i,j] = trapz(intg_for_trispec_matter_parallel_2h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
-            trispec_3h[i,j] = trapz(intg_for_trispec_matter_parallel_3h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
-            trispec_4h[i,j] = trapz(intg_for_trispec_matter_parallel_4h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
+            #trispec_2h[i,j] = trapz(intg_for_trispec_matter_parallel_2h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
+            #trispec_3h[i,j] = trapz(intg_for_trispec_matter_parallel_3h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
+            #trispec_4h[i,j] = trapz(intg_for_trispec_matter_parallel_4h(x, k1, k2, P_lin_inter, trispec_matter_mulim, trispec_matter_klim), x)/(2.0*np.pi)
         #print(i)
     trispec_2h = np.nan_to_num(trispec_2h)
     trispec_3h = np.nan_to_num(trispec_3h)

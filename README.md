@@ -35,7 +35,7 @@ or
     
         python setup.py install --user
 
-Either of these will install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf==1.7.0` for halo mass function utilities, `mpmath>=0.19` for mathematical utilities, and `numpy>=1.5.0`. Optionally, if you want to use the CAMB transfer functions in your halo models (preffered method), you should also instal pycamb with CAMB version from March 2013, using the following command: 
+Either of these will install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf==2.0.5` for halo mass function utilities, `mpmath>=0.19` for mathematical utilities, and `numpy>=1.5.0`. Optionally, if you want to use the CAMB transfer functions in your halo models (preffered method), you should also instal pycamb with CAMB version from March 2013, using the following command: 
 
         CAMBURL=http://camb.info/CAMB_Mar13.tar.gz pip install git+git://github.com/steven-murray/pycamb.git --user
 
@@ -93,6 +93,9 @@ If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenun
 
 ---
 Update log:
+
+**2017 July 20** - Release v1.5.1. Features:
+- Bug fix for ID's
 
 **2017 July 19** - Release v1.5.0. Features:
 - Updates to halo model to include CAMB and hmf 2.0.5 as defaults.

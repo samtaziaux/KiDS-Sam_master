@@ -1699,17 +1699,20 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
     Rmax = Rbins[1:nRbins+1]/Rconst
 
     # Adding the radial bins
-    print('galIDlist =', galIDlist, type(galIDlist[0]))
+    #print('galIDlist =', galIDlist, type(galIDlist[0]))
     if 'bootstrap' in purpose:
         fitscols.append(pyfits.Column(name = 'Bootstrap', format='20A', \
                                       array = galIDlist))
     else:
+        """
+        # This need to be figured out, it is causing pipeline to stall if there is an empty lens list passed.
         if isinstance(galIDlist[0], basestring):
             fmt = '100A'
         elif isinstance(galIDlist[0], int):
             fmt = 'J'
         else:
-            fmt = 'E'
+        """
+        fmt = 'E'
         fitscols.append(pyfits.Column(name = 'ID', format=fmt, \
                                       array = galIDlist))
 
@@ -1724,7 +1727,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
     [fitscols.append(pyfits.Column(name = outputnames[c], \
                                    format = '%iD'%nRbins, \
                                    array = output[c])) \
-     for c in xrange(len(outputnames))]
+    for c in xrange(len(outputnames))]
 
     if 'covariance' in purpose:
         fitscols.append(pyfits.Column(name = 'e1', format='4D', array= e1))
@@ -1742,12 +1745,14 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
     #	print
     if os.path.isfile(filename):
         os.remove(filename)
-        print('Old catalog overwritten:', filename)
+        print('Overwritting old catalog:', filename)
     else:
-        print('New catalog written:', filename)
+        print('Writting new catalog:', filename)
     print()
 
     tbhdu.writeto(filename)
+    print('Catalog written.')
+    print()
 
     return
 

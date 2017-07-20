@@ -121,12 +121,15 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     combcol = []
 
     # Adding the lens ID's and the radial bins R
+    """
+    # This need to be figured out, it is causing pipeline to stall if there is an empty lens list passed.
     if isinstance(sheardat['ID'][0], basestring):
         fmt = '100A'
     elif isinstance(sheardat['ID'][0], int):
         fmt = 'J'
     else:
-        fmt = 'E'
+    """
+    fmt = 'E'
     combcol.append(pyfits.Column(name='ID', format=fmt, array=sheardat['ID']))
     print('Combining: ID')
 

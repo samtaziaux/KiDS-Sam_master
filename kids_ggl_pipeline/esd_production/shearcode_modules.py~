@@ -395,7 +395,7 @@ def define_filename_splits(path_splits, purpose, filename_var, \
             try:
                 os.makedirs(new_path)
                 break
-            except OSError as e:
+            except OSError, e:
                 if e.errno != 17:
                     raise
                 time.sleep(2)
@@ -431,7 +431,7 @@ def define_filename_results(path_results, purpose, filename_var, \
             try:
                 os.makedirs(new_path)
                 break
-            except OSError as e:
+            except OSError, e:
                 if e.errno != 17:
                     raise
                 time.sleep(2)

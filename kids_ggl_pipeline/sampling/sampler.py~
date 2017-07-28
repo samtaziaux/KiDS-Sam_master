@@ -131,7 +131,7 @@ def run_emcee(hm_options, sampling_options, args):
                     except TypeError:
                         line += '  %s  %s  %s' \
                                 %tuple([str(v) for v in (v2,v3,v4)])
-            print(line, file=hdr)
+            printline, file=hdr)
         print('nwalkers  {0:5d}'.format(nwalkers), file=hdr)
         print('nsteps    {0:5d}'.format(nsteps), file=hdr)
         print('nburn     {0:5d}'.format(nburn), file=hdr)

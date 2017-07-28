@@ -53,7 +53,7 @@ def read_config(config_file):
         elif line[0] == 'GAMA_path':
             gama_path = line[1]
         elif line[0] == 'lens_catalog':
-            lens_catalog = line[1]
+			lens_catalog = line[1]
         elif line[0] == 'The-wiZZ':
             wizz = line[1]
 

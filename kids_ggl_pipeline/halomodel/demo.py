@@ -19,4 +19,3 @@ def mass_nfw(theta, R, h=1, Om=0.315, Ol=0.685):
     _delta = delta
     _izip = izip
     profile, mass, zgal = theta
-    

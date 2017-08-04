@@ -6,6 +6,7 @@
 """
 
 # Import the necessary libraries
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
@@ -27,7 +28,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
             path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
             filename_addition, Ncat, splitslist, blindcats, blindcat, \
-            blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot = \
+            blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
             shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
     blindcat = blindcat[0]
@@ -38,7 +39,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     else:
         print('Step 2: Combine the splits into the ESD profiles '\
               'and analytical covariance matrix')
-    print
+    print()
 
     # Define the list of variables for the output filename
     filename_var = shear.define_filename_var(purpose, centering, binname, \
@@ -47,7 +48,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if ('random' or 'star') in purpose:
         filename_var = '{0:d}_{1}'.format(Ncat, filename_var)
         # Ncat is the number of existing randoms
-        print 'Number of existing random catalogs: {0}'.format(Ncat)
+        print('Number of existing random catalogs: {0}'.format(Ncat))
 
     # Paths to the resulting files
     filename_N1 = filename_var.replace('binnum', '{0:d}'.format(binnum))
@@ -66,10 +67,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Stop if the output already exists.
     if os.path.isfile(filenamecov):
-        print '(in combine_covariance_plus_bootstrap)',
-        print 'This output already exists:', filenameESD
-        print 'This output already exists:', filenamecov
-        print
+        print('(in combine_covariance_plus_bootstrap)')
+        print('This output already exists:', filenameESD)
+        print('This output already exists:', filenamecov)
+        print()
         return
 
     # Importing all GAMA data, and the information
@@ -196,9 +197,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         if sum(ESD_mask) > 0:
                             cov[N1,N2,R1,R2] = np.cov((ESDt_N1[:, R1])[ESD_mask],
                                                       (ESDt_N2[:, R2])[ESD_mask],
-                                                      bias=1)[0,1] #N2 = N1!
-                        #if N1!=N2:
-                        #    cov[N1,N2,R1,R2] = 0.0
+                                                      bias=1)[0,1]
+                        if cross_cov == False:
+                            if N1!=N2:
+                                cov[N1,N2,R1,R2] = 0.0
 
 
     if 'covariance' in purpose: # Calculating the covariance
@@ -225,8 +227,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 if os.path.isfile(shearcatname_N1):
                     #print '	Combining field', x+1, '/', len(kidscats), \
                             #':', kidscats[x]
-                    print '    Combining field {0} / {1} : {2}'.format(
-                        x+1, len(kidscats), kidscats[x])
+                    print('    Combining field {0} / {1} : {2}'.format(
+                        x+1, len(kidscats), kidscats[x]))
 
                     sheardat_N1 = pyfits.open(shearcatname_N1)[1].data
                     Cs_N1 = sheardat_N1['Cs']
@@ -285,12 +287,15 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                 
                                 if 'covariance' in purpose:
                                     cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2]))
+                                    if cross_cov == False:
+                                        if N1!=N2:
+                                            cov[N1,N2,R1,R2] = 0.0
 
                 else:
                     # This message should be a lot more explicit
                     print('ERROR: Not all fields are analysed! '\
                                   'Please restart shear code!')
-                    exit()
+                    raise SystemExit()
 
             # Calculating the final output values of the
             # accompanying shear data
@@ -313,7 +318,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
             galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
-            print 'galIDs_matched: {0}'.format(len(galIDs_matched))
+            print('galIDs_matched: {0}'.format(len(galIDs_matched)))
 
             # Printing stacked shear profile to a text file
             shear.write_stack(filenameESD, filename_N1, Rcenters, Runit,
@@ -330,38 +335,39 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     for R2 in xrange(nRbins):
                         cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] / \
                             (wk2[N1,R1]*wk2[N2,R2])
+    
 
-    with open(filenamecov, 'w') as file:
-        print >>file, '#', '%s_min[m]'%binname, '	', '%s_min[n]'%binname,'	','Radius[i](kpc/h%g)'%(h*100), '	','Radius[j](kpc/h%g)'%(h*100), '   ','covariance(h%g*M_sun/pc^2)^2'%(h*100), '	', 'correlation','	', 'bias(1+K[m,i])(1+K[n,j])'
+    header = '%s_min[m]    %s_min[n]    Radius[i](kpc/h%g)    Radius[j](kpc/h%g)    covariance(h%g*M_sun/pc^2)^2    correlation    bias(1+K[m,i])(1+K[n,j])'%(binname, binname, h*100, h*100, h*100)
 
-    with open(filenamecov, 'a') as file:
-
-        # Calculating the correlation
-        for N1 in xrange(Nobsbins):
-            for N2 in xrange(Nobsbins):
-                for R1 in xrange(nRbins):
-                    for R2 in xrange(nRbins):
+    file = np.empty((Nobsbins*Nobsbins*nRbins*nRbins, 7))
+    index_out = 0
+    # Calculating the correlation
+    for N1 in xrange(Nobsbins):
+        for N2 in xrange(Nobsbins):
+            for R1 in xrange(nRbins):
+                for R2 in xrange(nRbins):
                         
-                        radius1[N1,N2,R1,R2] = Rcenters[R1]
-                        radius2[N1,N2,R1,R2] = Rcenters[R2]
-                        bin1[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N1]
-                        bin2[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N2]
+                    radius1[N1,N2,R1,R2] = Rcenters[R1]
+                    radius2[N1,N2,R1,R2] = Rcenters[R2]
+                    bin1[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N1]
+                    bin2[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N2]
 
-                        if (0. < error_tot[N1,R1])&(error_tot[N1,R1] < inf) \
-                            and (0. < error_tot[N2,R2])&(error_tot[N2,R2] < inf):
+                    if (0. < error_tot[N1,R1])&(error_tot[N1,R1] < inf) \
+                        and (0. < error_tot[N2,R2])&(error_tot[N2,R2] < inf):
         
-                            cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
+                        cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
             
-                            covbias[N1,N2,R1,R2] = bias_tot[N1,R1]*bias_tot[N2,R2]
+                        covbias[N1,N2,R1,R2] = bias_tot[N1,R1]*bias_tot[N2,R2]
                 
-                        else:
-                            cov[N1,N2,R1,R2] = -999
-                            cor[N1,N2,R1,R2] = -999
-                            covbias[N1,N2,R1,R2] = -999
+                    else:
+                        cov[N1,N2,R1,R2] = -999
+                        cor[N1,N2,R1,R2] = -999
+                        covbias[N1,N2,R1,R2] = -999
 
-                        print >>file, bin1[N1,N2,R1,R2], '	',bin2[N1,N2,R1,R2], '	',radius1[N1,N2,R1,R2], '	',radius2[N1,N2,R1,R2], '	',cov[N1,N2,R1,R2], '	',cor[N1,N2,R1,R2], '	',covbias[N1,N2,R1,R2]
-
-    print 'Written: Covariance matrix data:', filenamecov
+                    file[index_out,:] = bin1[N1,N2,R1,R2], bin2[N1,N2,R1,R2], radius1[N1,N2,R1,R2], radius2[N1,N2,R1,R2], cov[N1,N2,R1,R2], cor[N1,N2,R1,R2], covbias[N1,N2,R1,R2]
+                    index_out += 1
+    np.savetxt(filenamecov, file, header=header)
+    print('Written: Covariance matrix data:', filenamecov)
 
     return
 

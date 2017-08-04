@@ -4,7 +4,7 @@
 # Part of the module to determine the shear
 # as a function of radius from a galaxy.
 """
-
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
@@ -31,12 +31,12 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot = \
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
         shear.input_variables(Nsplit, Nsplits, binnum, blindcat, config_file)
 
     
-    print 'Step 2: Combine splits into one catalogue'
-    print
+    print('Step 2: Combine splits into one catalogue')
+    print()
 
 
     if 'bootstrap' in purpose:
@@ -85,7 +85,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing catalogs
-        print 'Number of new catalog:', Ncat
+        print('Number of new catalog:', Ncat)
 
     # Paths to the resulting files
     outname = shear.define_filename_results(path_results, purpose, \
@@ -94,9 +94,9 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     # Stop if the output already exists.
     if os.path.isfile(outname):
-        print '(in combine_splits)',
-        print 'This output already exists:', outname
-        print
+        print('(in combine_splits)')
+        print('This output already exists:', outname)
+        print()
         return
 
     # Load the first split 
@@ -121,14 +121,17 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     combcol = []
 
     # Adding the lens ID's and the radial bins R
+    """
+    # This need to be figured out, it is causing pipeline to stall if there is an empty lens list passed.
     if isinstance(sheardat['ID'][0], basestring):
         fmt = '100A'
     elif isinstance(sheardat['ID'][0], int):
         fmt = 'J'
     else:
-        fmt = 'E'
+    """
+    fmt = 'E'
     combcol.append(pyfits.Column(name='ID', format=fmt, array=sheardat['ID']))
-    print 'Combining: ID'
+    print('Combining: ID')
 
     centers = ['Rmin', 'Rmax', 'Rcenter']
 
@@ -136,19 +139,19 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         combcol.append(pyfits.Column(name=r, format='%iD'%Rbins, \
                                      array=sheardat[r], unit='kpc/h%g'%h*100))
                                      
-        print 'Combining:', r
+        print('Combining:', r)
 
     # Adding all the columns that need to be stacked
 
     for col in xrange(len(columns)):
         sumcol = 0
-        print 'Combining:', columns[col]
+        print('Combining:', columns[col])
 
         if ('random' in purpose):
             for shearcatname in splitslist:
                 # Reading the shear catalogue			
                 
-                print '	', shearcatname
+                print('	', shearcatname)
                 shearcat = pyfits.open(shearcatname)
                 sheardat = shearcat[1].data
                 
@@ -167,7 +170,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
                                                             filename_addition, \
                                                             blindcat)
                 
-                print '	', shearcatname
+                print('	', shearcatname)
                 shearcat = pyfits.open(shearcatname)
                 sheardat = shearcat[1].data
                 
@@ -178,8 +181,8 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     # Adding the values of the variances
     combcol.append(pyfits.Column(name='variance(e[A,B,C,D])', format='4D', \
                                  array=sheardat['variance(e[A,B,C,D])']))
-    print 'Combining: variance(e[A,B,C,D])'
-    print
+    print('Combining: variance(e[A,B,C,D])')
+    print()
 
     # Writing the combined columns to a combined fits file
     cols=pyfits.ColDefs(combcol)
@@ -187,9 +190,9 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     if os.path.isfile(outname):
         os.remove(outname)
-        print 'Old file "%s" overwritten.'%outname
+        print('Old file "%s" overwritten.'%outname)
     else:
-        print 'New file "%s" written.'%outname
+        print('New file "%s" written.'%outname)
 
     tbhdu.writeto(outname)
 

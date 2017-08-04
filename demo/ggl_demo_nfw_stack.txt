@@ -35,6 +35,9 @@
 # path to the spec-z catalogue with the entry `specz_file`. If this
 # entry is not given, then it is assumed that the spec-z catalogue
 # is in the same location as the parent folder of individual patches.
+# If you want to run the pipeline on the mocks, then select the KiDS_version = 0,
+# and provide the full path and name of the used lightcone. Lenses in this case still
+# conform to the GAMA-like catalogue format.
 # The following paths work if you run the pipeline in Leiden.
 
 # Option 1:
@@ -165,12 +168,18 @@ src_limits1           Z_B        0.1,0.9
 
 kids_blinds            A,B,C
 
+## Optional settings
+
 # allow for a gap between the source and lens redshifts;
 # i.e., only select sources such that z_s > z_l + z_epsilon (optional)
 z_epsilon           0.2             # Default = 0.2
 
 # if running shearbootstrap, select the number of patches to group in a regular patern (optional)
 nbootstraps         1               # Default = 1
+
+# if running shearcovariance or shearbootstrap, select if you want to include the cross-covariance between the bins (optional)
+# Boolean parameter! Values are either 0 or 1.
+cross_covariance         1          # Default = 1
 
 
 ########################

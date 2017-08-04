@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from glob import glob
 import numpy as np
@@ -25,6 +26,7 @@ def read_config(config_file):
     specz_file = None
     z_epsilon = 0.2
     n_boot = 1
+    cross_cov = bool(1)
     gama_path = 'None'
     filename = 'None'
     wizz = 'False'
@@ -82,6 +84,8 @@ def read_config(config_file):
             ncores = int(line[1])
         elif line[0] == 'nbootstraps':
             n_boot = int(line[1])
+        elif line[0] == 'cross_covariance':
+            cross_cov = bool(int(line[1]))
 
         # Lens selection
         elif line[0] == 'lensID_file':
@@ -139,7 +143,7 @@ def read_config(config_file):
     try: # If a custom lens catalog was given
         if 'None' not in lens_catalog:
             gama_path = lens_catalog
-            print 'Lens catalog:', lens_catalog
+            print('Lens catalog:', lens_catalog)
     except:
         pass
         
@@ -148,6 +152,6 @@ def read_config(config_file):
             Om, Ol, Ok, h, z_epsilon,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,
-            src_selection, cat_version, wizz, n_boot, blindcats)
+            src_selection, cat_version, wizz, n_boot, cross_cov, blindcats)
 
     return out

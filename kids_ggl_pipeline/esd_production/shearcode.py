@@ -3,7 +3,7 @@
 """
 "Determine the shear as a function of radius from a galaxy."
 """
-
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
@@ -137,7 +137,6 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                     #nsplit, nsplits, nobsbin, config_file, 'covariance')
         runblinds(plot_covboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
-
     return
 
 
@@ -198,12 +197,13 @@ def run_esd(config_file):
     kids_path, gama_path, specz_file, Om, Ol, Ok, h, z_epsilon,\
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, blindcats = \
+        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
         esd_utils.read_config(config_file)
 
-    print '\n \n \n \n \n \n \n \n \n \n'
-    print 'Running:', purpose
-    print
+    print('\n \n \n \n \n')
+    print('Running KiDS-GGL pipeline - signal extraction')
+    #print 'Running:', purpose
+    print()
 
     # Define the initial parameters for this shearcode run
     runparams = define_runparams(purpose, lens_binning, ncores, blindcats)
@@ -214,7 +214,7 @@ def run_esd(config_file):
                    blindcat, blindcats, config_file)
 
     end_tot = (time.time()-start_tot)/60
-    print 'Finished in: %g minutes' %end_tot
-    print
+    print('Finished in: %g minutes' %end_tot)
+    print()
 
     return

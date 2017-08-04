@@ -65,8 +65,8 @@ def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
         phi = np.zeros((1,m.size))
     Mo = m_0(M, A, M_1, gamma_1, gamma_2)
     for i in xrange(M.size):
-        phi[i] = log10(np.e) * exp(-(log10(m/Mo[i])**2) / (2*(sigma**2))) / \
-                 ((2*pi)**0.5 * sigma * m)
+        phi[i] = log10(np.e) * exp(-(log10(m/Mo[i])**2.0) / (2.0*(sigma**2.0))) / \
+                 ((2.0*pi)**0.5 * sigma * m)
     return phi
 
 
@@ -82,7 +82,7 @@ def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     Mo = Ac2s * m_0(M, A, M_1, gamma_1, gamma_2)
     for i in xrange(M.size):
         phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * \
-                 exp(-(m/Mo[i])**2) / m
+                 exp(-(m/Mo[i])**2.0) / m
     return phi
 
 
@@ -141,8 +141,8 @@ def m_0(M, A, M_1, gamma_1, gamma_2):
     Stellar mass as a function of halo mass
 
     """
-    return 10**A * ((M/10**M_1)**(gamma_1)) / \
-          ((1.0 + (M/10**M_1))**(gamma_1 - gamma_2))
+    return 10.0**A * ((M/10.0**M_1)**(gamma_1)) / \
+          ((1.0 + (M/10.0**M_1))**(gamma_1 - gamma_2))
 
 
 def phi_0(M, b_0, b_1, b_2):
@@ -200,7 +200,7 @@ def ncm_simple(mass_func, M, M_1, sigma):
     
     M_1 = 10.0**M_1
     #"""
-    nc = exp(-(log10(M)-log10(M_1))**2 / (2*(sigma**2))) / \
+    nc = exp(-(log10(M)-log10(M_1))**2.0 / (2.0*(sigma**2.0))) / \
         ((2.0*pi)**0.5 * sigma * log(10))
     #"""
     #nc = 0.5 * (1.0+sp.erf((log10(M)-log10(M_1))/sigma))

@@ -22,11 +22,12 @@ model             halo.model
 # See Cacciato, 2009 (http://arxiv.org/abs/0807.4932) and 2013 (http://arxiv.org/abs/1207.0503) for details. Shown here are fiducial values from the later paper.
 
 # Cosmology parameters for the halo model (reason for duplication - those can be fitted for using the sampler)
+# MAKE SURE THAT THOSE ARE THE SAME AS USED FOR THE DATA EXTRACTION!
 
 hm_param          sigma_8         fixed     0.8159
 hm_param          H0              fixed     67.74
 hm_param          omegam          fixed     0.3089
-hm_param          omegab_h2       fixed     0.02230
+hm_param          omegab          fixed     0.04860
 hm_param          omegav          fixed     0.6911
 hm_param          n               fixed     0.9667
 

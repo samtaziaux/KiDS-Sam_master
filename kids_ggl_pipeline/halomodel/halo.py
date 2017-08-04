@@ -25,6 +25,7 @@
 # Halo model code
 # Andrej Dvornik, 2014/2015
 
+from __future__ import print_function
 import multiprocessing as multi
 import numpy as np
 import mpmath as mp
@@ -37,6 +38,7 @@ from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d, UnivariateSpline
 from itertools import count, izip
 from time import time
+from astropy.cosmology import LambdaCDM
 
 from hmf import MassFunction
 
@@ -78,14 +80,14 @@ def memoize(function):
             memo[args] = rv
         return rv
     return wrapper
-
+"""
 #@memoize
 def Mass_Function(M_min, M_max, step, name, **cosmology_params):
     return MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step,
                         mf_fit=name, delta_h=200.0, delta_wrt='mean',
                         cut_fit=False, z2=None, nz=None, delta_c=1.686,
                         **cosmology_params)
-
+"""
 
 """
 # Components of density profile from Mohammed and Seljak 2014
@@ -283,7 +285,7 @@ def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
     b_g = trapz(mass_func.dndlnm * population * \
                 Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
                 
-    return (exp(mass_func.power) * b_g), b_g
+    return (mass_func.power * b_g), b_g
 
 
 def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
@@ -306,7 +308,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         #M_min, M_max, M_step, M_bin_min, M_bin_max, \
         #centrals, satellites, taylor_procedure, include_baryons, \
         #smth1, smth2 = theta
-    sigma_8, H0, omegam, omegab_h2, omegav, n, \
+    sigma_8, H0, omegam, omegab, omegav, n, \
         z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
         fc_nsat, alpha_s, b_0, b_1, b_2, \
         alpha_star, beta_gas, r_t0, r_c0, p_off, r_off, bias, \
@@ -356,38 +358,40 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                  dtype=np.longdouble)
                        for Mi, Mx in _izip(M_bin_min, M_bin_max)])
     #print 'hod_mass =', time() - to
-    cosmology_params = _array([])
+    transfer_params = _array([])
     for z_i in z:
-        cosmology_params = np.append(cosmology_params, {"sigma_8": sigma_8,
-                                     "H0": H0,"omegab_h2": omegab_h2,
-                                     "omegam": omegam, "omegav": omegav, "n": n,
-                                     "lnk_min": lnk_min ,"lnk_max": lnk_max,
-                                     "dlnk": k_step, "transfer_fit": "BBKS",
-                                     "z":np.float64(z_i),
-                                     "force_flat": True})
+        transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
+                                    'n': n,
+                                    'lnk_min': lnk_min ,'lnk_max': lnk_max,
+                                    'dlnk': k_step, 'transfer_model': 'CAMB',
+                                    'z':np.float64(z_i)})
+
     # Calculation
     # Tinker10 should also be read from theta!
     #to = time()
-    #hmf = Mass_Function(M_min, M_max, M_step, "Tinker10", **cosmology_params)
     hmf = _array([])
-    for i in cosmology_params:
-        hmf_temp = Mass_Function(M_min, M_max, M_step, "Tinker10", **i)
+    h = H0/100.0
+    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav)
+    for i in transfer_params:
+        hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
+                                hmf_model='Tinker10', delta_h=200.0, delta_wrt='mean',
+                                delta_c=1.686,
+                                **i)
+        hmf_temp.update(cosmo_model=cosmo_model)
         hmf = np.append(hmf, hmf_temp)
-    #print 'mass function =', time() - to
 
     mass_func = np.zeros((z.size, mass_range.size))
     rho_mean = np.zeros(z.shape)
     rho_crit = np.zeros(z.shape)
     rho_dm = np.zeros(z.shape)
-
-    omegab = hmf[0].omegab
-    omegac = hmf[0].omegac
-    omegav = hmf[0].omegav
-    h = hmf[0].h
-
+    
+    omegab = hmf[0].cosmo.Ob0
+    omegac = hmf[0].cosmo.Om0-omegab
+    omegav = hmf[0].cosmo.Ode0
+    
     for i in xrange(z.size):
         mass_func[i] = hmf[i].dndlnm
-        rho_mean[i] = hmf[i].mean_dens_z
+        rho_mean[i] = hmf[i].mean_density0
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
         rho_dm[i] = rho_mean[i] * baryons.f_dm(omegab, omegac)
 
@@ -841,7 +845,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                            rvir_range_3d_i,
                                            rvir_range_2d_i))
                      for sur_den2_i in _izip(sur_den4)]) / 1e12
+                     
+    from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    nu = spline(hmf[0].nu,hmf[0].M,k=5)
+                     
     """
+    
     #for i in xrange(len(M_bin_min)):
         #d_sur_den2[i][d_sur_den2[i] <= 0.0] = np.nan
         #d_sur_den2[i][d_sur_den2[i] >= 10.0**20.0] = np.nan
@@ -869,12 +878,12 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #print 'out_esd_tot_inter =', time() - to
 
     #print np.nan_to_num(out_esd_tot_inter)
-    print np.log10(effective_mass), bias_out, bias_out/bias.T[0], 0
+    print(np.log10(effective_mass), bias_out, bias_out/bias.T[0], 0)
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
 
     # Add other outputs as needed. Total ESD should always be first!
     return [out_esd_tot_inter, np.log10(effective_mass), bias_out]
-    #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass
+    #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass, nu(1)
 
 if __name__ == '__main__':
-    print 0
+    print(0)

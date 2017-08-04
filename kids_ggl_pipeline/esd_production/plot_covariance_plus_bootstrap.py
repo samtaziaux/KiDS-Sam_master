@@ -6,6 +6,7 @@
 """
 
 # Import the necessary libraries
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
@@ -31,11 +32,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
         path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
         splitslist, blindcats, blindcat, blindcatnum, \
-        path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot = \
+        path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
-    print 'Final step: Plot the ESD profiles and correlation matrix'
-    print
+    print('Final step: Plot the ESD profiles and correlation matrix')
+    print()
 
     blindcat = blindcat[0]
     
@@ -62,7 +63,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if ('random' in purpose) or ('star' in purpose):
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
-        print 'Number of existing random catalogs:', Ncat
+        print('Number of existing random catalogs:', Ncat)
 
     # Paths to the resulting files
     outname = shear.define_filename_results(path_results, purpose, \

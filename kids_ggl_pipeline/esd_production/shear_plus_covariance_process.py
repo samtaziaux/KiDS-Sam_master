@@ -6,6 +6,7 @@
 """
 
 # Import the necessary libraries
+from __future__ import print_function
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
@@ -108,7 +109,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
         for kidscatname in splitkidscats[Nsplit]:
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 80: # If it is too high...
-                print 'Waiting: More memory required'
+                print('Waiting: More memory required')
                 time.sleep(30) # wait before continuing the calculation
 
             kidscatN = kidscatN+1
@@ -129,12 +130,12 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
 
-            print 'Analysing part %i/%i, process %i: %s (contains %i objects)'\
+            print('Analysing part %i/%i, process %i: %s (contains %i objects)'\
                     %(kidscatN, len(splitkidscats[Nsplit]), \
-                      Nsplit+1, kidscatname, len(galIDs))
+                      Nsplit+1, kidscatname, len(galIDs)))
 
             if ('random' in purpose):
-                print '	of catalog:', Ncat+1
+                print('	of catalog:', Ncat+1)
 
             # Split the list of lenses into chunks of 100 max.
             # why 100? trying a few more here
@@ -154,8 +155,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                                         len(w.T[0]), nRbins])
 
             for l in xrange(len(lenssplits)-1):
-                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), \
-                                            lenssplits[l], '-', lenssplits[l+1]
+                print('Lens split %i/%i:'%(l+1, len(lenssplits)-1), \
+                                            lenssplits[l], '-', lenssplits[l+1])
 
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
@@ -287,7 +288,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
             if os.path.isfile(filename):
                 os.remove(filename)
-                print 'Placeholder:', filename, 'is removed.'
+                print('Placeholder:', filename, 'is removed.')
 
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
@@ -297,13 +298,13 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, \
                                 Rconst, output, outputnames, variance, \
                                 purpose, e1, e2, w, srcm)
-            print 'Written:', filename
+            print('Written:', filename)
 
 
-    if cat_version == 3:
+    if cat_version == 3 or cat_version == 0:
 
         for kidscatname in splitkidscats[Nsplit]:
-
+            
             index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
             """
             memfrac = memory.test() # Check which fraction of the memory is full
@@ -331,11 +332,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
 
-            print 'Analysing part %i/%i, process %i: %s (contains %i objects)'\
+            print('Analysing part %i/%i, process %i: %s (contains %i objects)'\
                             %(kidscatN, len(splitkidscats[Nsplit]), \
-                              Nsplit+1, kidscatname, len(galIDs))
+                              Nsplit+1, kidscatname, len(galIDs)))
             if ('random' in purpose):
-                print '	of catalog:', Ncat+1
+                print('	of catalog:', Ncat+1)
 
             # Split the list of lenses into chunks of 100 max.
             # why 100? trying larger numbers (CS)
@@ -370,7 +371,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
                         np.zeros([len(outputnames), len(w.T[0]), nRbins])
 
             for l in xrange(len(lenssplits)-1):
-                print 'Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1]
+                print('Lens split %i/%i:'%(l+1, len(lenssplits)-1), lenssplits[l], '-', lenssplits[l+1])
 
                 # Select all the lens properties that are in this lens split
                 galID_split, galRA_split, galDEC_split, galZ_split, Dcl_split, \
@@ -508,7 +509,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
             if os.path.isfile(filename):
                 os.remove(filename)
-                print 'Placeholder:', filename, 'is removed.'
+                print('Placeholder:', filename, 'is removed.')
 
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
@@ -518,7 +519,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, \
                                 Rconst, output, outputnames, variance, \
                                 purpose, e1, e2, w, srcm)
-            print 'Written:', filename
+            print('Written:', filename)
 
     q1.put(Nsplit)
 
@@ -534,11 +535,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot = \
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
         shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
 
-    print 'Step 1: Create split catalogues in parallel'
-    print
+    print('Step 1: Create split catalogues in parallel')
+    print()
 
 
     if 'bootstrap' in purpose:
@@ -579,20 +580,20 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if ('random' in purpose):
         filename_var = '%i_%s'%(Ncat+1, filename_var)
         # Ncat is the number of existing catalogs, we want to go one beyond
-        print 'Number of new catalog:', Ncat+1
+        print('Number of new catalog:', Ncat+1)
     #		print 'Splits already written: \n', splitslist
 
     # Stop if the catalog already exists.
     outname = shear.define_filename_results(path_results, purpose, \
                                             filename_var, filename_addition, \
                                             Nsplit, blindcat)
-    print 'Requested file:', outname
-    print
+    print('Requested file:', outname)
+    print()
 
     if os.path.isfile(outname):
-        print '(in shear_plus_covariance)',
-        print 'This output already exists:', outname
-        print
+        print('(in shear_plus_covariance)')
+        print('This output already exists:', outname)
+        print()
         return
 
 
@@ -606,9 +607,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                                 Nsplits, filename_addition, \
                                                 blindcat)
 
-            with open(filename, 'w') as file:
-                print >>file, ''
-            print 'Placeholder:', filename, 'is written.'
+            np.savetxt(filename, np.empty(0))
+            print('Placeholder:', filename, 'is written.')
 
     else:
         filename = 0
@@ -629,11 +629,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     e2_varlist = np.array([[]]*4)
 
     if cat_version == 2:
-        print 'Importing KiDS catalogs from: %s'%path_kidscats
+        print('Importing KiDS catalogs from: %s'%path_kidscats)
         i = 0
         for kidscatname in kidscats:
             i += 1
-            print '	%i/%i:'%(i, len(kidscats)), kidscatname
+            print('	%i/%i:'%(i, len(kidscats)), kidscatname)
 
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
@@ -653,32 +653,32 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     tile_varlist = np.array([])
     srcPZ_a = np.array([])
     srcPZ_varlist = np.array([])
-    if cat_version == 3:
+
+    if cat_version == 3 or cat_version == 0:
         kidscatname2 = np.array([])
         for i in xrange(len(kidscats)):
             kidscatname2 = np.append(kidscatname2, \
                                      kidscats[i].rsplit('-', 1)[0])
-
         kidscatname2 = np.unique(kidscatname2)
-
-        print 'Importing KiDS catalogs from: %s'%path_kidscats
+        
+        print('Importing KiDS catalogs from: %s'%path_kidscats)
         i = 0
         for kidscatname in kidscatname2:
             i += 1
-            print '	%i/%i:'%(i, len(kidscatname2)), kidscatname
-
+            print('	%i/%i:'%(i, len(kidscatname2)), kidscatname)
+            
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
             shear.import_kidscat(path_kidscats, kidscatname, \
                                  kidscat_end, src_selection, cat_version)
-
+                
             srcNr_varlist = np.append(srcNr_varlist, srcNr)
             srcRA_varlist = np.append(srcRA_varlist, srcRA)
             srcDEC_varlist = np.append(srcDEC_varlist, srcDEC)
             srcm_varlist = np.append(srcm_varlist, srcm)
             tile_varlist = np.append(tile_varlist, tile)
             srcPZ_varlist = np.append(srcPZ_varlist, srcPZ)
-
+                                 
             # Make ellipticity- and lfweight-lists for the variance calculation
             w_varlist = np.hstack([w_varlist, w.T])
             e1_varlist = np.hstack([e1_varlist, e1.T])
@@ -686,10 +686,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = [], [], [], \
                                                                 [], [], [], \
                                                                 [], [], []
-
+    
     # Calculating the variance of the ellipticity for this source selection
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist)
-
+    
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
                                            'None', 'None', 0, -inf, inf,
@@ -749,6 +749,37 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             print('\nThe-wiZZ is not yet supported, quitting ...')
             raise SystemExit()
 
+    if cat_version == 0:
+        print('\nCalculating the lensing efficiency ...')
+            
+        srclims = src_selection['z_photometric'][1]
+        sigma_selection = {}
+        # 10 lens redshifts for calculation of Sigma_crit
+        lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
+        #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+        #                          for y in lens_redshifts])
+        cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+        lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
+        
+            
+        lens_angular = lens_comoving/(1.0+lens_redshifts)
+        k = np.zeros_like(lens_redshifts)
+    
+        for i in xrange(lens_redshifts.size):
+            sigma_selection['z_photometric'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
+            srcNZ_k, spec_weight_k = shear.import_spec_cat_mocks(path_kidscats, kidscatname2,\
+                                    kidscat_end, specz_file, sigma_selection, \
+                                    cat_version)
+                    
+            srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, \
+                                            weights=spec_weight_k, density=1)
+            srcPZ_k = srcPZ_k/srcPZ_k.sum()
+            k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
+                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
+            
+        k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
+
+
     # Calculation of average m correctionf for KiDS-450
     if cat_version == 3:
         # Values are hardcoded, if image simulations give
@@ -795,10 +826,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Printing the made choices
 
-    print
-    print 'Using %s cores to create split catalogues'%Nsplits, \
-            ', - Center definition = %s'%centering
-    print
+    print()
+    print('Using %s cores to create split catalogues'%Nsplits, \
+            ', - Center definition = %s'%centering)
+    print()
 
     output = 0
     outputnames = 0

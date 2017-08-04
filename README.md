@@ -62,6 +62,11 @@ where, in my case, `<path_to_kids_ggl_folder>=/Library/Frameworks/Python.framewo
 
 This should show three panels with data points and lines resembling the Early Science satellite galaxy-galaxy lensing results of Sifon et al. (2015) and, after closing it, show the 3x3x14 covariance matrix.
 
+At this point you are also able to import any component of the KiDS-GGL pipeline as `python` modules for use within your own code. Step **c)** above should ensure all the components are accessible by your `python` installation. For instance, to access the different density profiles (currently all based on modifications of the NFW profile) and their associated quantities (such as mass, lensing signal, etc), you may type
+
+    from kids_ggl_pipeline.halomodel import nfw
+
+
 #### 2. Set up your configuration file.
     
 See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_demo_halo_specific.txt` for guidance.

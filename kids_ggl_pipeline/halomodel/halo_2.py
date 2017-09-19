@@ -244,7 +244,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step, 'transfer_model': 'CAMB',
+                                    'dlnk': k_step, 'transfer_model': 'EH',
                                     'z':np.float64(z_i)})
 
     # Calculation
@@ -252,7 +252,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     #to = time()
     hmf = _array([])
     h = H0/100.0
-    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav)
+    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
         hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
                                 hmf_model='Tinker10', delta_h=200.0, delta_wrt='mean',
@@ -488,10 +488,10 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
         
     P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
                     for Pgg_k_i in _izip(Pgg_k)]
-    """
+    #"""
     P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
                     for Pmm_i in _izip(Pmm)]
-    """
+    #"""
                             
                             
     """
@@ -505,11 +505,11 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     xi2_2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2_2[i] = power_to_corr_ogata(P_inter_2[i], rvir_range_3d)
-    """
+    #"""
     xi2_3 = np.zeros((M_bin_min.size,rvir_range_3d.size))
     for i in xrange(M_bin_min.size):
         xi2_3[i] = power_to_corr_ogata(P_inter_3[i], rvir_range_3d)
-    """
+    #"""
 
 
     """
@@ -531,13 +531,13 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
         sur_den2_2[i] = fill_nan(sur_den2_2[i])
         w_p[i] = sur_den2_2[i]/rho_mean[i]
 
-    """
+    #"""
     sur_den2_3 = _array([sigma(xi2_3_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
                          for xi2_3_i, rho_mean_i in _izip(xi2_3, rho_mean)])
     for i in xrange(M_bin_min.size):
         sur_den2_3[i][(sur_den2_3[i] <= 0.0) | (sur_den2_3[i] >= 1e20)] = np.nan
         sur_den2_3[i] = fill_nan(sur_den2_3[i])
-    """
+    #"""
 
     """
     # Excess surface density
@@ -554,7 +554,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                                                rvir_range_3d_i,
                                                rvir_range_2d_i))
                          for sur_den2_i in _izip(sur_den2)]) / 1e12
-    """
+    #"""
     d_sur_den2_2 = _array([np.nan_to_num(d_sigma(sur_den2_2_i,
                                                 rvir_range_3d_i,
                                                 rvir_range_2d_i))
@@ -565,7 +565,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                                                  rvir_range_3d_i,
                                                  rvir_range_2d_i))
                         for sur_den2_3_i in _izip(sur_den2_3)]) / 1e12
-    """
+    #"""
                          
                          
                          
@@ -575,8 +575,9 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                         for d_sur_den2_i in _izip(d_sur_den2)])
                          
     out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
+    
         
-    """
+    #"""
     out_esd_tot_2 = _array([UnivariateSpline(rvir_range_2d_i,
                             np.nan_to_num(d_sur_den2_2_i), s=0)
                             for d_sur_den2_2_i in _izip(d_sur_den2_2)])
@@ -589,12 +590,12 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                             for d_sur_den2_3_i in _izip(d_sur_den2_3)])
                          
     out_esd_tot_inter_3 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    """
+    #"""
                          
     for i in xrange(M_bin_min.size):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        #out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
-        #out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
+        out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
+        out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
 
     if include_baryons:
         pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0)/1e12 \
@@ -610,17 +611,17 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     
     # Add other outputs as needed. Total ESD should always be first!
     
-    
+
     # This is for w_p and esd
-    """
     sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
-    np.nan_to_num(wp_i), s=0)
-    for wp_i in _izip(w_p)])
+                            np.nan_to_num(wp_i), s=0)
+                             for wp_i in _izip(w_p)])
         
     sur_den2_2_out_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
     for i in xrange(M_bin_min.size):
         sur_den2_2_out_inter[i] = sur_den2_2_out[i](rvir_range_2d_i)
-        
+
+    """
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
     wp_out = np.vstack((out_esd_tot_inter, sur_den2_2_out_inter))
     #wp_out = wp_out.flatten()
@@ -635,10 +636,10 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
     wp_out = np.vstack((out_esd_tot_inter, out_esd_tot_inter_2))
     """
-    #return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
+    return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2_out_inter, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
     #return [gamma_out]
     #return [wp_out]
-    return [k_range, Pg_c, Pg_s, Pg_2h, Pg_k, Pgg_s, Pgg_cs, Pgg_2h, Pgg_k, Pmm_1h, [hmf[0].power, hmf[1].power, hmf[2].power], Pmm]
+    #return [k_range, Pg_c, Pg_s, Pg_2h, Pg_k, Pgg_s, Pgg_cs, Pgg_2h, Pgg_k, Pmm_1h, [hmf[0].power, hmf[1].power, hmf[2].power], Pmm]
 
 if __name__ == '__main__':
     print(0)

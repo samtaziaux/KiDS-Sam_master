@@ -361,10 +361,10 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
 
     """
     _log = log
-    v1free = val1[numpy.where(jfree)]
-    v2free = val2[numpy.where(jfree)]
-    v3free = val3[numpy.where(jfree)]
-    v4free = val4[numpy.where(jfree)]
+    v1free = val1[numpy.where(jfree)].flatten()
+    v2free = val2[numpy.where(jfree)].flatten()
+    v3free = val3[numpy.where(jfree)].flatten()
+    v4free = val4[numpy.where(jfree)].flatten()
     if not isfinite(v1free.sum()):
         return -inf, fail_value
     j = (prior_types == 'normal')

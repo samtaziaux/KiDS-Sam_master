@@ -179,7 +179,7 @@ def d_sigma(sigma, r_i, r_x):
     s = np.zeros(len(r_x))
     err = np.zeros(len(r_x))
 
-    c = UnivariateSpline(np.log10(r_i), np.log10(sigma),s=0, ext=0)
+    c = UnivariateSpline(np.log10(r_i), np.log10(sigma),s=0, ext=0, k=1)
     x_int = np.linspace(0.0, 1.0, 1000, endpoint=True)
 
     for i in xrange(len(r_x)):

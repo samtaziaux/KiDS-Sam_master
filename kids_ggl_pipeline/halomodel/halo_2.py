@@ -384,10 +384,13 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                 rho_mean, z, f, concentration)])
                    
     # and of the NFW profile of the satellites
+    """
     uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
                 mass_range, rvir_range_lin_i, k_range_lin)
                 for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
                 _izip(rvir_range_lin, rho_mean, z, fc_nsat)])
+    """
+    uk_s = u_k
     uk_s = uk_s/uk_s[:,0][:,None]
                    
     # If there is miscentering to be accounted for
@@ -403,7 +406,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                             c=concentration_i) for \
                             rvir_range_lin_i, rho_mean_i, z_i, f_i, concentration_i, p_off_i, r_off_i
                             in _izip(rvir_range_lin, rho_mean, z, f, concentration, p_off, r_off)])
-        u_k = u_k/u_k[:,0][:,None]
+    u_k = u_k/u_k[:,0][:,None]
 
     # Galaxy - dark matter spectra (for lensing)
     Pg_2h = bias * _array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,

@@ -216,18 +216,20 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     return 1.0/k_interpolated(z_in)
 
 
-def survey_variance(mass_func, W_p, k_range, volume):
+def survey_variance(mass_func, W_p, k_range, radius):
     
     # Seems to be about right! To be checked again!.
     
     P_lin = mass_func.power
     
-    #integ1 = W_p(np.exp(k_range)) * np.exp(k_range)**2.0
-    #v_w = 4.0*np.pi * simps(integ1, np.exp(k_range))
-    v_w = volume
+    #v_w = radius
+    #integ2 = W_p(np.exp(k_range))**2.0 * np.exp(k_range)**2.0 * P_lin
+    #sigma = (1.0 / (2.0*np.pi**2.0 * v_w**2.0)) * simps(integ2, np.exp(k_range))
     
+    
+    Awr = simps(np.exp(k_range) * sp.jv(0, np.exp(k_range) * radius)/(2.0*np.pi) * W_p(np.exp(k_range))**2.0, k_range)
     integ2 = W_p(np.exp(k_range))**2.0 * np.exp(k_range)**2.0 * P_lin
-    sigma = (1.0 / (2.0*np.pi**2.0 * v_w**2.0)) * simps(integ2, np.exp(k_range))
+    sigma = (1.0 / (2.0*np.pi**2.0 * Awr)) * simps(integ2, np.exp(k_range))
     
     return sigma
 
@@ -1170,7 +1172,9 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
     
     W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
+    #survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
+    survey_var = [survey_variance(hmf_i, W_p, k_range, radius) for hmf_i in hmf]
+    
     
     #W = 500.0**3.0 * sp.jv(1, k_range_lin*500.0) / (k_range_lin*500.0)
     #W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)

@@ -642,7 +642,7 @@ def run_kidscoord(path_kidscats, cat_version):
         # Create the dictionary that will hold the names
         # of the KiDS catalogues with their RA and DEC
         kidscoord = dict()
-
+        kidscat_end = ''
         for i in xrange(len(kidscatlist)):
             # Of the KiDS file names, keep only "KIDS_RA_DEC"
 

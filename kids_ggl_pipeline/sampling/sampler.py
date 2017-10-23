@@ -559,7 +559,7 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
     ball = numpy.zeros((nwalkers, ndim))
     for n, j in enumerate(params_free):
         if prior_free[n] == 'normal':
-            lims = (v4free[n] - v3free[n]) / 10.0
+            lims = (v4free[n] - v3free[n]) / 5.0
             min = starting[n] - lims
             max = starting[n] + lims
             if min <= v3free[n]:
@@ -570,7 +570,7 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
             ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
 
         if prior_free[n] == 'lognormal':
-            lims = (v4free[n] - v3free[n]) / 10.0
+            lims = (v4free[n] - v3free[n]) / 5.0
             min = starting[n] - lims
             max = starting[n] + lims
             if min <= v3free[n]:
@@ -581,7 +581,7 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
             ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
                         
         if prior_free[n] == 'uniform':
-            lims = (v2free[n] - v1free[n]) / 10.0
+            lims = (v2free[n] - v1free[n]) / 5.0
             min = starting[n] - lims
             max = starting[n] + lims
             if min <= v1free[n]:
@@ -592,7 +592,7 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
             ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
     
         if prior_free[n] == 'exp':
-            lims = (v3free[n] - v2free[n]) / 10.0
+            lims = (v3free[n] - v2free[n]) / 5.0
             min = starting[n] - lims
             max = starting[n] + lims
             if min <= v2free[n]:

@@ -338,19 +338,19 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     effective_mass_bar = _array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range) * \
                         (1.0 - baryons.f_dm(omegab, omegac))
                         for z_i, hmf_i, pop_g_i in _izip(z, hmf, pop_g)])
-    """
+    #"""
     import matplotlib.pyplot as pl
-    pl.plot(mass_range, pop_c[0])
-    pl.plot(mass_range, pop_s[0])
-    pl.plot(mass_range, pop_g[0])
+    pl.plot(mass_range, pop_c[0], color='black', ls=':')
+    pl.plot(mass_range, pop_s[0], color='black', ls='-.')
+    pl.plot(mass_range, pop_g[0], color='black', ls='-')
                        
-    pl.plot(mass_range, pop_c[1])
-    pl.plot(mass_range, pop_s[1])
-    pl.plot(mass_range, pop_g[1])
+    pl.plot(mass_range, pop_c[1], color='orange', ls=':')
+    pl.plot(mass_range, pop_s[1], color='orange', ls='-.')
+    pl.plot(mass_range, pop_g[1], color='orange', ls='-')
     
-    pl.plot(mass_range, pop_c[2])
-    pl.plot(mass_range, pop_s[2])
-    pl.plot(mass_range, pop_g[2])
+    pl.plot(mass_range, pop_c[2], color='red', ls=':')
+    pl.plot(mass_range, pop_s[2], color='red', ls='-.')
+    pl.plot(mass_range, pop_g[2], color='red', ls='-')
     
     pl.xscale('log')
     pl.yscale('log')
@@ -358,17 +358,17 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     pl.xlim([1e10, 1e14])
     pl.show()
                        
-    from scipy.interpolate import InterpolatedUnivariateSpline as spline
-    nu = spline(hmf[0].nu,hmf[0].M,k=5)
+    #from scipy.interpolate import InterpolatedUnivariateSpline as spline
+    #nu = spline(hmf[0].nu,hmf[0].M,k=5)
                        
-    print nu(1)
+    #print nu(1)
                        
-    pl.plot(hmf[0].nu, hmf[0].M)
-    pl.yscale('log')
-    pl.show()
-    quit()
-    """
-                   
+    #pl.plot(hmf[0].nu, hmf[0].M)
+    #pl.yscale('log')
+    #pl.show()
+    #quit()
+    #"""
+
     """
     # Power spectrum
     """
@@ -384,13 +384,13 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                 rho_mean, z, f, concentration)])
                    
     # and of the NFW profile of the satellites
-    """
+    #"""
     uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
                 mass_range, rvir_range_lin_i, k_range_lin)
                 for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
                 _izip(rvir_range_lin, rho_mean, z, fc_nsat)])
-    """
-    uk_s = u_k
+    #"""
+    #uk_s = u_k
     uk_s = uk_s/uk_s[:,0][:,None]
                    
     # If there is miscentering to be accounted for

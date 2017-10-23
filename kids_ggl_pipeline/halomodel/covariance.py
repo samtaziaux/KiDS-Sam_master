@@ -1000,12 +1000,12 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
                 rho_mean, z, f, concentration)])
     u_k = u_k/u_k[:,0][:,None]
     # and of the NFW profile of the satellites
-    """
+    #"""
     uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
                 mass_range, rvir_range_lin_i, k_range_lin)
                 for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
                 _izip(rvir_range_lin, rho_mean, z, fc_nsat)])
-    """
+    #"""
     uk_s = u_k
     uk_s = uk_s/uk_s[:,0][:,None]
 

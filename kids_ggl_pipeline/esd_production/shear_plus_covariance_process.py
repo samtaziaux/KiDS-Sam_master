@@ -36,7 +36,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                filename_var,
                filename, cat_version, blindcat, srclists, path_splits,
                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-               variance, h):
+               variance, h, path_kidscats, kidscatname, kidscat_end, src_selection):
     
     q1 = mp.Queue()
     procs = []
@@ -50,7 +50,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
                                                 filename_var,
                                                 filename, cat_version, blindcat, srclists, path_splits,
                                                 splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-                                                variance, h, q1))
+                                                variance, h, path_kidscats, kidscatname, kidscat_end, src_selection, q1))
         procs.append(work)
         work.start()
         #work.join()
@@ -76,7 +76,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance, h, q1):
+         variance, h, path_kidscats, kidscatname, kidscat_end, src_selection, q1):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -629,6 +629,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     e2_varlist = np.array([[]]*4)
 
     if cat_version == 2:
+        k_interpolated = []
         print('Importing KiDS catalogs from: %s'%path_kidscats)
         i = 0
         for kidscatname in kidscats:
@@ -858,7 +859,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                  Runit, nRbins, Rconst, filename_var, filename, cat_version,
                  blindcat, srclists, path_splits, splitkidscats, catmatch,
-                 Dcsbins, Dc_epsilon, filename_addition, variance, h)
+                 Dcsbins, Dc_epsilon, filename_addition, variance, h, path_kidscats, kidscatname, kidscat_end, src_selection)
 
     if 'covariance' in purpose:
         for i in xrange(Nobsbins):
@@ -877,7 +878,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                  binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                                  Runit, nRbins, Rconst, filename_var, filename, cat_version,
                                  blindcat, srclists, path_splits, splitkidscats, catmatch,
-                                 Dcsbins, Dc_epsilon, filename_addition, variance, h)
+                                 Dcsbins, Dc_epsilon, filename_addition, variance, h, path_kidscats, kidscatname, kidscat_end, src_selection)
 
     if out == 0:
         print('Splits finished properly.')

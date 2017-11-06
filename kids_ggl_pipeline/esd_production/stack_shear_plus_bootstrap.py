@@ -145,12 +145,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                                     srcmlist, Nsrclist]]
     
     # Mask the galaxies in the shear catalog, WITHOUT binning
-    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection, \
-                                           'None', 'None', 0, -inf, inf, Dcllist, h)
+    lenssel_binning = shear.define_lenssel(
+        gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf,
+        Dcllist, galZlist,  h)
     # Defining the observable binnning range of the groups
     binname, lens_binning, Nobsbins, \
-    binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                          lenssel_binning, gamacat)
+    binmin, binmax = shear.define_obsbins(
+        binnum, lens_binning, lenssel_binning, gamacat)
 
 
     # Defining the number of bootstrap samples ( = 1 for normal shear stack)
@@ -218,17 +219,19 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         
         # Defining the min/max value of each observable bin
         binname, lens_binning, Nobsbins, \
-        binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                              lenssel_binning, gamacat)
+        binmin, binmax = shear.define_obsbins(
+            binnum, lens_binning, lenssel_binning, gamacat)
 
         print()
-        print('%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, \
-                                          binmin, binmax))
+        #print('%s-bin %i of %i: %g - %g'%(binname, binnum, Nobsbins, \
+                                          #binmin, binmax))
+        print('{}-bin {} of {}: {} - {}'.format(
+                binname, binnum, Nobsbins, binmin, binmax))
         
         # Mask the galaxies in the shear catalog
-        lenssel = shear.define_lenssel(gamacat, centering, lens_selection, \
-                                       lens_binning, binname, binnum, \
-                                       binmin, binmax, Dcllist, h)
+        lenssel = shear.define_lenssel(
+            gamacat, centering, lens_selection, lens_binning, binname, binnum,
+            binmin, binmax, Dcllist, galZlist, h)
 
         if debug:
             print('lenssel:', sum(lenssel))

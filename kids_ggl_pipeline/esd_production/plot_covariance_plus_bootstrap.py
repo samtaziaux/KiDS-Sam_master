@@ -80,41 +80,38 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             filename_addition, cat_version)
     
     # Binnning information of the groups
-    lenssel_binning = shear.define_lenssel(gamacat, centering,
-                                           lens_selection, 'None',
-                                           'None', 0, -inf, inf, Dcllist, h)
-    # Mask the galaxies in the shear catalog, 
+    lenssel_binning = shear.define_lenssel(
+        gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf,
+        Dcllist, galZlist, h)
+    # Mask the galaxies in the shear catalog,
     # WITHOUT binning (for the bin creation)
-    binname, lens_binning, \
-    Nobsbins, binmin, binmax = shear.define_obsbins(binnum, lens_binning,
-                                                    lenssel_binning, gamacat,
-                                                    Dcllist)
+    binname, lens_binning, Nobsbins, binmin, binmax = \
+        shear.define_obsbins(
+            binnum, lens_binning, lenssel_binning, gamacat, Dcllist, galZlist)
 
 
     # Writing and showing the plots
 
-    plottitle1 = shear.define_plottitle(purpose, centering, \
-                                        lens_selection, binname, \
-                                        Nobsbins, src_selection)
-    
+    plottitle1 = shear.define_plottitle(
+        purpose, centering, lens_selection, binname, Nobsbins, src_selection)
+
     if 'bootstrap' not in purpose:
         # Plotting the shear profiles for all observable bins
         for N1 in xrange(Nobsbins):
 
-            binname, lens_binning, \
-            Nobsbins, binmin, binmax = shear.define_obsbins(N1+1, lens_binning, \
-                                                        lenssel_binning, \
-                                                        gamacat, Dcllist)
+            binname, lens_binning, Nobsbins, binmin, binmax = \
+                shear.define_obsbins(
+                    N1+1, lens_binning, lenssel_binning, gamacat, Dcllist,
+                    galZlist)
 
             filename_var_N1 = filename_var.replace('binnum', '%i'%(N1+1))
-            filename_N1 = shear.define_filename_results(path_results, purpose, \
-                                            filename_var_N1, filename_addition, \
-                                            Nsplit, blindcat)
-                                            
-            filenameESD = shear.define_filename_results(path_results, purpose, \
-                                                        filename_var_N1.replace('_bin_%i'%(N1+1), ''), \
-                                                        filename_addition, \
-                                                        Nsplit, blindcat)
+            filename_N1 = shear.define_filename_results(
+                path_results, purpose, filename_var_N1, filename_addition,
+                Nsplit, blindcat)
+            filenameESD = shear.define_filename_results(
+                path_results, purpose, 
+                filename_var_N1.replace('_bin_%i'%(N1+1), ''),
+                filename_addition, Nsplit, blindcat)
             if 'No' in binname:
                 plotlabel = r'ESD$_t$'
             else:
@@ -155,7 +152,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # 6.4.2016 - Andrej D.
     
     # Remove the used splits
-    if (Nsplit==1) and (blindcat==blindcats[-1]):
+    # CS: path_splits doesn't exist when I run it - why?
+    if (Nsplit==1) and (blindcat==blindcats[-1]) and os.path.isdir(path_splits):
         #time.sleep(3) # Wait untill all blinds are done.
         #msg = '\nWarning: do you want to delete split files? [y/n] \n'
         #answer = raw_input(msg)

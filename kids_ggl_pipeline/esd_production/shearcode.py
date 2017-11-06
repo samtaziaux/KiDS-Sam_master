@@ -144,10 +144,10 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
 #def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
 def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
-    
+
     # This allows STDIN to work in child processes
     fn = sys.stdin.fileno()
-    
+
     # this allows for a single blindcat to have a name with more than one letter
     #if hasattr(blindcats, '__iter__') and len(blindcats) > 1:
     if 'bootstrap' in purpose:

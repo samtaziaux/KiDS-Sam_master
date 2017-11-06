@@ -91,13 +91,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Binnning information of the groups
     # Mask the galaxies in the shear catalog, WITHOUT binning
     # (for the bin creation)
-    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
-                                           'None', 'None', 0, -inf, inf,
-                                           Dcllist, h)
+    lenssel_binning = shear.define_lenssel(
+        gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf,
+        Dcllist, galZlist, h)
 
-    binname, lens_binning, Nobsbins, \
-    binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                          lenssel_binning, gamacat, Dcllist)
+    binname, lens_binning, Nobsbins, binmin, binmax = \
+        shear.define_obsbins(
+            binnum, lens_binning, lenssel_binning, gamacat, Dcllist, galZlist)
 
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
@@ -307,12 +307,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, binmin, binmax = \
-                shear.define_obsbins(N1+1, lens_binning, lenssel_binning,
-                                     gamacat, Dcllist)
+                shear.define_obsbins(
+                    N1+1, lens_binning, lenssel_binning, gamacat, Dcllist,
+                    galZlist)
 
-            lenssel = shear.define_lenssel(gamacat, centering, lens_selection,
-                                           lens_binning, binname, N1+1,
-                                           binmin, binmax, Dcllist, h)
+            lenssel = shear.define_lenssel(
+                gamacat, centering, lens_selection, lens_binning, binname,
+                N1+1, binmin, binmax, Dcllist, galZlist, h)
 
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]

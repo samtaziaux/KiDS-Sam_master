@@ -3,7 +3,9 @@
 """
 "Determine the shear as a function of radius from a galaxy."
 """
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
@@ -15,14 +17,14 @@ import subprocess as sub
 import shlex
 
 # local
-import combine_covariance_plus_bootstrap as combine_covboot
-import combine_splits
-import plot_covariance_plus_bootstrap as plot_covboot
-import shear_plus_covariance_process as shearcov
-import shearcode_modules as shear
-import stack_shear_plus_bootstrap as stack_shearboot
-import distance
-import esd_utils
+from . import combine_covariance_plus_bootstrap as combine_covboot
+from . import combine_splits
+from . import plot_covariance_plus_bootstrap as plot_covboot
+from . import shear_plus_covariance_process as shearcov
+from . import shearcode_modules as shear
+from . import stack_shear_plus_bootstrap as stack_shearboot
+from . import distance
+from . import esd_utils
 
 
 start_tot = time.time()

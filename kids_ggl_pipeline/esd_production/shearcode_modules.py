@@ -25,9 +25,7 @@ from matplotlib.colors import LogNorm
 from matplotlib import gridspec
 from matplotlib import rc, rcParams
 
-
-import distance
-import esd_utils
+from . import distance, esd_utils
 
 # Important constants(very preliminary!)
 G = const.G.to('pc3/Msun s2')

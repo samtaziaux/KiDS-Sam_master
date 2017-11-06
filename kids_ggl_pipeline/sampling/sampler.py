@@ -28,7 +28,7 @@ else:
     xrange = range
 
 # local
-import sampling_utils
+from . import sampling_utils
 
 
 def run_emcee(hm_options, sampling_options, args):

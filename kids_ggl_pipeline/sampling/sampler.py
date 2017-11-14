@@ -40,14 +40,7 @@ def run_emcee(hm_options, sampling_options, args):
     datafile, datacols, covfile, covcols, \
         exclude_bins, output, sampler, nwalkers, nsteps, nburn, \
         thin, k, threads, sampler_type, update_freq = sampling_options
-    
-    #function = cloud.serialization.cloudpickle.dumps(model)
-    #del model
-    #print(function)
 
-    #pickle.dumps(function)
-    #print('pickled')
-    
     print('Running KiDS-GGL pipeline - sampler\n')
     if args.demo:
         print(' ** Running demo only **')
@@ -218,7 +211,8 @@ def run_emcee(hm_options, sampling_options, args):
 
     # set up starting point for all walkers
     #po = starting * numpy.random.uniform(0.9, 1.1, size=(nwalkers,ndim))
-    po = sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, ndim, nwalkers)
+    po = sampler_ball(params, prior_types, jfree, starting, val1, val2, val3,
+                      val4, ndim, nwalkers)
     lnprior = zeros(ndim)
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
@@ -228,9 +222,9 @@ def run_emcee(hm_options, sampling_options, args):
         n = 1 if len(fmt) == 1 else int(fmt[0])
         # is this value a scalar?
         if len(fmt) == 1:
-            size = nwalkers * nsteps / thin
+            size = nwalkers * nsteps // thin
         else:
-            size = [nwalkers*nsteps/thin, int(fmt[:-1])]
+            size = [nwalkers*nsteps//thin, int(fmt[:-1])]
             # only for ESDs. Note that there will be trouble if outputs
             # other than the ESD have the same length, so avoid them at
             # all cost.
@@ -266,7 +260,7 @@ def run_emcee(hm_options, sampling_options, args):
         pos = po
     # incrementally save output
     # this array contains lnprior, chi2, lnlike
-    chi2 = [zeros(nwalkers*nsteps/thin) for i in xrange(3)]
+    chi2 = [zeros(nwalkers*nsteps//thin) for i in xrange(3)]
     nwritten = 0
     for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
                                               thin=thin)):
@@ -555,19 +549,20 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     return metadata, nwritten
 
 
-def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, ndim, nwalkers):
-
-    # This creates a ball around a starting value,
-    # taking prior ranges into consideration.
-    # It takes intervals (max-min)/2 around a starting value.
-
+def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4,
+                 ndim, nwalkers):
+    """
+    This creates a ball around a starting value, taking prior ranges
+    into consideration. It takes intervals (max-min)/2 around a
+    starting value.
+    """
     v1free = val1[numpy.where(jfree)]
     v2free = val2[numpy.where(jfree)]
     v3free = val3[numpy.where(jfree)]
     v4free = val4[numpy.where(jfree)]
     params_free = params[numpy.where(jfree)]
     prior_free = prior_types[numpy.where(jfree)]
-    
+
     ball = numpy.zeros((nwalkers, ndim))
     for n, j in enumerate(params_free):
         if prior_free[n] == 'normal':
@@ -578,7 +573,6 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
                 min = v3free[n]
             if max >= v4free[n]:
                 max = v4free[n]
-            
             ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
 
         if prior_free[n] == 'lognormal':
@@ -589,9 +583,8 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
                 min = v3free[n]
             if max >= v4free[n]:
                 max = v4free[n]
-            
             ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
-                        
+
         if prior_free[n] == 'uniform':
             lims = (v2free[n] - v1free[n]) / 5.0
             min = starting[n] - lims
@@ -600,9 +593,8 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
                 min = v1free[n]
             if max >= v2free[n]:
                 max = v2free[n]
-            
             ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
-    
+
         if prior_free[n] == 'exp':
             lims = (v3free[n] - v2free[n]) / 5.0
             min = starting[n] - lims
@@ -611,8 +603,6 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4, n
                 min = v2free[n]
             if max >= v3free[n]:
                 max = v3free[n]
-            
             ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
-
 
     return ball

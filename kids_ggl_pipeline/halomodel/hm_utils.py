@@ -1,5 +1,6 @@
 from __future__ import print_function
 import imp
+import numpy as np
 import os
 from glob import glob
 from numpy import array, inf, iterable, loadtxt
@@ -54,12 +55,12 @@ def read_config(config_file, version='0.5.7'):
         # also read param names
         elif line[0] == 'hm_param':
             if line[2] not in valid_types:
-                msg = 'ERROR: Please provide only valid prior types in the'
-                msg += ' parameter file (%s). Value %s is invalid.' \
-                       %(paramfile, line[1])
-                msg = ' Valid types are %s' %valid_types
+                msg = 'ERROR: Please provide only valid prior types in the' \
+                      ' parameter file ({0}). Value {1} is invalid.' \
+                      ' Valid types are {2}'.format(
+                            paramfile, line[1], valid_types)
                 print(msg)
-                exit()
+                sys.exit()
             params.append(line[1])
             prior_types.append(line[2])
             if line[2] == 'function':
@@ -156,7 +157,7 @@ def read_config(config_file, version='0.5.7'):
         hm_functions = (func for func in hm_functions)
     if njoin == 1 and len(join[0]) == 0:
         join = None
-   
+
     out = (model, array(params), array(param_types), array(prior_types),
            make_array(val1), make_array(val2), make_array(val3),
            make_array(val4), join, hm_functions, array(starting),

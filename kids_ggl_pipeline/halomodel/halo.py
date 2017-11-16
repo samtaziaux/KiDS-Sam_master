@@ -566,7 +566,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
                                                  c=concentration_i) for \
                       rvir_range_lin_i, rho_dm_i, z_i, f_i, concentration_i, p_off_i, r_off_i
                       in _izip(rvir_range_lin, rho_dm, z, f, concentration, p_off, r_off)])
-        u_k = u_k/u_k[:,0][:,None]
+    u_k = u_k/u_k[:,0][:,None]
 
     # Galaxy - dark matter spectra
     #to = time()

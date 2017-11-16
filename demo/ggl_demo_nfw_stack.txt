@@ -359,7 +359,7 @@ thin		         1
 
 # Number of iterations after which progress will be saved to the output file. If this number is too
 # small it may represent a significant overhead.
-update_freq          20
+update_freq          200
 
 # Apologies for the criptic name. This sets the number of bins used to sample the offset 1-halo term
 # (Nbins = 2^k + 1). Each increasing k will increase runtime significantly; k=7 gives precision of 1%

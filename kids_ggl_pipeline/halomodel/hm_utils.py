@@ -194,10 +194,8 @@ def depth(iterable):
                for item in iterable)
 
 def make_array(val):
-    #if numpy.iterable(val):
-        #val = array(val)
-    #else:
-    val = array(val)
+    if iterable(val):
+        val = array(val)
     for i, v in enumerate(val):
         if len(v) == 1 and depth(v) == 1:
             val[i] = v[0]

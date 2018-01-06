@@ -4,16 +4,17 @@
 # Part of the module to determine the shear 
 # as a function of radius from a galaxy.
 """
+from __future__ import absolute_import, print_function
 
 # Import the necessary libraries
-from __future__ import print_function
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
 import os
 import time
-import shearcode_modules as shear
 from astropy import constants as const, units as u
+
+from . import shearcode_modules as shear
 
 # Important constants
 inf = np.inf # Infinity
@@ -338,7 +339,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                             (wk2[N1,R1]*wk2[N2,R2])
     
 
-    header = '%s_min[m]    %s_min[n]    Radius[i](kpc/h%g)    Radius[j](kpc/h%g)    covariance(h%g*M_sun/pc^2)^2    correlation    bias(1+K[m,i])(1+K[n,j])'%(binname, binname, h*100, h*100, h*100)
+    header = '{0}_min[m]    {0}_min[n]    Radius[i](kpc/h{1:g})' \
+             '    Radius[j](kpc/h{1:g})    covariance(h{1:g}*M_sun/pc^2)^2' \
+             '    correlation    bias(1+K[m,i])(1+K[n,j])'.format(
+                    binname, 100*h)
 
     file = np.empty((Nobsbins*Nobsbins*nRbins*nRbins, 7))
     index_out = 0

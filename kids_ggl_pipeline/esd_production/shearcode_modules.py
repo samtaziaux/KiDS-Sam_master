@@ -19,6 +19,7 @@ from glob import glob
 
 from astropy import constants as const, units as u
 from astropy.cosmology import LambdaCDM
+from astropy.table import Table
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
@@ -449,23 +450,23 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, \
         nRbins, Rconst = define_Rbins(path_Rbins, Runit)
-    
+
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, \
-    Dcllist, Dallist = import_gamacat(path_gamacat, centering, purpose, Ncat, \
-    O_matter, O_lambda, Ok, h, Runit, lens_weights)
-    
+        Dcllist, Dallist = import_gamacat(
+            path_gamacat, centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
+            Runit, lens_weights)
+
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
-    
+
     # Match the KiDS field and GAMA galaxy coordinates
-    catmatch, kidscats, galIDs_infield = run_catmatch(kidscoord, galIDlist, \
-                                                      galRAlist, galDEClist, \
-                                                      Dallist, Rmax, purpose, \
-                                                      filename_addition, \
-                                                      cat_version)
+    catmatch, kidscats, galIDs_infield = run_catmatch(
+        kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose,
+        filename_addition, cat_version)
+
     gc.collect()
-    
+
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
         galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -538,20 +539,29 @@ def define_Rbins(path_Rbins, Runit):
 
 
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
-def import_gamacat(path_gamacat, centering, purpose, Ncat, \
-                    O_matter, O_lambda, Ok, h, Runit, lens_weights):
+def import_gamacat(path_gamacat, centering, purpose, Ncat,
+                   O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
     randomcatname = 'RandomsWindowedV01.fits'
     directory = os.path.dirname(os.path.realpath(path_gamacat))
-    randomcatname = directory + '/' + randomcatname
-    
+    randomcatname = os.path.join(directory, randomcatname)
+
     # Importing the GAMA catalogues
     print('Importing GAMA catalogue:', path_gamacat)
+    #gamacat = pyfits.open(path_gamacat, ignore_missing_end=True)[1].data
+    gamacat = Table.read(path_gamacat)
 
-    gamacat = pyfits.open(path_gamacat, ignore_missing_end=True)[1].data
+    # maybe make a `format_colnames` function later, perhaps as helper
+    if 'Dec' in gamacat.colnames:
+        gamacat['Dec'].name = 'DEC'
+    if 'z' in gamacat.colnames:
+        gamacat['z'].name = 'Z'
 
-
-    galIDlist = gamacat['ID'] # IDs of all galaxies
+    # IDs of all galaxies
+    if not 'ID' in gamacat.colnames:
+        gamacat['ID'] = np.arange(gamacat['RA'].size, dtype=int)
+    gamacat['ID'] = np.array(gamacat['ID'], dtype=str)
+    galIDlist = gamacat['ID']
     if galIDlist.size != np.unique(galIDlist).size:
         print('Dear user, you have confused me with non unique IDs for your lenses.')
         print('I will refrain to keep running (it takes me a lot of energy)')

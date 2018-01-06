@@ -17,14 +17,15 @@ import subprocess as sub
 import shlex
 
 # local
-from . import combine_covariance_plus_bootstrap as combine_covboot
-from . import combine_splits
-from . import plot_covariance_plus_bootstrap as plot_covboot
-from . import shear_plus_covariance_process as shearcov
-from . import shearcode_modules as shear
-from . import stack_shear_plus_bootstrap as stack_shearboot
-from . import distance
-from . import esd_utils
+from . import (
+    combine_covariance_plus_bootstrap as combine_covboot,
+    combine_splits,
+    plot_covariance_plus_bootstrap as plot_covboot,
+    shear_plus_covariance_process as shearcov,
+    shearcode_modules as shear,
+    stack_shear_plus_bootstrap as stack_shearboot,
+    distance,
+    esd_utils)
 
 
 start_tot = time.time()

@@ -5,6 +5,7 @@
 # as a function of radius from a galaxy.
 """
 from __future__ import print_function
+
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
@@ -42,9 +43,9 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     if 'bootstrap' in purpose:
         purpose = purpose.replace('bootstrap', 'catalog')
         
-        path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
-        path_splits = '%s/splits_%s'%(path_catalogs, purpose)
-        path_results = '%s/results_%s'%(path_catalogs, purpose)
+        path_catalogs = os.path.join(path_output.rsplit('/',1)[0], 'catalogs')
+        path_splits = os.path.join(path_catalogs, 'splits_{0}'.format(purpose))
+        path_results = os.path.join(path_catalogs, 'results_{0}'.format(purpose))
 
     if 'catalog' in purpose:
 
@@ -55,7 +56,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         #    Nsplit = binnum-1
 
         if centering == 'Cen':
-            lens_selection = {'rank%s'%centering: ['self', np.array([1])]}
+            lens_selection = {'rank{0}'.format(centering): ['self', np.array([1])]}
         else:
             lens_selection = {}
         

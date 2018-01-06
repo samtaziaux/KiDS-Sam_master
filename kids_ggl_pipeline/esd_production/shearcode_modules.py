@@ -1064,17 +1064,20 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
 
 
             # Reading in the calculated Z_S from The-wiZZ output file
-            n_z[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data,\
-                                                            filename_var, i),\
-                                                            comments='#')[:,1])
-            w_i[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data,\
-                                                            filename_var, i),\
-                                                            comments='#')[:,3])
+            n_z[:,i] = np.nan_to_num(np.genfromtxt(
+                '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii' \
+                    %(path_wizz_data, filename_var, i),
+                comments='#')[:,1])
+            w_i[:,i] = np.nan_to_num(np.genfromtxt(
+                '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii' \
+                    %(path_wizz_data, filename_var, i),
+                comments='#')[:,3])
             #print n_z[:,i], w_i[:,i]
 
         n_z = np.sum(n_z*w_i, axis=1)/np.sum(w_i, axis=1)
-        np.savetxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(path_wizz_data,\
-                                        filename_var), n_z, delimiter='\t')
+        np.savetxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii' \
+                        %(path_wizz_data, filename_var),
+                   n_z, delimiter='\t')
         n_z[n_z < 0] = 0
 
     return np.nan_to_num(n_z)
@@ -1793,9 +1796,15 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)     wk2     w2k2     Nsources'%(Runit, h*100, h*100, h*100)
+        filehead = '# Radius({0})	ESD_t(h{1:g}*M_sun/pc^2)' \
+                   '   ESD_x(h{1:g}*M_sun/pc^2)' \
+                   '    error(h{1:g}*M_sun/pc^2)^2	bias(1+K)' \
+                   '    variance(e_s)     wk2     w2k2' \
+                   '     Nsources'.format(Runit, h*100)
     else:
-        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2    Nsources'%(Runit)
+        filehead = '# Radius({0})    gamma_t    gamma_x    error' \
+                   '    bias(1+K)    variance(e_s)    wk2    w2k2' \
+                   '    Nsources'.format(Runit)
 
     index = np.where(np.logical_not((0 < error_tot) & (error_tot < inf)))
     ESDt_tot.setflags(write=True)
@@ -1817,7 +1826,9 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
-    np.savetxt(filename, data_out, delimiter='\t', header=filehead)
+    fmt = ['%.4e' for i in range(data_out.shape[1])]
+    fmt[-1] = '%6d'
+    np.savetxt(filename, data_out, delimiter=' '*4, fmt=fmt, header=filehead)
 
     print('Written: ESD profile data:', filename)
 

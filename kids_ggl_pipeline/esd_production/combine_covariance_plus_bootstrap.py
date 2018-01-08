@@ -25,12 +25,14 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
-            lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-            cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
-            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
-            filename_addition, Ncat, splitslist, blindcats, blindcat, \
-            blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
-            shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
+        lens_selection, lens_weights, binname, Nobsbins, src_selection, \
+        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        filename_addition, Ncat, splitslist, blindcats, blindcat, \
+        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        z_epsilon, n_boot, cross_cov = \
+            shear.input_variables(
+                nsplit, nsplits, nobsbin, blindcat, config_file)
 
     blindcat = blindcat[0]
 
@@ -79,9 +81,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
-                path_Rbins, Runit, path_gamacat, path_kidscats, centering,
-                purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
-                filename_addition, cat_version)
+            path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+            centering, purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
+            filename_addition, cat_version)
 
     galIDlist_matched = np.array([], dtype=np.int32)
     for kidscatname in kidscats:

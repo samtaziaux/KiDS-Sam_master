@@ -29,8 +29,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
         path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
         splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
-        path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
-        shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
+        path_gamacat, colnames, specz_file, z_epsilon, n_boot, cross_cov = \
+            shear.input_variables(
+                nsplit, nsplits, nobsbin, blindcat, config_file)
     
     blindcat = blindcat[0]
 
@@ -97,10 +98,12 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
     Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
-    galweightlist, galZlist, Dcllist, Dallist = shear.import_data(path_Rbins, \
-    Runit, path_gamacat, path_kidscats, centering, \
-    purpose.replace('catalog', 'bootstrap'), Ncat, O_matter, O_lambda, Ok, h, \
-    lens_weights, filename_addition, cat_version)
+    galweightlist, galZlist, Dcllist, Dallist = \
+        shear.import_data(
+            path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+            centering, purpose.replace('catalog', 'bootstrap'), Ncat,
+            O_matter, O_lambda, Ok, h, lens_weights, filename_addition,
+            cat_version)
     
     # The bootstrap lens-field matching is used to prevent duplicated lenses.
     

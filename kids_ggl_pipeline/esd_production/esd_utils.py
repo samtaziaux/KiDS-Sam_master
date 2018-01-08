@@ -31,6 +31,7 @@ def read_config(config_file):
     cross_cov = bool(1)
     gama_path = 'None'
     filename = 'None'
+    colnames = ['ID','RA','DEC','Z']
     wizz = 'False'
     config = open(config_file)
     for line in config:
@@ -54,6 +55,12 @@ def read_config(config_file):
             gama_path = line[1]
         elif line[0] == 'lens_catalog':
             lens_catalog = line[1]
+        elif line[0] == 'lens_columns':
+            colnames = line[1].split(',')
+            assert len(colnames) in (3,4), \
+                'Parameter `lens_columns` must specify the three or four' \
+                ' required columns (depending on whether you want physical' \
+                ' distances)'
         elif line[0] == 'The-wiZZ':
             wizz = line[1]
 
@@ -148,7 +155,7 @@ def read_config(config_file):
     except:
         pass
 
-    out = (kids_path, gama_path, specz_file,
+    out = (kids_path, gama_path, colnames, specz_file,
             Om, Ol, Ok, h, z_epsilon,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,

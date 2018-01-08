@@ -197,11 +197,12 @@ def run_esd(config_file):
           invalid='ignore')
           
     # Input for the codes
-    kids_path, gama_path, specz_file, Om, Ol, Ok, h, z_epsilon,\
+    kids_path, gama_path, colnames, specz_file, Om, Ol, Ok, h, z_epsilon, \
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
-        esd_utils.read_config(config_file)
+        lens_selection, src_selection, cat_version, wizz, n_boot, \
+        cross_cov, blindcats = \
+            esd_utils.read_config(config_file)
 
     print('\n \n \n \n \n')
     print('Running KiDS-GGL pipeline - signal extraction')

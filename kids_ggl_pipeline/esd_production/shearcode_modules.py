@@ -6,7 +6,6 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import astropy.io.fits as pyfits
 import gc
 import numpy as np
 import sys
@@ -19,6 +18,7 @@ from glob import glob
 
 from astropy import constants as const, units as u
 from astropy.cosmology import LambdaCDM
+from astropy.io import ascii, fits as pyfits
 from astropy.table import Table
 
 from matplotlib import pyplot as plt
@@ -56,11 +56,12 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         #print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
-        path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
-        lensid_file, lens_weights, lens_binning, lens_selection, \
-        src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
-        esd_utils.read_config(config_file)
+    path_kidscats, path_gamacat, colnames, specz_file, O_matter, O_lambda, Ok, h, \
+        z_epsilon, path_output, filename_addition, purpose, \
+        path_Rbins, Runit, Ncores, lensid_file, lens_weights, lens_binning, \
+        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, \
+        blindcats = \
+            esd_utils.read_config(config_file)
 
     print()
     print('Running:', purpose)
@@ -206,7 +207,8 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov
+        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        z_epsilon, n_boot, cross_cov
 
 
 # Defining the lensID lens selection/binning
@@ -443,8 +445,8 @@ def define_filename_results(path_results, purpose, filename_var, \
 
 # Importing all GAMA and KiDS data, and
 # information on radial bins and lens-field matching.
-def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
-                purpose, Ncat, O_matter, O_lambda, Ok, h, \
+def import_data(path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+                centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
                 lens_weights, filename_addition, cat_version):
 
     # Import R-range
@@ -454,8 +456,8 @@ def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, \
         Dcllist, Dallist = import_gamacat(
-            path_gamacat, centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
-            Runit, lens_weights)
+            path_gamacat, colnames, centering, purpose, Ncat, O_matter,
+            O_lambda, Ok, h, Runit, lens_weights)
 
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
@@ -539,7 +541,7 @@ def define_Rbins(path_Rbins, Runit):
 
 
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
-def import_gamacat(path_gamacat, centering, purpose, Ncat,
+def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
                    O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
     randomcatname = 'RandomsWindowedV01.fits'
@@ -548,34 +550,38 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat,
 
     # Importing the GAMA catalogues
     print('Importing GAMA catalogue:', path_gamacat)
-    #gamacat = pyfits.open(path_gamacat, ignore_missing_end=True)[1].data
-    gamacat = Table.read(path_gamacat)
+    try:
+        gamacat = Table(pyfits.open(
+            path_gamacat, ignore_missing_end=True)[1].data)
+    except IOError:
+        gamacat = ascii.read(path_gamacat)
 
-    # maybe make a `format_colnames` function later, perhaps as helper
-    if 'Dec' in gamacat.colnames:
-        gamacat['Dec'].name = 'DEC'
-    if 'z' in gamacat.colnames:
-        gamacat['z'].name = 'Z'
-
+    for colname in colnames:
+        assert colname in gamacat.colnames, \
+            'Full list of column names:\n{2}\n\n' \
+            'Column {0} not present in catalog {1}. See the full list of' \
+            'column names above'.format(
+                colname, path_gamacat, gamacat.colnames)
     # IDs of all galaxies
-    if not 'ID' in gamacat.colnames:
-        gamacat['ID'] = np.arange(gamacat['RA'].size, dtype=int)
-    gamacat['ID'] = np.array(gamacat['ID'], dtype=str)
-    galIDlist = gamacat['ID']
+    if colnames[0] not in gamacat.colnames:
+        gamacat[colnames[0]] = np.arange(gamacat[colnames[1]].size, dtype=int)
+    gamacat[colnames[0]] = np.array(gamacat[colnames[0]], dtype=str)
+    galIDlist = gamacat[colnames[0]]
     if galIDlist.size != np.unique(galIDlist).size:
         print('Dear user, you have confused me with non unique IDs for your lenses.')
         print('I will refrain to keep running (it takes me a lot of energy)')
         print('till you make sure that each lens has its own ID.')
         print('I am not a communist code. Sorry for the inconvenience.')
         raise SystemExit()
-    
+
+    # these are very GAMA-specific
     if centering == 'Cen':
         galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)
         galDEClist = gamacat['CenDEC'] # Central DEC of the galaxy (in degrees)
         galZlist = gamacat['Zfof'] # Z of the group
     else:
-        galRAlist = gamacat['RA'] # Central RA of the galaxy (in degrees)
-        galDEClist = gamacat['DEC'] # Central DEC of the galaxy (in degrees)
+        galRAlist = gamacat[colnames[1]] # Central RA of the galaxy (in degrees)
+        galDEClist = gamacat[colnames[2]] # Central DEC of the galaxy (in degrees)
 
     if 'random' in purpose:
         # Determine RA and DEC for the random/star catalogs
@@ -596,8 +602,8 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat,
         # This is hardcoded for this set of randoms.
         Ncatmax = step*len(galIDlist)
 
-        galRAlist = randomcat['RA'][slice][Ncatmin:Ncatmax:step]
-        galDEClist = randomcat['DEC'][slice][Ncatmin:Ncatmax:step]
+        galRAlist = randomcat[colnames[1]][slice][Ncatmin:Ncatmax:step]
+        galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
         
     #Defining the lens weights
     weightname = lens_weights.keys()[0]
@@ -608,9 +614,12 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat,
 
     # Defining the comoving and angular distance to the galaxy center
     if 'pc' in Runit: # Rbins in a multiple of pc
-        galZlist = gamacat['Z'] # Central Z of the galaxy
+        assert len(colnames) == 4, \
+            'Please provide the name of the redshift column if you want' \
+            ' to use physical projected distances'
+        galZlist = gamacat[colnames[3]] # Central Z of the galaxy
         if 'random' in purpose:
-            galZlist = randomcat['Z'][slice][Ncatmin:Ncatmax:step]
+            galZlist = randomcat[colnames[3]][slice][Ncatmin:Ncatmax:step]
         #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
         #                    for z in galZlist])
         # Distance in pc/h, where h is the dimensionless Hubble constant
@@ -630,7 +639,7 @@ def import_gamacat(path_gamacat, centering, purpose, Ncat,
     Dallist = Dcllist/(1+galZlist)
 
     return gamacat, galIDlist, galRAlist, galDEClist, \
-    galweightlist, galZlist, Dcllist, Dallist
+        galweightlist, galZlist, Dcllist, Dallist
 
 
 def run_kidscoord(path_kidscats, cat_version):

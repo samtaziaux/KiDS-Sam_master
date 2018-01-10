@@ -556,12 +556,14 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
     except IOError:
         gamacat = ascii.read(path_gamacat)
 
-    for colname in colnames:
+    # skip the ID column name since if it doesn't exist we create it below
+    for colname in colnames[1:]:
         assert colname in gamacat.colnames, \
             'Full list of column names:\n{2}\n\n' \
             'Column {0} not present in catalog {1}. See the full list of' \
             'column names above'.format(
                 colname, path_gamacat, gamacat.colnames)
+
     # IDs of all galaxies
     if colnames[0] not in gamacat.colnames:
         gamacat[colnames[0]] = np.arange(gamacat[colnames[1]].size, dtype=int)
@@ -1437,10 +1439,10 @@ def define_obslist(obsname, gamacat, h, Dcllist=[], galZlist=[]):
 
 # Masking the lenses according to the appropriate
 # lens selection and the current KiDS field
-def define_lenssel(gamacat, centering, lens_selection, lens_binning,
+def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
                    binname, binnum, binmin, binmax, Dcllist, galZlist, h):
 
-    lenssel = np.ones(len(gamacat['ID']), dtype=bool)
+    lenssel = np.ones(len(gamacat[colnames[0]]), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
     #binname = 'No'
     
@@ -1456,7 +1458,7 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
             bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[param]
         
-        if 'ID' in param:
+        if colnames[0] in param:
             lenssel *= np.in1d(obslist, binlims)
         else:
             if len(binlims) == 1:
@@ -1468,8 +1470,8 @@ def define_lenssel(gamacat, centering, lens_selection, lens_binning,
         # Importing the binning file
         obsfile = lens_binning[binname][0]
         if obsfile == 'self':
-            if 'ID' in binname:
-                obslist = define_obslist('ID', gamacat, h, Dcllist, galZlist)
+            if colnames[0] in binname:
+                obslist = define_obslist(colnames[0], gamacat, h, Dcllist, galZlist)
             else:
                 obslist = define_obslist(binname, gamacat, h, Dcllist, galZlist)
         else:
@@ -1727,15 +1729,13 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
         fitscols.append(pyfits.Column(name = 'Bootstrap', format='20A', \
                                       array = galIDlist))
     else:
-        """
         # This need to be figured out, it is causing pipeline to stall if there is an empty lens list passed.
         if isinstance(galIDlist[0], basestring):
-            fmt = '100A'
+            fmt = '50A'
         elif isinstance(galIDlist[0], int):
             fmt = 'J'
         else:
-        """
-        fmt = 'E'
+            fmt = 'E'
         fitscols.append(pyfits.Column(name = 'ID', format=fmt, \
                                       array = galIDlist))
 
@@ -1847,9 +1847,14 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
         galIDsname_split = filename.rsplit('_',1)
         galIDsname = '%s_lensIDs.txt'%(galIDsname_split[0])
         #kidsgalIDsname = '%s_KiDSlensIDs.txt'%(galIDsname_split[0])
-        
-        np.savetxt(galIDsname, galIDs_matched, fmt='%s', delimiter='\t',\
-                   header="ID's of all stacked lenses:", comments='# ')
+
+        galIDs_table = Table(
+            [galIDs_matched], names=("# ID's of all stacked lenses:",))
+        galIDs_table.write(galIDsname,
+            names=["IDs of all stacked lenses:"], quotechar='"',
+            format='ascii.commented_header', overwrite=True)
+        #np.savetxt(galIDsname, [galIDs_matched], delimiter=' ',
+                   #header="ID's of all stacked lenses:", comments='# ')
         
         print("Written: List of all stacked lens ID's"\
                 " that contribute to the signal:", galIDsname)

@@ -30,10 +30,10 @@ import shearcode_modules as shear
 inf = np.inf # Infinity
 nan = np.nan # Not a number
 
-def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
-               gallists, lens_selection, lens_binning, binname, binnum,
-               binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
-               filename_var,
+def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
+               colnames, centering, gallists, lens_selection, lens_binning,
+               binname, binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
+               Runit, nRbins, Rconst, filename_var,
                filename, cat_version, blindcat, srclists, path_splits,
                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
                variance, h):
@@ -44,13 +44,14 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
     
     for j in xrange(Nsplits):
         
-        work = mp.Process(target=loop, args=(purpose, Nsplits, j, output, outputnames, gamacat, centering,
-                                                gallists, lens_selection, lens_binning, binname, binnum,
-                                                binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
-                                                filename_var,
-                                                filename, cat_version, blindcat, srclists, path_splits,
-                                                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-                                                variance, h, q1))
+        work = mp.Process(
+            target=loop,
+            args=(purpose, Nsplits, j, output, outputnames, gamacat, colnames,
+                  centering, gallists, lens_selection, lens_binning, binname,
+                  binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit,
+                  nRbins, Rconst, filename_var, filename, cat_version,
+                  blindcat, srclists, path_splits, splitkidscats, catmatch,
+                  Dcsbins, Dc_epsilon, filename_addition, variance, h, q1))
         procs.append(work)
         work.start()
         #work.join()
@@ -70,8 +71,8 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering
         return 0
 
 
-def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
-         gallists, lens_selection, lens_binning, binname, binnum,
+def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
+         centering, gallists, lens_selection, lens_binning, binname, binnum,
          binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
          filename_var,
          filename, cat_version, blindcat, srclists, path_splits,
@@ -114,8 +115,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
 
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(
-                gamacat, centering, lens_selection, lens_binning, binname,
-                binnum, binmin, binmax, Dcllist, galZlist, h)
+                gamacat, colnames, centering, lens_selection, lens_binning,
+                binname, binnum, binmin, binmax, Dcllist, galZlist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -314,8 +315,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, centering,
             """
             kidscatN = kidscatN+1
             lenssel = shear.define_lenssel(
-                gamacat, centering, lens_selection, lens_binning, binname,
-                binnum, binmin, binmax, Dcllist, galZlist, h)
+                gamacat, colnames, centering, lens_selection, lens_binning,
+                binname, binnum, binmin, binmax, Dcllist, galZlist, h)
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
@@ -684,17 +685,19 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             w_varlist = np.hstack([w_varlist, w.T])
             e1_varlist = np.hstack([e1_varlist, e1.T])
             e2_varlist = np.hstack([e2_varlist, e2.T])
-            srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = [], [], [], \
-                                                                [], [], [], \
-                                                                [], [], []
+            #srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = [], [], [], \
+                                                                #[], [], [], \
+                                                                #[], [], []
+            srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
+                [[] for i in range(9)]
 
     # Calculating the variance of the ellipticity for this source selection
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist)
 
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(
-        gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf,
-        Dcllist, galZlist, h)
+        gamacat, colnames, centering, lens_selection, 'None', 'None',
+        0, -inf, inf, Dcllist, galZlist, h)
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     binname, lens_binning, Nobsbins, binmin, binmax = \
@@ -824,7 +827,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     if 'catalog' in purpose:
         out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
-                 centering, gallists, lens_selection, lens_binning,
+                 colnames, centering, gallists, lens_selection, lens_binning,
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                  Runit, nRbins, Rconst, filename_var, filename, cat_version,
                  blindcat, srclists, path_splits, splitkidscats, catmatch,
@@ -842,12 +845,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     shear.define_obsbins(i+1, lens_binning, lenssel_binning,
                                          gamacat)
             
-            out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
-                             centering, gallists, lens_selection, lens_binning,
-                             binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-                             Runit, nRbins, Rconst, filename_var, filename, cat_version,
-                             blindcat, srclists, path_splits, splitkidscats, catmatch,
-                             Dcsbins, Dc_epsilon, filename_addition, variance, h)
+            out = loop_multi(
+                purpose, Nsplits, Nsplits, output, outputnames, gamacat,
+                colnames, centering, gallists, lens_selection, lens_binning,
+                binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
+                Runit, nRbins, Rconst, filename_var, filename, cat_version,
+                blindcat, srclists, path_splits, splitkidscats, catmatch,
+                Dcsbins, Dc_epsilon, filename_addition, variance, h)
 
     if out == 0:
         print('Splits finished properly.')

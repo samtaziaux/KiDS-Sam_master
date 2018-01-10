@@ -13,8 +13,9 @@ import numpy as np
 import sys
 import os
 import time
-import shearcode_modules as shear
 from astropy import constants as const, units as u
+
+import shearcode_modules as shear
 
 # Important constants
 inf = np.inf # Infinity
@@ -49,46 +50,37 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     else:
         print('Step 3: Stack the lenses and create the ESD profile')
     print()
-    
+
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose.replace('catalog',''), \
-                                             centering, binname, Nobsbins, \
-                                             Nobsbins, lens_selection, lens_binning, \
-                                             src_selection, lens_weights, \
-                                             name_Rbins, O_matter, \
-                                             O_lambda, Ok, h)
+    filename_var = shear.define_filename_var(
+        purpose.replace('catalog',''), centering, binname, Nobsbins,
+        Nobsbins, lens_selection, lens_binning, src_selection, lens_weights,
+        name_Rbins, O_matter, O_lambda, Ok, h)
 
     if ('random' or 'star') in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
         print('Number of existing random catalogs:', Ncat)
 
-    filenameESD = shear.define_filename_results(path_results, purpose, \
-                                                filename_var, \
-                                                filename_addition, \
-                                                Nsplit, blindcat)
+    filenameESD = shear.define_filename_results(
+        path_results, purpose, filename_var, filename_addition,
+        Nsplit, blindcat)
     print('Requested file:', filenameESD)
-    
+
     # Define the list of variables for the input catalog
-    filename_var = shear.define_filename_var('shearcatalog', centering, \
-                                             'None', -999, -999, \
-                                             {'None': np.array([])}, {'None': np.array([])}, \
-                                             src_selection, ['None', ''], \
-                                             name_Rbins, O_matter, \
-                                             O_lambda, Ok, h)
+    filename_var = shear.define_filename_var(
+        'shearcatalog', centering, 'None', -999, -999, {'None': np.array([])},
+        {'None': np.array([])}, src_selection, ['None', ''], name_Rbins,
+        O_matter, O_lambda, Ok, h)
     if ('random' in purpose):
-        filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
+        filename_var = '%i_%s'%(Ncat, filename_var)
 
     # Importing the relevant data from the shear catalog
-    shearcatname = \
-        shear.define_filename_results(path_catalog_results.replace('bootstrap',\
-                                                                   'catalog'), \
-                                                 purpose.replace('bootstrap',\
-                                                                 'catalog'), \
-                                                 filename_var, \
-                                                 filename_addition, \
-                                                 Nsplit, blindcat)
+    shearcatname = shear.define_filename_results(
+        path_catalog_results.replace('bootstrap', 'catalog'),
+        purpose.replace('bootstrap', 'catalog'),
+        filename_var, filename_addition, Nsplit, blindcat)
 
     sheardat = pyfits.open(shearcatname)[1].data
     print('Importing:', shearcatname)
@@ -109,25 +101,22 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     
     galIDlist_matched = np.array([], dtype=np.int32)
     for kidscatname in kidscats:
-        galIDlist_matched = np.append(galIDlist_matched, \
-                                      catmatch[kidscatname][0])
+        galIDlist_matched = np.append(
+            galIDlist_matched, catmatch[kidscatname][0])
     galIDlist_matched = np.unique(galIDlist_matched)
     
     # The ID's of the galaxies that lie in this field
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose.replace('catalog',''), \
-                                             centering, binname, 'binnum', \
-                                             Nobsbins, lens_selection, lens_binning, \
-                                             src_selection, lens_weights, \
-                                             name_Rbins, O_matter, \
-                                             O_lambda, Ok, h)
+    filename_var = shear.define_filename_var(
+        purpose.replace('catalog',''), centering, binname, 'binnum', Nobsbins,
+        lens_selection, lens_binning, src_selection, lens_weights, name_Rbins,
+        O_matter, O_lambda, Ok, h)
 
     if 'random' in purpose:
         filename_var = '%i_%s'%(Ncat, filename_var)
         # Ncat is the number of existing randoms
         print('Number of existing random catalogs:', Ncat)
 
-    
     galIDlist = sheardat['ID'] # ID of all galaxies in the shear catalog
     gammatlist = np.nan_to_num(sheardat['gammat_%s'%blindcat]) # Shear profile of each galaxy
     gammaxlist = np.nan_to_num(sheardat['gammax_%s'%blindcat]) # Cross profile of each galaxy
@@ -138,19 +127,18 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     srcmlist = np.nan_to_num(sheardat['bias_m_%s'%blindcat]) # Bias profile of each galaxy
     variance = sheardat['variance(e[A,B,C,D])'][0] # The variance
     Nsrclist = sheardat['Nsources']
-    
+
     # Adding the lens weights
     galweightlist = np.reshape(galweightlist, [len(galIDlist),1])
-    [gammatlist, gammaxlist, wk2list, \
-     w2k2list, srcmlist, Nsrclist] = [gallist*galweightlist for gallist in [gammatlist, \
-                                                    gammaxlist, wk2list, \
-                                                    w2k2list*galweightlist,\
-                                                    srcmlist, Nsrclist]]
-    
+    gammatlist, gammaxlist, wk2list, w2k2list, srcmlist, Nsrclist = \
+        [gallist*galweightlist for gallist
+         in [gammatlist, gammaxlist, wk2list, w2k2list*galweightlist,
+             srcmlist, Nsrclist]]
+
     # Mask the galaxies in the shear catalog, WITHOUT binning
     lenssel_binning = shear.define_lenssel(
-        gamacat, centering, lens_selection, 'None', 'None', 0, -inf, inf,
-        Dcllist, galZlist,  h)
+        gamacat, colnames, centering, lens_selection, 'None', 'None',
+        0, -inf, inf, Dcllist, galZlist,  h)
     # Defining the observable binnning range of the groups
     binname, lens_binning, Nobsbins, \
     binmin, binmax = shear.define_obsbins(
@@ -233,8 +221,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         
         # Mask the galaxies in the shear catalog
         lenssel = shear.define_lenssel(
-            gamacat, centering, lens_selection, lens_binning, binname, binnum,
-            binmin, binmax, Dcllist, galZlist, h)
+            gamacat, colnames,  centering, lens_selection, lens_binning,
+            binname, binnum, binmin, binmax, Dcllist, galZlist, h)
 
         if debug:
             print('lenssel:', sum(lenssel))

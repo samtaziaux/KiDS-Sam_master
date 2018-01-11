@@ -1048,7 +1048,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
 
 
 
-    Pg_k = _array([((Pg_c_i + Pg_s_i) + Pg_2h_i)
+    Pg_k = _array([(Pg_c_i + Pg_s_i + Pg_2h_i)
                    for Pg_c_i, Pg_s_i, Pg_2h_i
                    in _izip(Pg_c, Pg_s, Pg_2h)])
     

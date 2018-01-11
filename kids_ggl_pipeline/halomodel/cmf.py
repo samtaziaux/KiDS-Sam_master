@@ -6,7 +6,7 @@ from numpy import array, exp, log, log10, pi
 from scipy.integrate import simps, trapz
 import scipy.special as sp
 
-from ,tools import Integrate
+from .tools import Integrate
 
 """
 # Population functions - average number of galaxies 

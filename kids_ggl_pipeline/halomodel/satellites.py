@@ -15,9 +15,9 @@ from scipy.stats import rv_discrete
 from scipy.integrate import romberg
 
 # local
-from .nfw import (esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
+from .nfw import (esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7,
                   mass_enclosed, mass_total_sharp)
-from ,utils import cM_duffy08, delta, density_average, nfw_profile
+from .utils import cM_duffy08, delta, density_average, nfw_profile
 
 
 def fiducial(theta, R, h=1, Om=0.315, Ol=0.685, rmax=2):

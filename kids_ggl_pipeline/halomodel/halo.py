@@ -53,7 +53,7 @@ from .tools import (
     star_concentration, virial_mass, virial_radius)
 from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata)
-from ,dark_matter import (
+from .dark_matter import (
     NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, GM_cen_analy, GM_sat_analy, miscenter)
 from .cmf import *

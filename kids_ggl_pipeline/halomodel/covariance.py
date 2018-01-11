@@ -60,7 +60,7 @@ from .dark_matter import (
     NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
     GG_sat_analy, GG_cen_sat_analy, miscenter)
-from ,cmf import *
+from .cmf import *
 
 
 """

@@ -65,8 +65,7 @@ def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
         phi = np.zeros((1,m.size))
     Mo = m_0(M, A, M_1, gamma_1, gamma_2)
     for i in xrange(M.size):
-        phi[i] = log10(np.e) * exp(-(log10(m/Mo[i])**2.0) / (2.0*(sigma**2.0))) / \
-                 ((2.0*pi)**0.5 * sigma * m)
+        phi[i] = np.exp(-((np.log10(m)-np.log10(Mo[i]))**2.0) / (2.0*(sigma**2.0))) / ((2.0*pi)**0.5 * sigma * m * np.log(10.0))
     return phi
 
 
@@ -81,8 +80,7 @@ def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
         phi = np.zeros((1,m.size))
     Mo = Ac2s * m_0(M, A, M_1, gamma_1, gamma_2)
     for i in xrange(M.size):
-        phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * \
-                 exp(-(m/Mo[i])**2.0) / m
+        phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * exp(-(m/Mo[i])**2.0) / m
     return phi
 
 
@@ -117,8 +115,9 @@ def av_cen(m, M, sigma, A, M_1, gamma_1, gamma_2):
 
     phi_int = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2) #Centrals!
     for i in xrange(M.size):
-        integ = phi_int[i,:]*m
-        phi[i] = Integrate(integ, m)
+        #integ = phi_int[i,:]*m
+        #phi[i] = Integrate(integ, m)
+        phi[i] = trapz(phi_int[i] * m, m)
 
     return phi
 
@@ -169,9 +168,7 @@ def ncm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
         nc[i] = Integrate(phi_int[i], m)
     # This works, but above more general, for different definition of
     # CLF/CMF.
-    #func = lambda x: 0.5 * (sp.erf((np.log10(x/m_0(M, A, M_1, gamma_1,
-    #                                               gamma_2))) / \
-    #                               (sigma * (2.0**0.5))))
+    #func = lambda x: 0.5 * (sp.erf((np.log10(x/m_0(M, A, M_1, gamma_1, gamma_2))) / (sigma * (2.0**0.5))))
     #nc = (func(m[-1]) - func(m[0]))
     return nc
 

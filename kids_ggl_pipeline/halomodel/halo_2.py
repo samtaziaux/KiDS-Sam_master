@@ -228,17 +228,24 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     if not np.iterable(beta):
         beta = np.array([beta]*M_bin_min.size)
 
+    # repurposing the p_off and r_off to use for different sizes of x-axis for clustering and lensing
+    
+    exclude_bins_esd = p_off
+    exclude_bins_wp = r_off
 
-    concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i))\
-                          for z_i, f_i in _izip(z,f)])
+    concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i)) for z_i, f_i in _izip(z,f)])
+
+    concentration_sat = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i)) for z_i, f_i,fc_nsat_i in _izip(z,f,fc_nsat)])
     
     n_bins_obs = M_bin_min.size
     bias = np.array([bias]*k_range_lin.size).T
     
-    hod_mass = _array([_logspace(Mi, Mx, 200, endpoint=False,
-                                 dtype=np.longdouble)
-                       for Mi, Mx in _izip(M_bin_min, M_bin_max)])
-        
+    #hod_mass = np.array([np.logspace(Mi, Mx, 200, endpoint=False, dtype=np.longdouble)
+    #                   for Mi, Mx in _izip(M_bin_min, M_bin_max)])
+
+    hod_mass = 10.0**np.array([np.linspace(Mi, Mx, 200, dtype=np.longdouble)
+                     for Mi, Mx in _izip(M_bin_min, M_bin_max)])
+
     transfer_params = _array([])
     for z_i in z:
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
@@ -284,7 +291,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     rvir_range_3d_i = _logspace(-2.5, 1.2, 25, endpoint=True)
     rvir_range_2d_i = R[0][1:]
     rvir_range_2d_i = np.unique(rvir_range_2d_i)
-    
+
     # Calculating halo model
     
     if centrals:
@@ -338,7 +345,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     effective_mass_bar = _array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range) * \
                         (1.0 - baryons.f_dm(omegab, omegac))
                         for z_i, hmf_i, pop_g_i in _izip(z, hmf, pop_g)])
-    #"""
+    """
     import matplotlib.pyplot as pl
     pl.plot(mass_range, pop_c[0], color='black', ls=':')
     pl.plot(mass_range, pop_s[0], color='black', ls='-.')
@@ -367,7 +374,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     #pl.yscale('log')
     #pl.show()
     #quit()
-    #"""
+    """
 
     """
     # Power spectrum
@@ -384,12 +391,17 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                 rho_mean, z, f, concentration)])
                    
     # and of the NFW profile of the satellites
-    #"""
+    """
     uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
                 mass_range, rvir_range_lin_i, k_range_lin)
                 for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
                 _izip(rvir_range_lin, rho_mean, z, fc_nsat)])
-    #"""
+    """
+    uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
+                rvir_range_lin_i, k_range_lin,\
+                c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
+                f_i, concentration_i in _izip(rvir_range_lin, \
+                rho_mean, z, f, concentration_sat)])
     #uk_s = u_k
     uk_s = uk_s/uk_s[:,0][:,None]
                    
@@ -495,7 +507,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
                     for Pmm_i in _izip(Pmm)]
     #"""
-                            
+
                             
     """
     # Correlation functions
@@ -569,7 +581,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                                                  rvir_range_2d_i))
                         for sur_den2_3_i in _izip(sur_den2_3)]) / 1e12
     #"""
-                         
+
                          
                          
                          
@@ -594,7 +606,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                          
     out_esd_tot_inter_3 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
     #"""
-                         
+
     for i in xrange(M_bin_min.size):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
         out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
@@ -613,9 +625,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
     
     # Add other outputs as needed. Total ESD should always be first!
-    
 
-    # This is for w_p and esd
     sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
                             np.nan_to_num(wp_i), s=0)
                              for wp_i in _izip(w_p)])
@@ -624,6 +634,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     for i in xrange(M_bin_min.size):
         sur_den2_2_out_inter[i] = sur_den2_2_out[i](rvir_range_2d_i)
 
+    # This is for w_p and esd, separated in bins
     """
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
     wp_out = np.vstack((out_esd_tot_inter, sur_den2_2_out_inter))
@@ -631,16 +642,18 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     #print(wp_out)
     """
 
-    # This is for ratio
-    #gamma_out = _array([gg_i/gm_i for gg_i, gm_i in _izip(out_esd_tot_inter_2, out_esd_tot_inter)])
-    
-    # This is for esd_gg and esd_gm
+    # This is for w_p and esd, used in one bin
     """
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
-    wp_out = np.vstack((out_esd_tot_inter, out_esd_tot_inter_2))
-    """
+    if exclude_bins_esd != 0:
+        out_esd_tot_inter = np.delete(out_esd_tot_inter, exclude_bins_esd-1, axis=1)
+    if exclude_bins_wp != 0:
+        sur_den2_2_out_inter = np.delete(sur_den2_2_out_inter, exclude_bins_wp-1, axis=1)
+
+    wp_out = np.hstack((out_esd_tot_inter.flatten(), sur_den2_2_out_inter.flatten()))
+    #"""
+
     return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2_out_inter, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
-    #return [gamma_out]
     #return [wp_out]
     #return [k_range, Pg_c, Pg_s, Pg_2h, Pg_k, Pgg_s, Pgg_cs, Pgg_2h, Pgg_k, Pmm_1h, [hmf[0].power, hmf[1].power, hmf[2].power], Pmm]
 

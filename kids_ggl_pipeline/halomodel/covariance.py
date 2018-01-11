@@ -904,8 +904,9 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
         beta = np.array([beta]*M_bin_min.size)
 
 
-    concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i))\
-                          for z_i, f_i in _izip(z,f)])
+    concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i)) for z_i, f_i in _izip(z,f)])
+
+    concentration_sat = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i)) for z_i, f_i,fc_nsat_i in _izip(z,f,fc_nsat)])
     
     n_bins_obs = M_bin_min.size
     bias = np.array([bias]*k_range_lin.size).T
@@ -1000,13 +1001,18 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
                 rho_mean, z, f, concentration)])
     u_k = u_k/u_k[:,0][:,None]
     # and of the NFW profile of the satellites
-    #"""
+    """
     uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
                 mass_range, rvir_range_lin_i, k_range_lin)
                 for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
                 _izip(rvir_range_lin, rho_mean, z, fc_nsat)])
-    #"""
-    uk_s = u_k
+    """
+    uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
+                rvir_range_lin_i, k_range_lin,\
+                c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
+                f_i, concentration_i in _izip(rvir_range_lin, \
+                rho_mean, z, f, concentration_sat)])
+    #uk_s = u_k
     uk_s = uk_s/uk_s[:,0][:,None]
 
 
@@ -1036,7 +1042,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
 
 
 
-    Pg_k = _array([(Pg_c_i + Pg_s_i) + Pg_2h_i
+    Pg_k = _array([((Pg_c_i + Pg_s_i) + Pg_2h_i)
                    for Pg_c_i, Pg_s_i, Pg_2h_i
                    in _izip(Pg_c, Pg_s, Pg_2h)])
     
@@ -1074,7 +1080,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
                     for hmf_i, u_k_i, rho_mean_i, beta_i in\
                     _izip(hmf, u_k, rho_mean, beta)])
                             
-    Pmm = _array([Pmm_1h_i + hmf_i.power
+    Pmm = _array([(Pmm_1h_i + hmf_i.power)
                     for Pmm_1h_i, hmf_i
                     in _izip(Pmm_1h, hmf)])
 
@@ -1145,10 +1151,20 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
     #kids_variance_squared = 0.082#0.076 #0.275#0.076
     #z_kids = 0.6
     
-    sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h
-    eff_density_in_mpc = eff_density / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
+    #sigma_crit_old = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h
+    sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
+    print(sigma_crit/10.0**12.0)
     
-    shape_noise = (sigma_crit**2.0) * hmf[0].cosmo.H(z_kids).value * (kids_variance_squared / eff_density_in_mpc)/ (3.0*10.0**6.0)
+    
+    eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
+    #eff_density_in_mpc = eff_density / hmf[0].cosmo.angular_diameter_distance(z_kids).value**2.0 * (2.0 * Pi_max)
+    
+    #shape_noise_old = ((sigma_crit_old)**2.0) * hmf[0].cosmo.H(z_kids).value * (kids_variance_squared / eff_density_in_mpc)/ (3.0*10.0**6.0)
+    #print(shape_noise_old)
+    
+    #eff_density_in_mpc = eff_density
+    #shape_noise = np.zeros(sigma_crit.shape)
+    shape_noise = ((sigma_crit / rho_mean[0])**2.0) * (kids_variance_squared / eff_density_in_mpc) / (Pi_max)**2.0# * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / (2.0 * Pi_max))
     
     #radius = np.sqrt(kids_area/np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # conversion of area in deg^2 to Mpc/h!
     radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h
@@ -1157,7 +1173,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
     print(eff_density_in_mpc)
     #ngal = 2.0*ngal
     
-    print(shape_noise)
+    print(shape_noise * rho_mean[0]**2.0 / 10.0**24.0)
     print(1.0/ngal)
     #quit()
 
@@ -1324,7 +1340,7 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
     #cov_esd_tot = cov_esd_gauss + cov_esd_ssc + cov_esd_non_gauss
     #cov_cross_tot = cov_cross_gauss + cov_cross_ssc + cov_cross_non_gauss
     
-    return cov_wp_tot, cov_esd_tot, cov_cross_tot, M_bin_min.size
+    return cov_wp_tot, (cov_esd_tot * rho_mean[0]**2.0) / 10.0**24.0, (cov_cross_tot * rho_mean[0]) / 10.0**12.0, M_bin_min.size
     #return cov_wp_gauss, cov_esd_gauss, cov_cross_gauss, M_bin_min.size
     #return cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss, M_bin_min.size
     #return cov_wp_ssc, cov_esd_ssc, cov_cross_ssc, M_bin_min.size

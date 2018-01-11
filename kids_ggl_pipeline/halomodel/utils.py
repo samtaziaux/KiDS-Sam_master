@@ -3,7 +3,8 @@ Auxiliary functions. This needs to be refactioned to use astropy.cosmology.
 This should also take input from the config file.
 
 """
-from __future__ import division, print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 from astropy.cosmology import FlatLambdaCDM
@@ -13,6 +14,7 @@ except ImportError:
     izip = zip
 from numpy import array, exp, inf, loadtxt, median, pi
 from scipy.stats import rv_discrete
+
 
 def cM_duffy08(M, z, h=1):
     # critical density

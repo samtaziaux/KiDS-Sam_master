@@ -4,8 +4,8 @@
 # Part of the module to determine the shear
 # as a function of radius from a galaxy.
 """
-from __future__ import print_function
-debug = False
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 # Import the necessary libraries
 import astropy.io.fits as pyfits
@@ -15,8 +15,9 @@ import os
 import time
 from astropy import constants as const, units as u
 
-import shearcode_modules as shear
+from . import shearcode_modules as shear
 
+debug = False
 # Important constants
 inf = np.inf # Infinity
 nan = np.nan # Not a number

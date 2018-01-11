@@ -4,16 +4,18 @@
 # Part of the module to determine the shear
 # as a function of radius from a galaxy.
 """
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
 import os
 import time
-import shearcode_modules as shear
 from astropy import constants as const, units as u
 import glob
+
+from . import shearcode_modules as shear
 
 # Important constants
 G = const.G.to('pc3/Msun s2')

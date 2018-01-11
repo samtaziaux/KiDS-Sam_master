@@ -4,9 +4,10 @@
 # Part of the module to determine the shear
 # as a function of radius from a galaxy.
 """
-
 # Import the necessary libraries
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
@@ -14,16 +15,16 @@ import sys
 import os
 import time
 from scipy.interpolate import interp1d
-import distance
 
 from astropy import constants as const, units as u
 from astropy.cosmology import LambdaCDM
-from itertools import izip
-import memory_test as memory
-import time
+if sys.version_info[0] == 2:
+    from itertools import izip
+else:
+    izip = zip
 import gc
 
-import shearcode_modules as shear
+from . import distance, memory_test as memory, shearcode_modules as shear
 
 
 # Important constants

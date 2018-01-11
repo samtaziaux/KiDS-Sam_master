@@ -21,13 +21,20 @@
 #  MA 02110-1301, USA.
 #
 #
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import time
 #from progressbar import *
 import numpy as np
 import matplotlib.pyplot as pl
 import scipy
 import multiprocessing as multi
-from itertools import izip
+import sys
+if sys.version_info[0] == 2:
+    from itertools import izip
+else:
+    izip = zip
 from numpy import exp, log, log10, pi
 from scipy.integrate import quad, romberg, simps, trapz
 from scipy.interpolate import interp1d, InterpolatedUnivariateSpline, \
@@ -35,7 +42,7 @@ from scipy.interpolate import interp1d, InterpolatedUnivariateSpline, \
 import scipy.special as sp
 from time import time
 
-import hankel
+from . import hankel
 
 
 """

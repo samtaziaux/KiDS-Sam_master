@@ -21,6 +21,9 @@
 #  MA 02110-1301, USA.
 #
 #
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import time
 import numpy as np
 import matplotlib.pyplot as pl
@@ -28,8 +31,9 @@ from numpy import cos, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
-from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, \
-                  virial_mass, virial_radius
+
+from .tools import (Integrate, Integrate1, extrap1d, extrap2d, fill_nan,
+                    virial_mass, virial_radius)
 
 
 """

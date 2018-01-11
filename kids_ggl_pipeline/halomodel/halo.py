@@ -21,37 +21,42 @@
 #  MA 02110-1301, USA.
 #
 #
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 # Halo model code
 # Andrej Dvornik, 2014/2015
 
-from __future__ import print_function
 import multiprocessing as multi
 import numpy as np
 import mpmath as mp
-import longdouble_utils as ld
 import matplotlib.pyplot as pl
 import scipy
+import sys
 from numpy import arange, array, exp, linspace, logspace, ones
 from scipy import special as sp
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d, UnivariateSpline
-from itertools import count, izip
+from itertools import count
+if sys.version_info[0] == 2:
+    from itertools import izip
+else:
+    izip = zip
 from time import time
 from astropy.cosmology import LambdaCDM
 
 from hmf import MassFunction
 
-import baryons
-from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan, \
-                  gas_concentration, star_concentration, virial_mass, \
-                  virial_radius
-from lens import power_to_corr, power_to_corr_multi, sigma, d_sigma, \
-                 power_to_corr_ogata
-from dark_matter import NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, \
-                        GM_cen_spectrum, GM_sat_spectrum, delta_NFW, \
-                        GM_cen_analy, GM_sat_analy, miscenter
-from cmf import *
+from . import baryons, longdouble_utils as ld
+from .tools import (
+    Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
+    star_concentration, virial_mass, virial_radius)
+from .lens import (
+    power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata)
+from ,dark_matter import (
+    NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
+    delta_NFW, GM_cen_analy, GM_sat_analy, miscenter)
+from .cmf import *
 
 import pylab
 

@@ -1,20 +1,18 @@
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import imp
 import numpy as np
 import os
 from glob import glob
 from numpy import array, inf, iterable, loadtxt
 
-import sys
-sys.path.append(os.getcwd())
-# in the working directory, for custom functions
+# local
+from . import nfw, nfw_stack, satellites, halo, halo_decorated, halo_2
 try:
-    import models
+    from . import models
 except ImportError:
     pass
-
-# local
-import nfw, nfw_stack, satellites, halo, halo_decorated, halo_2
 
 
 def read_config(config_file, version='0.5.7'):

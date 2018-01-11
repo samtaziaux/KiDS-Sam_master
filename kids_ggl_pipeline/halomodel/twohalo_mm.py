@@ -1,8 +1,10 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import time
 import multiprocessing as multi
 import numpy as np
 import mpmath as mp
-import longdouble_utils as ld
 import matplotlib.pyplot as pl
 import scipy
 from scipy.integrate import simps, trapz
@@ -10,7 +12,10 @@ from scipy.interpolate import interp1d
 import scipy.special as sp
 from hmf import MassFunction
 
-from lens import power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata
+from . import longdouble_utils as ld
+from .lens import (
+    power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata)
+
 
 def memoize(function):
     memo = {}

@@ -1,6 +1,12 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import numpy as np
 from scipy.spatial import cKDTree
+
+import sys
+if sys.version_info[0] == 3:
+    xrange = range
 
 ### TODO:
 ###     Pickling doesn't work with either KDTree object. Need to think of a

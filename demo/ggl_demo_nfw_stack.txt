@@ -50,9 +50,19 @@ KiDS_version        3
 specz_file          /disks/shear10/KiDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat
 
 # Full path to the GAMA catalogue fits file, or to another lens catalog.
-# This catalog should have columns (containing your lens information) with the following names: 
-# 'ID', 'RA', 'DEC', (optional: 'Z', if Runit = *pc), and your lens parameters (used for the selection).
+# This catalog should contain at least a right ascension and a declination
+# columns. If no ID column is present, IDs are automatically generated
+# which corresponds to the index of each object in the catalogue (counting
+# from zero). If you wish to calculate the lensing signal as a function
+# of physical projected distance (as opposed to angular separations),
+# then the catalog ue must also contain a redshift column.
 GAMA_path           /disks/shear10/brouwer_veersemeer/MergedCatalogues/GAMACatalogue_1.0.fits
+
+# New in v1.6: The column names for the four required column can be given
+# comma-separated in the following entry. For GAMA use ID,RA,DEC,Z (or comment out).
+# It is not necessary to specify a redshift column name if redshifts are not
+# going to be used.
+lens_columns        ID,RA,DEC,Z
 
 # Optional usage of The-wiZZ to estimate source redshifts. Default value is 'False'.
 The-wiZZ            False
@@ -359,7 +369,7 @@ thin		         1
 
 # Number of iterations after which progress will be saved to the output file. If this number is too
 # small it may represent a significant overhead.
-update_freq          20
+update_freq          200
 
 # Apologies for the criptic name. This sets the number of bins used to sample the offset 1-halo term
 # (Nbins = 2^k + 1). Each increasing k will increase runtime significantly; k=7 gives precision of 1%

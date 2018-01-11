@@ -3,7 +3,9 @@
 """
 "Determine the shear as a function of radius from a galaxy."
 """
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import astropy.io.fits as pyfits
 import multiprocessing as mp
 import numpy as np
@@ -15,14 +17,15 @@ import subprocess as sub
 import shlex
 
 # local
-import combine_covariance_plus_bootstrap as combine_covboot
-import combine_splits
-import plot_covariance_plus_bootstrap as plot_covboot
-import shear_plus_covariance_process as shearcov
-import shearcode_modules as shear
-import stack_shear_plus_bootstrap as stack_shearboot
-import distance
-import esd_utils
+from . import (
+    combine_covariance_plus_bootstrap as combine_covboot,
+    combine_splits,
+    plot_covariance_plus_bootstrap as plot_covboot,
+    shear_plus_covariance_process as shearcov,
+    shearcode_modules as shear,
+    stack_shear_plus_bootstrap as stack_shearboot,
+    distance,
+    esd_utils)
 
 
 start_tot = time.time()
@@ -142,10 +145,10 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
 #def runblinds(codename, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
 def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
-    
+
     # This allows STDIN to work in child processes
     fn = sys.stdin.fileno()
-    
+
     # this allows for a single blindcat to have a name with more than one letter
     #if hasattr(blindcats, '__iter__') and len(blindcats) > 1:
     if 'bootstrap' in purpose:
@@ -194,11 +197,12 @@ def run_esd(config_file):
           invalid='ignore')
           
     # Input for the codes
-    kids_path, gama_path, specz_file, Om, Ol, Ok, h, z_epsilon,\
+    kids_path, gama_path, colnames, specz_file, Om, Ol, Ok, h, z_epsilon, \
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
-        esd_utils.read_config(config_file)
+        lens_selection, src_selection, cat_version, wizz, n_boot, \
+        cross_cov, blindcats = \
+            esd_utils.read_config(config_file)
 
     print('\n \n \n \n \n')
     print('Running KiDS-GGL pipeline - signal extraction')

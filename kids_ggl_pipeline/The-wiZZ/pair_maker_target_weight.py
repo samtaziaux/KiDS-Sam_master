@@ -1,3 +1,5 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import _core_utils
 import _stomp_utils
@@ -8,6 +10,8 @@ import numpy as np
 import stomp
 import sys
 
+if sys.version_info[0] == 3:
+    xrange = range
 
 """
 This program is used to calculate a relative weight for each spectroscpic
@@ -75,8 +79,8 @@ if __name__ == "__main__":
     min_scale_list = args.min_scale.split(',')
     max_scale_list = args.max_scale.split(',')
     
-    print min_scale_list
-    print max_scale_list
+    print(min_scale_list)
+    print(max_scale_list)
     
     if len(min_scale_list) != len(max_scale_list):
         print("Number of min scales requested does not match number of max"

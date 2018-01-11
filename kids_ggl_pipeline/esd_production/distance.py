@@ -1,11 +1,12 @@
 #!/usr/bin/python
-
 """
 This utility function calculates the radial diameter distance 'Da' from the
 redshift 'z' for a given matter and lambda density 'Om' and 'Ol'). Multiplying
 Da by an opening angle 'theta' on the sky will give its actual size 'x'.
 
 """
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import astropy.io.fits as pyfits
 from scipy import integrate

@@ -1,9 +1,8 @@
 #! /usr/bin/python
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 
 import _core_utils
 import input_flags
+import _kdtree_utils
 import _pdf_maker_utils
 import h5py
 import numpy as np
@@ -11,12 +10,14 @@ import sys
 
 if __name__ == "__main__": 
     
+    
     ### First we parse the command line for arguments as usual. See
     ### input_flags.py for a full list of input arguments. 
-    args = input_flags.parse_input_pdf_args()
+    args = input_flags.parse_input_pdf_single_galaxy_args()
     
     print("")
-    print("The-wiZZ has begun conjuring: running pair maker...")
+    print("The-wiZZ has begun conjuring: running pair maker for single "
+          "galaxies...")
     
     input_flags.print_args(args)
     
@@ -25,6 +26,7 @@ if __name__ == "__main__":
     print("Loading files...")
     hdf5_pair_file = _core_utils.file_checker_loader(args.input_pair_hdf5_file)
     unknown_data = _core_utils.file_checker_loader(args.unknown_sample_file)
+    match_data = _core_utils.file_checker_loader(args.match_sample_file)
     ### Load the spectroscopic data from the HDF5 data file.
     print("Preloading target data...")
     pdf_maker = _pdf_maker_utils.PDFMaker(hdf5_pair_file[args.pair_scale_name],
@@ -51,11 +53,7 @@ if __name__ == "__main__":
     ### adaptive and has the same draw backs as adaptive is that the bias could
     ### be changing oddly from bin to bin. It is recommended that the user try
     ### adaptive and comoving spaced bins for the best results. Comoving returns
-    ### bins that are of equal comoving distance from the line of sight. We also
-    ### provide binning in equal ln(1 + z). This is for people who want a
-    ### comoving like binning but without the dependece on cosmology. It also
-    ### has the convienent property of giving errors that can be more easlily
-    ### compared the usual simga/(1 + z) error.
+    ### bins that are of equal comoving distance from the line of sight.
     print("Creating bins...")
     if args.z_binning_type == 'linear':
         z_bin_edge_array = _pdf_maker_utils._create_linear_redshift_bin_edges(
@@ -67,9 +65,6 @@ if __name__ == "__main__":
     elif args.z_binning_type == 'comoving':
         z_bin_edge_array = _pdf_maker_utils._create_comoving_redshift_bin_edges(
             args.z_min, args.z_max, args.z_n_bins)
-    elif args.z_binning_type == 'logspace':
-        z_bin_edge_array = _pdf_maker_utils._create_logspace_redshift_bin_edges(
-            args.z_min, args.z_max, args.z_n_bins)
     else:
         print("Requested binning name invalid. Valid types are:")
         print("\tlinear: linear binning in redshift")
@@ -78,46 +73,66 @@ if __name__ == "__main__":
         print("Retunning linear binning...")
         z_bin_edge_array = _pdf_maker_utils._create_linear_redshift_bin_edges(
             args.z_min, args.z_max, args.z_n_bins)
-    ### This is where the heavy lifting happens. We create our PDF maker object
-    ### which will hold the pair file for use, calculate the over density per
-    ### redshift bin, and also store intermediary results for later use. 
-    ### Before we can estimate the PDF, we must mask for the objects we want 
-    ### to estimate the redshit of. These objects can be color selected,
-    ### photo-z selected, or any other object selection you would like. The code
-    ### line below turns the array of indices in the hdf5 pair file, into a
-    ### single density estimate around the target object.
-    print("Starting indices matcher...")
-    _pdf_maker_utils.collapse_ids_to_single_estimate(
-        hdf5_pair_file[args.pair_scale_name], pdf_maker, unknown_data, args)
     
-    ### Before we calculated the pdfs, we want to know what the over densities
-    ### are in each of the regions calculated on the area we consider.
-    print("Calculating region densities...")
-    pdf_maker.compute_region_densities(z_bin_edge_array, args.z_max)
-    if args.output_region_pickle_file is not None:
-        pdf_maker.write_region_densities(args.output_region_pickle_file, args)
-    ### Now that we've "collapsed" the estimate around the target object we need
-    ### to bin up the results in redshift and create our final PDF.
-    print("Calculating pdf...")
-    if args.bootstrap_samples is None:
-        pdf_maker.compute_pdf_bootstrap(args.n_bootstrap)
-    else:
-        bootstrap_region_array = np.loadtxt(args.bootstrap_samples,
+    ### This portion of the code creates the kdtree on the unknown sample that 
+    ### we will match our match sample to. 
+    print("Making KDTree")
+    mag_name_list = args.unknown_magnitude_names.split(',')
+    try:
+        other_name_list = args.unknown_other_names.split(',')
+    except AttributeError:
+        other_name_list = []
+    print mag_name_list, other_name_list
+    kdtree = _kdtree_utils.CatalogKDTree(
+        _kdtree_utils.create_match_data(
+            unknown_data, mag_name_list, other_name_list, args.use_as_colors))
+    
+    ### Now we create the same array as the unknown sample for our match
+    ### sample.
+    print("Creating matching data array...")
+    match_data_array = _kdtree_utils.create_match_data(
+        match_data, mag_name_list, other_name_list, args.use_as_colors)
+    match_data_density_array = np.empty((match_data_array.shape[0],
+                                        z_bin_edge_array.shape[0]))
+    
+    ### Now we loop over each match objects data array, match it to the unknown
+    ### sample's kdtree and submit those galaxies to pdf_maker to create an
+    ### estimate of the pdf from the unknown sample objects with the closest
+    ### properites.
+    print("Starting match object loop...")
+    for match_idx, match_obj in enumerate(match_data_array):
+        
+        ### match the ids
+        _pdf_maker_utils.collapse_ids_to_single_estimate(
+            hdf5_pair_file[args.pair_scale_name], pdf_maker,
+            unknown_data[kdtree(match_obj, args.n_kdtree_matched)], args)
+        
+        ### Get the region densities
+        pdf_maker.compute_region_densities(z_bin_edge_array, args.z_max)
+        
+        ### Collapse the region densities and estimate the error.
+        if args.bootstrap_samples is None:
+            pdf_maker.compute_pdf_bootstrap(args.n_bootstrap)
+        else:
+            bootstrap_region_array = np.loadtxt(args.bootstrap_samples,
                                             dtype = np.int_)
-        pdf_maker._compute_pdf_bootstrap(bootstrap_region_array)
-    ### Write individual bootstraps to file.
-    if args.output_bootstraps_file is not None:
-        pdf_maker.write_bootstrap_samples_to_ascii(args.output_bootstraps_file,
-                                                   args)
-    
-    ### Now that we have the results. We just need to write them to file and we
-    ### are done.
-    print("Writing...")
-    output_file = _core_utils.create_ascii_file(args.output_pdf_file_name, args)
-    pdf_maker.write_pdf_to_ascii(output_file)
-    output_file.close()
-    
+            pdf_maker._compute_pdf_bootstrap(bootstrap_region_array)
+        
+        match_data_density_array[match_idx, :] = pdf_maker.density_array
+        
+    ### Now we create the output header for the output ascii file.
     ### TODO:
-    ###    Include bootstrapping and writing of the raw boostrap samples. 
+    ###     Maybe change this output to HDF5
+    output_header = 'input_flags:\n'
+    for arg in vars(args):
+        output_header += '\t%s : %s\n' % (arg, getattr(args, arg))
+    output_header += "redshifts : "
+    for z in pdf_maker.redshift_array:
+        output_header += '%.8e ' % z
+    output_header += '\n'
     
-    print("Done!")
+    ### Write out the ascii file.
+    np.savetxt(args.output_pdf_file_name, match_data_density_array, 
+               fmt = '%.8e', header = output_header)
+    
+    print "Done!"

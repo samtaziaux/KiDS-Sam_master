@@ -19,11 +19,12 @@ else:
     xrange = range
 
 # local
-from . import calc_bias
-from .nfw import (esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7,
-                  mass_enclosed, mass_total_sharp)
-from .utils import cM_duffy08, delta, density_average
-from .twohalo_mm import dsigma_mm
+from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
+from nfw import mass_enclosed, mass_total_sharp
+from utils import cM_duffy08, delta, density_average
+
+from twohalo_mm import dsigma_mm
+import calc_bias
 
 
 def fiducial4(theta, R, h=1, Om=0.315, Ol=0.685):
@@ -489,7 +490,7 @@ def central_nfw_brouwer(theta, R, h=1, Om=0.315, Ol=0.685):
 
     # Output ESD and parameters
     out = [esd_central, pointmass]
-    #print(logMcentral)
+    #print logMcentral
     
     return out
 
@@ -517,12 +518,12 @@ def esd_mdm(theta, R, h=0.7, Om=0.315, Ol=0.685):
     #Cd = [(c * Hi) / (G * 6) for Hi in izip(H)]
     Cd = (c * H0) / (G * 6)
 
-    #print(Cd)
-    #print(R)
+    #print Cd
+    #print R
     
     esd_mdm = [pm + (Ai * (Mi * Cd)**0.5 / (4 * Ri[1:] * 1e6)) # Mpc to pc
                     for pm, Ai, Mi, Ri in izip(pointmass, A, Mstar, R)]
-    #print(esd_mdm)
+    #print esd_mdm
     
     """
     # more parameters
@@ -562,12 +563,12 @@ def esd_mdm_An(theta, R, h=0.7, Om=0.315, Ol=0.685):
     #Cd = [(c * Hi) / (G * 6) for Hi in izip(H)]
     Cd = (c * H0) / (G * 6)
 
-    #print(Cd)
-    #print(R)
+    #print Cd
+    #print R
     
     esd_mdm = [pm + (((Mi * Cd)**0.5 / 4) * (Ai * (Ri[1:]*1e6)**(-1*ni))) # Mpc to pc
                     for pm, Ai, ni, Mi, Ri in izip(pointmass, A, n, Mstar, R)]
-    #print(esd_mdm)
+    #print esd_mdm
     
     """
     # more parameters
@@ -658,9 +659,8 @@ def fiducial_bias(theta, R, h=1, Om=0.315, Ol=0.685):
 
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_2halo, Mavg]
-    #print(logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1,
-          #logMcentral2)
-    print(fc_central, logMcentral, b_in)
+    #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
+    print fc_central, logMcentral, b_in
     return out
 
 
@@ -779,9 +779,8 @@ def fiducial_bias_off(theta, R, h=1, Om=0.315, Ol=0.685):
 
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_host, esd_2halo, pointmass, Mavg, ccentral, b]
-    #print(logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1,
-          #logMcentral2)
-    print(ccentral, logMcentral, alpha_in, f_off_in)
+    #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
+    print ccentral, logMcentral, alpha_in, f_off_in
     return out
 
 
@@ -860,9 +859,8 @@ def fiducial_bias_cm(theta, R, h=1, Om=0.315, Ol=0.685):
 
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_2halo, Mavg]
-    #print(logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1,
-          #logMcentral2)
-    print(fc_central, logMcentral, b_in)
+    #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
+    print fc_central, logMcentral, b_in
     return out
 
 
@@ -960,9 +958,8 @@ def nfw_off(theta, R, h=1, Om=0.315, Ol=0.685):
                  
     #out = [esd_total, esd_central, esd_sat, esd_2halo, Mavg, 0]
     out = [esd_total, esd_central, esd_host, pointmass, Mavg]
-    #print(logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1,
-          #logMcentral2)
-    #print(logMcentral, alpha_in, f_off_in)
+    #print logMsat1, logMsat2, fc_central1, fc_central2, logMcentral1, logMcentral2
+    #print logMcentral, alpha_in, f_off_in
     
     return out
 

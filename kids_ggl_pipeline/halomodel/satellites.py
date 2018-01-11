@@ -1,4 +1,12 @@
-from itertools import count, izip
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+import sys
+from itertools import count
+if sys.version_info[0] == 2:
+    from itertools import izip
+else:
+    izip = zip
 from numpy import all as npall, array, average, cumsum, digitize
 from numpy import linspace, log, log10, max as npmax, median
 from numpy import ones, outer, sum as npsum, transpose, zeros
@@ -7,9 +15,10 @@ from scipy.stats import rv_discrete
 from scipy.integrate import romberg
 
 # local
-from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
-from nfw import mass_enclosed, mass_total_sharp
-from utils import cM_duffy08, delta, density_average, nfw_profile
+from .nfw import (esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7,
+                  mass_enclosed, mass_total_sharp)
+from .utils import cM_duffy08, delta, density_average, nfw_profile
+
 
 def fiducial(theta, R, h=1, Om=0.315, Ol=0.685, rmax=2):
     # local variables are accessed much faster than global ones

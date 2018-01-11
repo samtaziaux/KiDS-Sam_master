@@ -1,6 +1,7 @@
 #!/usr/bin/python
-
-"This modules will compute the 2-halo term of the halo model."
+"""Compute the 2-halo term of the halo model."""
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import numpy as np
 import sys
@@ -12,8 +13,8 @@ from astropy.io import fits as pyfits
 
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, '../../halomodel/')
-import twohalo_mm
+from . import twohalo_mm
+
 
 # Van den Bosch 2002
 def calc_S(M, Omega_m, Omega_b, sigma_8, h):

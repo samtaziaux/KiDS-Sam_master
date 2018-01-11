@@ -1,9 +1,13 @@
-
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import h5py
 import numpy as np
 import stomp
 
+import sys
+if sys.version_info[0] == 3:
+    xrange = range
 
 class RawPairFinder(object):
     

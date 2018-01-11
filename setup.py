@@ -1,3 +1,5 @@
+from __future__ import absolute_import, print_function
+
 import os
 import re
 try:
@@ -5,33 +7,12 @@ try:
 except ImportError:
     from distutils.core import setup
 
-here = os.path.abspath(os.path.dirname(__file__))
 
-
-#Taken from the Python docs:
-#Utility function to read the README file.
-#Used for the long_description.  It's nice, because now 1) we have a
-#top level README file and 2) it's easier to type in the README file
-#than to put a raw string in below
-def read(fname):
-    return open(os.path.join(here, fname)).read()
-
-
-#this function copied from pip's setup.py
-#https://github.com/pypa/pip/blob/1.5.6/setup.py
-#so that the version is only set in the __init__.py and then read here
-#to be consistent
-def find_version(fname):
-    version_file = read(fname)
-    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
-                              version_file, re.M)
-    if version_match:
-        return version_match.group(1)
-    raise RuntimeError("Unable to find version string.")
+from kids_ggl_pipeline.helpers.setup_helpers import (
+    find_location, find_version, read)
 
 
 setup(name='kids_ggl_pipeline',
-      #version='1.1.1',
       version=find_version('kids_ggl_pipeline/__init__.py'),
       description='KiDS Galaxy-Galaxy Lensing Pipeline',
       author='Margot Brouwer, Andrej Dvornik, Cristobal Sifon',
@@ -45,6 +26,7 @@ setup(name='kids_ggl_pipeline',
                 'kids_ggl_pipeline/helpers',
                 'kids_ggl_pipeline/The-wiZZ'],
       package_data={'': ['demo/*', 'README.md']},
+      #data_files=[(setup_helpers.data_files_recursively('demo'),)],
       scripts=['bin/kids_ggl'],
       install_requires=['astropy>=1.2.0',
                         'emcee>=2.1.0',

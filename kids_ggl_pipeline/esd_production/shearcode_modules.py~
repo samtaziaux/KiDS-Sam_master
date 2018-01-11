@@ -6,6 +6,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import astropy.io.fits as pyfits
 import gc
 import numpy as np
 import sys
@@ -18,15 +19,15 @@ from glob import glob
 
 from astropy import constants as const, units as u
 from astropy.cosmology import LambdaCDM
-from astropy.io import ascii, fits as pyfits
-from astropy.table import Table
 
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib import gridspec
 from matplotlib import rc, rcParams
 
-from . import distance, esd_utils
+
+import distance
+import esd_utils
 
 # Important constants(very preliminary!)
 G = const.G.to('pc3/Msun s2')
@@ -56,12 +57,11 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         #print 'Warning: Input not found!'
 
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, colnames, specz_file, O_matter, O_lambda, Ok, h, \
-        z_epsilon, path_output, filename_addition, purpose, \
-        path_Rbins, Runit, Ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, \
-        blindcats = \
-            esd_utils.read_config(config_file)
+    path_kidscats, path_gamacat, specz_file, O_matter, O_lambda, Ok, h, z_epsilon, \
+        path_output, filename_addition, purpose, path_Rbins, Runit, Ncores, \
+        lensid_file, lens_weights, lens_binning, lens_selection, \
+        src_selection, cat_version, wizz, n_boot, cross_cov, blindcats = \
+        esd_utils.read_config(config_file)
 
     print()
     print('Running:', purpose)
@@ -89,8 +89,8 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
 
     # Defining the lens-ID lens selection/binning
     if 'None' not in lensid_file:
-        selection = define_lensid_selection(
-            lensid_file, lens_selection, lens_binning, binname, Nobsbins)
+        selection = define_lensid_selection(lensid_file, lens_selection, \
+                                            lens_binning, binname, Nobsbins)
         lens_selection, lens_binning, binname, Nobsbins = selection
 
     # Defining the center definition
@@ -207,8 +207,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
-        z_epsilon, n_boot, cross_cov
+        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov
 
 
 # Defining the lensID lens selection/binning
@@ -396,7 +395,7 @@ def define_filename_splits(path_splits, purpose, filename_var, \
             try:
                 os.makedirs(new_path)
                 break
-            except OSError as e:
+            except OSError, e:
                 if e.errno != 17:
                     raise
                 time.sleep(2)
@@ -432,7 +431,7 @@ def define_filename_results(path_results, purpose, filename_var, \
             try:
                 os.makedirs(new_path)
                 break
-            except OSError as e:
+            except OSError, e:
                 if e.errno != 17:
                     raise
                 time.sleep(2)
@@ -445,30 +444,30 @@ def define_filename_results(path_results, purpose, filename_var, \
 
 # Importing all GAMA and KiDS data, and
 # information on radial bins and lens-field matching.
-def import_data(path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
-                centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
+def import_data(path_Rbins, Runit, path_gamacat, path_kidscats, centering, \
+                purpose, Ncat, O_matter, O_lambda, Ok, h, \
                 lens_weights, filename_addition, cat_version):
 
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, \
         nRbins, Rconst = define_Rbins(path_Rbins, Runit)
-
+    
     # Import GAMA catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, \
-        Dcllist, Dallist = import_gamacat(
-            path_gamacat, colnames, centering, purpose, Ncat, O_matter,
-            O_lambda, Ok, h, Runit, lens_weights)
-
+    Dcllist, Dallist = import_gamacat(path_gamacat, centering, purpose, Ncat, \
+    O_matter, O_lambda, Ok, h, Runit, lens_weights)
+    
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
-
+    
     # Match the KiDS field and GAMA galaxy coordinates
-    catmatch, kidscats, galIDs_infield = run_catmatch(
-        kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose,
-        filename_addition, cat_version)
-
+    catmatch, kidscats, galIDs_infield = run_catmatch(kidscoord, galIDlist, \
+                                                      galRAlist, galDEClist, \
+                                                      Dallist, Rmax, purpose, \
+                                                      filename_addition, \
+                                                      cat_version)
     gc.collect()
-
+    
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
         galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -541,49 +540,34 @@ def define_Rbins(path_Rbins, Runit):
 
 
 # Load the properties (RA, DEC, Z -> dist) of the galaxies in the GAMA catalogue
-def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
-                   O_matter, O_lambda, Ok, h, Runit, lens_weights):
+def import_gamacat(path_gamacat, centering, purpose, Ncat, \
+                    O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
     randomcatname = 'RandomsWindowedV01.fits'
     directory = os.path.dirname(os.path.realpath(path_gamacat))
-    randomcatname = os.path.join(directory, randomcatname)
-
+    randomcatname = directory + '/' + randomcatname
+    
     # Importing the GAMA catalogues
     print('Importing GAMA catalogue:', path_gamacat)
-    try:
-        gamacat = Table(pyfits.open(
-            path_gamacat, ignore_missing_end=True)[1].data)
-    except IOError:
-        gamacat = ascii.read(path_gamacat)
 
-    # skip the ID column name since if it doesn't exist we create it below
-    for colname in colnames[1:]:
-        assert colname in gamacat.colnames, \
-            'Full list of column names:\n{2}\n\n' \
-            'Column {0} not present in catalog {1}. See the full list of' \
-            'column names above'.format(
-                colname, path_gamacat, gamacat.colnames)
+    gamacat = pyfits.open(path_gamacat, ignore_missing_end=True)[1].data
 
-    # IDs of all galaxies
-    if colnames[0] not in gamacat.colnames:
-        gamacat[colnames[0]] = np.arange(gamacat[colnames[1]].size, dtype=int)
-    gamacat[colnames[0]] = np.array(gamacat[colnames[0]], dtype=str)
-    galIDlist = gamacat[colnames[0]]
+
+    galIDlist = gamacat['ID'] # IDs of all galaxies
     if galIDlist.size != np.unique(galIDlist).size:
         print('Dear user, you have confused me with non unique IDs for your lenses.')
         print('I will refrain to keep running (it takes me a lot of energy)')
         print('till you make sure that each lens has its own ID.')
         print('I am not a communist code. Sorry for the inconvenience.')
         raise SystemExit()
-
-    # these are very GAMA-specific
+    
     if centering == 'Cen':
         galRAlist = gamacat['CenRA'] # Central RA of the galaxy (in degrees)
         galDEClist = gamacat['CenDEC'] # Central DEC of the galaxy (in degrees)
         galZlist = gamacat['Zfof'] # Z of the group
     else:
-        galRAlist = gamacat[colnames[1]] # Central RA of the galaxy (in degrees)
-        galDEClist = gamacat[colnames[2]] # Central DEC of the galaxy (in degrees)
+        galRAlist = gamacat['RA'] # Central RA of the galaxy (in degrees)
+        galDEClist = gamacat['DEC'] # Central DEC of the galaxy (in degrees)
 
     if 'random' in purpose:
         # Determine RA and DEC for the random/star catalogs
@@ -604,8 +588,8 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         # This is hardcoded for this set of randoms.
         Ncatmax = step*len(galIDlist)
 
-        galRAlist = randomcat[colnames[1]][slice][Ncatmin:Ncatmax:step]
-        galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
+        galRAlist = randomcat['RA'][slice][Ncatmin:Ncatmax:step]
+        galDEClist = randomcat['DEC'][slice][Ncatmin:Ncatmax:step]
         
     #Defining the lens weights
     weightname = lens_weights.keys()[0]
@@ -616,12 +600,9 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
 
     # Defining the comoving and angular distance to the galaxy center
     if 'pc' in Runit: # Rbins in a multiple of pc
-        assert len(colnames) == 4, \
-            'Please provide the name of the redshift column if you want' \
-            ' to use physical projected distances'
-        galZlist = gamacat[colnames[3]] # Central Z of the galaxy
+        galZlist = gamacat['Z'] # Central Z of the galaxy
         if 'random' in purpose:
-            galZlist = randomcat[colnames[3]][slice][Ncatmin:Ncatmax:step]
+            galZlist = randomcat['Z'][slice][Ncatmin:Ncatmax:step]
         #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
         #                    for z in galZlist])
         # Distance in pc/h, where h is the dimensionless Hubble constant
@@ -641,7 +622,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
     Dallist = Dcllist/(1+galZlist)
 
     return gamacat, galIDlist, galRAlist, galDEClist, \
-        galweightlist, galZlist, Dcllist, Dallist
+    galweightlist, galZlist, Dcllist, Dallist
 
 
 def run_kidscoord(path_kidscats, cat_version):
@@ -663,7 +644,7 @@ def run_kidscoord(path_kidscats, cat_version):
         # Create the dictionary that will hold the names
         # of the KiDS catalogues with their RA and DEC
         kidscoord = dict()
-        kidscat_end = ''
+
         for i in xrange(len(kidscatlist)):
             # Of the KiDS file names, keep only "KIDS_RA_DEC"
 
@@ -1075,20 +1056,17 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
 
 
             # Reading in the calculated Z_S from The-wiZZ output file
-            n_z[:,i] = np.nan_to_num(np.genfromtxt(
-                '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii' \
-                    %(path_wizz_data, filename_var, i),
-                comments='#')[:,1])
-            w_i[:,i] = np.nan_to_num(np.genfromtxt(
-                '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii' \
-                    %(path_wizz_data, filename_var, i),
-                comments='#')[:,3])
+            n_z[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data,\
+                                                            filename_var, i),\
+                                                            comments='#')[:,1])
+            w_i[:,i] = np.nan_to_num(np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data,\
+                                                            filename_var, i),\
+                                                            comments='#')[:,3])
             #print n_z[:,i], w_i[:,i]
 
         n_z = np.sum(n_z*w_i, axis=1)/np.sum(w_i, axis=1)
-        np.savetxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii' \
-                        %(path_wizz_data, filename_var),
-                   n_z, delimiter='\t')
+        np.savetxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(path_wizz_data,\
+                                        filename_var), n_z, delimiter='\t')
         n_z[n_z < 0] = 0
 
     return np.nan_to_num(n_z)
@@ -1342,7 +1320,7 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
 
 # Binnning information of the groups
 def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
-                   Dcllist=[], galZlist=[]):
+                   Dcllist=[]):
 
     # Check how the binning is given
     binname = lens_binning.keys()[0]
@@ -1371,8 +1349,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                 
                 # Importing the binning file
                 if obsfile == 'self':
-                    obslist = define_obslist(
-                        binname, gamacat, 0.7, Dcllist, galZlist)
+                    obslist = define_obslist(binname, gamacat, 0.7, Dcllist)
                 else:
                     print('Using %s from %s' %(binname, obsfile))
                     obscat = pyfits.open(obsfile)[1].data
@@ -1409,7 +1386,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
 
 
 # Corrections on GAMA catalog observables
-def define_obslist(obsname, gamacat, h, Dcllist=[], galZlist=[]):
+def define_obslist(obsname, gamacat, h, Dcllist=[]):
 
     obslist = gamacat[obsname]
 
@@ -1439,10 +1416,10 @@ def define_obslist(obsname, gamacat, h, Dcllist=[], galZlist=[]):
 
 # Masking the lenses according to the appropriate
 # lens selection and the current KiDS field
-def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
-                   binname, binnum, binmin, binmax, Dcllist, galZlist, h):
+def define_lenssel(gamacat, centering, lens_selection, lens_binning,
+                   binname, binnum, binmin, binmax, Dcllist, h):
 
-    lenssel = np.ones(len(gamacat[colnames[0]]), dtype=bool)
+    lenssel = np.ones(len(gamacat['ID']), dtype=bool)
     # introduced by hand (CS) for the case when I provide a lensID_file:
     #binname = 'No'
     
@@ -1452,13 +1429,13 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
         obsfile = lens_selection[param][0]
         # Importing the binning file
         if obsfile == 'self':
-            obslist = define_obslist(param, gamacat, h, Dcllist, galZlist)
+            obslist = define_obslist(param, gamacat, h, Dcllist)
         else:
             print('Using %s from %s'%(param, obsfile))
             bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[param]
         
-        if colnames[0] in param:
+        if 'ID' in param:
             lenssel *= np.in1d(obslist, binlims)
         else:
             if len(binlims) == 1:
@@ -1470,10 +1447,10 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
         # Importing the binning file
         obsfile = lens_binning[binname][0]
         if obsfile == 'self':
-            if colnames[0] in binname:
-                obslist = define_obslist(colnames[0], gamacat, h, Dcllist, galZlist)
+            if 'ID' in binname:
+                obslist = define_obslist('ID', gamacat, h, Dcllist)
             else:
-                obslist = define_obslist(binname, gamacat, h, Dcllist, galZlist)
+                obslist = define_obslist(binname, gamacat, h, Dcllist)
         else:
             print('Using %s from %s'%(binname, obsfile))
             bincat = pyfits.open(obsfile)[1].data
@@ -1729,13 +1706,15 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
         fitscols.append(pyfits.Column(name = 'Bootstrap', format='20A', \
                                       array = galIDlist))
     else:
+        """
         # This need to be figured out, it is causing pipeline to stall if there is an empty lens list passed.
         if isinstance(galIDlist[0], basestring):
-            fmt = '50A'
+            fmt = '100A'
         elif isinstance(galIDlist[0], int):
             fmt = 'J'
         else:
-            fmt = 'E'
+        """
+        fmt = 'E'
         fitscols.append(pyfits.Column(name = 'ID', format=fmt, \
                                       array = galIDlist))
 
@@ -1805,15 +1784,9 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius({0})	ESD_t(h{1:g}*M_sun/pc^2)' \
-                   '   ESD_x(h{1:g}*M_sun/pc^2)' \
-                   '    error(h{1:g}*M_sun/pc^2)^2	bias(1+K)' \
-                   '    variance(e_s)     wk2     w2k2' \
-                   '     Nsources'.format(Runit, h*100)
+        filehead = '# Radius(%s)	ESD_t(h%g*M_sun/pc^2)   ESD_x(h%g*M_sun/pc^2)	error(h%g*M_sun/pc^2)^2	bias(1+K)    variance(e_s)     wk2     w2k2     Nsources'%(Runit, h*100, h*100, h*100)
     else:
-        filehead = '# Radius({0})    gamma_t    gamma_x    error' \
-                   '    bias(1+K)    variance(e_s)    wk2    w2k2' \
-                   '    Nsources'.format(Runit)
+        filehead = '# Radius(%s)	gamma_t gamma_x	error   bias(1+K)	variance(e_s)   wk2     w2k2    Nsources'%(Runit)
 
     index = np.where(np.logical_not((0 < error_tot) & (error_tot < inf)))
     ESDt_tot.setflags(write=True)
@@ -1835,9 +1808,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
-    fmt = ['%.4e' for i in range(data_out.shape[1])]
-    fmt[-1] = '%6d'
-    np.savetxt(filename, data_out, delimiter=' '*4, fmt=fmt, header=filehead)
+    np.savetxt(filename, data_out, delimiter='\t', header=filehead)
 
     print('Written: ESD profile data:', filename)
 
@@ -1847,14 +1818,9 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
         galIDsname_split = filename.rsplit('_',1)
         galIDsname = '%s_lensIDs.txt'%(galIDsname_split[0])
         #kidsgalIDsname = '%s_KiDSlensIDs.txt'%(galIDsname_split[0])
-
-        galIDs_table = Table(
-            [galIDs_matched], names=("# ID's of all stacked lenses:",))
-        galIDs_table.write(galIDsname,
-            names=["IDs of all stacked lenses:"], quotechar='"',
-            format='ascii.commented_header', overwrite=True)
-        #np.savetxt(galIDsname, [galIDs_matched], delimiter=' ',
-                   #header="ID's of all stacked lenses:", comments='# ')
+        
+        np.savetxt(galIDsname, galIDs_matched, fmt='%s', delimiter='\t',\
+                   header="ID's of all stacked lenses:", comments='# ')
         
         print("Written: List of all stacked lens ID's"\
                 " that contribute to the signal:", galIDsname)

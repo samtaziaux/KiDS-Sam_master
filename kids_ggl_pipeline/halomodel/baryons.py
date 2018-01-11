@@ -21,6 +21,8 @@
 #  MA 02110-1301, USA.
 #
 #
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import time
 import numpy as np
@@ -28,10 +30,9 @@ import matplotlib.pyplot as pl
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
-import halo
-import cmf
 
-from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
+from . import halo, cmf
+from .tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
 
 
 """

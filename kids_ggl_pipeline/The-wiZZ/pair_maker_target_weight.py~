@@ -1,5 +1,3 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
 
 import _core_utils
 import _stomp_utils
@@ -10,32 +8,27 @@ import numpy as np
 import stomp
 import sys
 
-if sys.version_info[0] == 3:
-    xrange = range
 
 """
-This is the main program for running the pair finder and creating the data file
-that contains the raw pair information between the target and unknown sample.
-It should be run with the complete photometric, unknown catalog of interest to
-allow users to later subselect samples from this catalog.
+This program is used to calculate a relative weight for each spectroscpic
+object. Dense structures in the target dataset can cause undue bias in the
+resultant recovery and even cause negagive correlations for samples that anti-
+correlation with said structures. This code attempts to mitigate this by
+computing the over-density of spectroscopic objects relative to themseleves and
+using this as a weight for supressing the effect of over-dense structures on
+the recovery. This may even help with surveys with strange masks.
 """
 
 
 if __name__ == "__main__":
     
     print("")
-    print("The-wiZZ has begun conjuring: running pair maker...")
+    print("The-wiZZ has begun conjuring: running pair maker target weight...")
     
     ### load the command line arguments 
     args = input_flags.parse_input_pair_args()
     
     input_flags.print_args(args)
-    
-    ### Create the output hdf5 file where we will store the output for the
-    ### pair finding including raw pairs, area, unmasked fraction. We do this
-    ### first to soft fail rather than run through the code.
-    output_pair_hdf5_file = _core_utils.create_hdf5_file(
-        args.output_pair_hdf5_file, args)
     
     ### load the stomp geometry coving the area of spectroscopic overlap
     ### TODO:
@@ -56,10 +49,14 @@ if __name__ == "__main__":
     target_vector, target_ids = _stomp_utils.load_target_sample(
         args.target_sample_file, stomp_map, args)
     
-    ### load the unknown sample from disc. Assumed data type is fits though hdf5
-    ### will be allowed in later versions
-    unknown_itree = _stomp_utils.load_unknown_sample(args.unknown_sample_file,
-                                                     stomp_map, args)
+    ### Instead of loading an unknown sample from disk, we load the target
+    ### objects themselves as the unknown sample.
+    unknown_itree = stomp.IndexedTreeMap(stomp_map.RegionResolution(), 200)
+    for target_idx, target_obj in enumerate(target_vector):
+        tmp_i_ang = stomp.IndexedAngularCoordinate(
+            target_obj.UnitSphereX(), target_obj.UnitSphereY(),
+            target_obj.UnitSphereZ(), target_idx)
+        unknown_itree.AddPoint(tmp_i_ang)
     
     ### We also wish to subtract a random sample from density estimate. This
     ### function creates a set of uniform data points on the geometry of the
@@ -78,16 +75,22 @@ if __name__ == "__main__":
     min_scale_list = args.min_scale.split(',')
     max_scale_list = args.max_scale.split(',')
     
-    print(min_scale_list)
-    print(max_scale_list)
+    print min_scale_list
+    print max_scale_list
     
     if len(min_scale_list) != len(max_scale_list):
         print("Number of min scales requested does not match number of max"
               "sales. Exitting.")
         sys.exit()
-    
+        
+    over_density_list = []
     ### loop over the min/max scales requested.
+    output_file = _core_utils.create_ascii_file(args.output_hdf5_file, args)
     for scale_idx in xrange(len(min_scale_list)):
+        output_file.writelines('#type%i = kpc%st%s\n' %
+                               (scale_idx,
+                                min_scale_list[scale_idx],
+                                max_scale_list[scale_idx]))
         print("Running scale: %s to %s" % (min_scale_list[scale_idx],
                                            max_scale_list[scale_idx]))
         ### Pair finder does what it says. It also computes the areas, unmasked
@@ -103,13 +106,20 @@ if __name__ == "__main__":
             pair_finder.random_loop(np.float_(min_scale_list[scale_idx]),
                                     np.float_(max_scale_list[scale_idx]),
                                     random_tree)
-        
-        ### Now that we have all of our pairs found and in memory, we want to
-        ### write them to something more permanent.
-        pair_finder.write_to_hdf5(output_pair_hdf5_file,
-                                  'kpc%st%s' % (min_scale_list[scale_idx],
-                                                max_scale_list[scale_idx]))
+            
+        over_density_array = np.empty(len(pair_finder._pair_list))
+        for target_idx, target_id_list in enumerate(pair_finder._pair_list):
+            
+            over_density_array[target_idx] = (
+                len(target_id_list) * args.n_randoms /
+                pair_finder._n_random_per_target[target_idx])
+        over_density_list.append(over_density_array)
     
-    output_pair_hdf5_file.close()
+    for target_idx in xrange(target_vector.size()):
+        line = ''
+        for scale_idx in xrange(len(over_density_list)):
+            line += '%.8e ' % over_density_list[scale_idx][target_idx]
+        output_file.writelines(line + '\n')
+    output_file.close()
     ### And that's it. We are done.
     

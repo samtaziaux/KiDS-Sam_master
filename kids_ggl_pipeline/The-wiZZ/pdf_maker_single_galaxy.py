@@ -1,4 +1,6 @@
 #! /usr/bin/python
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import _core_utils
 import input_flags
@@ -82,7 +84,7 @@ if __name__ == "__main__":
         other_name_list = args.unknown_other_names.split(',')
     except AttributeError:
         other_name_list = []
-    print mag_name_list, other_name_list
+    print(mag_name_list, other_name_list)
     kdtree = _kdtree_utils.CatalogKDTree(
         _kdtree_utils.create_match_data(
             unknown_data, mag_name_list, other_name_list, args.use_as_colors))
@@ -135,4 +137,4 @@ if __name__ == "__main__":
     np.savetxt(args.output_pdf_file_name, match_data_density_array, 
                fmt = '%.8e', header = output_header)
     
-    print "Done!"
+    print("Done!")

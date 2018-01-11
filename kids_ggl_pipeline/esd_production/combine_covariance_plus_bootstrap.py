@@ -4,16 +4,17 @@
 # Part of the module to determine the shear 
 # as a function of radius from a galaxy.
 """
+from __future__ import absolute_import, print_function
 
 # Import the necessary libraries
-from __future__ import print_function
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
 import os
 import time
-import shearcode_modules as shear
 from astropy import constants as const, units as u
+
+from . import shearcode_modules as shear
 
 # Important constants
 inf = np.inf # Infinity
@@ -24,12 +25,14 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
-            lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-            cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
-            path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
-            filename_addition, Ncat, splitslist, blindcats, blindcat, \
-            blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
-            shear.input_variables(nsplit, nsplits, nobsbin, blindcat, config_file)
+        lens_selection, lens_weights, binname, Nobsbins, src_selection, \
+        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
+        filename_addition, Ncat, splitslist, blindcats, blindcat, \
+        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        z_epsilon, n_boot, cross_cov = \
+            shear.input_variables(
+                nsplit, nsplits, nobsbin, blindcat, config_file)
 
     blindcat = blindcat[0]
 
@@ -78,9 +81,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
-                path_Rbins, Runit, path_gamacat, path_kidscats, centering,
-                purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
-                filename_addition, cat_version)
+            path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+            centering, purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
+            filename_addition, cat_version)
 
     galIDlist_matched = np.array([], dtype=np.int32)
     for kidscatname in kidscats:
@@ -91,35 +94,39 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Binnning information of the groups
     # Mask the galaxies in the shear catalog, WITHOUT binning
     # (for the bin creation)
-    lenssel_binning = shear.define_lenssel(gamacat, centering, lens_selection,
-                                           'None', 'None', 0, -inf, inf,
-                                           Dcllist, h)
+    lenssel_binning = shear.define_lenssel(
+        gamacat, colnames, centering, lens_selection, 'None', 'None',
+        0, -inf, inf, Dcllist, galZlist, h)
 
-    binname, lens_binning, Nobsbins, \
-    binmin, binmax = shear.define_obsbins(binnum, lens_binning, \
-                                          lenssel_binning, gamacat, Dcllist)
+    binname, lens_binning, Nobsbins, binmin, binmax = \
+        shear.define_obsbins(
+            binnum, lens_binning, lenssel_binning, gamacat, Dcllist, galZlist)
 
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
-        gammat = np.zeros([Nobsbins,nRbins])
-        gammax = np.zeros([Nobsbins,nRbins])
-        wk2 = np.zeros([Nobsbins,nRbins])
-        srcm = np.zeros([Nobsbins,nRbins])
-        Nsrc = np.zeros([Nobsbins,nRbins])
+        #gammat = np.zeros([Nobsbins,nRbins])
+        #gammax = np.zeros([Nobsbins,nRbins])
+        #wk2 = np.zeros([Nobsbins,nRbins])
+        #srcm = np.zeros([Nobsbins,nRbins])
+        #Nsrc = np.zeros([Nobsbins,nRbins])
+        gammat, gammax, wk2, srcm, Nsrc = np.zeros((5,Nobsbins,nRbins))
 
-    ESDt_tot = np.zeros([Nobsbins,nRbins])
-    ESDx_tot = np.zeros([Nobsbins,nRbins])
-    error_tot = np.zeros([Nobsbins,nRbins])
-    bias_tot = np.zeros([Nobsbins,nRbins])
+    #ESDt_tot = np.zeros([Nobsbins,nRbins])
+    #ESDx_tot = np.zeros([Nobsbins,nRbins])
+    #error_tot = np.zeros([Nobsbins,nRbins])
+    #bias_tot = np.zeros([Nobsbins,nRbins])
+    ESDt_tot, ESDx_tot, error_tot, bias_tot = np.zeros((4,Nobsbins,nRbins))
 
     # These lists will contain the final covariance matrix
-    radius1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    radius2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    bin1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    bin2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    cov = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    cor = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    covbias = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    #radius1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    #radius2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    #bin1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    #bin2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    #cov = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    #cor = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    #covbias = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
+    radius1, radius2, bin1, bin2, cov, cor, covbias = \
+        np.zeros((7,Nobsbins,Nobsbins,nRbins,nRbins))
 
 
     # The calculation of the covariance starts
@@ -307,12 +314,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             # Determine the stacked galIDs
             binname, lens_binning, Nobsbins, binmin, binmax = \
-                shear.define_obsbins(N1+1, lens_binning, lenssel_binning,
-                                     gamacat, Dcllist)
+                shear.define_obsbins(
+                    N1+1, lens_binning, lenssel_binning, gamacat, Dcllist,
+                    galZlist)
 
-            lenssel = shear.define_lenssel(gamacat, centering, lens_selection,
-                                           lens_binning, binname, N1+1,
-                                           binmin, binmax, Dcllist, h)
+            lenssel = shear.define_lenssel(
+                gamacat, colnames, centering, lens_selection, lens_binning,
+                binname, N1+1, binmin, binmax, Dcllist, galZlist, h)
 
             galIDs = galIDlist[lenssel] # Mask all quantities
             galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
@@ -337,7 +345,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                             (wk2[N1,R1]*wk2[N2,R2])
     
 
-    header = '%s_min[m]    %s_min[n]    Radius[i](kpc/h%g)    Radius[j](kpc/h%g)    covariance(h%g*M_sun/pc^2)^2    correlation    bias(1+K[m,i])(1+K[n,j])'%(binname, binname, h*100, h*100, h*100)
+    header = '{0}_min[m]    {0}_min[n]    Radius[i](kpc/h{1:g})' \
+             '    Radius[j](kpc/h{1:g})    covariance(h{1:g}*M_sun/pc^2)^2' \
+             '    correlation    bias(1+K[m,i])(1+K[n,j])'.format(
+                    binname, 100*h)
 
     file = np.empty((Nobsbins*Nobsbins*nRbins*nRbins, 7))
     index_out = 0

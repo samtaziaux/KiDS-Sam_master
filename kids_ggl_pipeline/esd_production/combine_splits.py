@@ -4,15 +4,18 @@
 # Part of the module to determine the shear
 # as a function of radius from a galaxy.
 """
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import astropy.io.fits as pyfits
 import numpy as np
 import sys
 import os
 import time
-import shearcode_modules as shear
 from astropy import constants as const, units as u
 import glob
+
+from . import shearcode_modules as shear
 
 # Important constants
 G = const.G.to('pc3/Msun s2')
@@ -31,8 +34,10 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, specz_file, z_epsilon, n_boot, cross_cov = \
-        shear.input_variables(Nsplit, Nsplits, binnum, blindcat, config_file)
+        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        z_epsilon, n_boot, cross_cov = \
+            shear.input_variables(
+                Nsplit, Nsplits, binnum, blindcat, config_file)
 
     
     print('Step 2: Combine splits into one catalogue')
@@ -42,9 +47,9 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     if 'bootstrap' in purpose:
         purpose = purpose.replace('bootstrap', 'catalog')
         
-        path_catalogs = '%s/catalogs'%(path_output.rsplit('/',1)[0])
-        path_splits = '%s/splits_%s'%(path_catalogs, purpose)
-        path_results = '%s/results_%s'%(path_catalogs, purpose)
+        path_catalogs = os.path.join(path_output.rsplit('/',1)[0], 'catalogs')
+        path_splits = os.path.join(path_catalogs, 'splits_{0}'.format(purpose))
+        path_results = os.path.join(path_catalogs, 'results_{0}'.format(purpose))
 
     if 'catalog' in purpose:
 
@@ -55,7 +60,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         #    Nsplit = binnum-1
 
         if centering == 'Cen':
-            lens_selection = {'rank%s'%centering: ['self', np.array([1])]}
+            lens_selection = {'rank{0}'.format(centering): ['self', np.array([1])]}
         else:
             lens_selection = {}
         
@@ -121,15 +126,14 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     combcol = []
 
     # Adding the lens ID's and the radial bins R
-    """
-    # This need to be figured out, it is causing pipeline to stall if there is an empty lens list passed.
+    # This need to be figured out, it is causing pipeline to stall if
+    # there is an empty lens list passed.
     if isinstance(sheardat['ID'][0], basestring):
-        fmt = '100A'
+        fmt = '50A'
     elif isinstance(sheardat['ID'][0], int):
         fmt = 'J'
     else:
-    """
-    fmt = 'E'
+        fmt = 'E'
     combcol.append(pyfits.Column(name='ID', format=fmt, array=sheardat['ID']))
     print('Combining: ID')
 

@@ -102,6 +102,18 @@ If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenun
 ---
 Update log:
 
+**2018 Januray 12** - Release v1.6.1. Features:
+- Update to hmf 3.0.3 and newer Python CAMB package
+- Bug fixes in halo model imports
+
+**2018 Januray 10** - Release v1.6.0. Features:
+- The lens files can now be either FITS or ascii files.
+- The user may specify the names of the required columns (ID,RA,Dec[,z]) in the configuration file, instead of having to modify the input table to comply with GAMA naming conventions
+- The ID column is no longer required (one will be created if none is present in the input table)
+- Minor bug fixes in the covariance calculation
+- Small style changes and code clean-up
+- The ESD production can be run on DR2 again
+
 **2017 July 20** - Release v1.5.1. Features:
 - Bug fix for ID's
 

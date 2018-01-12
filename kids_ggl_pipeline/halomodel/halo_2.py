@@ -47,7 +47,8 @@ from astropy.cosmology import LambdaCDM
 
 from hmf import MassFunction
 
-from . import baryons, longdouble_utils as ld
+from . import baryons as baryons
+from . import longdouble_utils as ld
 from .tools import (
     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
     star_concentration, virial_mass, virial_radius)
@@ -57,7 +58,7 @@ from .lens import (
 from .dark_matter import (
     NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
-    GG_sat_analy, GG_cen_sat_analy, miscenter)
+    GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10)
 from .cmf import *
 
 import pylab
@@ -125,41 +126,11 @@ def eff_mass(z, mass_func, population, m_x):
         trapz(mass_func.dndm * population, m_x)
 
 
+
 """
-# Some bias functions
+# Two halo term for matter-galaxy and galaxy-galaxy specta!
+# For matter-matter it is only P_lin!
 """
-
-def Bias(hmf, r_x):
-    """
-        PS bias - analytic
-        
-        """
-    bias = 1.0+(hmf.nu-1.0)/(hmf.growth*hmf.delta_c)
-    #print ("Bias OK.")
-    return bias
-
-
-def Bias_Tinker10(hmf, r_x):
-    """
-    Tinker 2010 bias - empirical
-        
-    """
-    nu = hmf.nu**0.5
-    y = np.log10(hmf.delta_halo)
-    A = 1.0 + 0.24 * y * exp(-(4 / y) ** 4)
-    a = 0.44 * y - 0.88
-    B = 0.183
-    b = 1.5
-    C = 0.019 + 0.107 * y + 0.19 * exp(-(4 / y) ** 4)
-    c = 2.4
-    #print y, A, a, B, b, C, c
-    return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
-
-
-    """
-    # Two halo term for matter-galaxy and galaxy-galaxy specta!
-    # For matter-matter it is only P_lin!
-    """
 
 def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
     """
@@ -257,7 +228,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step, 'transfer_model': 'EH',
+                                    'dlnk': k_step, 'transfer_model': 'CAMB'.encode(),
                                     'z':np.float64(z_i)})
 
     # Calculation
@@ -268,7 +239,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
         hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
-                                hmf_model='Tinker10', delta_h=200.0, delta_wrt='mean',
+                                hmf_model='Tinker10'.encode(), delta_h=200.0, delta_wrt='mean',
                                 delta_c=1.686,
                                 **i)
         hmf_temp.update(cosmo_model=cosmo_model)

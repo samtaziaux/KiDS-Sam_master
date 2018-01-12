@@ -176,6 +176,40 @@ def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 
 
 """
+# Some bias functions
+"""
+
+def Bias(hmf, r_x):
+    """
+    PS bias - analytic
+        
+    """
+    bias = 1.0+(hmf.nu-1.0)/(hmf.growth*hmf.delta_c)
+    #print ("Bias OK.")
+    return bias
+
+
+def Bias_Tinker10(hmf, r_x):
+    """
+    Tinker 2010 bias - empirical
+        
+    """
+    nu = hmf.nu**0.5
+    y = np.log10(hmf.delta_halo)
+    A = 1.0 + 0.24 * y * np.exp(-(4 / y) ** 4)
+    a = 0.44 * y - 0.88
+    B = 0.183
+    b = 1.5
+    C = 0.019 + 0.107 * y + 0.19 * np.exp(-(4 / y) ** 4)
+    c = 2.4
+    #print y, A, a, B, b, C, c
+    return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
+
+
+
+
+
+"""
 # Spectrum 1-halo components for dark matter.
 """
 

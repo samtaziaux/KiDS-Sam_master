@@ -31,7 +31,9 @@ from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
 
-from . import halo, cmf
+from . import cmf
+#from .halo import Bias_Tinker10
+from .dark_matter import Bias_Tinker10
 from .tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
 
 
@@ -353,7 +355,7 @@ def GS_TwoHalo(mass_func, z, rho_stars, rho_mean, n, k_x, r_x, m_x,
         T_comb[k,:] = T_s[k,:]
         # Divided by m or not?
         integ[k,:] = norm * (mass_func.dndlnm * T_comb[k] * \
-                     halo.Bias_Tinker10(mass_func,r_x)) / \
+                     Bias_Tinker10(mass_func,r_x)) / \
                      (rho_stars)#/m_x)/(rho_stars)
         comp[k,:] = Integrate(integ[k], m_x) * (k_x**(k*2)) * (-1)**k
 
@@ -491,7 +493,7 @@ def GGas_TwoHalo(mass_func, z, F, rho_gas, rho_mean, n, k_x, r_x, m_x,
         T_comb[k] = T_g[k]
         # Divided by m or not?
         integ[k] = norm * (mass_func.dndlnm * T_comb[k] * \
-                             halo.Bias_Tinker10(mass_func,r_x)) / \
+                             Bias_Tinker10(mass_func,r_x)) / \
                      (F * rho_gas)#/m_x)/(rho_stars)
         comp[k] = Integrate(integ[k], m_x) * (k_x**(k*2)) * (-1)**k
 

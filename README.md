@@ -38,9 +38,9 @@ or
     
         python setup.py install --user
 
-Either of these will install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf==2.0.5` for halo mass function utilities, `mpmath>=0.19` for mathematical utilities, and `numpy>=1.5.0`. Optionally, if you want to use the CAMB transfer functions in your halo models (preffered method), you should also instal pycamb with CAMB version from March 2013, using the following command: 
+Either of these will install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf>=3.0.1` for halo mass function utilities, `mpmath>=0.19` for mathematical utilities, and `numpy>=1.5.0`. Optionally, if you want to use the CAMB transfer functions in your halo models (preffered method), you should also instal CAMB using the following command: 
 
-        CAMBURL=http://camb.info/CAMB_Mar13.tar.gz pip install git+git://github.com/steven-murray/pycamb.git --user
+        pip install --egg camb
 
 **d)** After the setup script has finished, you should have a copy of the `kids_ggl` executable somewhere in your `$PATH`, which means you can run it out-of-the-box from anywhere in your computer. To make sure, type
 

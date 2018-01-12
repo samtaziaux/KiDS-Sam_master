@@ -102,7 +102,7 @@ If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenun
 ---
 Update log:
 
-**2018 Januray 12** - Release v1.6.1. Features:
+**2018 Januray 12** - Release v1.6.1. Features: 
 - Update to hmf 3.0.3 and newer Python CAMB package
 - Bug fixes in halo model imports
 

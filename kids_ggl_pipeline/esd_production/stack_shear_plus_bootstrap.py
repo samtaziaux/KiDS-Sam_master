@@ -177,7 +177,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             n_patches = 4
         
             result = []
-            for m in matched.keys():
+            for m in list(matched.keys()):
                 x_coord, y_coord = m
                 result_i = []
                 plot_i = np.array([])

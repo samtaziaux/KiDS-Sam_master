@@ -228,7 +228,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step, 'transfer_model': 'CAMB'.encode(),
+                                    'dlnk': k_step, 'transfer_model': 'EH'.encode(),
                                     'z':np.float64(z_i)})
 
     # Calculation

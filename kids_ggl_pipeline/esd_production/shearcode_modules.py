@@ -98,7 +98,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     centering = 'None'
     for cen in centers:
         if ('rank%s'%cen in binname) or \
-            ('rank%s'%cen in lens_selection.keys()):
+            ('rank%s'%cen in list(lens_selection.keys())):
             centering = cen
             print('Center definition = %s'%centering)
     if centering == 'Cen':
@@ -236,7 +236,7 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, 
 # that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
     
-    selnames = np.sort(selection.keys())
+    selnames = np.sort(list(selection.keys()))
     for selname in selnames:
         sellims = (selection[selname])[1]
         selname = selname.replace('_','')
@@ -276,7 +276,7 @@ def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnu
     print(binnum)
     print()
 
-    selnames = np.sort(selection.keys())
+    selnames = np.sort(list(selection.keys()))
     for selname in selnames:
         sellims = (selection[selname])[1]
         
@@ -328,7 +328,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                                                          var_print, '', \
                                                          lens_selection)
     
-        weightname = lens_weights.keys()[0]
+        weightname = list(lens_weights.keys())[0]
         if weightname != 'None':
             filename_var_lens = '%s_lw~%s'%(filename_var_lens, weightname)
             var_print = '%s Lens weights: %s,'%(var_print, weightname)
@@ -608,7 +608,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
         
     #Defining the lens weights
-    weightname = lens_weights.keys()[0]
+    weightname = list(lens_weights.keys())[0]
     if 'No' not in weightname:
         galweightlist = pyfits.open(lens_weights.values()[0])[1].data[weightname]
     else:
@@ -749,7 +749,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
 
     catmatch = dict()
     # Adding the lenses to the list that are inside each field
-    for kidscat in kidscoord.keys():
+    for kidscat in list(kidscoord.keys()):
 
         # The RA and DEC of the KiDS catalogs
         catRA = kidscoord[kidscat][0]
@@ -778,13 +778,13 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
             catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
 
 
-    kidscats = catmatch.keys() # The list of fields with lens centers in them
+    kidscats = list(catmatch.keys()) # The list of fields with lens centers in them
     
     galIDs_infield = totgalIDs # The galaxies that have their centers in a field
 
 
     # Adding the lenses outside the fields to the dictionary
-    for kidscat in kidscoord.keys():
+    for kidscat in list(kidscoord.keys()):
 
         # The RA and DEC of the KiDS catalogs
         catRA = kidscoord[kidscat][0]
@@ -820,7 +820,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
 
             catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
                     
-    kidscats = catmatch.keys()
+    kidscats = list(catmatch.keys())
     
 
     print('Matched fields:', len(kidscats), ', Matched field-galaxy pairs:', \
@@ -1211,7 +1211,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
 
     # We apply any other cuts specified by the user
-    for param in src_selection.keys():
+    for param in list(src_selection.keys()):
         srclims = src_selection[param][1]
         if len(srclims) == 1:
             srcmask *= (kidscat[param] == srclims[0])
@@ -1262,7 +1262,7 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     e2 = np.transpose(np.array([kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2']]))
 
     srcmask = (srcm==0.0)
-    for param in src_selection.keys():
+    for param in list(src_selection.keys()):
         srclims = src_selection[param][1]
         if len(srclims) == 1:
             srcmask *= (kidscat[param] == srclims[0])
@@ -1345,11 +1345,11 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                    Dcllist=[], galZlist=[]):
 
     # Check how the binning is given
-    binname = lens_binning.keys()[0]
+    binname = list(lens_binning.keys())[0]
     if 'No' not in binname:
         
         if 'ID' in binname:
-            Nobsbins = len(lens_binning.keys())
+            Nobsbins = len(list(lens_binning.keys()))
             if len(lenssel_binning) > 0:
                 print('Lens binning: Lenses divided in %i lens-ID bins' \
                       %(Nobsbins))
@@ -1447,7 +1447,7 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
     #binname = 'No'
     
     # Add the mask for each chosen lens parameter
-    for param in lens_selection.keys():
+    for param in list(lens_selection.keys()):
         binlims = lens_selection[param][1]
         obsfile = lens_selection[param][0]
         # Importing the binning file

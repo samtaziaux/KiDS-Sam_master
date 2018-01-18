@@ -236,10 +236,11 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, 
     return lens_selection, lens_binning, binname, Nobsbins
 
 
-# Define the part of the filename and plottitle
-# that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
-
+    """
+    Define the part of the filename and plottitle
+    that contains the lens/source selections
+    """
     selnames = np.sort(list(selection))
     for selname in selnames:
         sellims = (selection[selname])[1]
@@ -262,7 +263,7 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
                 plottitle = '%s %g $\leq$ %s $<$ %g,'%(plottitle, \
                                                           sellims[0], selname, \
                                                           sellims[1])
-                                                          
+
                 #plottitle = '$\mathrm{{{0}\,{1:g}}} \leq'.format(
                 #                plottitle, sellims[0])
                 #plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(

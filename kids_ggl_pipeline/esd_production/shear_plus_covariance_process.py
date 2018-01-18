@@ -663,9 +663,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     if cat_version in (0,3):
         kidscatname2 = np.array([])
-        #for i in xrange(len(kidscats)):
-            #kidscatname2 = np.append(
-                #kidscatname2, kidscats[i].rsplit('-', 1)[0])
         for cat in kidscats:
             kidscatname2 = np.append(kidscatname2, cat.rsplit('-', 1)[0])
         kidscatname2 = np.unique(kidscatname2)
@@ -674,27 +671,27 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         i = 0
         for kidscatname in kidscatname2:
             i += 1
-            print('	%i/%i:'%(i, len(kidscatname2)), kidscatname)
-            
-            # Import and mask all used data from the sources in this KiDS field
+            print('	{0}/{1}:'.format(i, len(kidscatname2)), kidscatname)
+
+            # Import and mask all used data from the sources in this
+            # KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
-            shear.import_kidscat(path_kidscats, kidscatname, \
-                                 kidscat_end, src_selection, cat_version)
-                
+                shear.import_kidscat(path_kidscats, kidscatname,
+                                     kidscat_end, src_selection, cat_version)
+
             srcNr_varlist = np.append(srcNr_varlist, srcNr)
             srcRA_varlist = np.append(srcRA_varlist, srcRA)
             srcDEC_varlist = np.append(srcDEC_varlist, srcDEC)
             srcm_varlist = np.append(srcm_varlist, srcm)
             tile_varlist = np.append(tile_varlist, tile)
             srcPZ_varlist = np.append(srcPZ_varlist, srcPZ)
-                                 
+
             # Make ellipticity- and lfweight-lists for the variance calculation
             w_varlist = np.hstack([w_varlist, w.T])
             e1_varlist = np.hstack([e1_varlist, e1.T])
             e2_varlist = np.hstack([e2_varlist, e2.T])
-            srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = [], [], [], \
-                                                                [], [], [], \
-                                                                [], [], []
+            srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
+                [[] for i in range(9)]
 
     # Calculating the variance of the ellipticity for this source selection
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist)
@@ -713,7 +710,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # We translate the range in source redshifts
     # to a range in source distances Ds (in pc/h)
     zsrcbins = np.arange(0.025,3.5,0.05)
-    
     #Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
     #                    for y in zsrcbins])
     #Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
@@ -726,7 +722,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if cat_version == 3:
         if wizz == 'False':
             print('\nCalculating the lensing efficiency ...')
-            
+
             srclims = src_selection['Z_B'][1]
             sigma_selection = {}
             # 10 lens redshifts for calculation of Sigma_crit

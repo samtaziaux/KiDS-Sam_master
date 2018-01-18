@@ -27,6 +27,9 @@ from . import (
     distance,
     esd_utils)
 
+if sys.version_info[0] == 3:
+    xrange = range
+
 
 start_tot = time.time()
 
@@ -79,7 +82,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
     # it's easier to debug if we don't use multiprocessing, so it will
     # only be used if it is asked for
-    
+
     if nruns > 1:
         #pool = mp.Pool(processes=nruns)
         #out = [pool.apply_async(shearcov.main,
@@ -90,14 +93,12 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         #pool.join()
         #for i in out:
         #    i.get()
-        
+
         # This is only for randoms, and because child processes are not allowed
         # to spawn new child processes, this needs to be run like this.
         for n in xrange(nruns):
             out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
-        
-        
-        
+
     else:
         out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     

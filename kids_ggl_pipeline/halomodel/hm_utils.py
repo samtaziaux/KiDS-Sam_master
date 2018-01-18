@@ -8,7 +8,7 @@ from glob import glob
 from numpy import array, inf, iterable, loadtxt
 
 # local
-from . import nfw, nfw_stack, satellites, halo, halo_decorated, halo_2
+from . import nfw, nfw_stack, satellites, halo, halo_2
 try:
     from . import models
 except ImportError:
@@ -177,8 +177,6 @@ def read_function(module, function):
         function = getattr(nfw_stack, function)
     elif module == 'halo':
         function = getattr(halo, function)
-    elif module == 'halo_decorated':
-        function = getattr(halo_decorated, function)
     elif module == 'halo_2':
         function = getattr(halo_2, function)
     elif module == 'models':

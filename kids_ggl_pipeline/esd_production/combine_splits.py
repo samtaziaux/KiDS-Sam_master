@@ -17,6 +17,10 @@ import glob
 
 from . import shearcode_modules as shear
 
+if sys.version_info[0] == 3:
+    basestring = str
+    xrange = range
+
 # Important constants
 G = const.G.to('pc3/Msun s2')
 c = const.c.to('pc/s')

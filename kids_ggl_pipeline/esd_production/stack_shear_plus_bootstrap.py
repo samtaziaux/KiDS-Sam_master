@@ -17,6 +17,10 @@ from astropy import constants as const, units as u
 
 from . import shearcode_modules as shear
 
+if sys.version_info[0] == 3:
+    xrange = range
+
+
 debug = False
 # Important constants
 inf = np.inf # Infinity

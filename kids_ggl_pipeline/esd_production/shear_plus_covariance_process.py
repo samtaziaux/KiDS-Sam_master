@@ -661,9 +661,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     if cat_version == 3 or cat_version == 0:
         kidscatname2 = np.array([])
+        print('kidscats =', kidscats)
         for i in xrange(len(kidscats)):
+            print('kidscats[i] =', kidscats[i])
+            print(kidscats[i].rsplit('-', 1)
             kidscatname2 = np.append(kidscatname2, \
                                      kidscats[i].rsplit('-', 1)[0])
+        int('a')
         kidscatname2 = np.unique(kidscatname2)
         
         print('Importing KiDS catalogs from: %s'%path_kidscats)

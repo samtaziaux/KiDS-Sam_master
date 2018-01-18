@@ -236,7 +236,8 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, 
 # that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
     
-    selnames = np.sort(selection.keys())
+    #selnames = np.sort(selection.keys())
+    selnames = np.sort(list(selection))
     for selname in selnames:
         sellims = (selection[selname])[1]
         selname = selname.replace('_','')

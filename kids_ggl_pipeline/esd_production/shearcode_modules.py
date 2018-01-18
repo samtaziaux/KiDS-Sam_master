@@ -28,6 +28,10 @@ from matplotlib import rc, rcParams
 
 from . import distance, esd_utils
 
+if sys.version_info[0] == 3:
+    xrange = range
+    basestring = str
+
 # Important constants(very preliminary!)
 G = const.G.to('pc3/Msun s2')
 c = const.c.to('pc/s')
@@ -236,7 +240,7 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, 
 # that contains the lens/source selections
 def define_filename_sel(filename_var, var_print, plottitle, selection):
     
-    selnames = np.sort(selection.keys())
+    selnames = np.sort(list(selection))
     for selname in selnames:
         sellims = (selection[selname])[1]
         selname = selname.replace('_','')
@@ -276,7 +280,7 @@ def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnu
     print(binnum)
     print()
 
-    selnames = np.sort(selection.keys())
+    selnames = np.sort(list(selection))
     for selname in selnames:
         sellims = (selection[selname])[1]
         
@@ -328,7 +332,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                                                          var_print, '', \
                                                          lens_selection)
     
-        weightname = lens_weights.keys()[0]
+        weightname = list(lens_weights)[0]
         if weightname != 'None':
             filename_var_lens = '%s_lw~%s'%(filename_var_lens, weightname)
             var_print = '%s Lens weights: %s,'%(var_print, weightname)
@@ -496,26 +500,19 @@ def define_Rbins(path_Rbins, Runit):
         print('nRbins', nRbins)
 
     else: # from a specified number (of bins)
-        try:
-            # Start, End, number of steps and step
-            # size of the radius R (logarithmic 10^x)
-            binlist = path_Rbins.split(',')
-
-            nRbins = int(binlist[0])
-            Rmin = float(binlist[1])
-            Rmax = float(binlist[2])
-            Rstep = (np.log10(Rmax)-np.log10(Rmin))/(nRbins)
-            Rbins = 10.**np.arange(np.log10(Rmin), np.log10(Rmax), Rstep)
-            Rbins = np.append(Rbins,Rmax)
-            Rcenters = np.array([(Rbins[r]+Rbins[r+1])/2 \
+        # Start, End, number of steps and step
+        # size of the radius R (logarithmic 10^x)
+        binlist = path_Rbins.split(',')
+        nRbins = int(binlist[0])
+        Rmin = float(binlist[1])
+        Rmax = float(binlist[2])
+        Rstep = (np.log10(Rmax)-np.log10(Rmin))/(nRbins)
+        Rbins = 10.**np.arange(np.log10(Rmin), np.log10(Rmax), Rstep)
+        Rbins = np.append(Rbins,Rmax)
+        Rcenters = np.array([(Rbins[r]+Rbins[r+1])/2 \
                                  for r in xrange(nRbins)])
 
-        except:
-            print('Observable bin file does not exist:', path_Rbins)
-            raise SystemExit()
-    
     # Translating from k/Mpc to pc, or from arcmin/sec to deg
-
     Rconst = -999
     if 'pc' in Runit:
         Rconst = 1.
@@ -549,7 +546,9 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
     randomcatname = os.path.join(directory, randomcatname)
 
     # Importing the GAMA catalogues
-    print('Importing GAMA catalogue:', path_gamacat)
+    print('Importing lens catalogue:', path_gamacat, '...')
+    assert os.path.isfile(path_gamacat), \
+        'Lens catalogue {0} does not exist'.format(path_gamacat)
     try:
         gamacat = Table(pyfits.open(
             path_gamacat, ignore_missing_end=True)[1].data)
@@ -606,11 +605,12 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
 
         galRAlist = randomcat[colnames[1]][slice][Ncatmin:Ncatmax:step]
         galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
-        
+
     #Defining the lens weights
-    weightname = lens_weights.keys()[0]
+    weightname = list(lens_weights)[0]
     if 'No' not in weightname:
-        galweightlist = pyfits.open(lens_weights.values()[0])[1].data[weightname]
+        galweightlist = \
+            pyfits.open(list(lens_weights.values())[0][1]).data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
 
@@ -777,11 +777,10 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
             catmatch[kidscat] = np.array([])
             catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
 
-
-    kidscats = catmatch.keys() # The list of fields with lens centers in them
-    
-    galIDs_infield = totgalIDs # The galaxies that have their centers in a field
-
+    # The list of fields with lens centers in them
+    kidscats = list(catmatch)
+    # The galaxies that have their centers in a field
+    galIDs_infield = totgalIDs
 
     # Adding the lenses outside the fields to the dictionary
     for kidscat in kidscoord.keys():
@@ -817,31 +816,30 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
         if len(galIDs)>0:
             if kidscat not in kidscats:
                 catmatch[kidscat] = []
+            catmatch[kidscat] = np.append(
+                catmatch[kidscat], [galIDs, name], 0)
 
-            catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
-                    
-    kidscats = catmatch.keys()
-    
+    kidscats = list(catmatch)
 
-    print('Matched fields:', len(kidscats), ', Matched field-galaxy pairs:', \
-        len(totgalIDs), ', Matched galaxies:', len(np.unique(totgalIDs)),\
-        ', Percentage(Matched galaxies):',  \
-        float(len(np.unique(totgalIDs)))/float(len(galIDlist))*100, '%')
     print()
-    
+    print('Matched fields:', len(kidscats))
+    print('Matched field-galaxy pairs:', len(totgalIDs))
+    print('Matched galaxies: {0} ({1:.2f}% of total)'.format(
+        len(np.unique(totgalIDs)),
+        100 * len(np.unique(totgalIDs)) / len(galIDlist)))
+    print()
+
     return catmatch, kidscats, galIDs_infield
 
 
-
-def split(seq, size): # Split up the list of KiDS fields for parallel processing
-
+def split(seq, size):
+    """Split up the list of KiDS fields for parallel processing"""
     newseq = []
-    splitsize = len(seq)/size
-
+    splitsize = len(seq) / size
     for i in xrange(size-1):
-        newseq.append(seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
+        newseq.append(
+            seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
     newseq.append(seq[int(round((size-1)*splitsize)):len(seq)])
-
     return newseq
 
 
@@ -954,7 +952,7 @@ def import_spec_cat_pz(kidscatname, catmatch, srcNr):
     mask = np.in1d(spec_cat['SeqNr'],srcNr)
     Z_S = Z_S[mask]
     Z_S_out = np.zeros((len(srcNr), 70))
-    for i in range(len(srcNr)):
+    for i in xrange(len(srcNr)):
         Z_S_out[i,:] = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), Z_S[i,:])
         Z_S_out[i,:] = Z_S_out[i,:]/Z_S_out[i,:].sum()
     
@@ -1345,11 +1343,11 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                    Dcllist=[], galZlist=[]):
 
     # Check how the binning is given
-    binname = lens_binning.keys()[0]
+    binname = list(lens_binning)[0]
     if 'No' not in binname:
-        
+
         if 'ID' in binname:
-            Nobsbins = len(lens_binning.keys())
+            Nobsbins = len(list(lens_binning))
             if len(lenssel_binning) > 0:
                 print('Lens binning: Lenses divided in %i lens-ID bins' \
                       %(Nobsbins))
@@ -1411,6 +1409,10 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
 # Corrections on GAMA catalog observables
 def define_obslist(obsname, gamacat, h, Dcllist=[], galZlist=[]):
 
+    assert obsname in gamacat.colnames, \
+        'Observable {0} not present in lens catalog. Please make' \
+        ' sure you have used the correct observable names in the' \
+        ' configuration file.'.format(obsname)
     obslist = gamacat[obsname]
 
     if 'AngSep' in obsname and len(Dcllist) > 0:
@@ -1835,7 +1837,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
-    fmt = ['%.4e' for i in range(data_out.shape[1])]
+    fmt = ['%.4e' for i in xrange(data_out.shape[1])]
     fmt[-1] = '%6d'
     np.savetxt(filename, data_out, delimiter=' '*4, fmt=fmt, header=filehead)
 
@@ -2029,7 +2031,7 @@ def write_plot(plotname, plotstyle): # Writing and showing the plot
 
 
 # Plotting the analytical or bootstrap covariance matrix
-def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
+def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle,
                            binname, lens_binning, Rbins, Runit, h,
                            cmap='gray_r'):
 
@@ -2040,7 +2042,7 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
     rc('font',**{'family':'serif','serif':['Computer Modern']})
 
     # Number of observable bins
-    obsbins = (lens_binning.values()[0])[1]
+    obsbins = list(lens_binning.values())[0][1]
     Nobsbins = len(obsbins)-1
 
     # Number and values of radial bins
@@ -2050,11 +2052,10 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
     fig = plt.figure(figsize=(12,10))
 
     gs_full = gridspec.GridSpec(1,2, width_ratios=[20,1])
-    gs = gridspec.GridSpecFromSubplotSpec(Nobsbins, Nobsbins, wspace=0, \
-                                          hspace=0, subplot_spec=gs_full[0,0])
-    gs_bar = gridspec.GridSpecFromSubplotSpec(3, 1, height_ratios=[1,3,1], \
-                                              subplot_spec=gs_full[0,1])
-                                              
+    gs = gridspec.GridSpecFromSubplotSpec(
+        Nobsbins, Nobsbins, wspace=0, hspace=0, subplot_spec=gs_full[0,0])
+    gs_bar = gridspec.GridSpecFromSubplotSpec(
+        3, 1, height_ratios=[1,3,1], subplot_spec=gs_full[0,1])
     cax = fig.add_subplot(gs_bar[1,0])
     ax = fig.add_subplot(gs_full[0,0])
 
@@ -2067,6 +2068,8 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
     #	covariance = covariance/bias
     #	correlation = covariance/correlation
 
+    # just for labelling
+    binname = binname.replace('_', '\\_')
 
     for N1 in xrange(Nobsbins):
         for N2 in xrange(Nobsbins):
@@ -2173,7 +2176,7 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle, \
     plt.savefig(plotname,format='png')
 
     print('Written: Covariance matrix plot:', plotname)
-
+    return
 
 
 

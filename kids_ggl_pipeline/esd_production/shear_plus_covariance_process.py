@@ -18,13 +18,15 @@ from scipy.interpolate import interp1d
 
 from astropy import constants as const, units as u
 from astropy.cosmology import LambdaCDM
+import gc
+
+from . import distance, memory_test as memory, shearcode_modules as shear
+
 if sys.version_info[0] == 2:
     from itertools import izip
 else:
     izip = zip
-import gc
-
-from . import distance, memory_test as memory, shearcode_modules as shear
+    xrange = range
 
 
 # Important constants
@@ -659,13 +661,16 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     srcPZ_a = np.array([])
     srcPZ_varlist = np.array([])
 
-    if cat_version == 3 or cat_version == 0:
+    if cat_version in (0,3):
         kidscatname2 = np.array([])
         for i in xrange(len(kidscats)):
-            kidscatname2 = np.append(kidscatname2, \
-                                     kidscats[i].rsplit('-', 1)[0])
+            kidscatname2 = np.append(
+                kidscatname2, kidscats[i].rsplit('-', 1)[0])
+        #for cat in kidscats:
+            #print('cat =', cat)
+            #kidscatname2 = np.append(kidscatname2, cat.rsplit('-', 1)[0])
         kidscatname2 = np.unique(kidscatname2)
-        
+
         print('Importing KiDS catalogs from: %s'%path_kidscats)
         i = 0
         for kidscatname in kidscatname2:

@@ -4,7 +4,8 @@
 # Part of the module to determine the shear 
 # as a function of radius from a galaxy.
 """
-from __future__ import absolute_import, print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 # Import the necessary libraries
 import astropy.io.fits as pyfits
@@ -15,6 +16,10 @@ import time
 from astropy import constants as const, units as u
 
 from . import shearcode_modules as shear
+
+if sys.version_info[0] == 3:
+    xrange = range
+
 
 # Important constants
 inf = np.inf # Infinity
@@ -45,9 +50,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     print()
 
     # Define the list of variables for the output filename
-    filename_var = shear.define_filename_var(purpose, centering, binname, \
-                    'binnum', Nobsbins, lens_selection, lens_binning, src_selection, \
-                    lens_weights, name_Rbins, O_matter, O_lambda, Ok, h)
+    filename_var = shear.define_filename_var(
+        purpose, centering, binname, 'binnum', Nobsbins, lens_selection,
+        lens_binning, src_selection, lens_weights, name_Rbins, O_matter,
+        O_lambda, Ok, h)
     if ('random' or 'star') in purpose:
         filename_var = '{0:d}_{1}'.format(Ncat, filename_var)
         # Ncat is the number of existing randoms
@@ -357,25 +363,28 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         for N2 in xrange(Nobsbins):
             for R1 in xrange(nRbins):
                 for R2 in xrange(nRbins):
-                        
                     radius1[N1,N2,R1,R2] = Rcenters[R1]
                     radius2[N1,N2,R1,R2] = Rcenters[R2]
-                    bin1[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N1]
-                    bin2[N1,N2,R1,R2] = (lens_binning.values()[0])[1][N2]
+                    bin1[N1,N2,R1,R2] = \
+                        list(lens_binning.values())[0][1][N1]
+                    bin2[N1,N2,R1,R2] = \
+                        list(lens_binning.values())[0][1][N2]
 
-                    if (0. < error_tot[N1,R1])&(error_tot[N1,R1] < inf) \
-                        and (0. < error_tot[N2,R2])&(error_tot[N2,R2] < inf):
-        
-                        cor[N1,N2,R1,R2] = cov[N1,N2,R1,R2]/((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
-            
+                    if (0. < error_tot[N1,R1]) & (error_tot[N1,R1] < inf) \
+                            and (0. < error_tot[N2,R2]) & (error_tot[N2,R2] < inf):
+                        cor[N1,N2,R1,R2] = \
+                            cov[N1,N2,R1,R2] \
+                            / ((cov[N1,N1,R1,R1]*cov[N2,N2,R2,R2])**0.5)
                         covbias[N1,N2,R1,R2] = bias_tot[N1,R1]*bias_tot[N2,R2]
-                
                     else:
                         cov[N1,N2,R1,R2] = -999
                         cor[N1,N2,R1,R2] = -999
                         covbias[N1,N2,R1,R2] = -999
 
-                    file[index_out,:] = bin1[N1,N2,R1,R2], bin2[N1,N2,R1,R2], radius1[N1,N2,R1,R2], radius2[N1,N2,R1,R2], cov[N1,N2,R1,R2], cor[N1,N2,R1,R2], covbias[N1,N2,R1,R2]
+                    file[index_out,:] = \
+                        bin1[N1,N2,R1,R2], bin2[N1,N2,R1,R2], \
+                        radius1[N1,N2,R1,R2], radius2[N1,N2,R1,R2], \
+                        cov[N1,N2,R1,R2], cor[N1,N2,R1,R2], covbias[N1,N2,R1,R2]
                     index_out += 1
     np.savetxt(filenamecov, file, header=header)
     print('Written: Covariance matrix data:', filenamecov)

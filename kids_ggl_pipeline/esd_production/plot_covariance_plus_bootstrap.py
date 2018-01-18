@@ -18,6 +18,9 @@ from astropy import constants as const, units as u
 
 from . import shearcode_modules as shear
 
+if sys.version_info[0] == 3:
+    xrange = range
+
 # Important constants
 inf = np.inf # Infinity
 nan = np.nan # Not a number
@@ -135,20 +138,21 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Creating the ueber-matrix plot
     filename_cov = filename_var.replace('_binnum', 's')
     filename_cov = filename_cov.replace('_bins', '')
-    filenamecov = '%s/%s_matrix_%s.txt'%(path_results, filename_cov, blindcat)
+    filenamecov = '{0}/{1}_matrix_{2}.txt'.format(
+        path_results, filename_cov, blindcat)
     
-    # The Group bins
+    # the group bins
     if binname == 'No': # If there is no binning
         plottitle2 = ''
     else: # If there is binning
-        plottitle2 = r'for %i %s bins between %g and %g.'%(Nobsbins, binname, \
-                                            (lens_binning.values()[0])[1][0], \
-                                            (lens_binning.values()[0])[1][-1])
-
+        plottitle2 = r'for {0} {1} bins between {2} and {3}.'.format(
+            Nobsbins, binname.replace('_', '\\_'),
+            list(lens_binning.values())[0][1][0],
+            list(lens_binning.values())[0][1][-1])
     #try:
-    shear.plot_covariance_matrix(filenamecov, plottitle1, plottitle2, \
-                                     plotstyle_matrix, binname, \
-                                     lens_binning, Rbins, Runit, h)
+    shear.plot_covariance_matrix(
+        filenamecov, plottitle1, plottitle2, plotstyle_matrix, binname,
+        lens_binning, Rbins, Runit, h)
     #except:
     #    print "Failed to create Matrix Plot of", filenamecov
     
@@ -166,15 +170,15 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         #if answer.lower() not in ('y', 'yes'):
         #    exit()
         filelist = os.listdir(path_splits)
-        
+
         for filename in filelist:
-            #os.remove('%s/%s'%(path_splits, filename))
             try:
-                os.remove('%s/%s'%(path_splits, filename))
+                #os.remove('%s/%s'%(path_splits, filename))
+                os.remove(os.path.join(path_splits, filename))
             except OSError:
-                shutil.rmtree('%s/%s'%(path_splits, filename))
-    
+                #shutil.rmtree('%s/%s'%(path_splits, filename))
+                shutil.rmtree(os.path.join(path_splits, filename))
 
     return
-    
+
 

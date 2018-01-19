@@ -1133,14 +1133,15 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
     
     
     eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
-    #eff_density_in_mpc = eff_density / hmf[0].cosmo.angular_diameter_distance(z_kids).value**2.0 * (2.0 * Pi_max)
-    
     #shape_noise_old = ((sigma_crit_old)**2.0) * hmf[0].cosmo.H(z_kids).value * (kids_variance_squared / eff_density_in_mpc)/ (3.0*10.0**6.0)
     #print(shape_noise_old)
     
     #eff_density_in_mpc = eff_density
     #shape_noise = np.zeros(sigma_crit.shape)
-    shape_noise = ((sigma_crit / rho_mean[0])**2.0) * (kids_variance_squared / eff_density_in_mpc) / (Pi_max)**2.0# * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / (2.0 * Pi_max))
+    #shape_noise = ((sigma_crit / rho_mean[0])**2.0) * (kids_variance_squared / eff_density_in_mpc) / (Pi_max)**2.0# * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / (2.0 * Pi_max))
+    eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0
+    shape_noise = ((sigma_crit / rho_mean[0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance_z1z2(z,z_kids).value)#(8.0 * Pi_max))
+    
     
     #radius = np.sqrt(kids_area/np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # conversion of area in deg^2 to Mpc/h!
     radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h

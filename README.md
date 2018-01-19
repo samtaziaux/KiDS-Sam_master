@@ -6,7 +6,7 @@ the KiDS galaxy-galaxy lensing pipeline, which takes current KiDS and GAMA
 catalogs and produces (or reads) an ESD and a covariance matrix and runs a
 fitting module (i.e., halo model) with a given sampling technique.*
 
-***Python 3 compatibility is in the process of being implemented. Most modules and functions should be compatible with a Python 3 installation, but not all corners of the pipeline have been tested yet. We strongly encourage all new and old users of the KiDS-GGL pipeline to use Python 3 and report any issues***
+***2018-01-19: As of v1.6.2, the ESD production module is confirmed to be fully compatible with a Python 3 installation. We encourage all users to update their KiDS-GGL pipeline to this version (or newer).***
 
 
 #### 1. Installation
@@ -101,6 +101,9 @@ If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenun
 
 ---
 Update log:
+
+**2018 January 19** - Release v1.6.2. Features:
+- ESD production fully tested in Python 3 after several bug fixes
 
 **2018 January 12** - Release v1.6.1. Features:
 - Update to hmf 3.0.3 and newer Python CAMB package

@@ -6,7 +6,7 @@ the KiDS galaxy-galaxy lensing pipeline, which takes current KiDS and GAMA
 catalogs and produces (or reads) an ESD and a covariance matrix and runs a
 fitting module (i.e., halo model) with a given sampling technique.*
 
-***2018-01-19: As of v1.6.2, the ESD production module is confirmed to be fully compatible with a Python 3 installation. We encourage all users to update their KiDS-GGL pipeline to this version (or newer).
+***2018-01-19: As of v1.6.2, the ESD production module is confirmed to be fully compatible with a Python 3 installation. We encourage all users to update their KiDS-GGL pipeline to this version (or newer).***
 
 
 #### 1. Installation

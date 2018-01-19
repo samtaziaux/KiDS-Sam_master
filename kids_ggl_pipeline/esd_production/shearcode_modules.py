@@ -237,8 +237,11 @@ def define_lensid_selection(lensid_file, lens_selection, lens_binning, binname, 
 
 
 def define_filename_sel(filename_var, var_print, plottitle, selection):
-    
-    selnames = np.sort(list(selection.keys()))
+    """
+    Define the part of the filename and plottitle
+    that contains the lens/source selections
+    """
+    selnames = np.sort(list(selection))
     for selname in selnames:
         sellims = (selection[selname])[1]
         selname = selname.replace('_','')
@@ -278,7 +281,7 @@ def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnu
     print(binnum)
     print()
 
-    selnames = np.sort(list(selection.keys()))
+    selnames = np.sort(list(selection))
     for selname in selnames:
         sellims = (selection[selname])[1]
         
@@ -330,7 +333,7 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
                                                          var_print, '', \
                                                          lens_selection)
     
-        weightname = list(lens_weights.keys())[0]
+        weightname = list(lens_weights)[0]
         if weightname != 'None':
             filename_var_lens = '%s_lw~%s'%(filename_var_lens, weightname)
             var_print = '%s Lens weights: %s,'%(var_print, weightname)
@@ -605,7 +608,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
 
     #Defining the lens weights
-    weightname = list(lens_weights.keys())[0]
+    weightname = list(lens_weights)[0]
     if 'No' not in weightname:
         galweightlist = \
             pyfits.open(list(lens_weights.values())[0][1]).data[weightname]
@@ -775,14 +778,13 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
             catmatch[kidscat] = np.array([])
             catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
 
-
-    kidscats = list(catmatch.keys()) # The list of fields with lens centers in them
-    
-    galIDs_infield = totgalIDs # The galaxies that have their centers in a field
-
+    # The list of fields with lens centers in them
+    kidscats = list(catmatch)
+    # The galaxies that have their centers in a field
+    galIDs_infield = totgalIDs
 
     # Adding the lenses outside the fields to the dictionary
-    for kidscat in list(kidscoord.keys()):
+    for kidscat in kidscoord.keys():
 
         # The RA and DEC of the KiDS catalogs
         catRA = kidscoord[kidscat][0]
@@ -818,10 +820,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
             catmatch[kidscat] = np.append(
                 catmatch[kidscat], [galIDs, name], 0)
 
-            catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
-                    
-    kidscats = list(catmatch.keys())
-    
+    kidscats = list(catmatch)
 
     print()
     print('Matched fields:', len(kidscats))
@@ -1345,11 +1344,11 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                    Dcllist=[], galZlist=[]):
 
     # Check how the binning is given
-    binname = list(lens_binning.keys())[0]
+    binname = list(lens_binning)[0]
     if 'No' not in binname:
 
         if 'ID' in binname:
-            Nobsbins = len(list(lens_binning.keys()))
+            Nobsbins = len(list(lens_binning))
             if len(lenssel_binning) > 0:
                 print('Lens binning: Lenses divided in %i lens-ID bins' \
                       %(Nobsbins))

@@ -566,7 +566,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                         np.nan_to_num(d_sur_den2_i), s=0)
                         for d_sur_den2_i in _izip(d_sur_den2)])
                          
-    out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
+    out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size)) 
     
         
     #"""

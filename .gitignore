@@ -6,6 +6,7 @@
 brouwer/
 cristobal/
 configs_andrej/
+__pycache__
 build/
 dist/
 kids_ggl_pipeline.egg-info/

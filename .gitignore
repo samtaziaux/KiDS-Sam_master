@@ -2,6 +2,7 @@
 *.pyc
 ._*
 *DS_Store*
+.ipynb_checkpoints
 /.project
 brouwer/
 cristobal/

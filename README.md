@@ -93,7 +93,7 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 - Always check how many cores are available in your machine before running in parallel.
 - **Contribute!**
  
-If you have any questions, please contact Andrej Dvornik (`dvornik@strw.leidenuniv.nl`), Margot Brouwer (`brouwer@strw.leidenuniv.nl`) and Cristóbal Sifón (`sifon@strw.leidenuniv.nl`).
+If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (`dvornik@strw.leidenuniv.nl`), Margot Brouwer (`brouwer@strw.leidenuniv.nl`) and/or Cristóbal Sifón (`sifon@astro.princeton.edu`).
 
 ---
 Update log:

@@ -12,7 +12,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
 #### 1. Installation
     
     
-**a)** Contact Cristóbal Sifón (sifon@strw.leidenuniv.nl) to become a member
+**a)** Contact Cristóbal Sifón (sifon@astro.princeton.edu) to become a member
        of the KiDS-WL repository and join the KiDS-GGL team
 
 **b)** Download [the latest stable version of the KiDS-GGL pipeline](https://github.com/KiDS-WL/KiDS-GGL/releases/latest) and unpack,
@@ -28,17 +28,13 @@ where for instance `<version>=1.0.0`.
 
 **c)** From within the same folder, run
 
-        python setup.py install
+        python setup.py install [--user]
 
-If you don't have administrator privileges, or simply want to install it in a non-standard place (e.g., your home directory), then type
+where the `--user` flag is recommended so as not to require root privileges, and the package will typically be installed in `$HOME/.local/lib`. If instead you want to install it in a non-standard place, then type
 
         python setup.py install --prefix=path/to/installation/
-    
-or
-    
-        python setup.py install --user
 
-Either of these will install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf>=3.0.1` for halo mass function utilities, `mpmath>=0.19` for mathematical utilities, and `numpy>=1.5.0`. Optionally, if you want to use the CAMB transfer functions in your halo models (preffered method), you should also instal CAMB using the following command: 
+The commands above will also install some additional packages required by the pipeline: `astropy>=1.1.0` for astronomical utilities (e.g., constants and units), `emcee>=2.1.0` for MCMC, `hmf>=3.0.1` for halo mass function utilities, `mpmath>=0.19` for mathematical utilities, and `numpy>=1.5.0`. Optionally, if you want to use the CAMB transfer functions in your halo models (preffered method), you should also instal CAMB using the following command: 
 
         pip install --egg camb
 

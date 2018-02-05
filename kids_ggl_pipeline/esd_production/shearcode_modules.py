@@ -102,7 +102,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     centering = 'None'
     for cen in centers:
         if ('rank%s'%cen in binname) or \
-            ('rank%s'%cen in list(lens_selection.keys())):
+            ('rank%s'%cen in lens_selection.keys()):
             centering = cen
             print('Center definition = %s'%centering)
     if centering == 'Cen':
@@ -750,7 +750,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
 
     catmatch = dict()
     # Adding the lenses to the list that are inside each field
-    for kidscat in list(kidscoord.keys()):
+    for kidscat in kidscoord.keys():
 
         # The RA and DEC of the KiDS catalogs
         catRA = kidscoord[kidscat][0]
@@ -1210,7 +1210,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
 
     # We apply any other cuts specified by the user
-    for param in list(src_selection.keys()):
+    for param in src_selection.keys():
         srclims = src_selection[param][1]
         if len(srclims) == 1:
             srcmask *= (kidscat[param] == srclims[0])
@@ -1261,7 +1261,7 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     e2 = np.transpose(np.array([kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2']]))
 
     srcmask = (srcm==0.0)
-    for param in list(src_selection.keys()):
+    for param in src_selection.keys():
         srclims = src_selection[param][1]
         if len(srclims) == 1:
             srcmask *= (kidscat[param] == srclims[0])
@@ -1450,7 +1450,7 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
     #binname = 'No'
     
     # Add the mask for each chosen lens parameter
-    for param in list(lens_selection.keys()):
+    for param in lens_selection.keys():
         binlims = lens_selection[param][1]
         obsfile = lens_selection[param][0]
         # Importing the binning file

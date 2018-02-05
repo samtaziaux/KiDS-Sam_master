@@ -2,10 +2,12 @@
 *.pyc
 ._*
 *DS_Store*
+.ipynb_checkpoints
 /.project
 brouwer/
 cristobal/
 configs_andrej/
+__pycache__
 build/
 dist/
 kids_ggl_pipeline.egg-info/

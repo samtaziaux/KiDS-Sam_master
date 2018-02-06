@@ -38,12 +38,14 @@ from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, UnivariateSpline
 from itertools import count
+from time import time
+from astropy.cosmology import LambdaCDM
+
 if sys.version_info[0] == 2:
     from itertools import izip
 else:
     izip = zip
-from time import time
-from astropy.cosmology import LambdaCDM
+    xrange = range
 
 from hmf import MassFunction
 from hmf import fitting_functions as ff

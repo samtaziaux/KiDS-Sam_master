@@ -11,6 +11,8 @@ from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
 from hmf import MassFunction
+from hmf import fitting_functions as ff
+from hmf import transfer_models as tf
 from astropy.cosmology import LambdaCDM
 
 from . import longdouble_utils as ld
@@ -67,11 +69,11 @@ def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     h = H0/100.0
     cosmo_model = LambdaCDM(H0=H0, Ob0=omegab/h**2.0, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
 
-    transfer_params = {'sigma_8': sigma_8, 'n': n, 'lnk_min': k_min ,'lnk_max': k_max, 'dlnk': k_step, 'transfer_model': 'CAMB'.encode(), 'z':z}
+    transfer_params = {'sigma_8': sigma_8, 'n': n, 'lnk_min': k_min ,'lnk_max': k_max, 'dlnk': k_step, 'transfer_model': tf.CAMB, 'z':z}
     # Calculation
     
     
-    hmf = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step, hmf_model='Tinker10'.encode(), delta_h=200.0, delta_wrt='mean', delta_c=1.686, **transfer_params)
+    hmf = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step, hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean', delta_c=1.686, **transfer_params)
     hmf.update(cosmo_model=cosmo_model)
     
     rho_crit = hmf.mean_dens_z/(hmf.omegac+hmf.omegab)

@@ -181,7 +181,7 @@ def run_emcee(hm_options, sampling_options, args):
         print(' ** chi2 = %.2f/%d **' %(chi2, dof))
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:
-            plot_demo(axes, R[0], esd[0], esd_err[0], model[0])
+            plot_demo(axes, R[0], esd[0], esd_err[0], model[0][0])
         else:
             for i in izip(axes, R, esd, esd_err, model[0]):
                 plot_demo(*i)

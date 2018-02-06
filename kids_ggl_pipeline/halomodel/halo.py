@@ -46,6 +46,8 @@ from time import time
 from astropy.cosmology import LambdaCDM
 
 from hmf import MassFunction
+from hmf import fitting_functions as ff
+from hmf import transfer_models as tf
 
 from . import baryons as baryons
 from . import longdouble_utils as ld
@@ -341,7 +343,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step, 'transfer_model': 'CAMB'.encode(),
+                                    'dlnk': k_step,
                                     'z':np.float64(z_i)})
     
     # Calculation
@@ -352,7 +354,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
         hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
-                                hmf_model='Tinker10'.encode(), delta_h=200.0, delta_wrt='mean',
+                                hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
                                 delta_c=1.686,
                                 **i)
         hmf_temp.update(cosmo_model=cosmo_model)

@@ -11,6 +11,7 @@ from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
 from hmf import MassFunction
+from astropy.cosmology import LambdaCDM
 
 from . import longdouble_utils as ld
 from .lens import (
@@ -28,12 +29,6 @@ def memoize(function):
         return rv
     return wrapper
 
-#@memoize
-def Mass_Function(M_min, M_max, step, k_min, k_max, k_step, name, **cosmology_params):
-    
-    m = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step, mf_fit=name, delta_h=200.0, delta_wrt='mean', cut_fit=False, z2=None, nz=None, delta_c=1.686, **cosmology_params)
-        
-    return m
 
 def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     
@@ -68,14 +63,16 @@ def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     
     # Setting parameters from config file
     
-    cosmology_params = {"sigma_8": sigma_8, "h": h,"omegab_h2": omegab_h2, \
-                        "omegam": omegam, "omegav": omegav, "n": n, \
-                        "lnk_min": k_min ,"lnk_max": k_max, "dlnk": k_step, \
-                        "transfer_fit": "BBKS", "z":z, "force_flat":True}
+
+    h = H0/100.0
+    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab/h**2.0, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
+
+    transfer_params = {'sigma_8': sigma_8, 'n': n, 'lnk_min': k_min ,'lnk_max': k_max, 'dlnk': k_step, 'transfer_model': 'CAMB'.encode(), 'z':z}
     # Calculation
     
     
-    hmf = Mass_Function(M_min, M_max, step, k_min, k_max, k_step, "Tinker10", **cosmology_params)
+    hmf = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step, hmf_model='Tinker10'.encode(), delta_h=200.0, delta_wrt='mean', delta_c=1.686, **transfer_params)
+    hmf.update(cosmo_model=cosmo_model)
     
     rho_crit = hmf.mean_dens_z/(hmf.omegac+hmf.omegab)
     rho_mean = hmf.mean_dens_z

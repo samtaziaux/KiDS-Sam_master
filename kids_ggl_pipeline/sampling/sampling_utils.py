@@ -130,7 +130,7 @@ def read_config(config_file, version='0.5.7', path_data='',
             # create folder if it doesn't exist, asking the user first
             output_folder = os.path.split(output)[0]
             if not os.path.isdir(output_folder):
-                create_folder = input(
+                create_folder = raw_input(
                     '\nOutput folder {0} does not exist. Would you like' \
                     ' to create it? [Y/n] '.format(output_folder))
                 if create_folder.lower().startswith('n'):

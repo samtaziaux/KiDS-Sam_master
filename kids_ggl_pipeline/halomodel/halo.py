@@ -343,7 +343,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step, 'transfer_model': tf.CAMB,
+                                    'dlnk': k_step,
                                     'z':np.float64(z_i)})
     
     # Calculation

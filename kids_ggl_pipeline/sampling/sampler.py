@@ -25,6 +25,7 @@ if sys.version_info[0] == 2:
     from itertools import izip
 else:
     izip = zip
+    raw_input = input
     xrange = range
 
 # local

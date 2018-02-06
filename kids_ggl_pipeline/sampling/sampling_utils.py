@@ -1,44 +1,49 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import numpy
+import numpy as np
 import os
+import sys
 from glob import glob
+
+if sys.version_info[0] == 3:
+    basestring = str
+    xrange = range
 
 
 def load_datapoints(datafile, datacols, exclude_bins=None):
     if isinstance(datafile, basestring):
-        R, esd = numpy.loadtxt(datafile, usecols=datacols[:2]).T
+        R, esd = np.loadtxt(datafile, usecols=datacols[:2]).T
         # better in Mpc
         if R[-1] > 500:
             R /= 1000
         if len(datacols) == 3:
-            oneplusk = numpy.loadtxt(datafile, usecols=[datacols[2]]).T
+            oneplusk = np.loadtxt(datafile, usecols=[datacols[2]]).T
             esd /= oneplusk
-        R = numpy.array([R])
-        esd = numpy.array([esd])
+        R = np.array([R])
+        esd = np.array([esd])
     else:
-        R, esd = numpy.transpose([numpy.loadtxt(df, usecols=datacols[:2])
+        R, esd = np.transpose([np.loadtxt(df, usecols=datacols[:2])
                                   for df in datafile], axes=(2,0,1))
         if len(datacols) == 3:
-            oneplusk = numpy.array([numpy.loadtxt(df, usecols=[datacols[2]])
+            oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
                               for df in datafile])
             esd /= oneplusk
         for i in xrange(len(R)):
             if R[i][-1] > 500:
                 R[i] /= 1000
     if exclude_bins is not None:
-        R = numpy.array([[Ri[j] for j in xrange(len(Ri))
+        R = np.array([[Ri[j] for j in xrange(len(Ri))
                           if j not in exclude_bins] for Ri in R])
-        esd = numpy.array([[esdi[j] for j in xrange(len(esdi))
+        esd = np.array([[esdi[j] for j in xrange(len(esdi))
                             if j not in exclude_bins] for esdi in esd])
     return R, esd
 
 
 def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
-    cov = numpy.loadtxt(covfile, usecols=[covcols[0]])
+    cov = np.loadtxt(covfile, usecols=[covcols[0]])
     if len(covcols) == 2:
-        cov /= numpy.loadtxt(covfile, usecols=[covcols[1]])
+        cov /= np.loadtxt(covfile, usecols=[covcols[1]])
     # 4-d matrix
     if exclude_bins is None:
         nexcl = 0
@@ -48,27 +53,27 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
     cov2d = cov.transpose(0,2,1,3)
     cov2d = cov2d.reshape((Nobsbins*(Nrbins+nexcl),
                            Nobsbins*(Nrbins+nexcl)))
-    icov = numpy.linalg.inv(cov2d)
+    icov = np.linalg.inv(cov2d)
     # are there any bins excluded?
     if exclude_bins is not None:
         for b in exclude_bins[::-1]:
-            cov = numpy.delete(cov, b, axis=3)
-            cov = numpy.delete(cov, b, axis=2)
+            cov = np.delete(cov, b, axis=3)
+            cov = np.delete(cov, b, axis=2)
     # product of the determinants
-    detC = numpy.array([numpy.linalg.det(cov[m][n])
+    detC = np.array([np.linalg.det(cov[m][n])
                         for m in xrange(Nobsbins)
                         for n in xrange(Nobsbins)])
     prod_detC = detC[detC > 0].prod()
     # likelihood normalization
-    likenorm = -(Nobsbins**2*numpy.log(2*numpy.pi) + numpy.log(prod_detC)) / 2
+    likenorm = -(Nobsbins**2*np.log(2*np.pi) + np.log(prod_detC)) / 2
     # switch axes to have the diagonals aligned consistently to make it
     # a 2d array
     cov2d = cov.transpose(0,2,1,3)
     cov2d = cov2d.reshape((Nobsbins*Nrbins,Nobsbins*Nrbins))
     # errors are sqrt of the diagonal of the covariance matrix
-    esd_err = numpy.sqrt(numpy.diag(cov2d)).reshape((Nobsbins,Nrbins))
+    esd_err = np.sqrt(np.diag(cov2d)).reshape((Nobsbins,Nrbins))
     # invert
-    icov = numpy.linalg.inv(cov2d)
+    icov = np.linalg.inv(cov2d)
     # reshape back into the desired shape (with the right axes order)
     icov = icov.reshape((Nobsbins,Nrbins,Nobsbins,Nrbins))
     icov = icov.transpose(2,0,3,1)
@@ -106,7 +111,7 @@ def read_config(config_file, version='0.5.7', path_data='',
                 msg = 'datacols must have either two or three elements'
                 raise ValueError(msg)
         elif line[0] == 'exclude_bins':
-            exclude_bins = numpy.array([int(i) for i in line[1].split(',')])
+            exclude_bins = np.array([int(i) for i in line[1].split(',')])
         if line[0] == 'path_covariance':
             path_covariance = line[1]
         elif line[0] == 'covariance':
@@ -175,18 +180,18 @@ def setup_integrand(R, k=7):
 
     """
     if R.shape[0] == 1:
-        Rrange = numpy.logspace(numpy.log10(0.99*R.min()),
-                                numpy.log10(1.01*R.max()), 2**k)
+        Rrange = np.logspace(np.log10(0.99*R.min()),
+                                np.log10(1.01*R.max()), 2**k)
         # this assumes that a value at R=0 will never be provided, which is
         # obviously true in real observations
-        R = numpy.array([numpy.append(0, R)])
-        Rrange = numpy.append(0, Rrange)
+        R = np.array([np.append(0, R)])
+        Rrange = np.append(0, Rrange)
     else:
-        Rrange = [numpy.logspace(numpy.log10(0.99*Ri.min()),
-                                 numpy.log10(1.01*Ri.max()), 2**k)
+        Rrange = [np.logspace(np.log10(0.99*Ri.min()),
+                                 np.log10(1.01*Ri.max()), 2**k)
                   for Ri in R]
-        R = [numpy.append(0, Ri) for Ri in R]
-        Rrange = [numpy.append(0, Ri) for Ri in Rrange]
-        R = numpy.array(R)
-        Rrange = numpy.array(Rrange)
+        R = [np.append(0, Ri) for Ri in R]
+        Rrange = [np.append(0, Ri) for Ri in Rrange]
+        R = np.array(R)
+        Rrange = np.array(Rrange)
     return R, Rrange

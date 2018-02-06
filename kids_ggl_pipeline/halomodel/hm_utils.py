@@ -4,8 +4,12 @@ from __future__ import (absolute_import, division, print_function,
 import imp
 import numpy as np
 import os
+import sys
 from glob import glob
 from numpy import array, inf, iterable, loadtxt
+
+if sys.version_info[0] == 3:
+    xrange = range
 
 # local
 from . import nfw, nfw_stack, satellites, halo, halo_2

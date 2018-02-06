@@ -8,6 +8,7 @@ from glob import glob
 
 if sys.version_info[0] == 3:
     basestring = str
+    raw_input = input
     xrange = range
 
 
@@ -126,6 +127,20 @@ def read_config(config_file, version='0.5.7', path_data='',
             if output[-5:].lower() != '.fits' and \
                 output[-4:].lower() != '.fit':
                 output += '.fits'
+            # create folder if it doesn't exist, asking the user first
+            output_folder = os.path.split(output)[0]
+            if not os.path.isdir(output_folder):
+                create_folder = input(
+                    '\nOutput folder {0} does not exist. Would you like' \
+                    ' to create it? [Y/n] '.format(output_folder))
+                if create_folder.lower().startswith('n'):
+                    msg = 'You chose not to create the non-existent' \
+                          ' output folder, so the MCMC samples cannot' \
+                          ' be stored. Exiting.'
+                    raise SystemExit(msg)
+                else:
+                    print('Creating folder {0}'.format(output_folder))
+                    os.makedirs(output_folder)
         # all of this will have to be made more flexible to allow for
         # non-emcee options
         elif line[0] == 'sampler':

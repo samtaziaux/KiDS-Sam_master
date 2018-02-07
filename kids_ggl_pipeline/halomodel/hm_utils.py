@@ -146,9 +146,9 @@ def read_config(config_file, version='0.5.7'):
                 hm_functions.append(i)
         elif line[0] == 'hm_output':
             fmt = line[2].split(',')
-            n = int(fmt[0]) if len(fmt) == 2 else 1
+            n = int(fmt[0]) if len(fmt) == 2 else 0
             fmt = fmt[-1]
-            if n == 1:
+            if n == 0:
                 meta_names.append(line[1])
                 fits_format.append(line[2])
             else:

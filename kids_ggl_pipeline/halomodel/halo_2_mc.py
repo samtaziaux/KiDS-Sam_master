@@ -460,7 +460,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     wp_out = sur_den2_2_out_inter
     #print(wp_out)
    
-    return list(wp_out)
+    return [wp_out, 0]
 
 
 if __name__ == '__main__':

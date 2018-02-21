@@ -1331,7 +1331,7 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
     # For every observable bin
     # append the observable value that contains the determined number of objects
     for o in xrange(Nobsbins):
-        obsbins = np.append(obsbins, sorted_obslist[o*obsbin_size])
+        obsbins = np.append(obsbins, sorted_obslist[np.int(o*obsbin_size)])
     
     # Finally, append the max value of the observable
     obsbins = np.append(obsbins, obslist_max)

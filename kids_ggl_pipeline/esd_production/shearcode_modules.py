@@ -610,8 +610,8 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
     #Defining the lens weights
     weightname = list(lens_weights)[0]
     if 'No' not in weightname:
-        galweightlist = \
-            pyfits.open(list(lens_weights.values())[0][1]).data[weightname]
+        galweightlist = pyfits.open(
+            path_gamacat, ignore_missing_end=True)[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
 

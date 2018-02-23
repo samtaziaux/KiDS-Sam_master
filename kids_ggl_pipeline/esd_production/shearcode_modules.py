@@ -1095,7 +1095,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
 
 # Import and mask all used data from the sources in this KiDS field
 def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
-                   src_selection, cat_version):
+                   src_selection, cat_version, blindcats):
     
     # Full directory & name of the corresponding KiDS catalogue
     if cat_version == 2:
@@ -1108,7 +1108,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     
     if cat_version == 0:
         return import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
-                                 src_selection, cat_version)
+                                 src_selection, cat_version, blindcats)
     
     # List of the ID's of all sources in the KiDS catalogue
     srcNr = kidscat['SeqNr']
@@ -1117,11 +1117,9 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     srcRA = kidscat['ALPHA_J2000']
     # List of the DEC's of all sources in the KiDS catalogue
     srcDEC = kidscat['DELTA_J2000']
-    
 
     if cat_version == 3:
-        w = np.transpose(np.array([kidscat['weight_A'], kidscat['weight_B'], \
-                                   kidscat['weight_C'], kidscat['weight_C']]))
+        w = np.transpose(np.array([kidscat['weight_'+blind] for blind in blindcats]))
         srcPZ = kidscat['Z_B']
         SN = kidscat['model_SNratio']
         manmask = kidscat['MASK']
@@ -1129,8 +1127,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         
     elif cat_version == 2:
         srcPZ = kidscat['PZ_full'] # Full P(z) probability function
-        w = np.transpose(np.array([kidscat['weight'], kidscat['weight'], \
-                                   kidscat['weight'], kidscat['weight']]))
+        w = np.transpose(np.array([kidscat['weight'] for blind in blindcats]))
                                    
         # The Signal to Noise of the sources (needed for bias)
         SN = kidscat['SNratio']
@@ -1152,55 +1149,19 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         srcm[(0.6 < srcPZ) & (srcPZ <= 0.7)] = -0.00931232658151
         srcm[(0.7 < srcPZ) & (srcPZ <= 0.8)] = -0.0135538269718
         srcm[(0.8 < srcPZ) & (srcPZ <= 0.9)] = -0.0286749355629
-            
-            
-    e1_A = kidscat['e1_A']
-    e1_B = kidscat['e1_B']
-    e1_C = kidscat['e1_C']
-    try:
-        e1_D = kidscat['e1_D']
-    except:
-        e1_D = kidscat['e1_C']
 
-    e2_A = kidscat['e2_A']
-    e2_B = kidscat['e2_B']
-    e2_C = kidscat['e2_C']
-    try:
-        e2_D = kidscat['e2_D']
-    except:
-        e2_D = kidscat['e2_C']
+    e_1 = np.array([kidscat['e1_'+blind] for blind in blindcats]).T
+    e_2 = np.array([kidscat['e2_'+blind] for blind in blindcats]).T
 
     try:
-        c1_A = kidscat['c1_A']
-        c1_B = kidscat['c1_B']
-        c1_C = kidscat['c1_C']
-        try:
-            c1_D = kidscat['c1_D']
-        except:
-            c1_D = kidscat['c1_C']
-
-        c2_A = kidscat['c2_A']
-        c2_B = kidscat['c2_B']
-        c2_C = kidscat['c2_C']
-        try:
-            c2_D = kidscat['c2_D']
-        except:
-            c2_D = kidscat['c2_C']
-    
-    
+        c_1 = np.array([kidscat['c1_'+blind] for blind in blindcats]).T
+        c_2 = np.array([kidscat['c2_'+blind] for blind in blindcats]).T
     except:
-        c1_A = np.zeros(srcNr.size, dtype=np.float64)
-        c1_B = np.zeros(srcNr.size, dtype=np.float64)
-        c1_C = np.zeros(srcNr.size, dtype=np.float64)
-        c1_D = np.zeros(srcNr.size, dtype=np.float64)
-        c2_A = np.zeros(srcNr.size, dtype=np.float64)
-        c2_B = np.zeros(srcNr.size, dtype=np.float64)
-        c2_C = np.zeros(srcNr.size, dtype=np.float64)
-        c2_D = np.zeros(srcNr.size, dtype=np.float64)
-    
-    # The corrected e1 and e2 for all blind catalogs
-    e1 = np.transpose(np.array([e1_A-c1_A, e1_B-c1_B, e1_C-c1_C, e1_D-c1_D]))
-    e2 = np.transpose(np.array([e2_A-c2_A, e2_B-c2_B, e2_C-c2_C, e2_D-c2_D]))
+        c_1 = np.zeros(e_1.shape)
+        c_2 = np.zeros(e_2.shape)
+
+    e1 = e_1 - c_1
+    e2 = e_2 - c_2
 
     # Masking: We remove sources with weight=0 and those masked by the catalog
     if cat_version == 2:
@@ -1234,7 +1195,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
 
 
 def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
-                   src_selection, cat_version):
+                   src_selection, cat_version, blindcats):
     
     # Full directory & name of the corresponding KiDS catalogue
     kidscatfile = '%s'%path_kidscats
@@ -1247,7 +1208,7 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     srcNr = np.arange(srcRA.size, dtype=np.float64)
 
     w = np.ones(srcNr.size, dtype=np.float64)
-    w = np.transpose(np.array([w, w, w, w]))
+    w = np.transpose(np.array([w for blind in blindcats]))
     srcPZ = kidscat['z_photometric']
     tile = np.empty(srcNr.size, dtype=object)
     for i in xrange(10):
@@ -1257,8 +1218,8 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
 
     srcm = np.zeros(srcNr.size, dtype=np.float64) # The multiplicative bias m
 
-    e1 = np.transpose(np.array([kidscat['eps_obs1'], kidscat['eps_obs1'], kidscat['eps_obs1'], kidscat['eps_obs1']]))
-    e2 = np.transpose(np.array([kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2'], kidscat['eps_obs2']]))
+    e1 = np.transpose(np.array([kidscat['eps_obs1'] for blind in blindcats]))
+    e2 = np.transpose(np.array([kidscat['eps_obs2'] for blind in blindcats]))
 
     srcmask = (srcm==0.0)
     for param in src_selection.keys():
@@ -1301,8 +1262,8 @@ def calc_variance(e1_varlist, e2_varlist, w_varlist):
 
     variance = np.mean([var_e1, var_e2], 0)
 
-    print('Variance (A,B,C,D):', variance)
-    print('Sigma (A,B,C,D):', variance**0.5)
+    print('Variance (blinds):', variance)
+    print('Sigma (blinds):', variance**0.5)
 
     return variance
 
@@ -1601,10 +1562,11 @@ def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_shear_output(incosphilist, insinphilist, e1, e2, \
-                      Rmask, klist, wlist, Nsrclist, srcm, Runit):
+                      Rmask, klist, wlist, Nsrclist, srcm, Runit, blindcats):
     
     wlist = wlist.T
-    klist_t = np.array([klist, klist, klist, klist]).T
+    klist_t = np.array([klist for b in xrange(len(blindcats))]).T
+    
     # Calculating the needed errors
     if 'pc' not in Runit:
         wk2list = wlist
@@ -1629,7 +1591,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     Nsrc_tot = np.sum(Nsrclist, 1)
     
     srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
-    srcm = np.array([srcm, srcm, srcm, srcm]).T
+    srcm = np.array([srcm for b in xrange(len(blindcats))]).T
     foo = [] # Empty unused lists
     srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
     srcm = []
@@ -1639,20 +1601,20 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     # Calculating the weighted tangential and
     # cross shear of the lens-source pairs
-    gammatlists = np.zeros([4, len(incosphilist), len(incosphilist[0])])
-    gammaxlists = np.zeros([4, len(incosphilist), len(incosphilist[0])])
+    gammatlists = np.zeros([len(blindcats), len(incosphilist), len(incosphilist[0])])
+    gammaxlists = np.zeros([len(blindcats), len(incosphilist), len(incosphilist[0])])
 
     klist = np.ma.filled(np.ma.array(klist, mask = Rmask, fill_value = inf))
-    klist = np.array([klist, klist, klist, klist]).T
+    klist = np.array([klist for b in xrange(len(blindcats))]).T
     if 'pc' not in Runit:
-        for g in xrange(4):
+        for g in xrange(len(blindcats)):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
                                    insinphilist) * wk2list[:,:,g].T)
             gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
                                    incosphilist) * wk2list[:,:,g].T)
 
     else:
-        for g in xrange(4):
+        for g in xrange(len(blindcats)):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
                                     insinphilist) * wk2list[:,:,g].T / \
                                     klist[:,:,g].T)
@@ -1662,45 +1624,17 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
 
 
-    [gammat_tot_A, gammat_tot_B, gammat_tot_C, \
-     gammat_tot_D] = [np.sum(gammatlists[g], 1) for g in xrange(4)]
-    [gammax_tot_A, gammax_tot_B, gammax_tot_C, \
-     gammax_tot_D] = [np.sum(gammaxlists[g], 1) for g in xrange(4)]
+    gammat_tot = [np.sum(gammatlists[g], 1) for g in xrange(len(blindcats))]
+    gammax_tot = [np.sum(gammaxlists[g], 1) for g in xrange(len(blindcats))]
 
-    """
-    w_tot_A, w_tot_B, w_tot_C, w_tot_D = \
-    w_tot.T[0], w_tot.T[1], w_tot.T[2], w_tot.T[3]
-    w2_tot_A, w2_tot_B, w2_tot_C, w2_tot_D = \
-    w2_tot.T[0], w2_tot.T[1], w2_tot.T[2], w2_tot.T[3]
-    """
-    wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D = \
-    wk2_tot.T[0], wk2_tot.T[1], wk2_tot.T[2], wk2_tot.T[3]
-    """
-    w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D = \
-    w2k4_tot.T[0], w2k4_tot.T[1], w2k4_tot.T[2], w2k4_tot.T[3]
-    """
-    w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D = \
-    w2k2_tot.T[0], w2k2_tot.T[1], w2k2_tot.T[2], w2k2_tot.T[3]
-    srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D = \
-    srcm_tot.T[0], srcm_tot.T[1], srcm_tot.T[2], srcm_tot.T[3]
+    wk2 = [wk2_tot.T[b] for b in xrange(len(blindcats))]
+    w2k2 = [w2k2_tot.T[b] for b in xrange(len(blindcats))]
+    srcm = [srcm_tot.T[b] for b in xrange(len(blindcats))]
 
     gc.collect()
-    """
-    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, \
-        gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
-        w_tot_A, w_tot_B, w_tot_C, w_tot_D, \
-        w2_tot_A, w2_tot_B, w2_tot_C, w2_tot_D, \
-        k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
-        w2k4_tot_A, w2k4_tot_B, w2k4_tot_C, w2k4_tot_D, \
-        w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-        srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
-    """
-    return gammat_tot_A, gammax_tot_A, gammat_tot_B, gammax_tot_B, \
-        gammat_tot_C, gammax_tot_C, gammat_tot_D, gammax_tot_D, \
-        k_tot, k2_tot, wk2_tot_A, wk2_tot_B, wk2_tot_C, wk2_tot_D, \
-        w2k2_tot_A, w2k2_tot_B, w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-        srcm_tot_A, srcm_tot_B, srcm_tot_C, srcm_tot_D
-
+    
+    return list(gammat_tot) + list(gammax_tot) + list(k_tot) + list(k2_tot) + \
+            list(wk2) + list(w2k2) + list(Nsrc_tot) + srcm
 
 
 # For each radial bin of each lens we calculate the output shears and weights
@@ -1719,7 +1653,7 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
 # Write the shear or covariance catalog to a fits file
 def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
-                  output, outputnames, variance, purpose, e1, e2, w, srcm):
+                  output, outputnames, variance, purpose, e1, e2, w, srcm, blindcats):
     
     fitscols = []
 
@@ -1756,13 +1690,13 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
     for c in xrange(len(outputnames))]
 
     if 'covariance' in purpose:
-        fitscols.append(pyfits.Column(name = 'e1', format='4D', array= e1))
-        fitscols.append(pyfits.Column(name = 'e2', format='4D', array= e2))
-        fitscols.append(pyfits.Column(name = 'lfweight', format='4D', array= w))
+        fitscols.append(pyfits.Column(name = 'e1', format='%iD'%len(blindcats), array= e1))
+        fitscols.append(pyfits.Column(name = 'e2', format='%iD'%len(blindcats), array= e2))
+        fitscols.append(pyfits.Column(name = 'lfweight', format='%iD'%len(blindcats), array= w))
         fitscols.append(pyfits.Column(name = 'bias_m', format='1D', array= srcm))
 
     # Adding the variance for the 4 blind catalogs
-    fitscols.append(pyfits.Column(name = 'variance(e[A,B,C,D])', format='4D', \
+    fitscols.append(pyfits.Column(name = 'variance(e[A,B,C,D])', format='%iD'%len(blindcats), \
                                   array= [variance]*len(galIDlist)))
 
     cols = pyfits.ColDefs(fitscols)

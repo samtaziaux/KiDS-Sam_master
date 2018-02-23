@@ -475,6 +475,30 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     Pmm = _array([Pmm_1h_i + hmf_i.power
                     for Pmm_1h_i, hmf_i
                     in _izip(Pmm_1h, hmf)])
+                    
+    """
+    b_k = np.sqrt(Pgg_k/Pmm)
+    r_k = Pg_k / np.sqrt(Pgg_k*Pmm)
+    
+    import matplotlib.pyplot as pl
+    pl.plot(k_range_lin, b_k[0], color='black', ls='-')
+    pl.plot(k_range_lin, b_k[1], color='black', ls='-.')
+    pl.plot(k_range_lin, b_k[2], color='black', ls=':')
+    pl.plot(k_range_lin, r_k[0], color='red', ls='-')
+    pl.plot(k_range_lin, r_k[1], color='red', ls='-.')
+    pl.plot(k_range_lin, r_k[2], color='red', ls=':')
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.xlim([0.1, 100])
+    #pl.ylim([1e10, 1e14])
+    pl.show()
+    
+    
+    new_data = np.vstack([k_range_lin, b_k[0], b_k[1], b_k[2], r_k[0], r_k[1], r_k[2]]).T
+    np.savetxt('/home/dvornik/br_k.txt', new_data, header='k, b(k)_bin1, b(k)_bin2, b(k)_bin3, r(k)_bin1, r(k)_bin2, r(k)_bin3')
+    
+    quit()
+    """
 
     #"""
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)

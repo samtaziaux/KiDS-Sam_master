@@ -249,12 +249,18 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     Zs_N1 = sheardat_N1['Zs']
                     if Cs_N1.size == 0:
                         continue
-
-                    e1 = sheardat_N1['e1'][:,blindcatnum]
-                    e2 = sheardat_N1['e2'][:,blindcatnum]
-                    lfweight = sheardat_N1['lfweight'][:,blindcatnum]
-                    srcmlist = sheardat_N1['bias_m']
-                    variance = sheardat_N1['variance(e[A,B,C,D])'][0]
+                    if len(blindcats) != 1:
+                        e1 = sheardat_N1['e1'][:,blindcatnum]
+                        e2 = sheardat_N1['e2'][:,blindcatnum]
+                        lfweight = sheardat_N1['lfweight'][:,blindcatnum]
+                        srcmlist = sheardat_N1['bias_m']
+                        variance = sheardat_N1['variance(e[A,B,C,D])'][0]
+                    else:
+                        e1 = sheardat_N1['e1']
+                        e2 = sheardat_N1['e2']
+                        lfweight = sheardat_N1['lfweight']
+                        srcmlist = sheardat_N1['bias_m']
+                        variance = sheardat_N1['variance(e[A,B,C,D])']
 
                     e1 = np.reshape(e1,[len(e1),1])
                     e2 = np.reshape(e2,[len(e2),1])

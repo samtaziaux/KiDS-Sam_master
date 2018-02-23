@@ -1624,17 +1624,16 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
 
 
-    gammat_tot = [np.sum(gammatlists[g], 1) for g in xrange(len(blindcats))]
-    gammax_tot = [np.sum(gammaxlists[g], 1) for g in xrange(len(blindcats))]
+    gammat_tot = np.array([np.sum(gammatlists[g], 1) for g in xrange(len(blindcats))])
+    gammax_tot = np.array([np.sum(gammaxlists[g], 1) for g in xrange(len(blindcats))])
 
-    wk2 = [wk2_tot.T[b] for b in xrange(len(blindcats))]
-    w2k2 = [w2k2_tot.T[b] for b in xrange(len(blindcats))]
-    srcm = [srcm_tot.T[b] for b in xrange(len(blindcats))]
+    wk2 = np.array([wk2_tot.T[b] for b in xrange(len(blindcats))])
+    w2k2 = np.array([w2k2_tot.T[b] for b in xrange(len(blindcats))])
+    srcm = np.array([srcm_tot.T[b] for b in xrange(len(blindcats))])
 
     gc.collect()
     
-    return list(gammat_tot) + list(gammax_tot) + list(k_tot) + list(k2_tot) + \
-            list(wk2) + list(w2k2) + list(Nsrc_tot) + srcm
+    return np.vstack([gammat_tot, gammax_tot, k_tot, k2_tot, wk2, w2k2, Nsrc_tot, srcm]).T#list(gammat_tot) + list(gammax_tot) + list(k_tot) + list(k2_tot) + list(wk2) + list(w2k2) + list(Nsrc_tot) + srcm
 
 
 # For each radial bin of each lens we calculate the output shears and weights

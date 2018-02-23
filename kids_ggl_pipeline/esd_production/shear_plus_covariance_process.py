@@ -236,9 +236,9 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
                             for o in xrange(len(output)):
-                                output[o, : ,r][galIDmask_split] = \
-                                output[o, : ,r][galIDmask_split] + \
-                                output_onebin[o]
+                                output[o,:,r][galIDmask_split] = \
+                                output[o,:,r][galIDmask_split] + \
+                                output_onebin[:,o]
 
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
@@ -258,7 +258,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
-                                output[o, : ,r] = output[o, : ,r] + output_onebin[o]
+                                output[o, : ,r] = output[o,:,r] + output_onebin[0]
 
             # Write the final output of this split to a fits file
             if 'covariance' in purpose:
@@ -434,13 +434,13 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                             output_onebin = shear.calc_shear_output(incosphilist, insinphilist,\
                                                     e1, e2, Rmask, klist,\
                                                      wlist, Nsrclist, srcm, Runit, blindcats)
-
+                            
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
                             for o in xrange(len(output)):
                                 output[o,:,r][galIDmask_split] = \
                                 output[o,:,r][galIDmask_split] + \
-                                output_onebin[o]
+                                output_onebin[:,o]
 
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
@@ -460,7 +460,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
-                                output[o, : ,r] = output[o, : ,r] + output_onebin[o]
+                                output[o, : ,r] = output[o,:,r] + output_onebin[o]
 
             # Write the final output of this split to a fits file
             if 'covariance' in purpose:

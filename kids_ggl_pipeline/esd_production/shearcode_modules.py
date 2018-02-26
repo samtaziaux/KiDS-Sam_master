@@ -688,7 +688,12 @@ def run_kidscoord(path_kidscats, cat_version):
         for x in kidscatlist:
             # Full directory & name of the corresponding KiDS catalogue
             kidscatfile = '%s/%s'%(path_kidscats, x)
-            kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
+            try:
+                kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
+                test = kidscat['SeqNr']
+            except:
+                kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
+                test = kidscat['SeqNr']
             #print kidscat['THELI_NAME']
             
             kidscatlist2 = np.unique(np.array(kidscat['THELI_NAME']))
@@ -1104,7 +1109,12 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     
     if cat_version == 3:
         kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
-        kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
+        try:
+            kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
+            test = kidscat['SeqNr']
+        except:
+            kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
+            test = kidscat['SeqNr']
     
     if cat_version == 0:
         return import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
@@ -1113,13 +1123,19 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     # List of the ID's of all sources in the KiDS catalogue
     srcNr = kidscat['SeqNr']
     #srcNr = kidscat['SeqNr_field'] # If ever needed for p(z)
-    # List of the RA's of all sources in the KiDS catalogue
-    srcRA = kidscat['ALPHA_J2000']
-    # List of the DEC's of all sources in the KiDS catalogue
-    srcDEC = kidscat['DELTA_J2000']
+    # List of the RA's and DEC's of all sources in the KiDS catalogue
+    try:
+        srcRA = kidscat['ALPHA_J2000']
+        srcDEC = kidscat['DELTA_J2000']
+    except:
+        srcRA = kidscat['RAJ2000']
+        srcDEC = kidscat['DECJ2000']
 
     if cat_version == 3:
-        w = np.transpose(np.array([kidscat['weight_'+blind] for blind in blindcats]))
+        try:
+            w = np.array([kidscat['weight_'+blind] for blind in blindcats]).T
+        except:
+            w = np.array([kidscat['weight']]).T
         srcPZ = kidscat['Z_B']
         SN = kidscat['model_SNratio']
         manmask = kidscat['MASK']
@@ -1127,7 +1143,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         
     elif cat_version == 2:
         srcPZ = kidscat['PZ_full'] # Full P(z) probability function
-        w = np.transpose(np.array([kidscat['weight'] for blind in blindcats]))
+        w = np.array([kidscat['weight'] for blind in blindcats]).T
                                    
         # The Signal to Noise of the sources (needed for bias)
         SN = kidscat['SNratio']
@@ -1150,12 +1166,22 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
         srcm[(0.7 < srcPZ) & (srcPZ <= 0.8)] = -0.0135538269718
         srcm[(0.8 < srcPZ) & (srcPZ <= 0.9)] = -0.0286749355629
 
-    e_1 = np.array([kidscat['e1_'+blind] for blind in blindcats]).T
-    e_2 = np.array([kidscat['e2_'+blind] for blind in blindcats]).T
+    # This needs to be modified so that columns without 'blind' suffix can be read in.
+    try:
+        e_1 = np.array([kidscat['e1_'+blind] for blind in blindcats]).T
+        e_2 = np.array([kidscat['e2_'+blind] for blind in blindcats]).T
+    except:
+        # This is for the public release cats.
+        e_1 = np.array([kidscat['e1']]).T
+        e_2 = np.array([kidscat['e2']]).T
 
     try:
-        c_1 = np.array([kidscat['c1_'+blind] for blind in blindcats]).T
-        c_2 = np.array([kidscat['c2_'+blind] for blind in blindcats]).T
+        try:
+            c_1 = np.array([kidscat['c1_'+blind] for blind in blindcats]).T
+            c_2 = np.array([kidscat['c2_'+blind] for blind in blindcats]).T
+        except:
+            c_1 = np.array([kidscat['c1']]).T
+            c_2 = np.array([kidscat['c2']]).T
     except:
         c_1 = np.zeros(e_1.shape)
         c_2 = np.zeros(e_2.shape)
@@ -1633,7 +1659,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     gc.collect()
     
-    return np.vstack([gammat_tot, gammax_tot, k_tot, k2_tot, wk2, w2k2, Nsrc_tot, srcm]).T#list(gammat_tot) + list(gammax_tot) + list(k_tot) + list(k2_tot) + list(wk2) + list(w2k2) + list(Nsrc_tot) + srcm
+    return np.vstack([gammat_tot, gammax_tot, k_tot, k2_tot, wk2, w2k2, Nsrc_tot, srcm]).T
 
 
 # For each radial bin of each lens we calculate the output shears and weights

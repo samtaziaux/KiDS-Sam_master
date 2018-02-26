@@ -268,6 +268,10 @@ def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
     return (mass_func.power * b_g), b_g
 
 
+def model_com(theta, R):
+    return model(theta, R)
+
+
 def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
           expansion=100, expansion_stars=160, n_bins=10000,
           lnk_min=-13., lnk_max=17.):

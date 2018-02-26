@@ -163,7 +163,7 @@ def run_emcee(hm_options, sampling_options, args):
         model = function(val1, R)
         print('Model evaluated in {0:.2e} seconds'.format(time() - to))
         #residuals = esd - model[0]
-        if 'model' in str(function):
+        if 'model' in str(function) and 'com' not in str(function):
             # model assumes comoving separations, changing data to accomodate for that
             redshift_index = numpy.int(numpy.where(params == 'z')[0])
             redshift = array([val1[redshift_index]])
@@ -422,7 +422,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
     #              for m in rng_obsbins for n in rng_obsbins]).sum()
     
-    if 'model' in str(function):
+    if 'model' in str(function) and 'com' not in str(function):
         # model assumes comoving separations, changing data to accomodate for that
         redshift_index = numpy.int(numpy.where(params == 'z')[0])
         redshift = array([v1[redshift_index]])

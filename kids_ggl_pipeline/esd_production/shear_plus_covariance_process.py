@@ -36,7 +36,7 @@ nan = np.nan # Not a number
 def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
                colnames, centering, gallists, lens_selection, lens_binning,
                binname, binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-               Runit, nRbins, Rconst, filename_var,
+               Runit, nRbins, Rconst, com, filename_var,
                filename, cat_version, blindcat, blindcats, srclists, path_splits,
                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
                variance, h, path_kidscats, kidscatname, kidscat_end, src_selection):
@@ -52,7 +52,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
             args=(purpose, Nsplits, j, output, outputnames, gamacat, colnames,
             centering, gallists, lens_selection, lens_binning, binname,
             binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit,
-            nRbins, Rconst, filename_var, filename, cat_version, blindcat, blindcats,
+            nRbins, Rconst, com, filename_var, filename, cat_version, blindcat, blindcats,
             srclists, path_splits, splitkidscats, catmatch, Dcsbins,
             Dc_epsilon, filename_addition, variance, h, path_kidscats,
              kidscatname, kidscat_end, src_selection, q1))
@@ -77,7 +77,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
 
 def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
          centering, gallists, lens_selection, lens_binning, binname, binnum,
-         binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
+         binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst, com,
          filename_var,
          filename, cat_version, blindcat, blindcats, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
@@ -177,17 +177,17 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                 # Calculate the projected distance (srcR) and the
                 # shear (gamma_t and gamma_x) of all lens-source pairs.
-                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, \
+                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, Dcl_split, \
                                                             galRA_split,\
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
-                                                            e1, e2, Rmin, Rmax)
+                                                            e1, e2, Rmin, Rmax, com)
 
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
                 k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split,
                                                 Dcsbins, srcPZ, cat_version,
-                                                Dc_epsilon)
+                                                Dc_epsilon, galZ_split, com)
                 Nsrc = np.ones(np.shape(k))
 
                 # Mask all invalid lens-source pairs using
@@ -377,11 +377,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                 # Calculate the projected distance (srcR) and the shear
                 # (gamma_t and gamma_x) of all lens-source pairs.
-                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, \
+                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, Dcl_split, \
                                                             galRA_split, \
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
-                                                            e1, e2, Rmin, Rmax)
+                                                            e1, e2, Rmin, Rmax, com)
 
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
@@ -504,7 +504,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
-        z_epsilon, n_boot, cross_cov = \
+        z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 
@@ -590,7 +590,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         shear.import_data(
             path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
             centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
-            lens_weights, filename_addition, cat_version)
+            lens_weights, filename_addition, cat_version, com)
 
     # Calculate the source variance
 
@@ -711,7 +711,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                 weights=spec_weight_k, density=1)
                 srcPZ_k = srcPZ_k/srcPZ_k.sum()
                 k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
+                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
             
             k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -745,7 +745,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                             weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
+                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon, com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -826,7 +826,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
                  colnames, centering, gallists, lens_selection, lens_binning,
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-                 Runit, nRbins, Rconst, filename_var, filename, cat_version,
+                 Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                  blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
                  Dcsbins, Dc_epsilon, filename_addition, variance, h,
                 path_kidscats, kidscatname, kidscat_end, src_selection)
@@ -846,7 +846,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
                              colnames, centering, gallists, lens_selection, lens_binning,
                              binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-                             Runit, nRbins, Rconst, filename_var, filename, cat_version,
+                             Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                              blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
                              Dcsbins, Dc_epsilon, filename_addition, variance, h,
                              path_kidscats, kidscatname, kidscat_end, src_selection)

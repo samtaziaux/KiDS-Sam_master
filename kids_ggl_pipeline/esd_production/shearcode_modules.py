@@ -63,7 +63,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     path_kidscats, path_gamacat, colnames, specz_file, O_matter, O_lambda, Ok, h, \
         z_epsilon, path_output, filename_addition, purpose, \
         path_Rbins, Runit, Ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, \
+        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, com, \
         blindcats = \
             esd_utils.read_config(config_file)
 
@@ -212,7 +212,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
-        z_epsilon, n_boot, cross_cov
+        z_epsilon, n_boot, cross_cov, com
 
 
 # Defining the lensID lens selection/binning
@@ -452,7 +452,7 @@ def define_filename_results(path_results, purpose, filename_var, \
 # information on radial bins and lens-field matching.
 def import_data(path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
                 centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
-                lens_weights, filename_addition, cat_version):
+                lens_weights, filename_addition, cat_version, com):
 
     # Import R-range
     Rmin, Rmax, Rbins, Rcenters, \
@@ -469,8 +469,8 @@ def import_data(path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
 
     # Match the KiDS field and GAMA galaxy coordinates
     catmatch, kidscats, galIDs_infield = run_catmatch(
-        kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, purpose,
-        filename_addition, cat_version)
+        kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, Rmax, purpose,
+        filename_addition, cat_version, com)
 
     gc.collect()
 
@@ -639,7 +639,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         Dcllist = np.degrees(np.ones(len(galIDlist)))
 
     # The angular diameter distance to the galaxy center
-    Dallist = Dcllist/(1+galZlist)
+    Dallist = Dcllist/(1.0+galZlist)
 
     return gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist
@@ -739,10 +739,13 @@ def run_kidscoord_mocks(path_kidscats, cat_version):
 
 
 # Create a dictionary of KiDS fields that contain the corresponding galaxies.
-def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
-                 purpose, filename_addition, cat_version):
+def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, Rmax, \
+                 purpose, filename_addition, cat_version, com):
 
-    Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
+    if com == False:
+        Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
+    if com == True:
+        Rfield = np.radians(np.sqrt(2.0)/2.0) * Dcllist
     if 'oldcatmatch' in filename_addition:
         print("*** Using old lens-field matching procedure! ***")
     else:
@@ -797,12 +800,19 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Rmax, \
 
         # Defining the distance R between the lens center
         # and its surrounding background sources
-        catR = Dallist*np.arccos(np.cos(np.radians(galDEClist))*\
-                                 np.cos(np.radians(catDEC))*\
-                                 np.cos(np.radians(galRAlist-catRA))+\
-                                 np.sin(np.radians(galDEClist))*\
-                                 np.sin(np.radians(catDEC)))
-
+        if com == False:
+            catR = Dallist*np.arccos(np.cos(np.radians(galDEClist))*\
+                                     np.cos(np.radians(catDEC))*\
+                                     np.cos(np.radians(galRAlist-catRA))+\
+                                     np.sin(np.radians(galDEClist))*\
+                                     np.sin(np.radians(catDEC)))
+        if com == True:
+            catR = Dcllist*np.arccos(np.cos(np.radians(galDEClist))*\
+                                     np.cos(np.radians(catDEC))*\
+                                     np.cos(np.radians(galRAlist-catRA))+\
+                                     np.sin(np.radians(galDEClist))*\
+                                     np.sin(np.radians(catDEC)))
+        
         coordmask = (catR < Rmax)
 
         galIDs = np.array(galIDlist[coordmask])
@@ -1479,7 +1489,7 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
 
 
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
-def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
+def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon, galZlist, com):
     
     # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
     Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
@@ -1503,7 +1513,13 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
 
     # Calculate the values of k (=1/Sigmacrit)
     Dals = np.reshape(Dals,[len(Dals),1])
-    k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
+    # Physical:
+    if com == False:
+        k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
+
+    # Comoving:
+    if com == True:
+        k = 1 / ((c.value**2)/(4*np.pi*G.value * ((1.0+galZlist)**2.0)) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
 
     DlsoDs = [] # Empty unused lists
     Dals = []
@@ -1547,18 +1563,27 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
 
 # Calculate the projected distance (srcR) and the
 # shear (gamma_t and gamma_x) of every lens-source pair
-def calc_shear(Dals, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax):
+def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, com):
 
     galRA, srcRA = np.meshgrid(galRAs, srcRA)
     galDEC, srcDEC = np.meshgrid(galDECs, srcDEC)
 
     # Defining the distance R and angle phi between the lens'
     # center and its surrounding background sources
-    srcR = Dals * np.arccos(np.cos(np.radians(galDEC))*\
-                            np.cos(np.radians(srcDEC))*\
-                            np.cos(np.radians(galRA-srcRA))+\
-                            np.sin(np.radians(galDEC))*\
-                            np.sin(np.radians(srcDEC)))
+    # Physical
+    if com == False:
+        srcR = Dals * np.arccos(np.cos(np.radians(galDEC))*\
+                                np.cos(np.radians(srcDEC))*\
+                                np.cos(np.radians(galRA-srcRA))+\
+                                np.sin(np.radians(galDEC))*\
+                                np.sin(np.radians(srcDEC)))
+    # Comoving
+    if com == True:
+        srcR = Dcls * np.arccos(np.cos(np.radians(galDEC))*\
+                                np.cos(np.radians(srcDEC))*\
+                                np.cos(np.radians(galRA-srcRA))+\
+                                np.sin(np.radians(galDEC))*\
+                                np.sin(np.radians(srcDEC)))
     
     # Masking all lens-source pairs that have a
     # relative distance beyond the maximum distance Rmax
@@ -1777,7 +1802,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
                    '    bias(1+K)    variance(e_s)    wk2    w2k2' \
                    '    Nsources'.format(Runit)
 
-    index = np.where(np.logical_not((0 < error_tot) & (error_tot < inf)))
+    index = np.where(np.logical_not((0.0 < error_tot) & (error_tot < inf)))
     ESDt_tot.setflags(write=True)
     ESDx_tot.setflags(write=True)
     error_tot.setflags(write=True)

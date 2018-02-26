@@ -126,6 +126,10 @@ Rbins                 10,20,2000
 #  b) Sky units {'arcsec', 'arcmin', 'deg'}
 Runit                 kpc
 
+# Specify the comoving/physical scales to be used in radial source selection and Sigma_crit calculation
+# Boolean parameter! Values are either 0 or 1.
+comoving               0
+
 # Number of cores you want to use to run the ESD production pipeline
 ncores                3
 

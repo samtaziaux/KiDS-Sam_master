@@ -16,9 +16,9 @@ from scipy.integrate import romberg
 from time import time
 
 # local
-from .nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
-from .nfw import mass_enclosed, mass_total_sharp
-from .utils import cM_duffy08, delta, density_average
+from nfw import esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7
+from nfw import mass_enclosed, mass_total_sharp
+from utils import cM_duffy08, delta, density_average
 
 
 def mass_nfw(theta, R, h=1, Om=0.315, Ol=0.685):

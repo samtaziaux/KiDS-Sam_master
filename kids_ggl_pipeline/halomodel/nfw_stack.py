@@ -19,11 +19,11 @@ else:
     xrange = range
 
 # local
-from . import calc_bias
-from .nfw import (esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7,
+import calc_bias
+from nfw import (esd, esd_offset, esd_sharp, esd_trunc5, esd_trunc7,
                   mass_enclosed, mass_total_sharp)
-from .utils import cM_duffy08, delta, density_average
-from .twohalo_mm import dsigma_mm
+from utils import cM_duffy08, delta, density_average
+from twohalo_mm import dsigma_mm
 
 
 def fiducial4(theta, R, h=1, Om=0.315, Ol=0.685):

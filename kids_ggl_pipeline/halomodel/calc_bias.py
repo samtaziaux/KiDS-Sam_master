@@ -13,7 +13,7 @@ from astropy.io import fits as pyfits
 
 import matplotlib.pyplot as plt
 
-from . import twohalo_mm
+import twohalo_mm
 
 
 # Van den Bosch 2002

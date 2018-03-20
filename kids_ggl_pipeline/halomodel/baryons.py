@@ -31,10 +31,10 @@ from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
 
-from . import cmf
+import cmf
 #from .halo import Bias_Tinker10
-from .dark_matter import Bias_Tinker10
-from .tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
+from dark_matter import Bias_Tinker10
+from tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
 
 
 """

@@ -51,19 +51,19 @@ from hmf import MassFunction
 from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
-from . import baryons as baryons
-from . import longdouble_utils as ld
-from .tools import (
+import baryons as baryons
+import longdouble_utils as ld
+from tools import (
                     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
                     star_concentration, virial_mass, virial_radius)
-from .lens import (
+from lens import (
                    power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata,
                    wp, wp_beta_correction)
-from .dark_matter import (
+from dark_matter import (
                           NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
                           delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
                           GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10)
-from .cmf import *
+from cmf import *
 
 import pylab
 

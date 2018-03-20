@@ -1326,29 +1326,424 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
 
 
 if __name__ == '__main__':
+
+    """
+    Run component codes for comparison with external code results
+    """
+
+    #
+    # input params
+    #
+    import os
+    save_dir = 'ps_data'
+    if not os.path.isdir( save_dir ):
+        os.mkdir( save_dir )
+
+    #
+    # test setup
+    #
+
+    H0 = 100.0 #67.74
+    h = H0 / 100.0
+    s8 = 0.8159 # sigma_8
+    Om = 0.3089   # Omega_m
+    Ob = 0.04860  # Omega_b
+    Ov = 0.6911  # Omega_Lambda
+    n_s = 0.9667   #n_s
+
+    f_c = 1.0 # to match BJ's code  # 1.31   #f_c - normalisation of concentration-mass relation
+    sigma_c = 0.1  #0.35  #sigma_c
+    M_0 = 10.58  #  9.60  #M_0
+    M_1 = 10.97  # 11.25  #M_1
+    gamma_1 = 7.5  # 3.41  #gamma_1
+    gamma_2 = 0.25  #0.99  #gamma_2
+    fc_sat = 1.0  # f_c for satellites, set to be same as f_c above when 1.
+    alpha_s = -0.83 # -1.34  # alpha_s
+    b_0 = 0.18 # -1.15  # b_0
+    b_1 = 0.83 # 0.59   # b_1
+    b_2 = -0.217  # b_2
+    bias = 1.0   # bias
+    beta = 1.0   # (beta_gas?  not sure what this is)
+
+    Mmin1 = 10.3   # stellar mass bins
+    Mmin2 = 10.6
+    Mmin3 = 10.9
+
+    Mmax1 = 10.6
+    Mmax2 = 10.9
+    Mmax3 = 11.9
+
+    Mmin = np.log10(10.0**np.array([Mmin1, Mmin2, Mmin3]))
+    Mmax = np.log10(10.0**np.array([Mmax1, Mmax2, Mmax3]))
+
+    Mstar = np.log10(10.0**np.array([10.4601, 10.743, 11.1313]))
+    z = np.array([0.244809,0.284467,0.318127])   # redshifts of bins
+
+    Pi_max = 100.0
+    kids_area = 180 * 3600.0 #500 #To be in arminutes!  # kids area in arcmin^2
+    eff_density = 8.53 #6.0 #1.2#1.4#2.34#8.53 #1.5#1.85
+    kids_variance_squared = 0.082 #0.076 #0.275#0.076
+    z_kids = 0.6 # kids redshift
+    spec_z_path = '/vol/euclid5/euclid5_1/reiko/KIDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat'
+
+    gauss, ssc, ng = 1, 1, 1
+    nproc = 32
+    smth1, smth2 = 0.0, 0.0
+
+    theta = s8, H0, Om, Ob, Ov, n_s, z, f_c, sigma_c, M_0, M_1, gamma_1, gamma_2, fc_sat, alpha_s, \
+            b_0, b_1, b_2, bias, beta, Mmin, Mmax, Mstar, \
+            Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, \
+            gauss, ssc, ng, spec_z_path, nproc, smth1, smth2
+
+    sigma_8, H0, omegam, omegab, omegav, n, \
+    z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
+    fc_nsat, alpha_s, b_0, b_1, b_2, \
+    bias, beta, \
+    M_bin_min, M_bin_max, \
+    Mstar, \
+    Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, gauss, ssc, ng, spec_z_path, nproc, \
+    smth1, smth2 = theta
+
+    # hard-coded in the current version
+    Ac2s = 0.56
+    M_min = 8. #5.
+    M_max = 15. #16.
+    M_step = 100  #200
+
+    # HMF set up parameters
+    lnk_min, lnk_max = np.log(0.001), np.log(100.0)    # [ lnk_min=-13., lnk_max=17. ]
+    n_bins = 10000
+    k_step = (lnk_max-lnk_min) / n_bins
+    k_range = arange(lnk_min, lnk_max, k_step)
+    k_range_lin = exp(k_range)
+
+    k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
+    k_temp_lin = np.exp(k_temp)
+
+
+    R = [ 10.0**np.linspace(np.log10(0.05), np.log10(10), 9, endpoint=True) ]
+
+    mass_range = 10**linspace(M_min, M_max, M_step)
+    M_step = (M_max - M_min)/M_step
+
+    if not np.iterable(M_bin_min):
+        M_bin_min = np.array([M_bin_min])
+        M_bin_max = np.array([M_bin_max])
+    if not np.iterable(z):
+        z = np.array([z]*M_bin_min.size)
+    if not np.iterable(f):
+        f = np.array([f]*M_bin_min.size)
+    if not np.iterable(fc_nsat):
+        fc_nsat = np.array([fc_nsat]*M_bin_min.size)
+    if not np.iterable(Mstar):
+        Mstar = np.array([Mstar]*M_bin_min.size)
+    if not np.iterable(beta):
+        beta = np.array([beta]*M_bin_min.size)
+
+    concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i)) for z_i, f_i in izip(z,f)])
+
+    concentration_sat = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i)) for z_i, f_i,fc_nsat_i in izip(z,f,fc_nsat)])
+
+
+    n_bins_obs = M_bin_min.size
+    bias = np.array([bias]*k_range_lin.size).T
+
+    hod_mass = array([logspace(Mi, Mx, 200, endpoint=False,
+                                 dtype=np.longdouble)
+                       for Mi, Mx in izip(M_bin_min, M_bin_max)])
+
+    transfer_params = array([])
+    for z_i in z:
+        transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
+                                    'n': n,
+                                    'lnk_min': lnk_min ,'lnk_max': lnk_max,
+                                    'dlnk': k_step,
+                                    'z':np.float64(z_i)})
+
+    # Calculation
+    # Tinker10 should also be read from theta!
+    #to = time()
+    hmf = array([])
+    h = H0/100.0
+    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
+    for i in transfer_params:
+        hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
+                                hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
+                                delta_c=1.686,
+                                **i)
+        hmf_temp.update(cosmo_model=cosmo_model)
+        hmf = np.append(hmf, hmf_temp)
+
+
+    mass_func = np.zeros((z.size, mass_range.size))
+    rho_mean = np.zeros(z.shape)
+    rho_crit = np.zeros(z.shape)
+    #rho_dm = np.zeros(z.shape)
+
+    omegab = hmf[0].cosmo.Ob0
+    omegac = hmf[0].cosmo.Om0-omegab
+    omegav = hmf[0].cosmo.Ode0
+
+    for i in xrange(z.size):
+        mass_func[i] = hmf[i].dndlnm
+        rho_mean[i] = hmf[i].mean_density0
+        rho_crit[i] = rho_mean[i] / (omegac+omegab)
+        #rho_dm[i] = rho_mean[i]# * baryons.f_dm(omegab, omegac)
+
+
+    rvir_range_lin = array([virial_radius(mass_range, rho_mean_i, 200.0)
+                         for rho_mean_i in rho_mean])
+    rvir_range = np.log10(rvir_range_lin)
+    rvir_range_3d = logspace(-3.2, 4, 200, endpoint=True)
+    rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
+    rvir_range_2d_i = R[0][1:]
+
+
+    # Calculating halo model
+
+    pop_c = array([ncm(hmf_i, i, mass_range, sigma_c, alpha_s, A, M_1,
+                                gamma_1, gamma_2, b_0, b_1, b_2)
+                            for hmf_i, i in izip(hmf, hod_mass)])
+
+    pop_s = array([nsm(hmf_i, i, mass_range, sigma_c, alpha_s, A, M_1,
+                                gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
+                            for hmf_i, i in izip(hmf, hod_mass)])
+
+    pop_g = pop_c + pop_s
+
+    ngal = array([n_gal(hmf_i, pop_g_i , mass_range)
+                   for hmf_i, pop_g_i in izip(hmf, pop_g)])
+
+    """
+    effective_mass = array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range)
+                        for z_i, hmf_i, pop_g_i in izip(z, hmf, pop_g)])
+    # Why does this only have pop_c and not pop_g?
+    # Do we need it? It's not used anywhere in the code
+    effective_mass_bar = array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range) * \
+                        (1.0 - baryons.f_dm(omegab, omegac))
+                        for z_i, hmf_i, pop_g_i in izip(z, hmf, pop_g)])
+
+
+    sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
+    #print(sigma_crit/10.0**12.0)
+
+    shape_noise = ((sigma_crit / rho_mean[0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance_z1z2(z,z_kids).value)#(8.0 * Pi_max))
+
+
+    shape_noise[0] = 0.0
+    test_gauss = np.zeros((len(k_temp_lin), len(k_temp_lin)))
+    delta = np.eye(len(k_temp_lin))
+    for i, k in enumerate(k_temp_lin):
+        for j, l in enumerate(k_temp_lin):
+            test_gauss[i,j] = 2.0 * ((np.sqrt(np.exp(P_inter_3[0](np.log(k)))) * np.sqrt(np.exp(P_inter_3[0](np.log(l))))) + delta[i,j]*shape_noise[0])**2.0
+
+    test_gauss = delta * test_gauss
+    """
+
+
+    #
+    # Calculate Fourier profiles
+    #
+
+    # damping of the 1h power spectra at small k
+    F_k1 = f_k(k_range_lin)
+    # Fourier Transform of the NFW profile
+    u_k = array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
+                rvir_range_lin_i, k_range_lin,\
+                c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
+                f_i, concentration_i in izip(rvir_range_lin, \
+                rho_mean, z, f, concentration)])
+    u_k = u_k/u_k[:,0][:,None]
+    # and of the NFW profile of the satellites
+    """
+    uk_s = array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
+                mass_range, rvir_range_lin_i, k_range_lin)
+                for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
+                izip(rvir_range_lin, rho_mean, z, fc_nsat)])
+    """
+    uk_s = array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
+                rvir_range_lin_i, k_range_lin,\
+                c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
+                f_i, concentration_i in izip(rvir_range_lin, \
+                rho_mean, z, f, concentration_sat)])
+    #uk_s = u_k
+    uk_s = uk_s/uk_s[:,0][:,None]
+
+
+    #
+    # Calculate power spectra
+    #
+
+    # save Pg_k (galaxy-matter power spectra)
+
+    Pg_2h = bias * array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
+                    rvir_range_lin_i, mass_range)[0]
+                    for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
+                    izip(rvir_range_lin, hmf, ngal, pop_g)])
+
+    bias_out = bias.T[0] * array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
+                    rvir_range_lin_i, mass_range)[1]
+                    for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
+                    izip(rvir_range_lin, hmf, ngal, pop_g)])
+
+    Pg_c = F_k1 * array([GM_cen_analy(hmf_i, u_k_i, rho_mean_i, pop_c_i,
+                    ngal_i, mass_range)
+                    for rho_mean_i, hmf_i, pop_c_i, ngal_i, u_k_i in\
+                    izip(rho_mean, hmf, pop_c, ngal, u_k)])
+
+    Pg_s = F_k1 * array([GM_sat_analy(hmf_i, u_k_i, uk_s_i, rho_mean_i,
+                    pop_s_i, ngal_i, mass_range)
+                    for rho_mean_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i in\
+                    izip(rho_mean, hmf, pop_s, ngal, u_k, uk_s)])
+
+    Pg_k = array([(Pg_c_i + Pg_s_i + Pg_2h_i)
+                   for Pg_c_i, Pg_s_i, Pg_2h_i
+                   in izip(Pg_c, Pg_s, Pg_2h)])
+
+    fname = os.path.join( save_dir, 'Pg.dat' )
+    save_data = np.vstack( (k_range_lin, Pg_k, Pg_c, Pg_s, Pg_2h) ).T
+    np.savetxt( fname, save_data, header='k, Pg_k, Pg_c, Pg_s, Pg_2h' )
+
+
+    # save Pgg_k (galaxy-galaxy power spectra)
+
+    Pgg_2h = bias * array([TwoHalo_gg(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
+                                       mass_range)[0]
+                    for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
+                    izip(rvir_range_lin, hmf, ngal, pop_g)])
+    """
+    ncen = array([n_gal(hmf_i, pop_c_i, mass_range)
+                    for hmf_i, pop_c_i in izip(hmf, pop_c)])
+    Pgg_c = F_k1 * array([GG_cen_analy(hmf_i, ncen_i*np.ones(k_range_lin.shape),
+                    ngal_i*np.ones(k_range_lin.shape), mass_range)
+                    for hmf_i, ncen_i, ngal_i in\
+                    izip(hmf, ncen, ngal)])
+    """
+    Pgg_c = np.zeros((n_bins_obs,n_bins))
+    #beta = np.ones(M_bin_min.size)
+    Pgg_s = F_k1 * array([GG_sat_analy(hmf_i, u_k_i, pop_s_i, ngal_i, beta_i, mass_range)
+                    for hmf_i, u_k_i, pop_s_i, ngal_i, beta_i in\
+                    izip(hmf, uk_s, pop_s, ngal, beta)])
+
+    Pgg_cs = F_k1 * array([GG_cen_sat_analy(hmf_i, u_k_i, pop_c_i, pop_s_i, ngal_i, mass_range)
+                    for hmf_i, pop_c_i, pop_s_i, ngal_i, u_k_i in\
+                    izip(hmf, pop_c, pop_s, ngal, uk_s)])
+
+    Pgg_k = array([(Pgg_c_i + (2.0 * Pgg_cs_i) + Pgg_s_i) + Pgg_2h_i
+                    for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
+                    in izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
+
+    fname = os.path.join( save_dir, 'Pgg.dat' )
+    save_data = np.vstack( (k_range_lin, Pgg_k, Pgg_c, Pgg_cs, Pg_s, Pgg_2h) ).T
+    np.savetxt( fname, save_data, header='k, Pgg_k, Pgg_c, Pgg_cs, Pgg_s, Pgg_2h' )
+
+
+    # save Pmm (matter-matter power spectra)
+
+    Pmm_1h = F_k1 * array([MM_analy(hmf_i, u_k_i, rho_mean_i, mass_range)
+                    for hmf_i, u_k_i, rho_mean_i, beta_i in\
+                    izip(hmf, u_k, rho_mean, beta)])
+
+    Pmm = array([(Pmm_1h_i + hmf_i.power)
+                    for Pmm_1h_i, hmf_i
+                    in izip(Pmm_1h, hmf)])
+
+
+    P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+                    for Pg_k_i in izip(Pg_k)]
+
+    P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
+                    for Pgg_k_i in izip(Pgg_k)]
+
+    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
+                    for Pmm_i in izip(Pmm)]
+
+
+    fname = os.path.join( save_dir, 'Pmm.dat' )
+    hmf_power = [ hmf_i.power for hmf_i in hmf]
+    save_data = np.vstack( (k_range_lin, Pmm, Pmm_1h, hmf_power) ).T
+    np.savetxt( fname, save_data, header='k, Pmm, Pmm_1h, hmf(Pmm_2h)' )
+
+
+
+    # Evaluate halo model integrals needed for SSC
+
+    I_g = array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
+                                   for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                   izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+
+    I_m = array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+
+    I_gg = array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+
+    I_gm = array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+
+    I_mm = array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
+                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+
+    I_inter_g = [UnivariateSpline(k_range, np.log(I_g_i), s=0, ext=0)
+               for I_g_i in izip(I_g)]
+
+    I_inter_m = [UnivariateSpline(k_range, np.log(I_m_i), s=0, ext=0)
+                for I_m_i in izip(I_m)]
+
+    I_inter_gg = [UnivariateSpline(k_range, np.log(I_gg_i), s=0, ext=0)
+                for I_gg_i in izip(I_gg)]
+
+    I_inter_gm = [UnivariateSpline(k_range, np.log(I_gm_i), s=0, ext=0)
+                for I_gm_i in izip(I_gm)]
+
+    I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
+                for I_mm_i in izip(I_mm)]
+
+    P_lin_inter = [UnivariateSpline(k_range, np.log(hmf_i.power), s=0, ext=0)
+                for hmf_i in hmf]
+
+    k3P_lin_inter = [UnivariateSpline(k_range, np.log(k_range_lin**3.0 * hmf_i.power), s=0, ext=0)
+                for hmf_i in hmf]
+
+    dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
+
+
+    # save trispectra
+
+    test_1h = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
+    test_1h = test_1h(k_temp_lin, k_temp_lin)
+
+    test = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], u_k[0], Bias_Tinker10(hmf[0], 0), rho_mean[0], mass_range, k_range_lin)
+    test = test(k_temp_lin, k_temp_lin)
+    #test = test/100.0
+    #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
+
+    test_tot = test_1h + test
+
+    fname = os.path.join( save_dir, 'T_k.dat' )
+    save_data = np.vstack( (k_temp_lin, test_tot) ).T
+    np.savetxt( fname, save_data, header='k, T' )
+
+    fname = os.path.join( save_dir, 'T_1h.dat' )
+    save_data = np.vstack( (k_temp_lin, test_1h) ).T
+    np.savetxt( fname, save_data, header='k, T_1h' )
+
+    fname = os.path.join( save_dir, 'T_234h.dat' )
+    save_data = np.vstack( (k_temp_lin, test) ).T
+    np.savetxt( fname, save_data, header='k, T_234h' )
+
+
+    # save ps_deriv_mm
+
+    ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_mm[0](k_temp)))*np.sqrt(np.exp(I_inter_mm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
+
+    fname = os.path.join( save_dir, 'ps_deriv_mm.dat' )
+    save_data = np.vstack( (k_temp_lin, ps_deriv_mm) ).T
+    np.savetxt( fname, save_data, header='k, ps_deriv_mm' )
+
+
     print(0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

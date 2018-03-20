@@ -12,7 +12,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
 #### 1. Installation
     
     
-**a)** Contact Cristóbal Sifón (sifon@astro.princeton.edu) to become a member
+**a)** Contact Cristobal Sifon (sifon@astro.princeton.edu) to become a member
        of the KiDS-WL repository and join the KiDS-GGL team
 
 **b)** Download [the latest stable version of the KiDS-GGL pipeline](https://github.com/KiDS-WL/KiDS-GGL/releases/latest) and unpack,
@@ -93,7 +93,7 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
 - Always check how many cores are available in your machine before running in parallel.
 - **Contribute!**
  
-If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristóbal Sifón (sifon@astro.princeton.edu).
+If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristobal Sifon (sifon@astro.princeton.edu).
 
 ---
 Update log:

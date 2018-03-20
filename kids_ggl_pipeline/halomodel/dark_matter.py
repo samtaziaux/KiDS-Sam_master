@@ -36,8 +36,8 @@ import scipy.special as sp
 if sys.version_info[0] == 3:
     xrange = range
 
-from .tools import (Integrate, Integrate1, extrap1d, extrap2d, fill_nan,
-                    virial_mass, virial_radius)
+from tools import (Integrate, Integrate1, extrap1d, extrap2d, fill_nan,
+                   virial_mass, virial_radius)
 
 
 """

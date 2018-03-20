@@ -44,7 +44,7 @@ else:
     izip = zip
     xrange = range
 
-from . import hankel
+import hankel
 
 
 """

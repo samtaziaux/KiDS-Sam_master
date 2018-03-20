@@ -12,9 +12,9 @@ if sys.version_info[0] == 3:
     xrange = range
 
 # local
-from . import nfw, nfw_stack, satellites, halo, halo_2, halo_2_mc, halo_sz
+import nfw, nfw_stack, satellites, halo, halo_2, halo_2_mc, halo_sz
 try:
-    from . import models
+    import models
 except ImportError:
     pass
 

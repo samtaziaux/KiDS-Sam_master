@@ -10,7 +10,7 @@ import scipy.special as sp
 if sys.version_info[0] == 3:
     xrange = range
 
-from .tools import Integrate
+from tools import Integrate
 
 """
 # Population functions - average number of galaxies 

@@ -15,8 +15,8 @@ from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 from astropy.cosmology import LambdaCDM
 
-from . import longdouble_utils as ld
-from .lens import (
+import longdouble_utils as ld
+from lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata)
 
 

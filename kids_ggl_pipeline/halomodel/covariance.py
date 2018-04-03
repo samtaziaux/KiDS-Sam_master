@@ -1361,7 +1361,7 @@ if __name__ == '__main__':
     alpha_s = -0.83 # -1.34  # alpha_s
     b_0 = 0.18 # -1.15  # b_0
     b_1 = 0.83 # 0.59   # b_1
-    b_2 = -0.217  # b_2
+    b_2 = 0.0  # -0.217  # b_2
     bias = 1.0   # bias
     beta = 1.0   # (beta_gas?  not sure what this is)
 
@@ -1714,36 +1714,60 @@ if __name__ == '__main__':
 
     # save trispectra
 
-    test_1h = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
-    test_1h = test_1h(k_temp_lin, k_temp_lin)
+    test_1h_mmmm = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
+    test_1h_mmmm = test_1h_mmmm(k_temp_lin, k_temp_lin)
+    print( np.diag(test_1h_mmmm) )
+
+    test_1h_gmgm = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'gmgm')
+    test_1h_gmgm = test_1h_gmgm(k_temp_lin, k_temp_lin)
+
+    test_1h_gggm = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'gggm')
+    test_1h_gggm = test_1h_gggm(k_temp_lin, k_temp_lin)
+
+    test_1h_gggg = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'gggg')
+    test_1h_gggg = test_1h_gggg(k_temp_lin, k_temp_lin)
 
     test = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], u_k[0], Bias_Tinker10(hmf[0], 0), rho_mean[0], mass_range, k_range_lin)
     test = test(k_temp_lin, k_temp_lin)
+    print( np.diag(test) )
     #test = test/100.0
     #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
 
-    test_tot = test_1h + test
+    test_tot_mmmm = test_1h_mmmm + test
+    print( np.diag(test_tot_mmmm) )
 
-    fname = os.path.join( save_dir, 'T_k.dat' )
-    save_data = np.vstack( (k_temp_lin, test_tot) ).T
+    fname = os.path.join( save_dir, 'T_mmmm_kk.dat' )
+    save_data = np.vstack( (k_temp_lin, np.diag(test_tot_mmmm)) ).T
     np.savetxt( fname, save_data, header='k, T' )
 
-    fname = os.path.join( save_dir, 'T_1h.dat' )
-    save_data = np.vstack( (k_temp_lin, test_1h) ).T
-    np.savetxt( fname, save_data, header='k, T_1h' )
+    fname = os.path.join( save_dir, 'T_1h_mmmm.dat' )
+    save_data = np.vstack( (k_temp_lin, np.diag(test_1h_mmmm)) ).T
+    np.savetxt( fname, save_data, header='k, T_1h_mmmm' )
 
     fname = os.path.join( save_dir, 'T_234h.dat' )
-    save_data = np.vstack( (k_temp_lin, test) ).T
+    save_data = np.vstack( (k_temp_lin, np.diag(test)) ).T
     np.savetxt( fname, save_data, header='k, T_234h' )
 
 
-    # save ps_deriv_mm
+    # save ps_deriv_mm, gg, gm
 
     ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_mm[0](k_temp)))*np.sqrt(np.exp(I_inter_mm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
+
+    ps_deriv_gg = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_gg[0](k_temp)))*np.sqrt(np.exp(I_inter_gg[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
+
+    ps_deriv_gm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_gm[0](k_temp)))*np.sqrt(np.exp(I_inter_gm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
 
     fname = os.path.join( save_dir, 'ps_deriv_mm.dat' )
     save_data = np.vstack( (k_temp_lin, ps_deriv_mm) ).T
     np.savetxt( fname, save_data, header='k, ps_deriv_mm' )
+
+    fname = os.path.join( save_dir, 'ps_deriv_gg.dat' )
+    save_data = np.vstack( (k_temp_lin, ps_deriv_gg) ).T
+    np.savetxt( fname, save_data, header='k, ps_deriv_gg' )
+
+    fname = os.path.join( save_dir, 'ps_deriv_gm.dat' )
+    save_data = np.vstack( (k_temp_lin, ps_deriv_gm) ).T
+    np.savetxt( fname, save_data, header='k, ps_deriv_gm' )
 
 
     print(0)

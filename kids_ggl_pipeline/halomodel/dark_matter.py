@@ -193,13 +193,11 @@ def Bias(hmf, r_x):
     return bias
 
 
-def Bias_Tinker10(hmf, r_x):
+def Tinker10_halobias_func(nu, Delta_halo, delta_c):
     """
-    Tinker 2010 bias - empirical
-        
+    The functional form of the Tinker10 halo bias b(nu), which "does not significantly evolve over 0<z<2.5".
     """
-    nu = hmf.nu**0.5
-    y = np.log10(hmf.delta_halo)
+    y = np.log10(Delta_halo)
     A = 1.0 + 0.24 * y * np.exp(-(4 / y) ** 4)
     a = 0.44 * y - 0.88
     B = 0.183
@@ -207,7 +205,43 @@ def Bias_Tinker10(hmf, r_x):
     C = 0.019 + 0.107 * y + 0.19 * np.exp(-(4 / y) ** 4)
     c = 2.4
     #print y, A, a, B, b, C, c
-    return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
+    return 1 - A * nu**a / (nu**a + delta_c**a) + B * nu**b + C * nu**c
+
+
+# the normalization look-up table (memoize? i don't know what that means--RN)
+norm_Tinker10Bias = dict()
+
+def Bias_Tinker10_norm(hmf):
+    """
+    The redshift dependence of the Tinker10 halo bias b(nu) enters through the normalization int dnu b(nu) f(nu,z) = 1
+    The argument "hmf" is a MassFunction instantiation.
+    It has an attribute named "hmf", the halo mass function (a fitting_function).
+    This fitting function has a subclass "fsigma" which is the f(sigma) lookup table.
+    """
+    # the redshift at which the halo mass function is evaluated
+    z = hmf.z
+    try:
+        return norm_Tinker10Bias[z]
+    except KeyError:
+        # the hmf package contains an internal lookup table for [nu^2, f(sigma)]
+        nu = hmf.hmf.nu2**0.5
+        # look-up table of halo mass function f(sigma) == nu*f(nu), where nu2 == (delta_c/sigma)^2 in the fitting_function class.
+        f_nu = hmf.hmf.fsigma / nu
+        b_nu = Tinker10_halobias_func(nu, hmf.delta_halo, hmf.delta_c)
+        norm_Tinker10Bias[z] = trapz( f_nu * b_nu, nu )
+        print (z, norm_Tinker10Bias[z])
+
+    return norm_Tinker10Bias[z]
+
+
+def Bias_Tinker10(hmf, r_x):
+    """
+    Tinker 2010 bias - empirical, and redshift dependent (through the normalization)
+    """
+    nu = hmf.nu**0.5
+    func = Tinker10_halobias_func(nu, hmf.delta_halo, hmf.delta_c)
+    norm = Bias_Tinker10_norm(hmf)
+    return func / norm
 
 
 

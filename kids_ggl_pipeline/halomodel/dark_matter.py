@@ -29,7 +29,7 @@ import matplotlib.pyplot as pl
 import numpy as np
 import sys
 from numpy import cos, pi, sin
-from scipy.integrate import simps, trapz
+from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d
 import scipy.special as sp
 
@@ -208,6 +208,28 @@ def Tinker10_halobias_func(nu, Delta_halo, delta_c):
     return 1 - A * nu**a / (nu**a + delta_c**a) + B * nu**b + C * nu**c
 
 
+def Tinker10_halo_massfunc_f_nu(nu, z):
+    """
+    The Tinker10 f(nu) mass function.
+    The equations here are from Tinker: 1001.3162, Eqs. 8-12, Table 4; for Delta=200 (BJ)
+    It also is identical to the one in the hmf package hmf.fitting_functions::Tinker10.
+    """
+    zp1 = z + 1.0
+    # redshift dependence of the parameters
+    beta = 0.589 * np.power(zp1, 0.2)
+    phi = -0.729 * np.power(zp1, -0.08)
+    eta = -0.243 * np.power(zp1, 0.27)
+    gamma = 0.864 * np.power(zp1, -0.01)
+
+    # the normalization of f(nu), from int dnu f(nu) = 1
+    alpha = 2./(np.power(gamma/2.,-0.5-eta)*sp.gamma(eta+0.5)+np.power(beta,-2.*phi)*np.power(gamma/2.,-0.5-eta+phi)*sp.gamma(eta-phi+0.5))
+
+    # the normalized Tinker+10 halo mass function f(nu)
+    f_nu = alpha * (1.0 + np.power(beta * nu, -2.*phi)) * np.power( nu, 2.*eta ) * np.exp( -0.5 * gamma * nu**2. )
+
+    return f_nu
+
+
 # the normalization look-up table (memoize? i don't know what that means--RN)
 norm_Tinker10Bias = dict()
 
@@ -223,13 +245,15 @@ def Bias_Tinker10_norm(hmf):
     try:
         return norm_Tinker10Bias[z]
     except KeyError:
-        # the hmf package contains an internal lookup table for [nu^2, f(sigma)]
-        nu = hmf.hmf.nu2**0.5
-        # look-up table of halo mass function f(sigma) == nu*f(nu), where nu2 == (delta_c/sigma)^2 in the fitting_function class.
-        f_nu = hmf.hmf.fsigma / nu
-        b_nu = Tinker10_halobias_func(nu, hmf.delta_halo, hmf.delta_c)
-        norm_Tinker10Bias[z] = trapz( f_nu * b_nu, nu )
-        print (z, norm_Tinker10Bias[z])
+        # Integrate without using the tabulated nu / f(nu) values in the hmf package,
+        # but the analytic expression.  The hmf tabulated values does not go to low enough nu.
+        # 0<nu<=10 is sufficent for the integral.
+
+        def integral(Nu):
+            return Tinker10_halo_massfunc_f_nu(Nu, z) * Tinker10_halobias_func(Nu, hmf.delta_halo, hmf.delta_c)
+        min_nu, max_nu = ( 0., 10. )
+        # using trapz or simps causes ~10% error due to divergence at nu=0.  quad error is ~1e-9.
+        norm_Tinker10Bias[z] = quad( integral, min_nu, max_nu )[0]
 
     return norm_Tinker10Bias[z]
 
@@ -238,7 +262,7 @@ def Bias_Tinker10(hmf, r_x):
     """
     Tinker 2010 bias - empirical, and redshift dependent (through the normalization)
     """
-    nu = hmf.nu**0.5
+    nu = hmf.hmf.nu2**0.5
     func = Tinker10_halobias_func(nu, hmf.delta_halo, hmf.delta_c)
     norm = Bias_Tinker10_norm(hmf)
     return func / norm

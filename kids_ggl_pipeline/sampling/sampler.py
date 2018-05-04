@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Satellite lensing EMCEE wrapper
+Galaxy-galaxy lensing EMCEE wrapper
 
 """
 from __future__ import (absolute_import, division, print_function,
@@ -15,7 +15,7 @@ from itertools import count
 from matplotlib import cm, pylab
 from numpy import all as npall, array, append, concatenate, dot, inf, isnan, \
                   isfinite, log, log10, outer, pi, sqrt, squeeze, transpose, \
-                  zeros
+                  where, zeros
 from os import remove
 from os.path import isfile
 from time import ctime, time
@@ -81,7 +81,7 @@ def run_emcee(hm_options, sampling_options, args):
     jfixed = (prior_types == 'fixed') | (prior_types == 'read') | \
              (prior_types == 'function')
     jfree = ~jfixed
-    ndim = len(val1[numpy.where(jfree)])
+    ndim = len(val1[where(jfree)])
     if len(starting) != ndim:
         msg = 'ERROR: Not all starting points defined for free parameters.'
         print(msg)
@@ -134,14 +134,12 @@ def run_emcee(hm_options, sampling_options, args):
     for i in xrange(3):
         fail_value.append(9999)
 
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
-                                    threads=threads,
-                                    args=(R,esd,icov,function,
-                                          params,prior_types[jfree],
-                                          val1,val2,val3,val4,params_join,
-                                          jfree,lnprior,likenorm,
-                                          rng_obsbins,fail_value,
-                                          array,dot,inf,izip,outer,pi))
+    sampler = emcee.EnsembleSampler(
+        nwalkers, ndim, lnprob, threads=threads,
+        args=(R,esd,icov,function,params,prior_types[jfree],
+              val1,val2,val3,val4,params_join,jfree,lnprior,likenorm,
+              rng_obsbins,fail_value,array,dot,inf,izip,outer,pi))
+
     # burn-in
     if nburn > 0:
         pos, prob, state, blobs = sampler.run_mcmc(po, nburn)
@@ -149,13 +147,14 @@ def run_emcee(hm_options, sampling_options, args):
         print('{1}: {0} Burn-in steps finished'.format(nburn, ctime()))
     else:
         pos = po
+
     # incrementally save output
     # this array contains lnprior, chi2, lnlike
     chi2 = [zeros(nwalkers*nsteps//thin) for i in xrange(3)]
     nwritten = 0
-    for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
-                                              thin=thin)):
-        if i > 0 and (i+1) * nwalkers > nwalkers * nwritten + update_freq:
+    for i, result in enumerate(
+            sampler.sample(pos, iterations=nsteps, thin=thin)):
+        if i > 0 and ((i+1)*nwalkers > nwalkers*nwritten + update_freq):
             out = write_to_fits(output, chi2, sampler, nwalkers, thin,
                                 params, jfree, metadata, meta_names,
                                 fits_format, update_freq, i, nwritten,
@@ -227,7 +226,6 @@ def run_emcee(hm_options, sampling_options, args):
 def lnprob(theta, R, esd, icov, function, params, prior_types,
            val1, val2, val3, val4, params_join, jfree, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, izip, outer, pi):
-           #array, dot, inf, izip, isfinite, log, log10, sqrt):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
     given a model, times the prior on the model parameters.
@@ -237,7 +235,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
         theta
             whatever *free* parameters are received by the model selected.
         R
-            projected distances from the satellite
+            lens-source separations
         esd
             excess surface density at distances R
         icov
@@ -264,27 +262,26 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
             time
 
     """
-    _log = log
-    v1free = val1[numpy.where(jfree)].flatten()
-    v2free = val2[numpy.where(jfree)].flatten()
-    v3free = val3[numpy.where(jfree)].flatten()
-    v4free = val4[numpy.where(jfree)].flatten()
+    v1free = val1[where(jfree)].flatten()
+    v2free = val2[where(jfree)].flatten()
+    v3free = val3[where(jfree)].flatten()
+    v4free = val4[where(jfree)].flatten()
     if not isfinite(v1free.sum()):
         return -inf, fail_value
     j = (prior_types == 'normal')
-    lnprior[j] = array([-(v-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
+    lnprior[j] = array([-(v-v1)**2 / (2*v2**2) - log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
                         for v, v1, v2, v3, v4
                         in izip(theta[j], v1free[j], v2free[j],
                                 v3free[j], v4free[j])])
     j = (prior_types == 'lognormal')
-    lnprior[j] = array([-(log10(v)-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
+    lnprior[j] = array([-(log10(v)-v1)**2 / (2*v2**2) - log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
                         for v, v1, v2, v3, v4
                         in izip(theta[j], v1free[j], v2free[j],
                                 v3free[j], v4free[j])])
     j = (prior_types == 'uniform')
-    lnprior[j] = array([0-_log(v2-v1) if v1 <= v <= v2 else -inf
+    lnprior[j] = array([-log(v2-v1) if v1 <= v <= v2 else -inf
                         for v, v1, v2
                         in izip(theta[j], v1free[j], v2free[j])])
     # note that exp is not normalized
@@ -295,10 +292,11 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     lnprior_total = lnprior.sum()
     if not isfinite(lnprior_total):
         return -inf, fail_value
-    # all other types ('fixed', 'read') should not contribute to the prior
+
+    # all other types ('fixed', 'read') do not contribute to the prior
     # run the given model
     v1 = val1.copy()
-    v1[numpy.where(jfree)] = theta
+    v1[where(jfree)] = theta
     if params_join is not None:
         v1j = list(v1)
         for p in params_join:
@@ -322,7 +320,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     
     if 'model' in str(function):
         # model assumes comoving separations, changing data to accomodate for that
-        redshift_index = numpy.int(numpy.where(params == 'z')[0])
+        redshift_index = numpy.int(where(params == 'z')[0])
         redshift = array([v1[redshift_index]])
         esd = esd/(1.0+redshift.T)**2.0
         residuals = (esd - model[0])*(1.0+redshift.T)**2.0
@@ -356,7 +354,7 @@ def run_demo():
                         #xy=(x,gti+20), ha='center', va='bottom',
                         #color='r')
         return
-    val1[numpy.where(jfree)] = starting
+    val1[where(jfree)] = starting
     if params_join is not None:
         v1 = list(val1)
         for p in params_join:
@@ -375,7 +373,7 @@ def run_demo():
     #residuals = esd - model[0]
     if 'model' in str(function):
         # model assumes comoving separations, changing data to accomodate for that
-        redshift_index = numpy.int(numpy.where(params == 'z')[0])
+        redshift_index = numpy.int(where(params == 'z')[0])
         redshift = array([val1[redshift_index]])
         esd = esd/(1.0+redshift.T)**2.0
         residuals = (esd - model[0])*(1.0+redshift.T)**2.0
@@ -530,12 +528,12 @@ def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4,
     into consideration. It takes intervals (max-min)/2 around a
     starting value.
     """
-    v1free = val1[numpy.where(jfree)]
-    v2free = val2[numpy.where(jfree)]
-    v3free = val3[numpy.where(jfree)]
-    v4free = val4[numpy.where(jfree)]
-    params_free = params[numpy.where(jfree)]
-    prior_free = prior_types[numpy.where(jfree)]
+    v1free = val1[where(jfree)]
+    v2free = val2[where(jfree)]
+    v3free = val3[where(jfree)]
+    v4free = val4[where(jfree)]
+    params_free = params[where(jfree)]
+    prior_free = prior_types[where(jfree)]
 
     ball = numpy.zeros((nwalkers, ndim))
     for n, j in enumerate(params_free):

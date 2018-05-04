@@ -12,6 +12,8 @@ if sys.version_info[0] == 2:
 Intrinsic scatter functions commonly used in the halo occupation distribution
 """
 
+# don't forget to update this!
+__all__ = ('lognormal', 'schechter_mod')
 
 def lognormal(m, M, sigma):
     """Log-normal scatter

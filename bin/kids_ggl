@@ -10,6 +10,7 @@ sys.path.append('./')
 from kids_ggl_pipeline.esd_production import shearcode
 from kids_ggl_pipeline.sampling import sampler, sampling_utils
 from kids_ggl_pipeline.halomodel import hm_utils
+from kids_ggl_pipeline.helpers import configurations
 
 
 def main():
@@ -31,9 +32,11 @@ def main():
 
     if args.sampler or args.demo:
         # Choose and set up a halo model
-        hm_options = hm_utils.read_config(args.config_file)
+        #hm_options = hm_utils.read_config(args.config_file)
         # Setup and run MCMC sampler
-        sampling_options = sampling_utils.read_config(args.config_file)
+        #sampling_options = sampling_utils.read_config(args.config_file)
+        hm_options, sampling_options = \
+            configurations.model_config(args.config_file)
         sampler.run_emcee(hm_options, sampling_options, args)
 
     if not (args.sampler or args.demo or args.esd):

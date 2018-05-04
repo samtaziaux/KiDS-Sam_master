@@ -3,6 +3,9 @@ from __future__ import absolute_import, division, print_function
 from numpy import log10
 
 
+#don't forget to update this!
+__all__ = ('powerlaw', 'double_powerlaw', 'double_powerlaw_scaled')
+
 def powerlaw(M, logM0, a, b):
     return 10**(a + b*log10(M/10**logM0))
 

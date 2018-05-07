@@ -225,9 +225,6 @@ def Bias_Tinker10(hmf, r_x):
     return func / norm
 
 
-
-
-
 """
 # Spectrum 1-halo components for dark matter.
 """

@@ -189,7 +189,7 @@ def Bias(hmf, r_x):
     return bias
 
 
-def Bias_Tinker10(hmf, r_x):
+def Bias_Tinker10_func(hmf, r_x):
     """
     Tinker 2010 bias - empirical
         
@@ -204,6 +204,21 @@ def Bias_Tinker10(hmf, r_x):
     c = 2.4
     #print y, A, a, B, b, C, c
     return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
+
+
+def Bias_Tinker10(hmf, r_x):
+    """
+    Tinker 2010 bias - empirical
+        
+    """
+    nu = hmf.nu**0.5
+    
+    f_nu = hmf.fsigma / nu
+    b_nu = Bias_Tinker10_func(hmf, r_x)
+    norm = trapz(f_nu * b_nu, nu)
+    
+    func = Bias_Tinker10_func(hmf, r_x)
+    return func / norm
 
 
 

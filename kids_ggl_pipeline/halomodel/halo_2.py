@@ -476,6 +476,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                     for Pmm_1h_i, hmf_i
                     in _izip(Pmm_1h, hmf)])
                     
+    #"""
     """
     b_k = np.sqrt(Pgg_k/Pmm)
     r_k = Pg_k / np.sqrt(Pgg_k*Pmm)

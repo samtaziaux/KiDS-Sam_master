@@ -31,16 +31,18 @@ import matplotlib.pyplot as pl
 import scipy
 import multiprocessing as multi
 import sys
-if sys.version_info[0] == 2:
-    from itertools import izip
-else:
-    izip = zip
 from numpy import exp, log, log10, pi
 from scipy.integrate import quad, romberg, simps, trapz
 from scipy.interpolate import interp1d, InterpolatedUnivariateSpline, \
                               UnivariateSpline
 import scipy.special as sp
 from time import time
+
+if sys.version_info[0] == 2:
+    from itertools import izip
+else:
+    izip = zip
+    xrange = range
 
 from . import hankel
 

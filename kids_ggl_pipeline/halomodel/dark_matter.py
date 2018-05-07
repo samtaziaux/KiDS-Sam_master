@@ -25,12 +25,16 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import time
-import numpy as np
 import matplotlib.pyplot as pl
+import numpy as np
+import sys
 from numpy import cos, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
+
+if sys.version_info[0] == 3:
+    xrange = range
 
 from .tools import (Integrate, Integrate1, extrap1d, extrap2d, fill_nan,
                     virial_mass, virial_radius)

@@ -362,7 +362,7 @@ nwalkers	         20
 # Number of steps *per walker*. Total number of MCMC samples will be nwalkers*nsteps.
 # Again we have set this to a small value so you can run a short chain without having
 # to make any changes.
-nsteps		         10 
+nsteps		         20 
 
 # Number of burn-in steps. Not sure but should also be per walker.
 nburn		         0 
@@ -381,6 +381,6 @@ update_freq          200
 k   		         7 
 
 # Number of cores, or threads, to be used to sample the MCMC.
-threads		         1
+threads		         2
 
 

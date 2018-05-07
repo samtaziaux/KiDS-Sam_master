@@ -4,13 +4,17 @@ from __future__ import (absolute_import, division, print_function,
 import imp
 import numpy as np
 import os
+import sys
 from glob import glob
 from numpy import array, inf, iterable, loadtxt
+
+if sys.version_info[0] == 3:
+    xrange = range
 
 # local
 from . import nfw, nfw_stack, satellites, halo, halo_2, halo_2_mc, halo_sz
 try:
-    from . import models
+    import models
 except ImportError:
     pass
 
@@ -142,9 +146,9 @@ def read_config(config_file, version='0.5.7'):
                 hm_functions.append(i)
         elif line[0] == 'hm_output':
             fmt = line[2].split(',')
-            n = int(fmt[0]) if len(fmt) == 2 else 1
+            n = int(fmt[0]) if len(fmt) == 2 else 0
             fmt = fmt[-1]
-            if n == 1:
+            if n == 0:
                 meta_names.append(line[1])
                 fits_format.append(line[2])
             else:

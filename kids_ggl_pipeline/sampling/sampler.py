@@ -25,6 +25,7 @@ if sys.version_info[0] == 2:
     from itertools import izip
 else:
     izip = zip
+    raw_input = input
     xrange = range
 
 # local
@@ -274,6 +275,7 @@ def run_emcee(hm_options, sampling_options, args):
             metadata, nwritten = out
 
     hdr = open(hdrfile, 'a')
+
     try:
         print('acceptance_fraction =', sampler.acceptance_fraction)
         print('acceptance_fraction =', file=hdr, end=' ')
@@ -281,6 +283,7 @@ def run_emcee(hm_options, sampling_options, args):
             print(af, file=hdr, end=' ')
     except ImportError:
         pass
+
     #try:
         #print('acor =', sampler.acor)
         #print('\nacor =', file=hdr, end=' ')
@@ -288,16 +291,20 @@ def run_emcee(hm_options, sampling_options, args):
             #print(ac, file=hdr, end=' ')
     #except ImportError:
         #pass
+
     # acor and get_autocorr_time() are the same
     try:
         print('acor =', sampler.get_autocorr_time())
         print('\nacor_time =', file=hdr, end=' ')
         for act in sampler.get_autocorr_time(c=5):
             print(act, file=hdr, end=' ')
-    except AttributeError:
+    #except AttributeError:
+        #pass
+    #except emcee.autocorr.AutocorrError:
+        #pass
+    except:
         pass
-    except emcee.autocorr.AutocorrError:
-        pass
+
     # acor and get_autocorr_time() are the same
     #try:
         #print('acor_time =', sampler.get_autocorr_time())
@@ -306,6 +313,7 @@ def run_emcee(hm_options, sampling_options, args):
             #print(act, file=hdr, end=' ')
     #except AttributeError:
         #pass
+
     print('\nFinished', ctime(), file=hdr)
     hdr.close()
     print('Saved to', hdrfile)

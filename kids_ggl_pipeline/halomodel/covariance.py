@@ -62,7 +62,7 @@ from lens import (
 from dark_matter import (
     NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
-    GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10)
+    GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10 )
 from cmf import *
 
 
@@ -899,7 +899,9 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
                                     'dlnk': k_step,
-                                    'z':np.float64(z_i)})
+                                    'transfer_model': tf.EH,
+                                    'z':np.float64(z_i)},
+)
     
     # Calculation
     # Tinker10 should also be read from theta!
@@ -1335,9 +1337,17 @@ if __name__ == '__main__':
     # input params
     #
     import os
-    save_dir = 'ps_data'
+    tag = '02'
+    zz = 0.2
+    save_dir = 'ps_data_z{}_Mmin0'.format( tag )
+    z0 = zz
+    z1 = zz
+    z2 = zz
+    M_step = 2000
+    M_min = 5.
     if not os.path.isdir( save_dir ):
         os.mkdir( save_dir )
+    print( save_dir )
 
     #
     # test setup
@@ -1362,8 +1372,8 @@ if __name__ == '__main__':
     b_0 = 0.18 # -1.15  # b_0
     b_1 = 0.83 # 0.59   # b_1
     b_2 = 0.0  # -0.217  # b_2
-    bias = 1.0   # bias
-    beta = 1.0   # (beta_gas?  not sure what this is)
+    bias = 1.0   # bias   ===> this term is now unnecessary.  Halo bias is determined by Tinker+10.
+    beta = 1.0   # Probably the Poisson parameter for the satellite-satellite 1h term
 
     Mmin1 = 10.3   # stellar mass bins
     Mmin2 = 10.6
@@ -1377,7 +1387,9 @@ if __name__ == '__main__':
     Mmax = np.log10(10.0**np.array([Mmax1, Mmax2, Mmax3]))
 
     Mstar = np.log10(10.0**np.array([10.4601, 10.743, 11.1313]))
-    z = np.array([0.244809,0.284467,0.318127])   # redshifts of bins
+    #z = np.array([0.244809,0.284467,0.318127])   # redshifts of bins
+    z = np.array([z0,z1,z2])   # redshifts of bins
+    print('z array:', z)
 
     Pi_max = 100.0
     kids_area = 180 * 3600.0 #500 #To be in arminutes!  # kids area in arcmin^2
@@ -1406,9 +1418,12 @@ if __name__ == '__main__':
 
     # hard-coded in the current version
     Ac2s = 0.56
-    M_min = 8. #5.
-    M_max = 15. #16.
-    M_step = 100  #200
+    #M_min = 8. #5.
+    #M_max = 15. #16.
+    #M_step = 100  #200
+    #M_min = 5.
+    M_max = 17.
+    #M_step = 100
 
     # HMF set up parameters
     lnk_min, lnk_max = np.log(0.001), np.log(100.0)    # [ lnk_min=-13., lnk_max=17. ]
@@ -1466,14 +1481,21 @@ if __name__ == '__main__':
     hmf = array([])
     h = H0/100.0
     cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
-    for i in transfer_params:
+    for z_i, i in enumerate( transfer_params ):  # "i" is an hmf.
         hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
                                 hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
                                 delta_c=1.686,
                                 **i)
         hmf_temp.update(cosmo_model=cosmo_model)
         hmf = np.append(hmf, hmf_temp)
-
+        #"""
+        # DEBUG
+        #fname = os.path.join( save_dir, 'P_hmf_z{}.dat'.format(z[z_i]) )
+        #save_data = np.vstack( (hmf_temp.k, hmf_temp.power, hmf_temp.nonlinear_power) ).T
+        #np.savetxt( fname, save_data, header='k, P_L, P_NL' )
+        #import sys
+        #sys.exit()
+        #"""
 
     mass_func = np.zeros((z.size, mass_range.size))
     rho_mean = np.zeros(z.shape)
@@ -1489,7 +1511,6 @@ if __name__ == '__main__':
         rho_mean[i] = hmf[i].mean_density0
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
         #rho_dm[i] = rho_mean[i]# * baryons.f_dm(omegab, omegac)
-
 
     rvir_range_lin = array([virial_radius(mass_range, rho_mean_i, 200.0)
                          for rho_mean_i in rho_mean])
@@ -1513,6 +1534,10 @@ if __name__ == '__main__':
 
     ngal = array([n_gal(hmf_i, pop_g_i , mass_range)
                    for hmf_i, pop_g_i in izip(hmf, pop_g)])
+
+    # DEBUG
+    print(ngal)
+    sys.exit(99)
 
     """
     effective_mass = array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range)
@@ -1554,6 +1579,7 @@ if __name__ == '__main__':
                 f_i, concentration_i in izip(rvir_range_lin, \
                 rho_mean, z, f, concentration)])
     u_k = u_k/u_k[:,0][:,None]
+
     # and of the NFW profile of the satellites
     """
     uk_s = array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
@@ -1568,6 +1594,17 @@ if __name__ == '__main__':
                 rho_mean, z, f, concentration_sat)])
     #uk_s = u_k
     uk_s = uk_s/uk_s[:,0][:,None]
+
+    """
+    # DEBUG PRINT
+    fname = os.path.join( save_dir, 'u_k.dat' )
+    print( len(k_range_lin) )
+    print( len(u_k[0,:,0]) )
+    print( uk_s.shape )
+    save_data = np.vstack( (k_range_lin, u_k[:,:,0], u_k[:,:,-1], uk_s[:,:,0], uk_s[:,:,-1]) ).T
+    print(save_data)
+    np.savetxt( fname, save_data, header='k, u(k), u_sat(k)' )
+    """
 
 
     #
@@ -1636,6 +1673,23 @@ if __name__ == '__main__':
     fname = os.path.join( save_dir, 'Pgg.dat' )
     save_data = np.vstack( (k_range_lin, Pgg_k, Pgg_c, Pgg_cs, Pg_s, Pgg_2h) ).T
     np.savetxt( fname, save_data, header='k, Pgg_k, Pgg_c, Pgg_cs, Pgg_s, Pgg_2h' )
+
+    
+    """
+    # DEBUG OUTPUT: I^1_1(k) integral
+    for hmf_i, pop_g_i, ngal_i in izip(hmf, pop_g, ngal):
+        b_g = trapz(hmf_i.dndlnm * pop_g_i * Bias_Tinker10(hmf_i, 0.) / mass_range, mass_range) / ngal_i
+        print( "I^1_1(k) at z =", hmf_i.z, "is", b_g )
+    """
+    # DEBUG OUTPUT:  I^0_2(k) integral
+    fname = os.path.join( save_dir, 'I02k_z{:.1f}.dat'.format(z0) )
+    print( len(k_range_lin) )
+    print( len(u_k[0,:,0]) )
+    print( uk_s.shape )
+    save_data = np.vstack( (k_range_lin, u_k[:,:,0], u_k[:,:,-1], uk_s[:,:,0], uk_s[:,:,-1]) ).T
+    print(save_data)
+    np.savetxt( fname, save_data, header='k, u(k), u_sat(k)' )
+
 
 
     # save Pmm (matter-matter power spectra)
@@ -1716,7 +1770,7 @@ if __name__ == '__main__':
 
     test_1h_mmmm = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
     test_1h_mmmm = test_1h_mmmm(k_temp_lin, k_temp_lin)
-    print( np.diag(test_1h_mmmm) )
+    ##print( np.diag(test_1h_mmmm) )
 
     test_1h_gmgm = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'gmgm')
     test_1h_gmgm = test_1h_gmgm(k_temp_lin, k_temp_lin)
@@ -1729,12 +1783,12 @@ if __name__ == '__main__':
 
     test = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], u_k[0], Bias_Tinker10(hmf[0], 0), rho_mean[0], mass_range, k_range_lin)
     test = test(k_temp_lin, k_temp_lin)
-    print( np.diag(test) )
+    ##print( np.diag(test) )
     #test = test/100.0
     #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
 
     test_tot_mmmm = test_1h_mmmm + test
-    print( np.diag(test_tot_mmmm) )
+    ##print( np.diag(test_tot_mmmm) )
 
     fname = os.path.join( save_dir, 'T_mmmm_kk.dat' )
     save_data = np.vstack( (k_temp_lin, np.diag(test_tot_mmmm)) ).T

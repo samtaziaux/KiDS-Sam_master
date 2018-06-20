@@ -148,7 +148,7 @@ def phi_0(M, b_0, b_1, b_2):
     #M12 = M/(10.0**12.0)
     #log_phi = b_0 + b_1*np.log10(M12) + b_2*(np.log10(M12))**2.0
 
-    # Use van Uitert+2016 form
+    # RN: Use van Uitert+2016 form
     M13 = M/(10.0**13.0)
     log_phi = b_0 + b_1*np.log10(M13) + b_2*(np.log10(M13))**2.0
 

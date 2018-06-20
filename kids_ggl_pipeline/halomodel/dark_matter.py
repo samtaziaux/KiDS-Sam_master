@@ -225,7 +225,7 @@ def Tinker10_halo_massfunc_f_nu(nu, z):
     alpha = 2./(np.power(gamma/2.,-0.5-eta)*sp.gamma(eta+0.5)+np.power(beta,-2.*phi)*np.power(gamma/2.,-0.5-eta+phi)*sp.gamma(eta-phi+0.5))
 
     # the normalized Tinker+10 halo mass function f(nu)
-    f_nu = alpha * (1.0 + np.power(beta * nu, -2.*phi)) * np.power( nu, 2.*eta ) * np.exp( -0.5 * gamma * nu**2. )
+    f_nu = alpha * ( 1.0 + np.power(beta * nu, -2.*phi) ) * np.power( nu, 2.*eta ) * np.exp( -0.5 * gamma * nu**2. )
 
     return f_nu
 
@@ -249,11 +249,41 @@ def Bias_Tinker10_norm(hmf):
         # but the analytic expression.  The hmf tabulated values does not go to low enough nu.
         # 0<nu<=10 is sufficent for the integral.
 
-        def integral(Nu):
-            return Tinker10_halo_massfunc_f_nu(Nu, z) * Tinker10_halobias_func(Nu, hmf.delta_halo, hmf.delta_c)
+        """
+        def integral( Nu, Z, Delta_Halo, Delta_C ):
+            return Tinker10_halo_massfunc_f_nu( Nu, Z ) * Tinker10_halobias_func( Nu, Delta_Halo, Delta_C )
         min_nu, max_nu = ( 0., 10. )
         # using trapz or simps causes ~10% error due to divergence at nu=0.  quad error is ~1e-9.
-        norm_Tinker10Bias[z] = quad( integral, min_nu, max_nu )[0]
+        norm_Tinker10Bias[z] = quad( integral, min_nu, max_nu, args=(z, hmf.delta_halo, hmf.delta_c))[0]
+        """
+        # the hmf package contains an internal lookup table for [nu^2, f(sigma)]
+        nu = hmf.hmf.nu2**0.5
+        # look-up table of halo mass function f(sigma) == nu*f(nu), where nu2 == (delta_c/sigma)^2 in the fitting_function class.
+        f_nu = hmf.hmf.fsigma / nu
+        b_nu = Tinker10_halobias_func(nu, hmf.delta_halo, hmf.delta_c)
+        norm_Tinker10Bias[z] = trapz( f_nu * b_nu, nu )
+        #"""
+
+        # DEBUG PRINT
+        print('bias norm', z, norm_Tinker10Bias[z])
+
+        # MORE DEBUG PRINT
+        nu = np.arange( 0.0001, 10., 0.01 )
+        f_nu = Tinker10_halo_massfunc_f_nu( nu, z )
+        b_nu = Tinker10_halobias_func( nu, hmf.delta_halo, hmf.delta_c )
+        filename = "T10_bnu_fnu_z{:.1f}.dat".format( z )
+        print( filename, '  (DEBUG print)' )
+        data = np.vstack((nu, f_nu, b_nu)).T
+        np.savetxt( filename, data )
+        filename = "hmf_bnu_fnu_z{:.1f}.dat".format( z )
+        print( filename, '  (DEBUG print)' )
+        hmf_fnu = hmf.hmf.fsigma / hmf.hmf.nu
+        hmf_bnu = Tinker10_halobias_func( hmf.hmf.nu, hmf.delta_halo, hmf.delta_c )
+        data = np.vstack((hmf.hmf.nu, hmf_fnu, hmf_bnu )).T
+        np.savetxt( filename, data )
+        integrand = trapz( hmf_fnu * hmf_bnu, hmf.hmf.nu )
+        print('( trapz bias norm at', z, ':', integrand, ')')
+
 
     return norm_Tinker10Bias[z]
 

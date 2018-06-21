@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 import numpy as np
 from six import string_types
 
-from . import confighod
+from . import confighod, configsampler
 
 
 class configline(str):
@@ -77,7 +77,7 @@ class configsection(str):
             self._parent = self.name.split('/')[0]
         return self._parent
 
-    def append_entry_output(self, output, line):
+    def append_entry_output(self, line, output):
         """
         `line` should be a `configline` object
         """
@@ -85,7 +85,7 @@ class configsection(str):
         output[1].append(line.words[1])
         return output
 
-    def append_entry_setup(self, setup, line):
+    def append_entry_setup(self, line, setup):
         """
         `line` should be a `configline` object
         """
@@ -136,7 +136,6 @@ class ConfigFile:
                 data = file.readlines()
             _data = []
             for line in data:
-#                 if configline.is_empty(line) or configline.is_comment(line):
                 line = configline(line)
                 if line.is_empty() or line.is_comment():
                     continue
@@ -168,6 +167,7 @@ class ConfigFile:
         # the problem is they don't preserve order!
         setup = [[], []]
         output = [[], []]
+        sampling = {}
         path = ''
         for line in self.data:
             line = configline(line)
@@ -188,19 +188,21 @@ class ConfigFile:
                 these_params = self.initialize_parameters()
                 these_priors = self.initialize_priors()
                 continue
-            if section == 'setup':
-                setup = section.append_entry_setup(setup, line)
-            elif section == 'output':
-                output = section.append_entry_output(output, line)
-            elif section.parent in ('cosmo', 'hod'):
-                new = confighod.append_entries(
-                    section, these_params, these_priors, starting, line)
+            if section.parent in ('cosmo', 'hod'):
+                new = confighod.hod_entries(
+                    line, section, these_params, these_priors, starting)
                 these_params, these_priors, starting = new
+            elif section == 'setup':
+                setup = section.append_entry_setup(line, setup)
+            elif section == 'output':
+                output = section.append_entry_output(line, output)
+            elif section == 'sampler':
+                sampling = configsampler.sampling_dict(line, sampling)
         # I don't quite understand how `parameters` gets extra
         # dimensions, but here's a dirty hack to get rid of them
         parameters = np.squeeze(parameters)
         priors = np.squeeze(priors)
-        return parameters, priors, starting, setup, output
+        return [parameters, priors, starting, setup, output], sampling
 
     def read_function(self, path):
         # maybe this should be in `configline` instead

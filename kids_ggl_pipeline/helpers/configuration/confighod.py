@@ -10,12 +10,11 @@ from ...halomodel.hod import relations, scatter
 valid_priors = ('fixed', 'lognormal', 'normal', 'uniform')
 
 
-def append_entries(section, parameters, priors, starting, line):
+def hod_entries(line, section, parameters, priors, starting):
     """
     `line` should be a `configline` object
     """
     if section.name == 'hod/observables':
-        #parameters[0] = observables(parameters, line)
         parameters[0].append(observables(line.words))
     elif section.name == 'hod/ingredients':
         parameters[0].append(ingredients(line.words))
@@ -31,11 +30,11 @@ def append_entries(section, parameters, priors, starting, line):
             parameters[3].append(np.inf)
         else:
             parameters, priors, starting = \
-                append_hod_parameters(parameters, priors, starting, line)
+                hod_parameters(parameters, priors, starting, line)
     return parameters, priors, starting
 
 
-def append_hod_parameters(parameters, priors, starting, line):
+def hod_parameters(parameters, priors, starting, line):
     """
     To deal with parameters with priors (including fixed values)
 
@@ -58,14 +57,14 @@ def append_hod_parameters(parameters, priors, starting, line):
             parameters[2].append(float(words[4]))
             parameters[3].append(float(words[5]))
         # starting only applies to free parameters
-        starting = append_starting(starting, parameters, line)
+        starting = starting_values(starting, parameters, line)
     if len(parameters[2]) < len(parameters[1]):
         parameters[2].append(-np.inf)
         parameters[3].append(np.inf)
     return parameters, priors, starting
 
 
-def append_starting(starting, parameters, line):
+def starting_values(starting, parameters, line):
     words = line.words
     prior = words[1]
     if prior == 'fixed':

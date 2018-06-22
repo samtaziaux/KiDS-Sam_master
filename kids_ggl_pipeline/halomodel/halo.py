@@ -38,14 +38,18 @@ from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, UnivariateSpline
 from itertools import count
+from time import time
+from astropy.cosmology import LambdaCDM
+
 if sys.version_info[0] == 2:
     from itertools import izip
 else:
     izip = zip
-from time import time
-from astropy.cosmology import LambdaCDM
+    xrange = range
 
 from hmf import MassFunction
+from hmf import fitting_functions as ff
+from hmf import transfer_models as tf
 
 from . import baryons as baryons
 from . import longdouble_utils as ld
@@ -266,6 +270,10 @@ def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
     return (mass_func.power * b_g), b_g
 
 
+def model_com(theta, R):
+    return model(theta, R)
+
+
 def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
           expansion=100, expansion_stars=160, n_bins=10000,
           lnk_min=-13., lnk_max=17.):
@@ -298,7 +306,7 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     Ac2s = 0.56
     M_min = 5.
     M_max = 16.
-    M_step = 100
+    M_step = 200
     #centrals = 1
     #satellites = 1
 
@@ -330,29 +338,29 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     n_bins_obs = M_bin_min.size
     bias = np.array([bias]*k_range_lin.size).T
     
-    #print 'mass_range =', time() - to
-    #to = time()
-    hod_mass = _array([_logspace(Mi, Mx, 100, endpoint=False,
-                                 dtype=np.longdouble)
-                       for Mi, Mx in _izip(M_bin_min, M_bin_max)])
-    #print 'hod_mass =', time() - to
+    #hod_mass = np.array([np.logspace(Mi, Mx, 200, endpoint=False, dtype=np.longdouble)
+    #                   for Mi, Mx in _izip(M_bin_min, M_bin_max)])
+
+    hod_mass = 10.0**np.array([np.linspace(Mi, Mx, 200, dtype=np.longdouble)
+                           for Mi, Mx in _izip(M_bin_min, M_bin_max)])
+    
     transfer_params = _array([])
     for z_i in z:
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step, 'transfer_model': 'CAMB'.encode(),
+                                    'dlnk': k_step,
                                     'z':np.float64(z_i)})
-
+    
     # Calculation
     # Tinker10 should also be read from theta!
     #to = time()
     hmf = _array([])
     h = H0/100.0
-    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav)
+    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
         hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
-                                hmf_model='Tinker10'.encode(), delta_h=200.0, delta_wrt='mean',
+                                hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
                                 delta_c=1.686,
                                 **i)
         hmf_temp.update(cosmo_model=cosmo_model)
@@ -476,21 +484,21 @@ def model(theta, R, h=0.7, Om=0.315, Ol=0.685,
     #to = time()
     if taylor_procedure:
         T_dm = _array([T_table(expansion, rho_dm_i, np.float64(z_i), mass_range,
-                               rvir_range_lin_i, i, "dm", np.float64(f_i), omegab,
+                               rvir_range_lin_i, i, 'dm', np.float64(f_i), omegab,
                                omegac, 0, 0, sigma_c, alpha_s, A, M_1,
                                gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
                        for rvir_range_lin_i, rho_dm_i, z_i, i, f_i in\
                        _izip(rvir_range_lin, rho_dm, z, hod_mass, f)])
         T_tot = _array([T_dm[i][0:1:1,:] for i in xrange(M_bin_min.size)])
     else:
-        T_dm = np.ones((hod_mass.size, (expansion+2)/2, mass_range.size))
+        T_dm = np.ones((hod_mass.size, np.int((expansion+2)/2), mass_range.size))
         T_tot = _array([T_dm[i][0:1:1,:] for i in xrange(M_bin_min.size)])
     #print 'T_tot =', time() - to
 
     if include_baryons:
         #to = time()
         T_dm = _array([T_table(expansion, rho_dm_i, np.float64(z_i), mass_range,
-                               rvir_range_lin_i, i, "dm", np.float64(f_i), omegab,
+                               rvir_range_lin_i, i, 'dm', np.float64(f_i), omegab,
                                omegac, 0, 0, sigma_c, alpha_s, A, M_1,
                                gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
                        for rvir_range_lin_i, rho_dm_i, z_i, i, f_i in \

@@ -25,12 +25,16 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import time
-import numpy as np
 import matplotlib.pyplot as pl
+import numpy as np
+import sys
 from numpy import cos, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
+
+if sys.version_info[0] == 3:
+    xrange = range
 
 from .tools import (Integrate, Integrate1, extrap1d, extrap2d, fill_nan,
                     virial_mass, virial_radius)
@@ -189,7 +193,7 @@ def Bias(hmf, r_x):
     return bias
 
 
-def Bias_Tinker10(hmf, r_x):
+def Bias_Tinker10_func(hmf, r_x):
     """
     Tinker 2010 bias - empirical
         
@@ -206,7 +210,19 @@ def Bias_Tinker10(hmf, r_x):
     return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
 
 
-
+def Bias_Tinker10(hmf, r_x):
+    """
+    Tinker 2010 bias - empirical
+        
+    """
+    nu = hmf.nu**0.5
+    
+    f_nu = hmf.fsigma / nu
+    b_nu = Bias_Tinker10_func(hmf, r_x)
+    norm = trapz(f_nu * b_nu, nu)
+    
+    func = Bias_Tinker10_func(hmf, r_x)
+    return func / norm
 
 
 """

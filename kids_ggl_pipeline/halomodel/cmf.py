@@ -2,9 +2,13 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import numpy as np
+import sys
 from numpy import array, exp, log, log10, pi
 from scipy.integrate import simps, trapz
 import scipy.special as sp
+
+if sys.version_info[0] == 3:
+    xrange = range
 
 from .tools import Integrate
 
@@ -59,8 +63,6 @@ from .tools import Integrate
 def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
     # Conditional stellar mass function - centrals
     # m - stellar mass, M - halo mass
-    # FROM OWLS HOD FIT: sigma = 4.192393813649759049e-01
-    #sigma = 0.125
     if np.iterable(M):
         phi = np.zeros((M.size,m.size))
     else:
@@ -74,8 +76,6 @@ def phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2):
 
 def phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     # Conditional stellar mass function - satellites
-    # m - stellar mass, M - halo mass
-    #alpha = -2.060096789583814925e+00
     if np.iterable(M):
         phi = np.zeros((M.size,m.size))
     else:
@@ -118,8 +118,6 @@ def av_cen(m, M, sigma, A, M_1, gamma_1, gamma_2):
 
     phi_int = phi_c(m, M, sigma, A, M_1, gamma_1, gamma_2) #Centrals!
     for i in xrange(M.size):
-        #integ = phi_int[i,:]*m
-        #phi[i] = Integrate(integ, m)
         phi[i] = trapz(phi_int[i] * m, m)
 
     return phi
@@ -132,8 +130,6 @@ def av_sat(m, M, alpha, A, M_1, gamma_1, gamma_2, b_0, b_1, b_2, Ac2s):
     phi_int = phi_s(m, M, alpha, A, M_1, gamma_1, gamma_2,
                     b_0, b_1, b_2, Ac2s)
     for i in xrange(M.size):
-        #integ = phi_int[i,:]*m
-        #phi[i] = Integrate(integ, m)
         phi[i] = trapz(phi_int[i] * m, m)
     return phi
 
@@ -149,11 +145,6 @@ def m_0(M, A, M_1, gamma_1, gamma_2):
 
 def phi_0(M, b_0, b_1, b_2):
     # Functional form for phi_0 - taken directly from Cacciato 2009
-    # Fit as a result in my thesis!
-
-    #b_0 = -5.137787703823422092e-01
-    #b_1 = 7.478552629547742525e-02
-    #b_2 = -7.938925982752477462e-02
     M12 = M/(10.0**12.0)
 
     log_phi = b_0 + b_1*np.log10(M12) + b_2*(np.log10(M12))**2.0
@@ -223,6 +214,70 @@ def ngm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
          nsm(mass_func, m, M, sigma, alpha, A, M_1, gamma_1, gamma_2,
              b_0, b_1, b_2)
     return ng
+
+
+
+# Msz-Mhalo HOD
+def m_SZ(M, M_0, a, b):
+    """
+    SZ estimated cluster mass as a function of halo mass
+    
+    """
+    logMsz = a + b * np.log10(M/(10.0**M_0))
+    return 10.0**logMsz
+
+
+def phi_c_sz(m, M, sigma, M_0, a, b):
+    
+    if np.iterable(M):
+        phi = np.zeros((M.size,m.size))
+    else:
+        M = np.array([M])
+        phi = np.zeros((1,m.size))
+    Mo = m_SZ(M, M_0, a, b)
+
+    for i in xrange(M.size):
+        phi[i] = np.exp(-((np.log10(m)-np.log10(Mo[i]))**2.0) / (2.0*(sigma**2.0))) / ((2.0*pi)**0.5 * sigma * m * np.log(10.0))
+    return phi
+
+
+def phi_s_sz(m, M, M_0, a, b, alpha, b_0, b_1, b_2, Ac2s):
+    
+    if np.iterable(M):
+        phi = np.zeros((M.size,m.size))
+    else:
+        M = np.array([M])
+        phi = np.zeros((1,m.size))
+    Mo = Ac2s * m_SZ(M, M_0, a, b)
+
+    for i in xrange(M.size):
+        phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * exp(-(m/Mo[i])**2.0) / m
+    return phi
+
+
+def ncm_sz(mass_func, m, M, sigma, M_0, a, b, alpha, b_0, b_1, b_2):
+    nc = np.ones(M.size)
+    phi_int = phi_c_sz(m, M, sigma, M_0, a, b)
+    for i in xrange(M.size):
+        nc[i] = Integrate(phi_int[i], m)
+    return nc
+
+
+def nsm_sz(mass_func, m, M, sigma, M_0, a, b, alpha, b_0, b_1, b_2, Ac2s):
+    ns = np.ones(M.size)
+    phi_int = phi_s_sz(m, M, M_0, a, b, alpha, b_0, b_1, b_2, Ac2s)
+    for i in xrange(M.size):
+        ns[i] = Integrate(phi_int[i], m)
+    return ns
+
+
+def ngm_sz(mass_func, m, M, sigma, M_0, a, b, alpha, b_0, b_1, b_2, Ac2s):
+    ng = ncm_sz(mass_func, m, M, sigma, M_0, a, b, alpha, b_0, b_1, b_2) + \
+        nsm_sz(mass_func, m, M, sigma, M_0, a, b, alpha, b_0, b_1, b_2, Ac2s)
+    return ng
+
+
+
 
 if __name__ == '__main__':
     main()

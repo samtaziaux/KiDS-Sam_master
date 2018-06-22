@@ -165,7 +165,7 @@ def run_emcee(hm_options, sampling_options, args):
         model = function(val1, R)
         print('Model evaluated in {0:.2e} seconds'.format(time() - to))
         #residuals = esd - model[0]
-        if 'model' in str(function):
+        if 'model' in str(function) and 'com' not in str(function):
             # model assumes comoving separations, changing data to accomodate for that
             redshift_index = numpy.int(numpy.where(params == 'z')[0])
             redshift = array([val1[redshift_index]])
@@ -182,7 +182,7 @@ def run_emcee(hm_options, sampling_options, args):
         print(' ** chi2 = %.2f/%d **' %(chi2, dof))
         fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
         if Ndatafiles == 1:
-            plot_demo(axes, R[0], esd[0], esd_err[0], model[0])
+            plot_demo(axes, R[0], esd[0], esd_err[0], model[0][0])
         else:
             for i in izip(axes, R, esd, esd_err, model[0]):
                 plot_demo(*i)
@@ -276,6 +276,7 @@ def run_emcee(hm_options, sampling_options, args):
             metadata, nwritten = out
 
     hdr = open(hdrfile, 'a')
+
     try:
         print('acceptance_fraction =', sampler.acceptance_fraction)
         print('acceptance_fraction =', file=hdr, end=' ')
@@ -283,6 +284,7 @@ def run_emcee(hm_options, sampling_options, args):
             print(af, file=hdr, end=' ')
     except ImportError:
         pass
+
     #try:
         #print('acor =', sampler.acor)
         #print('\nacor =', file=hdr, end=' ')
@@ -290,16 +292,20 @@ def run_emcee(hm_options, sampling_options, args):
             #print(ac, file=hdr, end=' ')
     #except ImportError:
         #pass
+
     # acor and get_autocorr_time() are the same
     try:
         print('acor =', sampler.get_autocorr_time())
         print('\nacor_time =', file=hdr, end=' ')
         for act in sampler.get_autocorr_time(c=5):
             print(act, file=hdr, end=' ')
-    except AttributeError:
+    #except AttributeError:
+        #pass
+    #except emcee.autocorr.AutocorrError:
+        #pass
+    except:
         pass
-    except emcee.autocorr.AutocorrError:
-        pass
+
     # acor and get_autocorr_time() are the same
     #try:
         #print('acor_time =', sampler.get_autocorr_time())
@@ -308,6 +314,7 @@ def run_emcee(hm_options, sampling_options, args):
             #print(act, file=hdr, end=' ')
     #except AttributeError:
         #pass
+
     print('\nFinished', ctime(), file=hdr)
     hdr.close()
     print('Saved to', hdrfile)
@@ -424,7 +431,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
     #              for m in rng_obsbins for n in rng_obsbins]).sum()
     
-    if 'model' in str(function):
+    if 'model' in str(function) and 'com' not in str(function):
         # model assumes comoving separations, changing data to accomodate for that
         redshift_index = numpy.int(numpy.where(params == 'z')[0])
         redshift = array([v1[redshift_index]])

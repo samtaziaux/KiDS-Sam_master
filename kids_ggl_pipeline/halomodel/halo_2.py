@@ -46,6 +46,8 @@ from time import time
 from astropy.cosmology import LambdaCDM
 
 from hmf import MassFunction
+from hmf import fitting_functions as ff
+from hmf import transfer_models as tf
 
 from . import baryons as baryons
 from . import longdouble_utils as ld
@@ -228,7 +230,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
         transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
                                     'n': n,
                                     'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step, 'transfer_model': 'EH'.encode(),
+                                    'dlnk': k_step, 'transfer_model': tf.EH,
                                     'z':np.float64(z_i)})
 
     # Calculation
@@ -239,7 +241,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
         hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
-                                hmf_model='Tinker10'.encode(), delta_h=200.0, delta_wrt='mean',
+                                hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
                                 delta_c=1.686,
                                 **i)
         hmf_temp.update(cosmo_model=cosmo_model)
@@ -473,6 +475,31 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     Pmm = _array([Pmm_1h_i + hmf_i.power
                     for Pmm_1h_i, hmf_i
                     in _izip(Pmm_1h, hmf)])
+                    
+    #"""
+    """
+    b_k = np.sqrt(Pgg_k/Pmm)
+    r_k = Pg_k / np.sqrt(Pgg_k*Pmm)
+    
+    import matplotlib.pyplot as pl
+    pl.plot(k_range_lin, b_k[0], color='black', ls='-')
+    pl.plot(k_range_lin, b_k[1], color='black', ls='-.')
+    pl.plot(k_range_lin, b_k[2], color='black', ls=':')
+    pl.plot(k_range_lin, r_k[0], color='red', ls='-')
+    pl.plot(k_range_lin, r_k[1], color='red', ls='-.')
+    pl.plot(k_range_lin, r_k[2], color='red', ls=':')
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.xlim([0.1, 100])
+    #pl.ylim([1e10, 1e14])
+    pl.show()
+    
+    
+    new_data = np.vstack([k_range_lin, b_k[0], b_k[1], b_k[2], r_k[0], r_k[1], r_k[2]]).T
+    np.savetxt('/home/dvornik/br_k.txt', new_data, header='k, b(k)_bin1, b(k)_bin2, b(k)_bin3, r(k)_bin1, r(k)_bin2, r(k)_bin3')
+    
+    quit()
+    """
 
     #"""
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)

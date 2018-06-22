@@ -36,8 +36,8 @@ nan = np.nan # Not a number
 def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
                colnames, centering, gallists, lens_selection, lens_binning,
                binname, binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-               Runit, nRbins, Rconst, filename_var,
-               filename, cat_version, blindcat, srclists, path_splits,
+               Runit, nRbins, Rconst, com, filename_var,
+               filename, cat_version, blindcat, blindcats, srclists, path_splits,
                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
                variance, h, path_kidscats, kidscatname, kidscat_end, src_selection):
     
@@ -52,7 +52,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
             args=(purpose, Nsplits, j, output, outputnames, gamacat, colnames,
             centering, gallists, lens_selection, lens_binning, binname,
             binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit,
-            nRbins, Rconst, filename_var, filename, cat_version, blindcat,
+            nRbins, Rconst, com, filename_var, filename, cat_version, blindcat, blindcats,
             srclists, path_splits, splitkidscats, catmatch, Dcsbins,
             Dc_epsilon, filename_addition, variance, h, path_kidscats,
              kidscatname, kidscat_end, src_selection, q1))
@@ -77,9 +77,9 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
 
 def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
          centering, gallists, lens_selection, lens_binning, binname, binnum,
-         binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst,
+         binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst, com,
          filename_var,
-         filename, cat_version, blindcat, srclists, path_splits,
+         filename, cat_version, blindcat, blindcats, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
          variance, h, path_kidscats, kidscatname, kidscat_end, src_selection, q1):
 
@@ -95,16 +95,13 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
     if 'catalog' in purpose:
         # These lists will contain the final output
-        
-        outputnames = ['gammat_A', 'gammax_A', 'gammat_B', 'gammax_B', \
-            'gammat_C', 'gammax_C', 'gammat_D', 'gammax_D', \
-            'k', 'k^2', \
-            'lfweight_A*k^2', 'lfweight_B*k^2', 'lfweight_C*k^2', \
-            'lfweight_D*k^2', \
-            'lfweight_A^2*k^2', 'lfweight_B^2*k^2', \
-            'lfweight_C^2*k^2', 'lfweight_D^2*k^2', 'Nsources', \
-            'bias_m_A', 'bias_m_B', 'bias_m_C', 'bias_m_D']
-
+        outputnames = ['gammat_'+blind for blind in blindcats] + \
+                      ['gammax_'+blind for blind in blindcats] + \
+                      ['k', 'k^2'] + \
+                      ['lfweight_'+blind+'*k^2' for blind in blindcats] + \
+                      ['lfweight_'+blind+'^2*k^2' for blind in blindcats] + \
+                      ['Nsources'] + \
+                      ['bias_m_'+blind for blind in blindcats]
         output = np.zeros([len(outputnames), len(galIDlist), nRbins])
 
     # Start of the reduction of one KiDS field
@@ -180,17 +177,17 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                 # Calculate the projected distance (srcR) and the
                 # shear (gamma_t and gamma_x) of all lens-source pairs.
-                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, \
+                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, Dcl_split, \
                                                             galRA_split,\
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
-                                                            e1, e2, Rmin, Rmax)
+                                                            e1, e2, Rmin, Rmax, com)
 
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
                 k, kmask = shear.calc_Sigmacrit(Dcl_split, Dal_split,
                                                 Dcsbins, srcPZ, cat_version,
-                                                Dc_epsilon)
+                                                Dc_epsilon, galZ_split, com)
                 Nsrc = np.ones(np.shape(k))
 
                 # Mask all invalid lens-source pairs using
@@ -200,13 +197,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                 # Create an lfweight matrix that can be
                 # masked according to lens-source distance
-                w_meshed_A, foo = np.meshgrid(w.T[0],np.zeros(len(k)))
-                w_meshed_B, foo = np.meshgrid(w.T[1],np.zeros(len(k)))
-                w_meshed_C, foo = np.meshgrid(w.T[2],np.zeros(len(k)))
-                w_meshed_D, foo = np.meshgrid(w.T[3],np.zeros(len(k)))
-                w_meshed = [w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D]
-                w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D = [], [], [], []
-                foo = [] # Remove unused lists
+                w_meshed = [np.meshgrid(w.T[b],np.zeros(len(k)))[0] for b in xrange(len(blindcats))]
 
                 # Start the reduction of one radial bin
                 for r in xrange(nRbins):
@@ -238,26 +229,16 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
                             
-                            output_onebin = [gammat_tot_A, gammax_tot_A, \
-                                             gammat_tot_B, gammax_tot_B, \
-                                             gammat_tot_C, gammax_tot_C, \
-                                             gammat_tot_D, gammax_tot_D, \
-                                             k_tot, k2_tot, \
-                                             wk2_tot_A, wk2_tot_B, \
-                                             wk2_tot_C, wk2_tot_D, \
-                                             w2k2_tot_A, w2k2_tot_B, \
-                                             w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-                                             srcm_tot_A, srcm_tot_B, \
-                                             srcm_tot_C, srcm_tot_D] = \
+                            output_onebin = \
                             shear.calc_shear_output(incosphilist, insinphilist,\
                                                     e1, e2, Rmask, klist,\
-                                                    wlist, Nsrclist, srcm, Runit)
+                                                    wlist, Nsrclist, srcm, Runit, blindcats)
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
                             for o in xrange(len(output)):
-                                output[o, : ,r][galIDmask_split] = \
-                                output[o, : ,r][galIDmask_split] + \
-                                output_onebin[o]
+                                output[o,:,r][galIDmask_split] = \
+                                output[o,:,r][galIDmask_split] + \
+                                output_onebin[:,o]
 
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
@@ -277,7 +258,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
-                                output[o, : ,r] = output[o, : ,r] + output_onebin[o]
+                                output[o, : ,r] = output[o,:,r] + output_onebin[0]
 
             # Write the final output of this split to a fits file
             if 'covariance' in purpose:
@@ -288,7 +269,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                         blindcat)
                 shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
                                     Rconst, output, outputnames, variance, \
-                                    purpose, e1, e2, w, srcm)
+                                    purpose, e1, e2, w, srcm, blindcats)
         if ('random' in purpose):
 
             if os.path.isfile(filename):
@@ -302,7 +283,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                     blindcat)
             shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, \
                                 Rconst, output, outputnames, variance, \
-                                purpose, e1, e2, w, srcm)
+                                purpose, e1, e2, w, srcm. blindcats)
             print('Written:', filename)
 
 
@@ -350,9 +331,9 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
             srcNr = srcNr_varlist[(index)]
             srcRA = srcRA_varlist[(index)]
             srcDEC = srcDEC_varlist[(index)]
-            w = w_varlist[:,index][[0,1,2,3],:].T
-            e1 = e1_varlist[:,index][[0,1,2,3],:].T
-            e2 = e2_varlist[:,index][[0,1,2,3],:].T
+            w = w_varlist[:,index][[b for b, blind in enumerate(blindcats)],:].T
+            e1 = e1_varlist[:,index][[b for b, blind in enumerate(blindcats)],:].T
+            e2 = e2_varlist[:,index][[b for b, blind in enumerate(blindcats)],:].T
             srcm = srcm_varlist[(index)]
             tile = tile_varlist[(index)]
             srcZB = srcPZ_varlist[(index)]
@@ -396,11 +377,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                 # Calculate the projected distance (srcR) and the shear
                 # (gamma_t and gamma_x) of all lens-source pairs.
-                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, \
+                srcR, incosphi, insinphi = shear.calc_shear(Dal_split, Dcl_split, \
                                                             galRA_split, \
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
-                                                            e1, e2, Rmin, Rmax)
+                                                            e1, e2, Rmin, Rmax, com)
 
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
@@ -418,13 +399,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                 # Create an lfweight matrix that can be
                 # masked according to lens-source distance
-                w_meshed_A, foo = np.meshgrid(w.T[0],np.zeros(len(k)))
-                w_meshed_B, foo = np.meshgrid(w.T[1],np.zeros(len(k)))
-                w_meshed_C, foo = np.meshgrid(w.T[2],np.zeros(len(k)))
-                w_meshed_D, foo = np.meshgrid(w.T[3],np.zeros(len(k)))
-                w_meshed = [w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D]
-                w_meshed_A, w_meshed_B, w_meshed_C, w_meshed_D = [], [], [], []
-                foo = [] # Remove unused lists
+                w_meshed = [np.meshgrid(w.T[b],np.zeros(len(k)))[0] for b in xrange(len(blindcats))]
+            
 
                 # Start the reduction of one radial bin
                 for r in xrange(nRbins):
@@ -455,27 +431,16 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                             # For each radial bin of each lens we calculate
                             # the weights and weighted shears
                             
-                            output_onebin = [gammat_tot_A, gammax_tot_A, \
-                                            gammat_tot_B, gammax_tot_B, \
-                                            gammat_tot_C, gammax_tot_C, \
-                                            gammat_tot_D, gammax_tot_D, \
-                                            k_tot, k2_tot, \
-                                            wk2_tot_A, wk2_tot_B, \
-                                            wk2_tot_C, wk2_tot_D, \
-                                            w2k2_tot_A, w2k2_tot_B, \
-                                            w2k2_tot_C, w2k2_tot_D, Nsrc_tot, \
-                                            srcm_tot_A, srcm_tot_B, \
-                                            srcm_tot_C, srcm_tot_D] = \
-                            shear.calc_shear_output(incosphilist, insinphilist,\
+                            output_onebin = shear.calc_shear_output(incosphilist, insinphilist,\
                                                     e1, e2, Rmask, klist,\
-                                                     wlist, Nsrclist, srcm, Runit)
-
+                                                     wlist, Nsrclist, srcm, Runit, blindcats)
+                            
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
                             for o in xrange(len(output)):
-                                output[o, : ,r][galIDmask_split] = \
-                                output[o, : ,r][galIDmask_split] + \
-                                output_onebin[o]
+                                output[o,:,r][galIDmask_split] = \
+                                output[o,:,r][galIDmask_split] + \
+                                output_onebin[:,o]
 
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
@@ -495,7 +460,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
-                                output[o, : ,r] = output[o, : ,r] + output_onebin[o]
+                                output[o, : ,r] = output[o,:,r] + output_onebin[o]
 
             # Write the final output of this split to a fits file
             if 'covariance' in purpose:
@@ -506,7 +471,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                         blindcat)
                 shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
                                     Rconst, output, outputnames, variance, \
-                                    purpose, e1, e2, w, srcm)
+                                    purpose, e1, e2, w, srcm, blindcats)
 
         if ('random' in purpose):
 
@@ -521,7 +486,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                     blindcat)
             shear.write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, \
                                 Rconst, output, outputnames, variance, \
-                                purpose, e1, e2, w, srcm)
+                                purpose, e1, e2, w, srcm, blindcats)
             print('Written:', filename)
 
     q1.put(Nsplit)
@@ -539,7 +504,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
-        z_epsilon, n_boot, cross_cov = \
+        z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 
@@ -625,14 +590,14 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         shear.import_data(
             path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
             centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
-            lens_weights, filename_addition, cat_version)
+            lens_weights, filename_addition, cat_version, com)
 
     # Calculate the source variance
 
     # These lists will contain all ellipticities for the variance calculation
-    w_varlist = np.array([[]]*4)
-    e1_varlist = np.array([[]]*4)
-    e2_varlist = np.array([[]]*4)
+    w_varlist = np.array([[]]*np.array(blindcats).shape[0])
+    e1_varlist = np.array([[]]*np.array(blindcats).shape[0])
+    e2_varlist = np.array([[]]*np.array(blindcats).shape[0])
 
     if cat_version == 2:
         k_interpolated = []
@@ -645,7 +610,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
             shear.import_kidscat(path_kidscats, kidscatname, kidscat_end, \
-                                 src_selection, cat_version)
+                                 src_selection, cat_version, blindcats)
 
             # Make ellipticity- and lfweight-lists for the variance calculation
             w_varlist = np.hstack([w_varlist, w.T])
@@ -677,7 +642,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             # KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
                 shear.import_kidscat(path_kidscats, kidscatname,
-                                     kidscat_end, src_selection, cat_version)
+                                     kidscat_end, src_selection, cat_version, blindcats)
 
             srcNr_varlist = np.append(srcNr_varlist, srcNr)
             srcRA_varlist = np.append(srcRA_varlist, srcRA)
@@ -746,7 +711,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                 weights=spec_weight_k, density=1)
                 srcPZ_k = srcPZ_k/srcPZ_k.sum()
                 k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
+                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
             
             k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -780,7 +745,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                             weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon)
+                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon, com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -861,8 +826,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
                  colnames, centering, gallists, lens_selection, lens_binning,
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-                 Runit, nRbins, Rconst, filename_var, filename, cat_version,
-                 blindcat, srclists, path_splits, splitkidscats, catmatch,
+                 Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
+                 blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
                  Dcsbins, Dc_epsilon, filename_addition, variance, h,
                 path_kidscats, kidscatname, kidscat_end, src_selection)
 
@@ -881,8 +846,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             out = loop_multi(purpose, Nsplits, Nsplits, output, outputnames, gamacat,
                              colnames, centering, gallists, lens_selection, lens_binning,
                              binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
-                             Runit, nRbins, Rconst, filename_var, filename, cat_version,
-                             blindcat, srclists, path_splits, splitkidscats, catmatch,
+                             Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
+                             blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
                              Dcsbins, Dc_epsilon, filename_addition, variance, h,
                              path_kidscats, kidscatname, kidscat_end, src_selection)
 

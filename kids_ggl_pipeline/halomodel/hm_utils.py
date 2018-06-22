@@ -18,6 +18,13 @@ try:
 except ImportError:
     pass
 
+# working directory
+try:
+    import models
+except ImportError:
+    pass
+
+
 
 def read_config(config_file, version='0.5.7'):
     valid_types = ('normal', 'lognormal', 'uniform', 'exp',
@@ -46,7 +53,7 @@ def read_config(config_file, version='0.5.7'):
             continue
         if line[0] == 'model':
             model = line[1].split('.')
-            model = read_function(*model)
+            model = [line[1], read_function(*model)]
         elif line[0] == 'path':
             if len(line) > 1:
                 path = line[1]

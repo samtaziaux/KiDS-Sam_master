@@ -106,7 +106,7 @@ def run_emcee(hm_options, sampling_options, args):
         if exclude_bins is not None:
             print('exclude_bins', ','.join([str(c) for c in exclude_bins]),
                   file=hdr)
-        print('model {0}'.format(function), file=hdr)
+        print('model {0} {1}'.format(*function), file=hdr)
         for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
                                           val1, val2, val3, val4):
             try:
@@ -131,7 +131,8 @@ def run_emcee(hm_options, sampling_options, args):
         print('nburn     {0:5d}'.format(nburn), file=hdr)
         print('thin      {0:5d}'.format(thin), file=hdr)
         hdr.close()
-
+    # I no longer need the name of the function
+    function = function[1]
 
     # are we just running a demo?
     if args.demo:

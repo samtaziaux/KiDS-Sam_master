@@ -113,15 +113,10 @@ class configsection(str):
     def append_subsection_parameters(self, parameters, these_params):
         if self.name is None:
             return parameters
-        print(self.name)
-        # initialize
         if len(parameters) == 0:
-            #parameters = these_params
             for i, p in enumerate(these_params):
                 parameters.append([p])
-            #parameters.append(these_params)
         elif self.name.count('/') == 0:
-            print(len(parameters), len(these_params))
             for i, p in enumerate(these_params):
                 parameters[i].append(p)
         elif self.name.count('/') == 1:
@@ -130,16 +125,6 @@ class configsection(str):
         elif self.name.count('/') == 2:
             for i, p in enumerate(these_params):
                 parameters[i][-1][-1].append(p)
-        """
-        if self.name.count('/') == 0:
-            parameters.append(these_params)
-        elif self.name.count('/') == 1:
-            parameters[-1].append(these_params)
-        elif self.name.count('/') == 2:
-            parameters[-1][-1].append(these_params)
-        """
-        print(parameters)
-        print()
         return parameters
 
     def is_parent(self):
@@ -203,16 +188,7 @@ class ConfigFile:
                 model = self.read_function(line.words[1])
                 continue
             if line.is_section():
-                # this is a dirty hack. Need to figure out why this
-                # does not happen automatically
-                print('section:', section.name)
-                #if section.name in ('cosmo', 'hod'):
-                    #these_params = [these_params]
-                    #these_priors = [these_priors]
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
-                    print('appending subsection parameters for', section.name)
-                    #parameters, priors = section.append_subsection_parameters(
-                        #parameters, priors, these_params, these_priors)
                     parameters = section.append_subsection_parameters(
                         parameters, these_params)
                     priors = section.append_subsection_priors(
@@ -232,10 +208,6 @@ class ConfigFile:
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
-        #parameters = confighod.arrange_parameters(parameters)
-        print(len(parameters), [len(p) for p in parameters])
-        print('priors:')
-        print(priors)
         sampling = configsampler.add_defaults(sampling)
         return [parameters, priors, starting, setup, output], sampling
 

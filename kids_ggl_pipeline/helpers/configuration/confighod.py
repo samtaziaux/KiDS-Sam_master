@@ -10,13 +10,6 @@ from ...halomodel.hod import relations, scatter
 valid_priors = ('fixed', 'lognormal', 'normal', 'uniform')
 
 
-"""
-def arrange_parameters(parameters, i=0):
-    if not np.isscalar(parameters[0]):
-        arrange_parameters(parameters
-    elem = 
-"""
-
 
 def hod_entries(line, section, parameters, priors, starting):
     """
@@ -24,11 +17,8 @@ def hod_entries(line, section, parameters, priors, starting):
     """
     if section.name == 'hod/observables':
         parameters[0].append(observables(line.words))
-        #parameters[0] = observables(line.words)
     elif section.name == 'hod/ingredients':
         parameters[0].append(ingredients(line.words))
-        #parameters[0] = ingredients(line.words)
-        print(parameters)
     # all other cosmo,hod sections
     else:
         if line.words[0] == 'name':

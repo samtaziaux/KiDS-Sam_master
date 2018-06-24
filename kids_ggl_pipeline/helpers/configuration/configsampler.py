@@ -26,3 +26,10 @@ def sampling_dict(line, sampling):
     return sampling
 
 
+def add_defaults(sampling):
+    if 'exclude_bins' not in sampling:
+        sampling['exclude_bins'] = None
+    if 'precision' not in sampling:
+        sampling['precision'] = sampling['k']
+    return sampling
+

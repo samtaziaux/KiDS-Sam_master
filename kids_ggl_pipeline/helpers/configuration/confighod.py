@@ -10,14 +10,25 @@ from ...halomodel.hod import relations, scatter
 valid_priors = ('fixed', 'lognormal', 'normal', 'uniform')
 
 
+"""
+def arrange_parameters(parameters, i=0):
+    if not np.isscalar(parameters[0]):
+        arrange_parameters(parameters
+    elem = 
+"""
+
+
 def hod_entries(line, section, parameters, priors, starting):
     """
     `line` should be a `configline` object
     """
     if section.name == 'hod/observables':
         parameters[0].append(observables(line.words))
+        #parameters[0] = observables(line.words)
     elif section.name == 'hod/ingredients':
         parameters[0].append(ingredients(line.words))
+        #parameters[0] = ingredients(line.words)
+        print(parameters)
     # all other cosmo,hod sections
     else:
         if line.words[0] == 'name':
@@ -64,6 +75,26 @@ def hod_parameters(parameters, priors, starting, line):
     return parameters, priors, starting
 
 
+def ingredients(words):
+    assert words[1] in ('True', 'False'), \
+        'Value {1} for parameter {0} in hod/ingredients not valid.' \
+        ' Must be True or False'.format(*(words))
+    return (words[1] == 'True')
+
+
+def observables(words):
+    binning = np.array(words[1].split(','), dtype=float)
+    means = np.array(words[2].split(','), dtype=float)
+    return [binning[:-1], binning[1:], means]
+
+
+def prior_is_valid(line):
+    assert line.words[1] in valid_priors, \
+        'prior {1} not valid; must be one of {0}'.format(
+            valid_priors, line.words[1])
+    return True
+
+
 def starting_values(starting, parameters, line):
     words = line.words
     prior = words[1]
@@ -86,26 +117,6 @@ def starting_values(starting, parameters, line):
                 np.log10(parameters[0][-1]),
                 np.log10(parameters[1][-1]), 1)[0])
     return starting
-
-
-def ingredients(words):
-    assert words[1] in ('True', 'False'), \
-        'Value {1} for parameter {0} in hod/ingredients not valid.' \
-        ' Must be True or False'.format(*(words))
-    return (words[1] == 'True')
-
-
-def observables(words):
-    binning = np.array(words[1].split(','), dtype=float)
-    means = np.array(words[2].split(','), dtype=float)
-    return [binning[:-1], binning[1:], means]
-
-
-def prior_is_valid(line):
-    assert line.words[1] in valid_priors, \
-        'prior {1} not valid; must be one of {0}'.format(
-            valid_priors, line.words[1])
-    return True
 
 
 def starting_value(line):

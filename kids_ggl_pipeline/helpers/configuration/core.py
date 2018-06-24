@@ -98,25 +98,49 @@ class configsection(str):
                 pass
         return setup
 
-    def append_subsection_parameters(
-            self, parameters, priors, these_params, these_priors):
-        if self.name is None or not np.any(these_params):
-            return parameters, priors
-        append_priors = \
-            self.name not in ('hod/ingredients', 'hod/observables')
+    def append_subsection_priors(self, priors, these_priors):
+        if self.name is None \
+                or self.name in ('hod/ingredients', 'hod/observables'):
+            return priors
+        if self.name.count('/') == 0:
+            priors.append(these_priors)
+        elif self.name.count('/') == 1:
+            priors[-1].append(these_priors)
+        elif self.name.count('/') == 2:
+            priors[-1][-1].append(these_priors)
+        return priors
+
+    def append_subsection_parameters(self, parameters, these_params):
+        if self.name is None:
+            return parameters
+        print(self.name)
+        # initialize
+        if len(parameters) == 0:
+            #parameters = these_params
+            for i, p in enumerate(these_params):
+                parameters.append([p])
+            #parameters.append(these_params)
+        elif self.name.count('/') == 0:
+            print(len(parameters), len(these_params))
+            for i, p in enumerate(these_params):
+                parameters[i].append(p)
+        elif self.name.count('/') == 1:
+            for i, p in enumerate(these_params):
+                parameters[i][-1].append(p)
+        elif self.name.count('/') == 2:
+            for i, p in enumerate(these_params):
+                parameters[i][-1][-1].append(p)
+        """
         if self.name.count('/') == 0:
             parameters.append(these_params)
-            if append_priors:
-                priors.append(these_priors)
         elif self.name.count('/') == 1:
             parameters[-1].append(these_params)
-            if append_priors:
-                priors[-1].append(these_priors)
         elif self.name.count('/') == 2:
             parameters[-1][-1].append(these_params)
-            if append_priors:
-                priors[-1][-1].append(these_priors)
-        return parameters, priors
+        """
+        print(parameters)
+        print()
+        return parameters
 
     def is_parent(self):
         return self.name == self.parent
@@ -158,6 +182,10 @@ class ConfigFile:
         return []
 
     def read(self):
+        """
+        Need to reshape parameters to return val1, val2, val3, val4
+        instead of cosmo, hod separately.
+        """
         section = configsection()
         parameters = []
         priors = []
@@ -177,12 +205,18 @@ class ConfigFile:
             if line.is_section():
                 # this is a dirty hack. Need to figure out why this
                 # does not happen automatically
-                if section.name == 'cosmo':
-                    these_params = [these_params]
-                    these_priors = [these_priors]
+                print('section:', section.name)
+                #if section.name in ('cosmo', 'hod'):
+                    #these_params = [these_params]
+                    #these_priors = [these_priors]
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
-                    parameters, priors = section.append_subsection_parameters(
-                        parameters, priors, these_params, these_priors)
+                    print('appending subsection parameters for', section.name)
+                    #parameters, priors = section.append_subsection_parameters(
+                        #parameters, priors, these_params, these_priors)
+                    parameters = section.append_subsection_parameters(
+                        parameters, these_params)
+                    priors = section.append_subsection_priors(
+                        priors, these_priors)
                 # initialize new section
                 section = configsection(line.section)
                 these_params = self.initialize_parameters()
@@ -198,10 +232,11 @@ class ConfigFile:
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
-        # I don't quite understand how `parameters` gets extra
-        # dimensions, but here's a dirty hack to get rid of them
-        parameters = np.squeeze(parameters)
-        priors = np.squeeze(priors)
+        #parameters = confighod.arrange_parameters(parameters)
+        print(len(parameters), [len(p) for p in parameters])
+        print('priors:')
+        print(priors)
+        sampling = configsampler.add_defaults(sampling)
         return [parameters, priors, starting, setup, output], sampling
 
     def read_function(self, path):

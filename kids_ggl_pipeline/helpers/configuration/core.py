@@ -102,29 +102,25 @@ class configsection(str):
         if self.name is None \
                 or self.name in ('hod/ingredients', 'hod/observables'):
             return priors
+        """
         if self.name.count('/') == 0:
             priors.append(these_priors)
         elif self.name.count('/') == 1:
             priors[-1].append(these_priors)
         elif self.name.count('/') == 2:
             priors[-1][-1].append(these_priors)
+        """
+        priors.append(these_priors)
         return priors
 
     def append_subsection_parameters(self, parameters, these_params):
         if self.name is None:
             return parameters
+        # initialize
         if len(parameters) == 0:
-            for i, p in enumerate(these_params):
-                parameters.append([p])
-        elif self.name.count('/') == 0:
-            for i, p in enumerate(these_params):
-                parameters[i].append(p)
-        elif self.name.count('/') == 1:
-            for i, p in enumerate(these_params):
-                parameters[i][-1].append(p)
-        elif self.name.count('/') == 2:
-            for i, p in enumerate(these_params):
-                parameters[i][-1][-1].append(p)
+            parameters = [[] for i in these_params]
+        for i, p in enumerate(these_params):
+            parameters[i].append(p)
         return parameters
 
     def is_parent(self):

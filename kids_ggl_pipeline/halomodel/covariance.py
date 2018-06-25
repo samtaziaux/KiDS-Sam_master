@@ -1339,7 +1339,7 @@ if __name__ == '__main__':
     import os
     tag = '02'
     zz = 0.2
-    save_dir = 'ps_data_z{}_Mmin0'.format( tag )
+    save_dir = 'ps_data_z{}'.format( tag )
     z0 = zz
     z1 = zz
     z2 = zz
@@ -1490,9 +1490,9 @@ if __name__ == '__main__':
         hmf = np.append(hmf, hmf_temp)
         #"""
         # DEBUG
-        #fname = os.path.join( save_dir, 'P_hmf_z{}.dat'.format(z[z_i]) )
-        #save_data = np.vstack( (hmf_temp.k, hmf_temp.power, hmf_temp.nonlinear_power) ).T
-        #np.savetxt( fname, save_data, header='k, P_L, P_NL' )
+        fname = os.path.join( save_dir, 'P_hmf_z{}.dat'.format(z[z_i]) )
+        save_data = np.vstack( (hmf_temp.k, hmf_temp.power, hmf_temp.nonlinear_power) ).T
+        np.savetxt( fname, save_data, header='k, P_L, P_NL' )
         #import sys
         #sys.exit()
         #"""
@@ -1536,8 +1536,8 @@ if __name__ == '__main__':
                    for hmf_i, pop_g_i in izip(hmf, pop_g)])
 
     # DEBUG
-    print(ngal)
-    sys.exit(99)
+    #print(ngal)
+    #sys.exit(99)
 
     """
     effective_mass = array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range)
@@ -1802,18 +1802,35 @@ if __name__ == '__main__':
     save_data = np.vstack( (k_temp_lin, np.diag(test)) ).T
     np.savetxt( fname, save_data, header='k, T_234h' )
 
+    # this is the derivative I want to print out, in comparison with Benjamin's code
+    """
+    ps_deriv_mm = (68.0/21.0 - (1.0/3.0)*(dP_lin)) * np.exp(P_lin) * np.exp(Im)*np.exp(Im)
+                  + np.exp(Imm)
+    where:
+    dP_lin should be d(ln[k^3 P_lin(k)]) / d(ln k)
+    P_lin should be ln[P_lin(k)]
+    Im should be ln[I^1_1(k)]
+    Imm should be ln[I^1_2(k,k)]
 
-    # save ps_deriv_mm, gg, gm
-
-    ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_mm[0](k_temp)))*np.sqrt(np.exp(I_inter_mm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
-
-    ps_deriv_gg = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_gg[0](k_temp)))*np.sqrt(np.exp(I_inter_gg[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
-
-    ps_deriv_gm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_gm[0](k_temp)))*np.sqrt(np.exp(I_inter_gm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
-
+    Below, k_temp is "ln(k)" and k_temp_lin is "k"; k_temp has 100 steps
+    Each function are UnivariateSpline function with the variable ln(k) (=="k_range")
+    """
+    ps_deriv_mm = (68.0/21.0 - (1.0/3.0)*(dlnk3P_lin_interdlnk[0](k_temp))) \
+                  * np.exp(P_lin_inter[0](k_temp)) \
+                  * np.exp(I_inter_m[0](k_temp)) * np.exp(I_inter_m[0](k_temp)) \
+                  + np.exp(I_inter_mm[0](k_temp))
     fname = os.path.join( save_dir, 'ps_deriv_mm.dat' )
     save_data = np.vstack( (k_temp_lin, ps_deriv_mm) ).T
     np.savetxt( fname, save_data, header='k, ps_deriv_mm' )
+
+
+    """
+    # save ps_deriv_mm, gg, gm
+    ps_deriv_gg_i = (68.0/21.0 - (1.0/3.0)*(dP_lin_i)) * np.exp(P_lin_i) * np.exp(Ig_i)*np.exp(Ig_i) + np.exp(Igg_i) - 2.0 * b_g[b_i] * np.exp(P_gg_i)
+    ps_deriv_gg_j = (68.0/21.0 - (1.0/3.0)*(dP_lin_j)) * np.exp(P_lin_j) * np.exp(Ig_j)*np.exp(Ig_j) + np.exp(Igg_j) - 2.0 * b_g[b_j] * np.exp(P_gg_j)
+    
+    ps_deriv_gm_i = (68.0/21.0 - (1.0/3.0)*(dP_lin_i)) * np.exp(P_lin_i) * np.exp(Ig_i)*np.exp(Im_i) + np.exp(Igm_i) - b_g[b_i] * np.exp(P_gm_i)
+    ps_deriv_gm_j = (68.0/21.0 - (1.0/3.0)*(dP_lin_j)) * np.exp(P_lin_j) * np.exp(Ig_j)*np.exp(Ig_j) + np.exp(Igm_j) - b_g[b_j] * np.exp(P_gm_j)    # **there is a typo in this equation, FIX in master**
 
     fname = os.path.join( save_dir, 'ps_deriv_gg.dat' )
     save_data = np.vstack( (k_temp_lin, ps_deriv_gg) ).T
@@ -1822,6 +1839,5 @@ if __name__ == '__main__':
     fname = os.path.join( save_dir, 'ps_deriv_gm.dat' )
     save_data = np.vstack( (k_temp_lin, ps_deriv_gm) ).T
     np.savetxt( fname, save_data, header='k, ps_deriv_gm' )
-
-
+    """
     print(0)

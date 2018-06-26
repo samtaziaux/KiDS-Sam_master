@@ -1343,7 +1343,7 @@ if __name__ == '__main__':
     z0 = zz
     z1 = zz
     z2 = zz
-    M_step = 2000
+    M_step = 2001
     M_min = 5.
     if not os.path.isdir( save_dir ):
         os.mkdir( save_dir )
@@ -1438,9 +1438,22 @@ if __name__ == '__main__':
 
     R = [ 10.0**np.linspace(np.log10(0.05), np.log10(10), 9, endpoint=True) ]
 
-    mass_range = 10**linspace(M_min, M_max, M_step)
+    mass_range_exponent = linspace(M_min, M_max, M_step)
+    mass_range = 10**mass_range_exponent
     M_step = (M_max - M_min)/M_step
 
+    """
+    # DEBUG OUTPUT (run only once)
+    Mvals = (13.0, 14.0, 15.0, 16.0, 17.0)
+    idx = [ (np.abs( mass_range_exponent - val )).argmin() for val in Mvals ]
+    print( Mvals, idx, mass_range[idx] )
+    # DEBUG RESULTS for M_step=2001, for use in u_k output
+    # Mvals = (13.0, 14.0, 15.0, 16.0, 17.0)
+    # idx = [1333, 1500, 1667, 1833, 2000]
+    # mass_range[idx] = 9.95405417e+12 1.00000000e+14 1.00461579e+15 9.95405417e+15 1.00000000e+17
+    sys.exit()
+    #"""
+    
     if not np.iterable(M_bin_min):
         M_bin_min = np.array([M_bin_min])
         M_bin_max = np.array([M_bin_max])
@@ -1488,13 +1501,12 @@ if __name__ == '__main__':
                                 **i)
         hmf_temp.update(cosmo_model=cosmo_model)
         hmf = np.append(hmf, hmf_temp)
-        #"""
-        # DEBUG
+        #""" DEBUG clause
         fname = os.path.join( save_dir, 'P_hmf_z{}.dat'.format(z[z_i]) )
-        save_data = np.vstack( (hmf_temp.k, hmf_temp.power, hmf_temp.nonlinear_power) ).T
-        np.savetxt( fname, save_data, header='k, P_L, P_NL' )
-        #import sys
-        #sys.exit()
+        if not os.path.isfile( fname ):
+            print( fname )
+            save_data = np.vstack( (hmf_temp.k, hmf_temp.power, hmf_temp.nonlinear_power) ).T
+            np.savetxt( fname, save_data, header='k, P_L, P_NL' )
         #"""
 
     mass_func = np.zeros((z.size, mass_range.size))
@@ -1509,8 +1521,32 @@ if __name__ == '__main__':
     for i in xrange(z.size):
         mass_func[i] = hmf[i].dndlnm
         rho_mean[i] = hmf[i].mean_density0
+        print( 'DEBUG:', i, z[i], rho_mean[i] )
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
         #rho_dm[i] = rho_mean[i]# * baryons.f_dm(omegab, omegac)
+
+        #"""
+        # DEBUG OUTPUT:  dn/dM(M_halo) 
+        if i == 0:
+
+            fname = os.path.join( save_dir, 'uk_z{:.1f}.dat'.format(z0) )
+
+            print( len(k_range_lin) )   # 10000 = len(k_range_lin)
+            print( len(u_k[0,:,0]) )   # 10000
+            print( uk_s.shape )   # (3, 10000, 2000)  3 M* bins, 
+            save_data = np.vstack( (k_range_lin, u_k[:,:,0], u_k[:,:,-1], uk_s[:,:,0], uk_s[:,:,-1]) ).T
+            print(save_data)
+            np.savetxt( fname, save_data, header='k, u(k), u_sat(k)' )
+
+
+            print( len(k_range_lin) )
+            print( len(u_k[0,:,0]) )
+            print( uk_s.shape )
+            save_data = np.vstack( (k_range_lin, u_k[:,:,0], u_k[:,:,-1], uk_s[:,:,0], uk_s[:,:,-1]) ).T
+            print(save_data)
+            np.savetxt( fname, save_data,
+                        header='rho_mean={}\nk, u(k), u_sat(k)'.format(rho_mean[i]) )
+        #"""            
 
     rvir_range_lin = array([virial_radius(mass_range, rho_mean_i, 200.0)
                          for rho_mean_i in rho_mean])
@@ -1579,6 +1615,7 @@ if __name__ == '__main__':
                 f_i, concentration_i in izip(rvir_range_lin, \
                 rho_mean, z, f, concentration)])
     u_k = u_k/u_k[:,0][:,None]
+    print( 'u_k.shape:', u_k.shape )   # (3, 10000, 2001)
 
     # and of the NFW profile of the satellites
     """
@@ -1595,16 +1632,24 @@ if __name__ == '__main__':
     #uk_s = u_k
     uk_s = uk_s/uk_s[:,0][:,None]
 
-    """
-    # DEBUG PRINT
-    fname = os.path.join( save_dir, 'u_k.dat' )
-    print( len(k_range_lin) )
-    print( len(u_k[0,:,0]) )
-    print( uk_s.shape )
-    save_data = np.vstack( (k_range_lin, u_k[:,:,0], u_k[:,:,-1], uk_s[:,:,0], uk_s[:,:,-1]) ).T
+    #"""
+    # DEBUG PRINT u(k, M_h)
+    fname = os.path.join( save_dir, 'uk_z{:.1f}.dat'.format(z0) )
+
+    print( len(k_range_lin) )   # 10000 = len(k_range_lin)
+    print( len(u_k[0,:,0]) )   # 10000
+    print( uk_s.shape )   # (3, 10000, 2001)  3 M*-bins, 10000 k-bins, 2001 M_halo-bins
+    
+    # the relevant Mh index for log10(Mh)=(13,14,15,16,17) are: [1333, 1500, 1667, 1833, 2000]
+    save_data = np.vstack((k_range_lin,
+                           u_k[:,:,1333], u_k[:,:,1500], u_k[:,:,1667],
+                           u_k[:,:,1833], u_k[:,:,2000],
+                           uk_s[:,:,1333], uk_s[:,:,1500], uk_s[:,:,1667],
+                           uk_s[:,:,1833], uk_s[:,:,2000])).T
     print(save_data)
-    np.savetxt( fname, save_data, header='k, u(k), u_sat(k)' )
-    """
+    np.savetxt( fname, save_data,
+                header='rho_mean={}\nk,   u(k,log10M=13), u(k,log10M=14), u(k,log10M=15), u(k,log10M=16), u(k,log10M=17),   u_sat(k,log10M=13), u_sat(k,log10M=14), u_sat(k,log10M=15), u_sat(k,log10M=16), u_sat(k,log10M=17)'.format(rho_mean[i]) )
+    #"""
 
 
     #

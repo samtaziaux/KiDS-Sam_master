@@ -1337,13 +1337,13 @@ if __name__ == '__main__':
     # input params
     #
     import os
-    tag = '05'
-    zz = 0.5
+    tag = '00'
+    zz = 0.0
     save_dir = 'ps_data_z{}'.format( tag )
     z0 = zz
     z1 = zz
     z2 = zz
-    M_step = 2001
+    M_step = 2000
     M_min = 0.
     if not os.path.isdir( save_dir ):
         os.mkdir( save_dir )
@@ -1443,16 +1443,21 @@ if __name__ == '__main__':
     M_step = (M_max - M_min)/M_step
 
     """
-    # DEBUG OUTPUT (run only once)
+    # DEBUG OUTPUT (run only once, after M_min/M_max/M_step [halo_mass] has been changed)
     Mvals = (13.0, 14.0, 15.0, 16.0, 17.0)
     idx = [ (np.abs( mass_range_exponent - val )).argmin() for val in Mvals ]
     print( Mvals, idx, mass_range[idx] )
     # DEBUG RESULTS for M_step=2001, for use in u_k output
     # Mvals = (13.0, 14.0, 15.0, 16.0, 17.0)
+    ## for Mmin=5, Mmax=17, Mstep=2000
+    # idx = [1529, 1646, 1764, 1881, 1999]
+    # mass_range[idx] = [1.00693515e+13 9.95403124e+13 1.00346158e+15 9.91969340e+15 1.00000000e+17]
+    ## for Mmin=5, Mmax=17, Mstep=2000(2001)
     # idx = [1333, 1500, 1667, 1833, 2000]
     # mass_range[idx] = 9.95405417e+12 1.00000000e+14 1.00461579e+15 9.95405417e+15 1.00000000e+17
     sys.exit()
     #"""
+    halo_mass_index = [1529, 1646, 1764, 1881, 1999]  # index corresponding to Mvals
     
     if not np.iterable(M_bin_min):
         M_bin_min = np.array([M_bin_min])
@@ -1508,7 +1513,6 @@ if __name__ == '__main__':
             save_data = np.vstack( (hmf_temp.k, hmf_temp.power, hmf_temp.nonlinear_power) ).T
             np.savetxt( fname, save_data, header='k, P_L, P_NL' )
         #"""
-    print( 'DEBUG: hmf dndlnm.size', hmf[0].dndlnm.size )
 
 
     mass_func = np.zeros((z.size, mass_range.size))
@@ -1523,7 +1527,6 @@ if __name__ == '__main__':
     for i in xrange(z.size):
         mass_func[i] = hmf[i].dndlnm
         rho_mean[i] = hmf[i].mean_density0
-        print( 'DEBUG:', i, z[i], rho_mean[i] )
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
         #rho_dm[i] = rho_mean[i]# * baryons.f_dm(omegab, omegac)
 
@@ -1633,11 +1636,10 @@ if __name__ == '__main__':
     print( uk_s.shape )   # (3, 10000, 2001)  3 M*-bins, 10000 k-bins, 2001 M_halo-bins
     
     # the relevant Mh index for log10(Mh)=(13,14,15,16,17) are: [1333, 1500, 1667, 1833, 2000]
+    i0, i1, i2, i3, i4 = halo_mass_index
     save_data = np.vstack((k_range_lin,
-                           u_k[:,:,1333], u_k[:,:,1500], u_k[:,:,1667],
-                           u_k[:,:,1833], u_k[:,:,2000],
-                           uk_s[:,:,1333], uk_s[:,:,1500], uk_s[:,:,1667],
-                           uk_s[:,:,1833], uk_s[:,:,2000])).T
+                           u_k[:,:,i0], u_k[:,:,i1], u_k[:,:,i2], u_k[:,:,i3], u_k[:,:,i4],
+                           uk_s[:,:,i0], uk_s[:,:,i1], uk_s[:,:,i2], uk_s[:,:,i3], uk_s[:,:,i4])).T
     print(save_data)
     np.savetxt( fname, save_data,
                 header='rho_mean={}; each u(k,log10(M)) has 3 entries for the 3 M* bins\nk,   u(k,log10M=13), u(k,log10M=14), u(k,log10M=15), u(k,log10M=16), u(k,log10M=17),   u_sat(k,log10M=13), u_sat(k,log10M=14), u_sat(k,log10M=15), u_sat(k,log10M=16), u_sat(k,log10M=17)'.format(rho_mean[i]) )

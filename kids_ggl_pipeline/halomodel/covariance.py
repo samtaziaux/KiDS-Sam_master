@@ -1337,14 +1337,14 @@ if __name__ == '__main__':
     # input params
     #
     import os
-    tag = '02'
-    zz = 0.2
+    tag = '05'
+    zz = 0.5
     save_dir = 'ps_data_z{}'.format( tag )
     z0 = zz
     z1 = zz
     z2 = zz
     M_step = 2001
-    M_min = 5.
+    M_min = 0.
     if not os.path.isdir( save_dir ):
         os.mkdir( save_dir )
     print( save_dir )
@@ -1508,6 +1508,8 @@ if __name__ == '__main__':
             save_data = np.vstack( (hmf_temp.k, hmf_temp.power, hmf_temp.nonlinear_power) ).T
             np.savetxt( fname, save_data, header='k, P_L, P_NL' )
         #"""
+    print( 'DEBUG: hmf dndlnm.size', hmf[0].dndlnm.size )
+
 
     mass_func = np.zeros((z.size, mass_range.size))
     rho_mean = np.zeros(z.shape)
@@ -1528,24 +1530,14 @@ if __name__ == '__main__':
         #"""
         # DEBUG OUTPUT:  dn/dM(M_halo) 
         if i == 0:
-
-            fname = os.path.join( save_dir, 'uk_z{:.1f}.dat'.format(z0) )
-
-            print( len(k_range_lin) )   # 10000 = len(k_range_lin)
-            print( len(u_k[0,:,0]) )   # 10000
-            print( uk_s.shape )   # (3, 10000, 2000)  3 M* bins, 
-            save_data = np.vstack( (k_range_lin, u_k[:,:,0], u_k[:,:,-1], uk_s[:,:,0], uk_s[:,:,-1]) ).T
-            print(save_data)
-            np.savetxt( fname, save_data, header='k, u(k), u_sat(k)' )
-
-
-            print( len(k_range_lin) )
-            print( len(u_k[0,:,0]) )
-            print( uk_s.shape )
-            save_data = np.vstack( (k_range_lin, u_k[:,:,0], u_k[:,:,-1], uk_s[:,:,0], uk_s[:,:,-1]) ).T
+            M = hmf[i].m
+            fname = os.path.join( save_dir, 'dndlnM_z{:.1f}.dat'.format(z0) )
+            save_data = np.vstack( (M, mass_func[i]) ).T
             print(save_data)
             np.savetxt( fname, save_data,
-                        header='rho_mean={}\nk, u(k), u_sat(k)'.format(rho_mean[i]) )
+                        header='M_halo, dn/dlnM(M_halo)'.format(rho_mean[i]) )
+        #print( 'DEBUG exit after dn/dlnM production; must be removed' )
+        #sys.exit()
         #"""            
 
     rvir_range_lin = array([virial_radius(mass_range, rho_mean_i, 200.0)
@@ -1648,7 +1640,7 @@ if __name__ == '__main__':
                            uk_s[:,:,1833], uk_s[:,:,2000])).T
     print(save_data)
     np.savetxt( fname, save_data,
-                header='rho_mean={}\nk,   u(k,log10M=13), u(k,log10M=14), u(k,log10M=15), u(k,log10M=16), u(k,log10M=17),   u_sat(k,log10M=13), u_sat(k,log10M=14), u_sat(k,log10M=15), u_sat(k,log10M=16), u_sat(k,log10M=17)'.format(rho_mean[i]) )
+                header='rho_mean={}; each u(k,log10(M)) has 3 entries for the 3 M* bins\nk,   u(k,log10M=13), u(k,log10M=14), u(k,log10M=15), u(k,log10M=16), u(k,log10M=17),   u_sat(k,log10M=13), u_sat(k,log10M=14), u_sat(k,log10M=15), u_sat(k,log10M=16), u_sat(k,log10M=17)'.format(rho_mean[i]) )
     #"""
 
 

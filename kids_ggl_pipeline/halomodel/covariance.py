@@ -1337,14 +1337,15 @@ if __name__ == '__main__':
     # input params
     #
     import os
-    tag = '00'
-    zz = 0.0
+    tag = '05'
+    zz = float(tag) * 0.1
     save_dir = 'ps_data_z{}'.format( tag )
     z0 = zz
     z1 = zz
     z2 = zz
     M_step = 2000
     M_min = 0.
+    M_max = 17.
     if not os.path.isdir( save_dir ):
         os.mkdir( save_dir )
     print( save_dir )
@@ -1418,12 +1419,6 @@ if __name__ == '__main__':
 
     # hard-coded in the current version
     Ac2s = 0.56
-    #M_min = 8. #5.
-    #M_max = 15. #16.
-    #M_step = 100  #200
-    #M_min = 5.
-    M_max = 17.
-    #M_step = 100
 
     # HMF set up parameters
     lnk_min, lnk_max = np.log(0.001), np.log(100.0)    # [ lnk_min=-13., lnk_max=17. ]

@@ -49,7 +49,7 @@ from hmf import MassFunction
 from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
-from . import baryons as baryons
+from . import baryons
 from . import longdouble_utils as ld
 from .tools import (
                     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
@@ -151,16 +151,18 @@ def model(theta, R):
     np.seterr(divide='ignore', over='ignore', under='ignore',
               invalid='ignore')
 
-    # new (yaml?) config
-    cosmo, hod, setup = theta
+    # new config
+    cosmo = theta[0]
+    hod = theta[1:-1]
+    setup = theta[-1]
 
     # HMF set up parameters
-    k_step = (setup['lnk_max']-setup['lnk_min']) / setup['kbins']
+    k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
     k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
     k_range_lin = exp(k_range)
     mass_range = 10**linspace(
         setup['logM_min'], setup['logM_max'], setup['logM_bins'])
-    M_step = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins'])
+    M_step = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
     M_bin_min, M_bin_max, Mstar = hod[0]

@@ -5,9 +5,17 @@ import numpy as np
 from six import string_types
 
 from . import confighod, configsampler
+from ...halomodel import (
+    nfw, nfw_stack, halo, halo_2, halo_2_mc, halo_sz, halo_sz_modular)
+
+# local, if present
+try:
+    import models
+except ImportError:
+    pass
 
 
-class configline(str):
+class ConfigLine(str):
 
     def __init__(self, line):
         self.line = line
@@ -79,7 +87,7 @@ class configsection(str):
 
     def append_entry_output(self, line, output):
         """
-        `line` should be a `configline` object
+        `line` should be a `ConfigLine` object
         """
         output[0].append(line.words[0])
         output[1].append(line.words[1])
@@ -87,30 +95,30 @@ class configsection(str):
 
     def append_entry_setup(self, line, setup):
         """
-        `line` should be a `configline` object
+        `line` should be a `ConfigLine` object
         """
-        setup[0].append(line.words[0])
+        #setup[0].append(line.words[0])
         for dtype in (int, float, str):
             try:
-                setup[1].append(dtype(line.words[1]))
+                #setup[1].append(dtype(line.words[1]))
+                setup[line.words[0]] = dtype(line.words[1])
                 break
             except ValueError:
                 pass
         return setup
 
+    def append_subsection_names(self, names, these_names):
+        for n in these_names:
+            names.append(n)
+        return names
+
     def append_subsection_priors(self, priors, these_priors):
         if self.name is None \
-                or self.name in ('hod/ingredients', 'hod/observables'):
+                or self.name in ('ingredients', 'observables'):
             return priors
-        """
-        if self.name.count('/') == 0:
-            priors.append(these_priors)
-        elif self.name.count('/') == 1:
-            priors[-1].append(these_priors)
-        elif self.name.count('/') == 2:
-            priors[-1][-1].append(these_priors)
-        """
-        priors.append(these_priors)
+        #priors.append(np.array([these_priors]))
+        for p in these_priors:
+            priors.append(p)
         return priors
 
     def append_subsection_parameters(self, parameters, these_params):
@@ -133,6 +141,7 @@ class ConfigFile:
         """Initialize configuration file"""
         self.filename = filename
         self._data = None
+        self._valid_modules = None
 
     @property
     def data(self):
@@ -141,7 +150,7 @@ class ConfigFile:
                 data = file.readlines()
             _data = []
             for line in data:
-                line = configline(line)
+                line = ConfigLine(line)
                 if line.is_empty() or line.is_comment():
                     continue
                 if '#' in line:
@@ -152,9 +161,20 @@ class ConfigFile:
 
     @property
     def valid_modules(self):
-        return {'satellites': satellites, 'nfw': nfw, 'nfw_stack': nfw_stack,
-                'halo': halo, 'halo_2': halo_2, 'halo_2_mc': halo_2_mc,
+        if self._valid_modules is None:
+            _modules = {
+                'nfw': nfw, 'nfw_stack': nfw_stack, 'halo': halo,
+                'halo_2': halo_2, 'halo_2_mc': halo_2_mc,
                 'halo_sz': halo_sz, 'halo_sz_modular': halo_sz_modular}
+            try:
+                _modules['models'] = models
+            except NameError:
+                pass
+            self._valid_modules = _modules
+        return self._valid_modules
+
+    def initialize_names(self):
+        return []
 
     def initialize_parameters(self):
         return [[] for i in range(4)]
@@ -168,19 +188,21 @@ class ConfigFile:
         instead of cosmo, hod separately.
         """
         section = configsection()
+        names = []
         parameters = []
         priors = []
         # starting values for free parameters
         starting = []
         # I wanted to use dictionaries but
         # the problem is they don't preserve order!
-        setup = [[], []]
+        #setup = [[], []]
+        setup = {}
         output = [[], []]
         sampling = {}
         path = ''
         for line in self.data:
-            line = configline(line)
-            if line[0] == 'model':
+            line = ConfigLine(line)
+            if line.words[0] == 'model':
                 model = self.read_function(line.words[1])
                 continue
             if line.is_section():
@@ -189,26 +211,42 @@ class ConfigFile:
                         parameters, these_params)
                     priors = section.append_subsection_priors(
                         priors, these_priors)
+                    names = section.append_subsection_names(
+                        names, these_names)
                 # initialize new section
                 section = configsection(line.section)
+                these_names = self.initialize_names()
                 these_params = self.initialize_parameters()
                 these_priors = self.initialize_priors()
                 continue
-            if section.parent in ('cosmo', 'hod'):
+            if section == 'observables':
+                observables = confighod.observables(line.words)
+            elif section == 'ingredients':
+                ingredients = confighod.ingredients(line.words)
+            elif section.parent in ('cosmo', 'hod'):
                 new = confighod.hod_entries(
-                    line, section, these_params, these_priors, starting)
-                these_params, these_priors, starting = new
+                    line, section, these_names, these_params, these_priors,
+                starting)
+                these_names, these_params, these_priors, starting = new
             elif section == 'setup':
                 setup = section.append_entry_setup(line, setup)
+                #setup[line.words[0]] = line.words[1]
             elif section == 'output':
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
+        print('setup =')
+        print(setup)
+        print()
+        parameters, nparams = confighod.flatten_parameters(parameters)
+        priors = np.array(priors)
         sampling = configsampler.add_defaults(sampling)
-        return [parameters, priors, starting, setup, output], sampling
+        hod_params = [model, observables, ingredients, names, parameters,
+                      priors, nparams, starting, setup, output]
+        return hod_params, sampling
 
     def read_function(self, path):
-        # maybe this should be in `configline` instead
+        # maybe this should be in `ConfigLine` instead
         module, func = path.split('.')
         assert module in self.valid_modules, \
             'Implemented modules are {0}'.format(

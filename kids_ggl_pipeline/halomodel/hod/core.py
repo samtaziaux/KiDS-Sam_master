@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division, print_function,
 
 from numpy import array
 
-from .tools import Integrate
+from ..tools import Integrate
 
 
 """

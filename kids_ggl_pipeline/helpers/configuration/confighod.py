@@ -10,32 +10,43 @@ from ...halomodel.hod import relations, scatter
 valid_priors = ('fixed', 'lognormal', 'normal', 'uniform')
 
 
+def append_setup(parameters, nparams, setup):
+    for i in setup:
+        parameters[0].append(i)
+    nparams.append(len(setup[0]))
+    return parameters, nparams
 
-def hod_entries(line, section, parameters, priors, starting):
+
+def flatten_parameters(parameters):
+    flat = [[] for p in parameters]
+    nparams = [len(p) for p in parameters[0]]
+    # first the four sets for the priors
+    for i, params in enumerate(parameters):
+        for par in params:
+            for p in par:
+                flat[i].append(p)
+    return flat, nparams
+
+
+def hod_entries(line, section, names, parameters, priors, starting):
     """
     `line` should be a `configline` object
     """
-    if section.name == 'hod/observables':
-        parameters[0].append(observables(line.words))
-    elif section.name == 'hod/ingredients':
-        parameters[0].append(ingredients(line.words))
-    # all other cosmo,hod sections
+    if line.words[0] == 'name':
+        if 'mor' in section:
+            parameters[0].append(getattr(relations, line.words[1]))
+        elif 'scatter' in section:
+            parameters[0].append(getattr(scatter, line.words[1]))
+        parameters[1].append(0)
+        parameters[2].append(-np.inf)
+        parameters[3].append(np.inf)
     else:
-        if line.words[0] == 'name':
-            if 'mor' in section:
-                parameters[0].append(getattr(relations, line.words[1]))
-            elif 'scatter' in section:
-                parameters[0].append(getattr(scatter, line.words[1]))
-            parameters[1].append(0)
-            parameters[2].append(-np.inf)
-            parameters[3].append(np.inf)
-        else:
-            parameters, priors, starting = \
-                hod_parameters(parameters, priors, starting, line)
-    return parameters, priors, starting
+        names, parameters, priors, starting = \
+            hod_parameters(names, parameters, priors, starting, line)
+    return names, parameters, priors, starting
 
 
-def hod_parameters(parameters, priors, starting, line):
+def hod_parameters(names, parameters, priors, starting, line):
     """
     To deal with parameters with priors (including fixed values)
 
@@ -44,9 +55,12 @@ def hod_parameters(parameters, priors, starting, line):
     need to consider `join` instances here.
     """
     words = line.words
-    if words[0] not in ('name', 'function'):
+    if words[0] in ('name', 'function'):
+        priors.append('fixed')
+    else:
         assert prior_is_valid(line)
-    priors.append(words[1])
+        priors.append(words[1])
+    names.append(words[0])
     parameters[0].append(float(words[2]))
     # keep adapting the code above to here
     if priors[-1] == 'fixed':
@@ -62,7 +76,7 @@ def hod_parameters(parameters, priors, starting, line):
     if len(parameters[2]) < len(parameters[1]):
         parameters[2].append(-np.inf)
         parameters[3].append(np.inf)
-    return parameters, priors, starting
+    return names, parameters, priors, starting
 
 
 def ingredients(words):

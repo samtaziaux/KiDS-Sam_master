@@ -23,7 +23,7 @@ def lognormal(m, M, sigma):
     M : output of `occupation.Phi`
 
     """
-    return array([exp(-((log10(m/Mi)**2) / (2*sigma**2)) \
+    return array([exp(-((log10(m/Mi)**2) / (2*sigma**2))) \
                      / ((2*pi)**0.5 * sigma * m * log(10))
                  for Mi in Mo])
 
@@ -39,6 +39,6 @@ def schechter_mod(m, M, M12, alpha, phi_s, b):
     M : output of `occupation.Phi`
     """
     phi_s = b[:,newaxis] * log10(M12)**arange(b.size)[:,newaxis]
-    return array([phi_s_i * (m/Mi)**(1.+alpha) * exp(-(m/Mi)**2 / m
+    return array([phi_s_i/m * (m/Mi)**alpha * exp(-(m/Mi)**2)
                   for phi_s_i, Mi in zip(phi_s, Mo)])
 

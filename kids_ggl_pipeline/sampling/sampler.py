@@ -33,10 +33,12 @@ from . import sampling_utils
 
 def run_emcee(hm_options, sampling_options, args):
 
-    function, observables, ingredients, names, parameters, prior_types, \
-        nparams, starting, setup, output = hm_options
+    #function, observables, ingredients, names, parameters, prior_types, \
+        #nparams, starting, setup, output = hm_options
+    function, parameters, names, prior_types, nparams, starting, output = \
+        hm_options
 
-    val1, val2, val3, val4 = parameters
+    val1, val2, val3, val4 = parameters[2]
     params_join = []
 
     print('Running KiDS-GGL pipeline - sampler\n')
@@ -82,23 +84,21 @@ def run_emcee(hm_options, sampling_options, args):
     val1 = np.append(val1, [Rrange, angles])
 
     # identify fixed and free parameters
-    jfixed = (prior_types == 'fixed') | (prior_types == 'read') | \
-             (prior_types == 'function')
-    #jfixed = [(p == 'fixed') | (p == 'read') | (p == 'function')
-              #for p in prior_types]
-    print('jfixed =', jfixed)
-    #jfree = [~jf for jf in jfixed]
+    jfixed = (prior_types == 'array') | (prior_types == 'fixed') \
+             | (prior_types == 'read') | (prior_types == 'function')
     jfree = ~jfixed
     ndim = len(val1[where(jfree)])
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
-    starting[starting == 0] = 1e-3
-    print('starting values =', starting)
+    print('Starting values =', starting)
+
+    parameters[2] = [val1, val2, val3, val4]
 
     # are we just running a demo?
     if args.demo:
-        run_demo(function, R, esd, esd_err, cov, val1, params_join, starting,
-                 jfree, nparams, names, setup, rng_obsbins, Ndatafiles)
+        run_demo(function, R, esd, esd_err, cov, icov, parameters,
+                 params_join, starting, jfree, nparams, names, rng_obsbins,
+                 Ndatafiles)
         sys.exit()
 
     write_hdr(
@@ -143,7 +143,7 @@ def run_emcee(hm_options, sampling_options, args):
     sampler = emcee.EnsembleSampler(
         nwalkers, ndim, lnprob, threads=threads,
         args=(R,esd,icov,function,names,prior_types[jfree],
-              val1,val2,val3,val4,params_join,jfree,lnprior,likenorm,
+              parameters,params_join,jfree,lnprior,likenorm,
               rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
 
     # burn-in
@@ -230,7 +230,7 @@ def run_emcee(hm_options, sampling_options, args):
 
 
 def lnprob(theta, R, esd, icov, function, names, prior_types,
-           val1, val2, val3, val4, params_join, jfree, lnprior, likenorm,
+           parameters, params_join, jfree, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
@@ -250,16 +250,11 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
             the model used to calculate the likelihood
         prior_types
             one value per parameter in *theta*, {'normal', 'uniform', 'fixed'}
-        val1
-            depends on each prior_type:
-                -normal : the mean of the gaussian
-                -uniform : the minimum allowed value
-                -fixed : the fixed value
-        val2
-            depends on each prior_type:
-                -normal : the half-width of the gaussian
-                -uniform : the maximum allowed value
-                -fixed : ignored (but must be there)
+        parameters
+            list of length 4, containing all parameters of the models. In
+            terms of the configuration file, these are [ingredients,
+            observable, parameters, setup]; where `parameters` is another
+            length-4 list
         jfree
             indices of the free values
         lnprior
@@ -268,6 +263,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
             time
 
     """
+    val1, val2, val3, val4 = parameters[2]
     v1free = val1[where(jfree)].flatten()
     v2free = val2[where(jfree)].flatten()
     v3free = val3[where(jfree)].flatten()
@@ -315,26 +311,28 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
         aux = [[v1j.pop(pi) for pi in p[1:][::-1]]
                 for p in params_join[::-1]]
         v1 = v1j #array(v1j) ??
+    # note that by now we discard the other v's!
+    parameters[2] = v1
 
-    model = function(v1, R)
+    model = function(parmaeters, R)
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
     #residuals = esd - model[0]
     #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
     #              for m in rng_obsbins for n in rng_obsbins]).sum()
-    
+
     if 'model' in str(function):
         # model assumes comoving separations, changing data to accomodate for that
-        redshift_index = np.int(where(names == 'z')[0])
-        redshift = array([v1[redshift_index]])
-        esd = esd/(1.0+redshift.T)**2.0
-        residuals = (esd - model[0])*(1.0+redshift.T)**2.0
+        redshift = read_redshift(val1, names, nparams)
+        esd = esd / (1+redshift)**2
+        esd_err = esd_err / (1+redshift)**2
+        residuals = (esd - model[0]) / (1+redshift)**2
     else:
         residuals = esd - model[0]
 
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-                    for m in rng_obsbins for n in rng_obsbins]).sum()
+                  for m in rng_obsbins for n in rng_obsbins]).sum()
 
     if not isfinite(chi2):
         return -inf, fail_value
@@ -344,13 +342,11 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     model.append(lnprior_total)
     model.append(chi2)
     model.append(lnlike)
-    # model[-3] is lnPderived, removed in v1.3.0
-    #return lnlike + model[-3] + lnprior_total, model
     return lnlike + lnprior_total, model
 
 
-def run_demo(function, R, esd, esd_err, cov, val1, params_join, starting,
-             jfree, nparams, names, setup, rng_obsbins, Ndatafiles):
+def run_demo(function, R, esd, esd_err, cov, icov, parameters, params_join,
+             starting, jfree, nparams, names, rng_obsbins, Ndatafiles):
     def plot_demo(ax, Ri, gt, gt_err, f):
         Ri = Ri[1:]
         ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
@@ -363,6 +359,7 @@ def run_demo(function, R, esd, esd_err, cov, val1, params_join, starting,
         return
 
     ## all of this needs to go in a new function
+    val1 = parameters[2][0]
     val1[where(jfree)] = starting
     if params_join is not None:
         v1 = list(val1)
@@ -378,25 +375,22 @@ def run_demo(function, R, esd, esd_err, cov, val1, params_join, starting,
         val1 = v1 #array(v1) ??
     to = time()
     # join into sections and subsections as per the config file
+    # by doing this I'm losing Rrange and angles, but I suppose
+    # those should be defined in the config file as well.
     val1 = [val1[sum(nparams[:i]):sum(nparams[:i+1])]
-            for i in range(len(nparams)-1)]
-    print('val1 =', val1)
-    print()
-    val1.append(setup)
-    print('val1 =', val1)
-    print()
+            for i in range(len(nparams))]
+    # note that we've discarded the other val's
+    parameters[2] = val1
     ## up to the line just above
 
-    model = function(val1, R)
+    model = function(parameters, R)
     print('Model evaluated in {0:.2e} seconds'.format(time() - to))
     #residuals = esd - model[0]
     if 'model' in str(function):
-        # model assumes comoving separations, changing data to accomodate for that
-        redshift_index = np.int(where(names == 'z')[0])
-        redshift = array([val1[redshift_index]])
-        esd = esd/(1.0+redshift.T)**2.0
-        residuals = (esd - model[0])*(1.0+redshift.T)**2.0
-        esd_err = esd_err/(1.0+redshift.T)**2.0
+        redshift = read_redshift(val1, names, nparams)
+        esd = esd / (1+redshift)**2
+        esd_err = esd_err / (1+redshift)**2
+        residuals = (esd - model[0]) / (1+redshift)**2
     else:
         residuals = esd - model[0]
 
@@ -538,6 +532,17 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
     #print('autocorrelation length =', sampler.acor)
     #print('autocorrelation time =', sampler.get_autocorr_time())
     return metadata, nwritten
+
+
+def read_redshift(val1, names, nparams):
+    # model assumes comoving separations, changing data to accomodate
+    # for that
+    redshift_index = np.int(where(names == 'z')[0])
+    # val1 is no longer a flat array
+    jz = [np.arange(nparams.size)[np.cumsum(nparams) <= redshift_index+1][0]]
+    jz.append(redshift_index - nparams[jz[0]])
+    redshift = val1[jz[0]][jz[1]]
+    return redshift.T
 
 
 def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,

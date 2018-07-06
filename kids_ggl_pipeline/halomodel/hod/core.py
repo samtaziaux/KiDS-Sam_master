@@ -1,7 +1,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import array
+from numpy import array, iterable
 
 from ..tools import Integrate
 

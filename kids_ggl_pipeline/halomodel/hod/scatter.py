@@ -25,7 +25,7 @@ def lognormal(m, M, sigma):
     """
     return array([exp(-((log10(m/Mi)**2) / (2*sigma**2))) \
                      / ((2*pi)**0.5 * sigma * m * log(10))
-                 for Mi in Mo])
+                 for Mi in M])
 
 
 def schechter_mod(m, M, M12, alpha, phi_s, b):
@@ -40,5 +40,5 @@ def schechter_mod(m, M, M12, alpha, phi_s, b):
     """
     phi_s = b[:,newaxis] * log10(M12)**arange(b.size)[:,newaxis]
     return array([phi_s_i/m * (m/Mi)**alpha * exp(-(m/Mi)**2)
-                  for phi_s_i, Mi in zip(phi_s, Mo)])
+                  for phi_s_i, Mi in zip(phi_s, M)])
 

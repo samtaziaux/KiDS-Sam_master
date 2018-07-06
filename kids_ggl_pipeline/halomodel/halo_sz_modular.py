@@ -33,15 +33,14 @@ import mpmath as mp
 import matplotlib.pyplot as pl
 import scipy
 import sys
-from numpy import arange, array, exp, linspace, logspace, ones
+from numpy import arange, array, exp, iterable, linspace, logspace, ones
 from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, UnivariateSpline
 from itertools import count
 if sys.version_info[0] == 2:
-    from itertools import izip
-else:
-    izip = zip
+    from itertools import izip as zip
+    range = xrange
 from time import time
 from astropy.cosmology import LambdaCDM
 
@@ -50,6 +49,7 @@ from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
 from . import baryons
+from . import hod
 from . import longdouble_utils as ld
 from .tools import (
                     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
@@ -152,9 +152,15 @@ def model(theta, R):
               invalid='ignore')
 
     # new config
-    cosmo = theta[0]
-    hod = theta[1:-1]
-    setup = theta[-1]
+    observables, ingredients, theta, setup = theta
+
+    # here is where the differences start!
+    cosmo, params_cent, mor_cent, scatter_cent, miscentring, \
+        params_sat, mor_sat, scatter_sat = theta
+
+    sigma8, H0, omegam, omegab, omegav, n, z = cosmo
+    f, bias = params_cent
+    fc_nsat = params_sat
 
     # HMF set up parameters
     k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
@@ -165,43 +171,43 @@ def model(theta, R):
     M_step = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
-    M_bin_min, M_bin_max, Mstar = hod[0]
+    M_bin_min, M_bin_max, Mstar = observables
     # this whole setup thing should be done outside of the model,
     # only once when setting up the sampler basically
-    if not np.iterable(M_bin_min):
-        M_bin_min = np.array([M_bin_min])
-        M_bin_max = np.array([M_bin_max])
-    #if not np.iterable(z):
-        #z = np.array([z]*M_bin_min.size)
-    #if not np.iterable(f):
-        #f = np.array([f]*M_bin_min.size)
-    #if not np.iterable(fc_nsat):
-        #fc_nsat = np.array([fc_nsat]*M_bin_min.size)
-    #if not np.iterable(Mstar):
-        #Mstar = np.array([Mstar]*M_bin_min.size)
+    if not iterable(M_bin_min):
+        M_bin_min = array([M_bin_min])
+        M_bin_max = array([M_bin_max])
+    if not iterable(f):
+        f = array([f]*M_bin_min.size)
+    if not iterable(fc_nsat):
+        fc_nsat = array([fc_nsat]*M_bin_min.size)
+    if not iterable(Mstar):
+        Mstar = array([Mstar]*M_bin_min.size)
 
-    concentration = np.array(
+    concentration = array(
         [Con(np.float64(z_i), mass_range, np.float64(f_i))
-         for z_i, f_i in izip(z,f)])
-    concentration_sat = np.array(
+         for z_i, f_i in zip(z,f)])
+    concentration_sat = array(
         [Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i))
-         for z_i, f_i,fc_nsat_i in izip(z,f,fc_nsat)])
+         for z_i, f_i,fc_nsat_i in zip(z,f,fc_nsat)])
     n_bins_obs = M_bin_min.size
-    bias = np.array([bias]*k_range_lin.size).T
+    bias = array([bias]*k_range_lin.size).T
 
-    #hod_mass = np.array([np.logspace(Mi, Mx, 200, endpoint=False, dtype=np.longdouble)
-    #                   for Mi, Mx in izip(M_bin_min, M_bin_max)])
+    #hod_mass = array([np.logspace(Mi, Mx, 200, endpoint=False, dtype=np.longdouble)
+    #                   for Mi, Mx in zip(M_bin_min, M_bin_max)])
 
-    hod_mass = 10.0**np.array([np.linspace(Mi, Mx, 200, dtype=np.longdouble)
-                           for Mi, Mx in izip(M_bin_min, M_bin_max)])
+    hod_mass = 10.0**array(
+        [np.linspace(Mi, Mx, 200, dtype=np.longdouble)
+         for Mi, Mx in zip(M_bin_min, M_bin_max)])
 
     transfer_params = array([])
-    for z_i in cosmo['z']:
+    for z_i in z:
         transfer_params = np.append(
             transfer_params,
-            {'sigma_8': cosmo['sigma_8'], 'n': cosmo['n'],
-             'lnk_min': lnk_min, 'lnk_max': lnk_max, 'dlnk': k_step,
-             'z': np.float64(z_i)})
+            {'sigma_8': sigma8, 'n': n,
+             'lnk_min': setup['lnk_min'], 'lnk_max': setup['lnk_max'],
+             'dlnk': k_step, 'z': np.float64(z_i)})
+            
 
     # Calculation
     # Tinker10 should also be read from theta!
@@ -209,13 +215,13 @@ def model(theta, R):
     hmf = array([])
     h = H0/100.0
     cosmo_model = LambdaCDM(
-        H0=cosmo['H0'], Ob0=cosmo['omegab'], Om0=cosmo['omegam'],
-        Ode0=cosmo['omegav'], Tcmb0=2.725)
+        H0=H0, Ob0=omegab, Om0=omegam,
+        Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
-        hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
-                                hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
-                                delta_c=1.686,
-                                **i)
+        hmf_temp = MassFunction(
+            Mmin=setup['logM_min'], Mmax=setup['logM_max'], dlog10m=M_step,
+            hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
+            delta_c=1.686, **i)
         hmf_temp.update(cosmo_model=cosmo_model)
         hmf = np.append(hmf, hmf_temp)
 
@@ -228,7 +234,7 @@ def model(theta, R):
     omegac = hmf[0].cosmo.Om0-omegab
     omegav = hmf[0].cosmo.Ode0
     
-    for i in xrange(z.size):
+    for i in range(z.size):
         mass_func[i] = hmf[i].dndlnm
         rho_mean[i] = hmf[i].mean_density0
         rho_crit[i] = rho_mean[i] / (omegac+omegab)
@@ -246,28 +252,28 @@ def model(theta, R):
     # Calculating halo model
 
     #to = time()
-    if centrals:
+    if ingredients['centrals']:
         #pop_c = array(
             #[ncm_sz(hmf_i, i, mass_range, sigma_c, M_0, a, b,
                     #alpha_s, b_0, b_1, b_2)
-             #for hmf_i, i in izip(hmf, hod_mass)])
+             #for hmf_i, i in zip(hmf, hod_mass)])
         # new modular version
         pop_c = array(
-            [hod.number(mor_cent, scatter_cent, i, mass_range,
-                        mor_cent_args, scatter_cent_args)
+            [hod.number(mor_cent[0], scatter_cent[0], i, mass_range,
+                        mor_cent[1:], scatter_cent[1:])
              for i in hod_mass])
     else:
         pop_c = np.zeros(hod_mass.shape)
     #print 'centrals =', time() - to
     #to = time()
-    if satellites:
+    if ingredients['satellites']:
         #pop_s = array(
             #[nsm_sz(hmf_i, i, mass_range, sigma_c, M_0, a, b, alpha_s,
                     #b_0, b_1, b_2, Ac2s)
-             #for hmf_i, i in izip(hmf, hod_mass)])
+             #for hmf_i, i in zip(hmf, hod_mass)])
         pop_s = array(
-            [hod.number(mor_sat, scatter_sat, i, mass_range,
-                        mor_sat_args, scatter_sat_args)
+            [hod.number(mor_sat[0], scatter_sat[0], i, mass_range,
+                        mor_sat[1:], scatter_sat[1:])
              for i in hod_mass])
     else:
         pop_s = np.zeros(hod_mass.shape)
@@ -276,10 +282,11 @@ def model(theta, R):
 
 
     ngal = array([n_gal(hmf_i, pop_g_i , mass_range)
-                   for hmf_i, pop_g_i in izip(hmf, pop_g)])
+                   for hmf_i, pop_g_i in zip(hmf, pop_g)])
 
-    effective_mass = array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range)
-                             for z_i, hmf_i, pop_g_i in izip(z, hmf, pop_g)])
+    effective_mass = array(
+        [eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range)
+         for z_i, hmf_i, pop_g_i in zip(z, hmf, pop_g)])
 
 
 
@@ -290,74 +297,73 @@ def model(theta, R):
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
     # Fourier Transform of the NFW profile
-    u_k = array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
-                    rvir_range_lin_i, k_range_lin,\
-                    c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
-                    f_i, concentration_i in izip(rvir_range_lin, \
-                    rho_mean, z, f, concentration)])
+    u_k = array(
+        [NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,
+               rvir_range_lin_i, k_range_lin, c=concentration_i)
+         for rvir_range_lin_i, rho_mean_i, z_i, f_i, concentration_i
+         in zip(rvir_range_lin, rho_mean, z, f, concentration)])
 
     # and of the NFW profile of the satellites
     #print fc_nsat
-    uk_s = array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
-                    rvir_range_lin_i, k_range_lin,\
-                    c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
-                    f_i, concentration_i in izip(rvir_range_lin, \
-                    rho_mean, z, f, concentration_sat)])
+    uk_s = array(
+        [NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,
+               rvir_range_lin_i, k_range_lin, c=concentration_i)
+         for rvir_range_lin_i, rho_mean_i, z_i, f_i, concentration_i
+         in zip(rvir_range_lin, rho_mean, z, f, concentration_sat)])
     uk_s = uk_s/uk_s[:,0][:,None]
     #uk_s = u_k
-    
-    # If there is miscentering to be accounted for
-    if miscentering:
-        if not np.iterable(p_off):
+
+    # If there is miscentring to be accounted for
+    if ingredients['miscentring']:
+        if not iterable(p_off):
             p_off = array([p_off]*M_bin_min.size)
-        if not np.iterable(r_off):
+        if not iterable(r_off):
             r_off = array([r_off]*M_bin_min.size)
-        u_k = array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), \
-                            mass_range, rvir_range_lin_i, k_range_lin,
-                    c=concentration_i) * miscenter(p_off_i, r_off_i, mass_range,
-                                                 rvir_range_lin_i, k_range_lin,
-                                                 c=concentration_i) for \
-                      rvir_range_lin_i, rho_mean_i, z_i, f_i, concentration_i, p_off_i, r_off_i
-                      in izip(rvir_range_lin, rho_mean, z, f, concentration, p_off, r_off)])
+        u_k = array(
+            [NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i),
+                   mass_range, rvir_range_lin_i, k_range_lin,
+                    c=concentration_i) \
+             * miscenter(p_off_i, r_off_i, mass_range, rvir_range_lin_i,
+                         k_range_lin, c=concentration_i)
+             for (rvir_range_lin_i, rho_mean_i, z_i, f_i, concentration_i,
+                  p_off_i, r_off_i)
+             in zip(rvir_range_lin, rho_mean, z, f, concentration,
+                     p_off, r_off)])
     u_k = u_k/u_k[:,0][:,None]
 
     # Galaxy - dark matter spectra (for lensing)
     Pg_2h = bias * array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
                             rvir_range_lin_i, mass_range)[0]
                            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
-                           izip(rvir_range_lin, hmf, ngal, pop_g)])
-    
+                           zip(rvir_range_lin, hmf, ngal, pop_g)])
+
     bias_out = bias.T[0] * array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
                             rvir_range_lin_i, mass_range)[1]
                             for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
-                            izip(rvir_range_lin, hmf, ngal, pop_g)])
-        
-        
-    if centrals:
+                            zip(rvir_range_lin, hmf, ngal, pop_g)])
+
+    if ingredients['centrals']:
         Pg_c = F_k1 * array([GM_cen_analy(hmf_i, u_k_i, rho_mean_i, pop_c_i,
                             ngal_i, mass_range)
                             for rho_mean_i, hmf_i, pop_c_i, ngal_i, u_k_i in\
-                            izip(rho_mean, hmf, pop_c, ngal, u_k)])
+                            zip(rho_mean, hmf, pop_c, ngal, u_k)])
     else:
-        Pg_c = np.zeros((n_bins_obs,n_bins))
-    if satellites:
+        Pg_c = np.zeros((n_bins_obs,setup['lnk_bins']))
+    if ingredients['satellites']:
         Pg_s = F_k1 * array([GM_sat_analy(hmf_i, u_k_i, uk_s_i, rho_mean_i,
                             pop_s_i, ngal_i, mass_range)
                             for rho_mean_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i in\
-                            izip(rho_mean, hmf, pop_s, ngal, u_k, uk_s)])
+                            zip(rho_mean, hmf, pop_s, ngal, u_k, uk_s)])
     else:
-        Pg_s = np.zeros((n_bins_obs,n_bins))
-                          
-
+        Pg_s = np.zeros((n_bins_obs,setup['lnk_bins']))
 
     Pg_k = array([(Pg_c_i + Pg_s_i) + Pg_2h_i
                for Pg_c_i, Pg_s_i, Pg_2h_i
-               in izip(Pg_c, Pg_s, Pg_2h)])
+               in zip(Pg_c, Pg_s, Pg_2h)])
 
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-               for Pg_k_i in izip(Pg_k)]
+               for Pg_k_i in zip(Pg_k)]
 
-           
 
     """
     # Correlation functions
@@ -365,7 +371,7 @@ def model(theta, R):
 
     #to = time()
     xi2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
-    for i in xrange(M_bin_min.size):
+    for i in range(M_bin_min.size):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
 
 
@@ -376,8 +382,8 @@ def model(theta, R):
 
 
     sur_den2 = array([sigma(xi2_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
-                       for xi2_i, rho_mean_i in izip(xi2, rho_mean)])
-    for i in xrange(M_bin_min.size):
+                       for xi2_i, rho_mean_i in zip(xi2, rho_mean)])
+    for i in range(M_bin_min.size):
         sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
         sur_den2[i] = fill_nan(sur_den2[i])
 
@@ -391,28 +397,28 @@ def model(theta, R):
                       #array([av_delta_NFW(hmf.dndm, z, rho_mean, pop_c_i,
                                              #mass_range,
                                              #rvir_range_2d_i) / 1e12
-                                #for pop_c_i in izip(pop_c)])
+                                #for pop_c_i in zip(pop_c)])
 
 
     d_sur_den2 = array([np.nan_to_num(d_sigma(sur_den2_i,
                                                  rvir_range_3d_i,
                                                  rvir_range_2d_i))
-                           for sur_den2_i in izip(sur_den2)]) / 1e12
+                           for sur_den2_i in zip(sur_den2)]) / 1e12
 
 
     out_esd_tot = array([UnivariateSpline(rvir_range_2d_i,
                                            np.nan_to_num(d_sur_den2_i), s=0)
-                          for d_sur_den2_i in izip(d_sur_den2)])
+                          for d_sur_den2_i in zip(d_sur_den2)])
 
 
     out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    for i in xrange(M_bin_min.size):
+    for i in range(M_bin_min.size):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
 
 
 
     pointmass = array([(10.0**Mi[0])/(np.pi*rvir_range_2d_i**2.0)/1e12 \
-            for Mi in izip(Mstar)])
+            for Mi in zip(Mstar)])
 
     out_esd_tot_inter = out_esd_tot_inter + pointmass
     

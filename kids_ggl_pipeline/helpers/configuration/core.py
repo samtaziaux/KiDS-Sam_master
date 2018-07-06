@@ -193,10 +193,9 @@ class ConfigFile:
         priors = []
         # starting values for free parameters
         starting = []
-        # I wanted to use dictionaries but
-        # the problem is they don't preserve order!
-        #setup = [[], []]
+        ingredients = {}
         setup = {}
+        # dictionaries don't preserve order
         output = [[], []]
         sampling = {}
         path = ''
@@ -222,7 +221,8 @@ class ConfigFile:
             if section == 'observables':
                 observables = confighod.observables(line.words)
             elif section == 'ingredients':
-                ingredients = confighod.ingredients(line.words)
+                ingredients = confighod.ingredients(
+                    ingredients, line.words)
             elif section.parent in ('cosmo', 'hod'):
                 new = confighod.hod_entries(
                     line, section, these_names, these_params, these_priors,
@@ -235,15 +235,12 @@ class ConfigFile:
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
-        print('setup =')
-        print(setup)
-        print()
         parameters, nparams = confighod.flatten_parameters(parameters)
-        priors = np.array(priors)
         sampling = configsampler.add_defaults(sampling)
-        hod_params = [model, observables, ingredients, names, parameters,
-                      priors, nparams, starting, setup, output]
-        return hod_params, sampling
+        hod_params = [observables, ingredients, parameters, setup]
+        hm_params = [model, hod_params, np.array(names), np.array(priors),
+                     np.array(nparams), np.array(starting), output]
+        return hm_params, sampling
 
     def read_function(self, path):
         # maybe this should be in `ConfigLine` instead

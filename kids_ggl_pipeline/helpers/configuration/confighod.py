@@ -7,7 +7,7 @@ from .core import *
 from ...halomodel.hod import relations, scatter
 
 
-valid_priors = ('fixed', 'lognormal', 'normal', 'uniform')
+valid_priors = ('array', 'fixed', 'function', 'lognormal', 'normal', 'uniform')
 
 
 def append_setup(parameters, nparams, setup):
@@ -40,6 +40,7 @@ def hod_entries(line, section, names, parameters, priors, starting):
         parameters[1].append(0)
         parameters[2].append(-np.inf)
         parameters[3].append(np.inf)
+        priors.append('function')
     else:
         names, parameters, priors, starting = \
             hod_parameters(names, parameters, priors, starting, line)
@@ -61,9 +62,11 @@ def hod_parameters(names, parameters, priors, starting, line):
         assert prior_is_valid(line)
         priors.append(words[1])
     names.append(words[0])
-    parameters[0].append(float(words[2]))
-    # keep adapting the code above to here
-    if priors[-1] == 'fixed':
+    if priors[-1] == 'array':
+        parameters[0].append(np.array(words[2].split(','), dtype=float))
+    else:
+        parameters[0].append(float(words[2]))
+    if priors[-1] in ('array', 'fixed'):
         parameters[1].append(-1)
     #if priors[-1] in ('lognormal', 'normal', 'uniform'):
     else:
@@ -79,11 +82,12 @@ def hod_parameters(names, parameters, priors, starting, line):
     return names, parameters, priors, starting
 
 
-def ingredients(words):
+def ingredients(ingr, words):
     assert words[1] in ('True', 'False'), \
         'Value {1} for parameter {0} in hod/ingredients not valid.' \
         ' Must be True or False'.format(*(words))
-    return (words[1] == 'True')
+    ingr[words[0]] = (words[1] == 'True')
+    return ingr
 
 
 def observables(words):
@@ -102,7 +106,7 @@ def prior_is_valid(line):
 def starting_values(starting, parameters, line):
     words = line.words
     prior = words[1]
-    if prior == 'fixed':
+    if prior in ('array', 'fixed'):
         return starting
     if prior == 'uniform':
         if len(words) == 5:

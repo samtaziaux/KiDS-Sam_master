@@ -239,7 +239,7 @@ class ConfigFile:
         sampling = configsampler.add_defaults(sampling)
         hod_params = [observables, ingredients, parameters, setup]
         hm_params = [model, hod_params, np.array(names), np.array(priors),
-                     np.array(nparams), np.array(starting), output]
+                     np.array(nparams), np.array(starting), np.array(output)]
         return hm_params, sampling
 
     def read_function(self, path):

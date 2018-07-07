@@ -31,7 +31,7 @@ if sys.version_info[0] == 2:
 from . import sampling_utils
 
 
-def run_emcee(hm_options, sampling_options, args):
+def run_emcee(hm_options, sampling, args):
 
     #function, observables, ingredients, names, parameters, prior_types, \
         #nparams, starting, setup, output = hm_options
@@ -44,8 +44,9 @@ def run_emcee(hm_options, sampling_options, args):
     print('Running KiDS-GGL pipeline - sampler\n')
     if args.demo:
         print(' ** Running demo only **')
-    elif isfile(output):
-        msg = 'Warning: output file %s exists. Overwrite? [y/N] ' %output
+    elif isfile(sampling['output']):
+        msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
+            sampling['output'])
         answer = input(msg)
         if len(answer) == 0:
             exit()
@@ -55,31 +56,31 @@ def run_emcee(hm_options, sampling_options, args):
         print('\n{0}: Started\n'.format(ctime()))
 
     # load data files
-    Ndatafiles = len(sampling_options['data'][0])
+    Ndatafiles = len(sampling['data'][0])
     # need to run this without exclude_bins to throw out invalid values in it
-    R, esd = sampling_utils.load_datapoints(*sampling_options['data'])
-    #if 'exclude_bins' in sampling_options:
-    exclude_bins = sampling_options['exclude_bins']
-    if exclude_bins is not None:
-        exclude_bins = exclude_bins[exclude_bins < esd.shape[1]]
+    R, esd = sampling_utils.load_datapoints(*sampling['data'])
+    #if 'exclude' in sampling:
+    if sampling['exclude'] is not None:
+        sampling['exclude'] = \
+            sampling['exclude'][sampling['exclude'] < esd.shape[1]]
     #else:
         #exclude_bins = None
     R, esd = sampling_utils.load_datapoints(
-        sampling_options['data'][0], sampling_options['data'][1],
-        exclude_bins)
+        sampling['data'][0], sampling['data'][1],
+        sampling['exclude'])
 
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
     rng_rbins = range(Nrbins)
     # load covariance
     cov = sampling_utils.load_covariance(
-        sampling_options['covariance'][0], sampling_options['covariance'][1],
-        Nobsbins, Nrbins, exclude_bins)
+        sampling['covariance'][0], sampling['covariance'][1],
+        Nobsbins, Nrbins, sampling['exclude'])
     cov, icov, likenorm, esd_err, cov2d = cov
 
     # needed for offset central profile
     R, Rrange = sampling_utils.setup_integrand(
-        R, sampling_options['precision'])
+        R, sampling['precision'])
     angles = np.linspace(0, 2*pi, 540)
     val1 = np.append(val1, [Rrange, angles])
 
@@ -101,16 +102,20 @@ def run_emcee(hm_options, sampling_options, args):
                  Ndatafiles)
         sys.exit()
 
-    write_hdr(
-        output, datafile, datacols, covfile, covcols, exclude_bins,
-        names, prior_types, val1, val2, val3, val4,
-        nwalkers, nsteps, nburn, thin)
+    #write_hdr(
+        #output, datafile, datacols, covfile, covcols, exclude_bins,
+        #names, prior_types, val1, val2, val3, val4,
+        #nwalkers, nsteps, nburn, thin)
+    write_hdr(sampling, function, parameters, names, prior_types)
 
     # set up starting point for all walkers
-    #po = starting * np.random.uniform(0.9, 1.1, size=(nwalkers,ndim))
-    po = sampler_ball(names, prior_types, jfree, starting, val1, val2, val3,
-                      val4, ndim, nwalkers)
+    po = sampler_ball(
+        names, prior_types, jfree, starting, parameters,
+        sampling['nwalkers'], ndim)
     lnprior = zeros(ndim)
+
+    print('output =', output)
+    meta_names, fits_format = output
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
     # different scenario
@@ -119,15 +124,17 @@ def run_emcee(hm_options, sampling_options, args):
         n = 1 if len(fmt) == 1 else int(fmt[0])
         # is this value a scalar?
         if len(fmt) == 1:
-            size = nwalkers * nsteps // thin
+            size = sampling['nwalkers'] * sampling['nsteps'] \
+                // sampling['thin']
         else:
-            size = [nwalkers*nsteps//thin, int(fmt[:-1])]
+            size = [sampling['nwalkers']*sampling['nsteps']//sampling['thin'],
+                    int(fmt[:-1])]
             # only for ESDs. Note that there will be trouble if outputs
             # other than the ESD have the same length, so avoid them at
             # all cost.
-            if exclude_bins is not None \
-                    and size[1] == esd.shape[-1]+len(exclude_bins):
-                size[1] -= len(exclude_bins)
+            if sampling['exclude'] is not None \
+                    and size[1] == esd.shape[-1]+len(sampling['exclude']):
+                size[1] -= len(sampling['exclude'])
         metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     metadata = [m[0] if m.shape[0] == 1 else m for m in metadata]
@@ -141,32 +148,34 @@ def run_emcee(hm_options, sampling_options, args):
         fail_value.append(9999)
 
     sampler = emcee.EnsembleSampler(
-        nwalkers, ndim, lnprob, threads=threads,
+        sampling['nwalkers'], ndim, lnprob, threads=sampling['threads'],
         args=(R,esd,icov,function,names,prior_types[jfree],
               parameters,params_join,jfree,lnprior,likenorm,
               rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
 
     # burn-in
-    if nburn > 0:
-        pos, prob, state, blobs = sampler.run_mcmc(po, nburn)
+    if sampling['nburn'] > 0:
+        pos, prob, state, blobs = sampler.run_mcmc(po, sampling['nburn'])
         sampler.reset()
-        print('{1}: {0} Burn-in steps finished'.format(nburn, ctime()))
+        print('{1}: {0} Burn-in steps finished'.format(
+            sampling['nburn'], ctime()))
     else:
         pos = po
 
     # incrementally save output
     # this array contains lnprior, chi2, lnlike
-    chi2 = [zeros(nwalkers*nsteps//thin) for i in range(3)]
+    chi2 = [zeros(sampling['nwalkers']*sampling['nsteps']//sampling['thin'])
+            for i in range(3)]
     nwritten = 0
     for i, result in enumerate(
-            sampler.sample(pos, iterations=nsteps, thin=thin)):
-        if i > 0 and ((i+1)*nwalkers > nwalkers*nwritten + update_freq):
-            out = write_to_fits(output, chi2, sampler, nwalkers, thin,
-                                names, jfree, metadata, meta_names,
-                                fits_format, update_freq, i, nwritten,
-                                Nobsbins, fail_value, array, BinTableHDU,
-                                Column, ctime, enumerate, isfile, zip,
-                                transpose, range)
+            sampler.sample(pos, iterations=sampling['nsteps'],
+                           thin=sampling['thin'])):
+        if i > 0 and ((i+1)*sampling['nwalkers'] \
+                      > sampling['nwalkers']*nwritten + sampling['update']):
+            out = write_to_fits(
+                sampler, sampling, chi2, names, jfree, output, metadata, i,
+                nwritten, Nobsbins, fail_value, array, BinTableHDU,
+                Column, ctime, enumerate, isfile, zip, transpose, range)
             metadata, nwritten = out
 
     hdr = open(hdrfile, 'a')
@@ -218,11 +227,11 @@ def run_emcee(hm_options, sampling_options, args):
     print(cmd)
     os.system(cmd)
     print('Saving everything to {0}...'.format(output))
-    #print(i, nwalkers, nwritten)
-    write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
-                  metadata, meta_names, fits_format, update_freq, i+1,
-                  nwritten, Nobsbins, fail_value, array, BinTableHDU,
-                  Column, ctime, enumerate, isfile, zip, transpose, range)
+    #print(i, sampling['nwalkers'], nwritten)
+    write_to_fits(
+        sampler, sampling, chi2, names, jfree, output, metadata, i+1,
+        nwritten, Nobsbins, fail_value, array, BinTableHDU, Column, ctime,
+        enumerate, isfile, zip, transpose, range)
     if os.path.isfile(tmp):
         os.remove(tmp)
     print('Everything saved to {0}!'.format(output))
@@ -314,7 +323,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     # note that by now we discard the other v's!
     parameters[2] = v1
 
-    model = function(parmaeters, R)
+    model = function(parameters, R)
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
@@ -432,22 +441,26 @@ def run_demo(function, R, esd, esd_err, cov, icov, parameters, params_join,
     return
 
 
-def write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
-                  metadata, meta_names, fits_format, update_freq, iternum,
-                  nwritten, Nobsbins, fail_value, array, BinTableHDU,
+#def write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
+                  #metadata, meta_names, fits_format, update_freq, iternum,
+                  #nwritten, Nobsbins, fail_value, array, BinTableHDU,
+                  #Column, ctime, enumerate, isfile, zip, transpose, range):
+def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
+                  iternum, nwritten, Nobsbins, fail_value, array, BinTableHDU,
                   Column, ctime, enumerate, isfile, zip, transpose, range):
     nchi2 = len(chi2)
     # the two following lines should remain consistent if modified
     chi2_loc = -2
     lnprior, chi2, lnlike = chi2
-    if isfile(output):
-        remove(output)
+    if isfile(sampling['output']):
+        remove(sampling['output'])
     chain = transpose(sampler.chain, axes=(2,1,0))
     columns = [Column(name=param, format='E', array=data[:iternum].flatten())
                for param, data in zip(names[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',
                           array=sampler.lnprobability.T[:iternum].flatten()))
 
+    meta_names, fits_format = output
     if len(meta_names) > 0:
         # save only the last chunk (starting from t),
         # all others are already in metadata.
@@ -456,8 +469,8 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
         nparams = len(metadata)
         for j, blob in zip(range(nwritten, iternum),
                             sampler.blobs[nwritten:]):
-            data = [zeros((nwalkers,m.shape[1]))
-                    if len(m.shape) == 2 else zeros(nwalkers)
+            data = [zeros((sampling['nwalkers'],m.shape[1]))
+                    if len(m.shape) == 2 else zeros(sampling['nwalkers'])
                     for m in metadata]
             # this loops over the walkers. In each iteration we then access
             # a list corresponding to the number of hm_output's
@@ -482,33 +495,32 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
                         n += 1
             # store data
             n = 0
+            write_start = j * sampling['nwalkers']
+            write_end = (j+1) * sampling['nwalkers']
             for k in range(len(data)):
-                
                 # if using a single bin, there can be scalars
                 if not hasattr(data[k], '__iter__'):
-                    metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
+                    metadata[n][write_start:write_end] = data[k]
                     n += 1
                     continue
                 shape = data[k].shape
                 if len(shape) == 3:
                     for datum in data[k]:
                         for m, val in enumerate(datum):
-                            metadata[n][j*nwalkers:(j+1)*nwalkers] = val
+                            metadata[n][write_start:write_end] = val
                             n += 1
                 elif len(shape) == 2 and len(fits_format[n]) == 1:
                     datum = data[k].T
                     for i in range(len(datum)):
-                        metadata[n][j*nwalkers:(j+1)*nwalkers] = datum[i]
+                        metadata[n][write_start:write_end] = datum[i]
                         n += 1
                 else:
-                    metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
+                    metadata[n][write_start:write_end] = data[k]
                     n += 1
-            #lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
-                                                           #for b in blob])
-            lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])
-            chi2[j*nwalkers:(j+1)*nwalkers] = array([b[-2] for b in blob])
-            lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
-        # this handles exclude_bins properly
+            lnprior[write_start:write_end] = array([b[-3] for b in blob])
+            chi2[write_start:write_end] = array([b[-2] for b in blob])
+            lnlike[write_start:write_end] = array([b[-1] for b in blob])
+        # this handles sampling['exclude'] properly
         for name, val, fmt in zip(meta_names, metadata, fits_format):
             val = squeeze(val)
             if len(val.shape) == 1:
@@ -521,12 +533,12 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
     columns.append(Column(name='chi2', format='E', array=chi2))
     columns.append(Column(name='lnlike', format='E', array=lnlike))
     fitstbl = BinTableHDU.from_columns(columns)
-    fitstbl.writeto(output)
+    fitstbl.writeto(sampling['output'])
     nwritten = iternum
     print('{2}: Saved to {0} with {1} samples'.format(
-            output, nwritten*nwalkers, ctime()))
-    if thin > 1:
-        print('(printing every {0}th sample)'.format(thin))
+            sampling['output'], nwritten*sampling['nwalkers'], ctime()))
+    if sampling['thin'] > 1:
+        print('(printing every {0}th sample)'.format(sampling['thin']))
     #print('acceptance fraction =', sampler.acceptance_fraction)
     # these two are the same
     #print('autocorrelation length =', sampler.acor)
@@ -545,13 +557,16 @@ def read_redshift(val1, names, nparams):
     return redshift.T
 
 
-def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
-                 ndim, nwalkers):
+#def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
+                 #ndim, nwalkers):
+def sampler_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
     """
     This creates a ball around a starting value, taking prior ranges
     into consideration. It takes intervals (max-min)/2 around a
     starting value.
     """
+    val1, val2, val3, val4 = parameters[2]
+    print('val2 =', val2)
     v1free = val1[where(jfree)]
     v2free = val2[where(jfree)]
     v3free = val3[where(jfree)]
@@ -559,7 +574,7 @@ def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
     names_free = names[where(jfree)]
     prior_free = prior_types[where(jfree)]
 
-    ball = np.zeros((nwalkers, ndim))
+    ball = np.zeros((nw, ndim))
     for n, j in enumerate(names_free):
         if prior_free[n] == 'normal':
             lims = (v4free[n] - v3free[n]) / 10.0
@@ -569,7 +584,7 @@ def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
                 min = v3free[n]
             if max >= v4free[n]:
                 max = v4free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nwalkers)
+            ball[:,n] = np.random.uniform(min, max, size=nw)
 
         if prior_free[n] == 'lognormal':
             lims = (v4free[n] - v3free[n]) / 10.0
@@ -579,7 +594,7 @@ def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
                 min = v3free[n]
             if max >= v4free[n]:
                 max = v4free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nwalkers)
+            ball[:,n] = np.random.uniform(min, max, size=nw)
 
         if prior_free[n] == 'uniform':
             lims = (v2free[n] - v1free[n]) / 10.0
@@ -589,7 +604,7 @@ def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
                 min = v1free[n]
             if max >= v2free[n]:
                 max = v2free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nwalkers)
+            ball[:,n] = np.random.uniform(min, max, size=nw)
 
         if prior_free[n] == 'exp':
             lims = (v3free[n] - v2free[n]) / 10.0
@@ -599,50 +614,62 @@ def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
                 min = v2free[n]
             if max >= v3free[n]:
                 max = v3free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nwalkers)
+            ball[:,n] = np.random.uniform(min, max, size=nw)
 
     return ball
 
 
-def write_hdr(output, datafile, datacols, covfile, covcols, exclude_bins,
-              names, prior_types, val1, val2, val3, val4,
-              nwalkers, nsteps, nburn, thin):
-    hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
+#def write_hdr(output, datafile, datacols, covfile, covcols, exclude_bins,
+              #names, prior_types, val1, val2, val3, val4,
+              #nwalkers, nsteps, nburn, thin):
+def write_hdr(sampling, function, parameters, names, prior_types):
+    hdrfile = '.'.join(sampling['output'].split('.')[:-1]) + '.hdr'
     print('Printing header information to', hdrfile)
-    hdr = open(hdrfile, 'w')
-    print('Started', ctime(), file=hdr)
-    print('datafile', ','.join(datafile), file=hdr)
-    print('cols', ','.join([str(c) for c in datacols]), file=hdr)
-    print('covfile', covfile, file=hdr)
-    print('covcols', ','.join([str(c) for c in covcols]), file=hdr)
-    if exclude_bins is not None:
-        print('exclude_bins', ','.join([str(c) for c in exclude_bins]),
+    #val1, val2, val3, val4 = parameters[2]
+    parameters[2] = np.transpose(parameters[2])
+    print(len(parameters), len(parameters[2]), len(names), len(prior_types))
+    #hdr = open(hdrfile, 'w')
+    with open(hdrfile, 'w') as hdr:
+        print('Started', ctime(), file=hdr)
+        print('datafile', ','.join(sampling['data'][0]), file=hdr)
+        print('cols', ','.join([str(c) for c in sampling['data'][1]]),
               file=hdr)
-    print('model {0}'.format(function), file=hdr)
-    for p, pt, v1, v2, v3, v4 in zip(names, prior_types,
-                                      val1, val2, val3, val4):
-        try:
-            line = '%s  %s  ' %(p, pt)
-            line += ','.join(np.array(v1, dtype=str))
-        except TypeError:
-            line = '%s  %s  %s' %(p, pt, str(v1))
-            if pt not in ('fixed', 'function', 'read'):
-                # I don't know why v2, v3 and v4 are single-element
-                # arrays instead of floats but who cares if all the rest
-                # works... I'm leaving the try statement just in case they
-                # might be floats at some point
-                try:
-                    line += '  %s  %s  %s' \
-                            %tuple([str(v[0]) for v in (v2,v3,v4)])
-                except TypeError:
-                    line += '  %s  %s  %s' \
-                            %tuple([str(v) for v in (v2,v3,v4)])
-        print(line, file=hdr)
-    print('nwalkers  {0:5d}'.format(nwalkers), file=hdr)
-    print('nsteps    {0:5d}'.format(nsteps), file=hdr)
-    print('nburn     {0:5d}'.format(nburn), file=hdr)
-    print('thin      {0:5d}'.format(thin), file=hdr)
-    hdr.close()
+        print('covfile', sampling['covariance'][0], file=hdr)
+        print('covcols',
+              ','.join([str(c) for c in sampling['covariance'][1]]),
+              file=hdr)
+        if sampling['exclude'] is not None:
+            print('exclude',
+                  ','.join([str(c) for c in sampling['exclude']]),
+                  file=hdr)
+        print('model {0}'.format(function), file=hdr)
+        """
+        for p, pt, v1, v2, v3, v4 \
+                in zip(names, prior_types, val1, val2, val3, val4):
+            try:
+                line = '%s  %s  ' %(p, pt)
+                line += ','.join(np.array(v1, dtype=str))
+            except TypeError:
+                line = '%s  %s  %s' %(p, pt, str(v1))
+                if pt not in ('fixed', 'function', 'read'):
+                    # I don't know why v2, v3 and v4 are single-element
+                    # arrays instead of floats but who cares if all the rest
+                    # works... I'm leaving the try statement just in case they
+                    # might be floats at some point
+                    try:
+                        line += '  %s  %s  %s' \
+                                %tuple([str(v[0]) for v in (v2,v3,v4)])
+                    except TypeError:
+                        line += '  %s  %s  %s' \
+                                %tuple([str(v) for v in (v2,v3,v4)])
+            print(line, file=hdr)
+        """
+        
+        print('nwalkers  {0:5d}'.format(sampling['nwalkers']), file=hdr)
+        print('nsteps    {0:5d}'.format(sampling['nsteps']), file=hdr)
+        print('nburn     {0:5d}'.format(sampling['nburn']), file=hdr)
+        print('thin      {0:5d}'.format(sampling['thin']), file=hdr)
+
     return
 
 

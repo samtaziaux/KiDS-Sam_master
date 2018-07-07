@@ -7,7 +7,8 @@ from .core import *
 from ...halomodel.hod import relations, scatter
 
 
-valid_priors = ('array', 'fixed', 'function', 'lognormal', 'normal', 'uniform')
+valid_priors = ('array', 'fixed', 'function', 'lognormal', 'normal',
+                'uniform')
 
 
 def append_setup(parameters, nparams, setup):
@@ -25,6 +26,7 @@ def flatten_parameters(parameters):
         for par in params:
             for p in par:
                 flat[i].append(p)
+    flat = [np.array(i) for i in flat]
     return flat, nparams
 
 

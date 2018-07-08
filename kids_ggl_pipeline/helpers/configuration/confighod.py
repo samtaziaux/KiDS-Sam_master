@@ -35,18 +35,28 @@ def hod_entries(line, section, names, parameters, priors, starting):
     `line` should be a `configline` object
     """
     if line.words[0] == 'name':
-        if 'mor' in section:
-            parameters[0].append(getattr(relations, line.words[1]))
-        elif 'scatter' in section:
-            parameters[0].append(getattr(scatter, line.words[1]))
-        parameters[1].append(0)
-        parameters[2].append(-np.inf)
-        parameters[3].append(np.inf)
-        priors.append('function')
+        names, parameters, priors = hod_function(
+            names, parameters, priors, section, line)
     else:
         names, parameters, priors, starting = \
             hod_parameters(names, parameters, priors, starting, line)
     return names, parameters, priors, starting
+
+
+def hod_function(names, parameters, priors, section, line):
+    if 'mor' in section:
+        parameters[0].append(getattr(relations, line.words[1]))
+    elif 'scatter' in section:
+        parameters[0].append(getattr(scatter, line.words[1]))
+    parameters[1].append(0)
+    parameters[2].append(-np.inf)
+    parameters[3].append(np.inf)
+    if len(line.words) == 3:
+        names.append(line.words[2])
+    else:
+        names.append(':'.join([section.name, line.words[1]]))
+    priors.append('function')
+    return names, parameters, priors
 
 
 def hod_parameters(names, parameters, priors, starting, line):

@@ -33,8 +33,6 @@ from . import sampling_utils
 
 def run_emcee(hm_options, sampling, args):
 
-    #function, observables, ingredients, names, parameters, prior_types, \
-        #nparams, starting, setup, output = hm_options
     function, parameters, names, prior_types, nparams, starting, output = \
         hm_options
 
@@ -44,7 +42,7 @@ def run_emcee(hm_options, sampling, args):
     print('Running KiDS-GGL pipeline - sampler\n')
     if args.demo:
         print(' ** Running demo only **')
-    elif isfile(sampling['output']):
+    elif isfile(sampling['output']) and not args.force_overwrite:
         msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
             sampling['output'])
         answer = input(msg)
@@ -136,13 +134,13 @@ def run_emcee(hm_options, sampling, args):
         sys.exit()
 
     # write header file
-    write_hdr(sampling, function, parameters, names, prior_types)
+    hdrfile = write_hdr(sampling, function, parameters, names, prior_types)
 
     # initialize sampler
     sampler = emcee.EnsembleSampler(
         sampling['nwalkers'], ndim, lnprob, threads=sampling['threads'],
         args=(R,esd,icov,function,names,prior_types[jfree],
-              parameters,params_join,jfree,lnprior,likenorm,
+              parameters,nparams,params_join,jfree,lnprior,likenorm,
               rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
 
     # set up starting point for all walkers
@@ -175,63 +173,62 @@ def run_emcee(hm_options, sampling, args):
                 Column, ctime, enumerate, isfile, zip, transpose, range)
             metadata, nwritten = out
 
-    hdr = open(hdrfile, 'a')
+    with open(hdrfile, 'a') as hdr:
 
-    try:
-        print('acceptance_fraction =', sampler.acceptance_fraction)
-        print('acceptance_fraction =', file=hdr, end=' ')
-        for af in sampler.acceptance_fraction:
-            print(af, file=hdr, end=' ')
-    except ImportError:
-        pass
+        try:
+            print('acceptance_fraction =', sampler.acceptance_fraction)
+            print('acceptance_fraction =', file=hdr, end=' ')
+            for af in sampler.acceptance_fraction:
+                print(af, file=hdr, end=' ')
+        except ImportError:
+            pass
 
-    #try:
-        #print('acor =', sampler.acor)
-        #print('\nacor =', file=hdr, end=' ')
-        #for ac in sampler.acor:
-            #print(ac, file=hdr, end=' ')
-    #except ImportError:
-        #pass
+        #try:
+            #print('acor =', sampler.acor)
+            #print('\nacor =', file=hdr, end=' ')
+            #for ac in sampler.acor:
+                #print(ac, file=hdr, end=' ')
+        #except ImportError:
+            #pass
 
-    # acor and get_autocorr_time() are the same
-    try:
-        print('acor =', sampler.get_autocorr_time())
-        print('\nacor_time =', file=hdr, end=' ')
-        for act in sampler.get_autocorr_time(c=5):
-            print(act, file=hdr, end=' ')
-    #except AttributeError:
-        #pass
-    #except emcee.autocorr.AutocorrError:
-        #pass
-    except:
-        pass
+        # acor and get_autocorr_time() are the same
+        try:
+            print('acor =', sampler.get_autocorr_time())
+            print('\nacor_time =', file=hdr, end=' ')
+            for act in sampler.get_autocorr_time(c=5):
+                print(act, file=hdr, end=' ')
+        #except AttributeError:
+            #pass
+        #except emcee.autocorr.AutocorrError:
+            #pass
+        except:
+            pass
 
-    # acor and get_autocorr_time() are the same
-    #try:
-        #print('acor_time =', sampler.get_autocorr_time())
-        #print('\nacor_time =', file=hdr, end=' ')
-        #for act in sampler.get_autocorr_time():
-            #print(act, file=hdr, end=' ')
-    #except AttributeError:
-        #pass
+        # acor and get_autocorr_time() are the same
+        #try:
+            #print('acor_time =', sampler.get_autocorr_time())
+            #print('\nacor_time =', file=hdr, end=' ')
+            #for act in sampler.get_autocorr_time():
+                #print(act, file=hdr, end=' ')
+        #except AttributeError:
+            #pass
 
-    print('\nFinished', ctime(), file=hdr)
-    hdr.close()
+        print('\nFinished', ctime(), file=hdr)
+
     print('Saved to', hdrfile)
 
-    tmp = output.replace('.fits', '.temp.fits')
-    cmd = 'mv {0} {1}'.format(output, tmp)
+    tmp = sampling['output'].replace('.fits', '.temp.fits')
+    cmd = 'mv {0} {1}'.format(sampling['output'], tmp)
     print(cmd)
     os.system(cmd)
-    print('Saving everything to {0}...'.format(output))
-    #print(i, sampling['nwalkers'], nwritten)
+    print('Saving everything to {0}...'.format(sampling['output']))
     write_to_fits(
         sampler, sampling, chi2, names, jfree, output, metadata, i+1,
         nwritten, Nobsbins, fail_value, array, BinTableHDU, Column, ctime,
         enumerate, isfile, zip, transpose, range)
     if os.path.isfile(tmp):
         os.remove(tmp)
-    print('Everything saved to {0}!'.format(output))
+    print('Everything saved to {0}!'.format(sampling['output']))
     return
 
 
@@ -320,13 +317,15 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     # join into sections and subsections as per the config file
     # by doing this I'm losing Rrange and angles, but I suppose
     # those should be defined in the config file as well.
-    val1 = [val1[sum(nparams[:i]):sum(nparams[:i+1])]
-            for i in range(len(nparams))]
+    v1 = np.array([v1[sum(nparams[:i]):sum(nparams[:i+1])]
+                   for i in range(len(nparams))])
     # note that by now we discard the other v's!
-    #parameters[2] = [val1, val2, val3, val4]
-    parameters[2] = val1
+    # we don't want to overwrite the old list now that we've
+    # changed one of its components
+    newp = [p for p in parameters]
+    newp[2] = v1
 
-    model = function(parameters, R)
+    model = function(newp, R)
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
@@ -336,7 +335,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
     if 'model' in str(function):
         # model assumes comoving separations, changing data to accomodate for that
-        redshift = read_redshift(val1, names, nparams)
+        redshift = read_redshift(val1, names)
         esd = esd / (1+redshift)**2
         residuals = (esd - model[0]) / (1+redshift)**2
     else:
@@ -353,6 +352,8 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     model.append(lnprior_total)
     model.append(chi2)
     model.append(lnlike)
+    # return to original content for future calls
+    parameters[2] = [val1, val2, val3, val4]
     return lnlike + lnprior_total, model
 
 
@@ -419,10 +420,6 @@ def run_demo(function, R, esd, esd_err, cov, icov, prior_types, parameters,
     return
 
 
-#def write_to_fits(output, chi2, sampler, nwalkers, thin, names, jfree,
-                  #metadata, meta_names, fits_format, update_freq, iternum,
-                  #nwritten, Nobsbins, fail_value, array, BinTableHDU,
-                  #Column, ctime, enumerate, isfile, zip, transpose, range):
 def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
                   iternum, nwritten, Nobsbins, fail_value, array, BinTableHDU,
                   Column, ctime, enumerate, isfile, zip, transpose, range):
@@ -433,6 +430,8 @@ def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
     if isfile(sampling['output']):
         remove(sampling['output'])
     chain = transpose(sampler.chain, axes=(2,1,0))
+    print(names, len(names))
+    print(jfree.size, jfree.sum())
     columns = [Column(name=param, format='E', array=data[:iternum].flatten())
                for param, data in zip(names[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',
@@ -507,7 +506,6 @@ def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
                 fmt = '{0}{1}'.format(val.shape[1], fmt[-1])
             columns.append(Column(name=name, array=val, format=fmt))
     columns.append(Column(name='lnprior', format='E', array=lnprior))
-    #columns.append(Column(name='lnPderived', format='E', array=lnPderived))
     columns.append(Column(name='chi2', format='E', array=chi2))
     columns.append(Column(name='lnlike', format='E', array=lnlike))
     fitstbl = BinTableHDU.from_columns(columns)
@@ -538,8 +536,6 @@ def read_redshift(val1, names, nparams=None):
     return redshift.T
 
 
-#def sampler_ball(names, prior_types, jfree, starting, val1, val2, val3, val4,
-                 #ndim, nwalkers):
 def sampler_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
     """
     This creates a ball around a starting value, taking prior ranges
@@ -547,7 +543,6 @@ def sampler_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
     starting value.
     """
     val1, val2, val3, val4 = parameters[2]
-    print('val2 =', val2)
     v1free = val1[where(jfree)]
     v2free = val2[where(jfree)]
     v3free = val3[where(jfree)]
@@ -608,7 +603,6 @@ def write_hdr(sampling, function, parameters, names, prior_types):
     print('Printing header information to', hdrfile)
     #val1, val2, val3, val4 = parameters[2]
     parameters[2] = np.transpose(parameters[2])
-    print(len(parameters), len(parameters[2]), len(names), len(prior_types))
     #hdr = open(hdrfile, 'w')
     with open(hdrfile, 'w') as hdr:
         print('Started', ctime(), file=hdr)
@@ -651,6 +645,9 @@ def write_hdr(sampling, function, parameters, names, prior_types):
         print('nburn     {0:5d}'.format(sampling['nburn']), file=hdr)
         print('thin      {0:5d}'.format(sampling['thin']), file=hdr)
 
-    return
+    # back to its original shape
+    parameters[2] = np.transpose(parameters[2])
+
+    return hdrfile
 
 

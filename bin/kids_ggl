@@ -14,17 +14,8 @@ from kids_ggl_pipeline.helpers import configuration
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    add = parser.add_argument
-    add('--demo', dest='demo', action='store_true',
-        help='evaluate a demo sample with the input parameters')
-    add('--esd', dest='esd', action='store_true',
-        help='run the ESD production module')
-    add('--sampler', dest='sampler', action='store_true',
-        help='run the MCMC sampler')
-    add('-c', '--config', dest='config_file')
-    args = parser.parse_args()
-    # options to turn on and off the data production or halo model?
+
+    args = parse_args()
 
     # ESD data production
     if args.esd:
@@ -41,6 +32,23 @@ def main():
         print('Nothing to do.\n')
 
     return
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    add = parser.add_argument
+    add('--demo', dest='demo', action='store_true',
+        help='evaluate a demo sample with the input parameters')
+    add('--esd', dest='esd', action='store_true',
+        help='run the ESD production module')
+    add('-f', dest='force_overwrite', action='store_true',
+        help='Overwrite output file if it exists')
+    add('--sampler', dest='sampler', action='store_true',
+        help='run the MCMC sampler')
+    add('-c', '--config', dest='config_file')
+    args = parser.parse_args()
+    # options to turn on and off the data production or halo model?
+    return args
 
 
 main()

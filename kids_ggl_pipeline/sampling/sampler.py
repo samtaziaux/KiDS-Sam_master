@@ -18,6 +18,7 @@ from numpy import all as npall, array, append, concatenate, dot, inf, isnan, \
                   where, zeros
 from os import remove
 from os.path import isfile
+from scipy import stats
 from time import ctime, time
 #import pickle
 
@@ -28,7 +29,7 @@ if sys.version_info[0] == 2:
     input = raw_input
 
 # local
-from . import sampling_utils
+from . import priors, sampling_utils
 
 
 def run_emcee(hm_options, sampling, args):
@@ -83,9 +84,7 @@ def run_emcee(hm_options, sampling, args):
     val1 = np.append(val1, [Rrange, angles])
 
     # identify fixed and free parameters
-    jfixed = (prior_types == 'array') | (prior_types == 'fixed') \
-             | (prior_types == 'read') | (prior_types == 'function')
-    jfree = ~jfixed
+    jfree = np.array([(p in priors.free_priors) for p in prior_types])
     ndim = len(val1[where(jfree)])
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
@@ -266,41 +265,14 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
             time
 
     """
-    val1, val2, val3, val4 = parameters[2]
-    v1free = val1[where(jfree)].flatten()
-    v2free = val2[where(jfree)].flatten()
-    v3free = val3[where(jfree)].flatten()
-    v4free = val4[where(jfree)].flatten()
-    if not isfinite(v1free.sum()):
-        return -inf, fail_value
-    j = (prior_types == 'normal')
-    lnprior[j] = array([-(v-v1)**2 / (2*v2**2) - log(2*pi*v2**2)/2
-                        if v3 <= v <= v4 else -inf
-                        for v, v1, v2, v3, v4
-                        in zip(theta[j], v1free[j], v2free[j],
-                               v3free[j], v4free[j])])
-    j = (prior_types == 'lognormal')
-    lnprior[j] = array([-(log10(v)-v1)**2 / (2*v2**2) - log(2*pi*v2**2)/2
-                        if v3 <= v <= v4 else -inf
-                        for v, v1, v2, v3, v4
-                        in zip(theta[j], v1free[j], v2free[j],
-                                v3free[j], v4free[j])])
-    j = (prior_types == 'uniform')
-    lnprior[j] = array([-log(v2-v1) if v1 <= v <= v2 else -inf
-                        for v, v1, v2
-                        in zip(theta[j], v1free[j], v2free[j])])
-    # note that exp is not normalized
-    j = (prior_types == 'exp')
-    lnprior[j] = array([v**v1 if v2 <= v <= v3 else -inf
-                        for v, v1, v2, v3
-                        in zip(theta[j], v1free[j], v2free[j], v3free[j])])
-    lnprior_total = lnprior.sum()
+    lnprior_total = priors.calculate_lnprior(
+        lnprior, theta, prior_types, parameters, jfree)
     if not isfinite(lnprior_total):
         return -inf, fail_value
 
     # all other types ('fixed', 'read') do not contribute to the prior
     # run the given model
-    v1 = val1.copy()
+    v1 = parameters[2][0].copy()
     v1[where(jfree)] = theta
     if params_join is not None:
         v1j = list(v1)
@@ -335,7 +307,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
     if 'model' in str(function):
         # model assumes comoving separations, changing data to accomodate for that
-        redshift = read_redshift(val1, names)
+        redshift = read_redshift(v1, names, nparams)
         esd = esd / (1+redshift)**2
         residuals = (esd - model[0]) / (1+redshift)**2
     else:
@@ -353,7 +325,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     model.append(chi2)
     model.append(lnlike)
     # return to original content for future calls
-    parameters[2] = [val1, val2, val3, val4]
+    #parameters[2] = [val1, val2, val3, val4]
     return lnlike + lnprior_total, model
 
 
@@ -430,8 +402,6 @@ def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
     if isfile(sampling['output']):
         remove(sampling['output'])
     chain = transpose(sampler.chain, axes=(2,1,0))
-    print(names, len(names))
-    print(jfree.size, jfree.sum())
     columns = [Column(name=param, format='E', array=data[:iternum].flatten())
                for param, data in zip(names[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',
@@ -551,53 +521,12 @@ def sampler_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
     prior_free = prior_types[where(jfree)]
 
     ball = np.zeros((nw, ndim))
-    for n, j in enumerate(names_free):
-        if prior_free[n] == 'normal':
-            lims = (v4free[n] - v3free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v3free[n]:
-                min = v3free[n]
-            if max >= v4free[n]:
-                max = v4free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nw)
-
-        if prior_free[n] == 'lognormal':
-            lims = (v4free[n] - v3free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v3free[n]:
-                min = v3free[n]
-            if max >= v4free[n]:
-                max = v4free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nw)
-
-        if prior_free[n] == 'uniform':
-            lims = (v2free[n] - v1free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v1free[n]:
-                min = v1free[n]
-            if max >= v2free[n]:
-                max = v2free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nw)
-
-        if prior_free[n] == 'exp':
-            lims = (v3free[n] - v2free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v2free[n]:
-                min = v2free[n]
-            if max >= v3free[n]:
-                max = v3free[n]
-            ball[:,n] = np.random.uniform(min, max, size=nw)
-
+    for n, p in enumerate(prior_free):
+        ball[:,n] = priors.draw(
+            p, (v1free[n],v2free[n]), (v3free[n],v4free[n]), size=nw)
     return ball
 
 
-#def write_hdr(output, datafile, datacols, covfile, covcols, exclude_bins,
-              #names, prior_types, val1, val2, val3, val4,
-              #nwalkers, nsteps, nburn, thin):
 def write_hdr(sampling, function, parameters, names, prior_types):
     hdrfile = '.'.join(sampling['output'].split('.')[:-1]) + '.hdr'
     print('Printing header information to', hdrfile)
@@ -618,9 +547,12 @@ def write_hdr(sampling, function, parameters, names, prior_types):
                   ','.join([str(c) for c in sampling['exclude']]),
                   file=hdr)
         print('model {0}'.format(function), file=hdr)
-        """
-        for p, pt, v1, v2, v3, v4 \
-                in zip(names, prior_types, val1, val2, val3, val4):
+        # being lazy for now
+        print('observables  {0}'.format(parameters[0]), file=hdr)
+        print('ingredients {0}'.format(
+            ','.join([key for key, item in parameters[1].items() if item])))
+        print(len(parameters[2]))
+        for p, pt, v1, v2, v3, v4 in zip(names, prior_types, *parameters[2].T):
             try:
                 line = '%s  %s  ' %(p, pt)
                 line += ','.join(np.array(v1, dtype=str))
@@ -638,8 +570,7 @@ def write_hdr(sampling, function, parameters, names, prior_types):
                         line += '  %s  %s  %s' \
                                 %tuple([str(v) for v in (v2,v3,v4)])
             print(line, file=hdr)
-        """
-        
+
         print('nwalkers  {0:5d}'.format(sampling['nwalkers']), file=hdr)
         print('nsteps    {0:5d}'.format(sampling['nsteps']), file=hdr)
         print('nburn     {0:5d}'.format(sampling['nburn']), file=hdr)

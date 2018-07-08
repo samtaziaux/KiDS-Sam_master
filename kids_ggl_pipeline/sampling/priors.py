@@ -12,15 +12,15 @@ fixed_priors = ['array', 'fixed', 'function', 'read']
 # all are used!
 lnprior_functions = {
     'exp': lambda v, v1, v2: log(expon.pdf(v)),
-    'jeffrey': lambda v, v1, v2: -log(v),
+    'jeffreys': lambda v, v1, v2: -log(v),
     'lognormal': lambda v, v1, v2: \
-        -(log(v)-v1)**2 / (2*v2**2) - log(2*pi*v2**2)/2,
+        -v - (log(v)-v1)**2 / (2*v2**2) - log(2*pi*v2**2),
     'normal': lambda v, v1, v2: \
-        -(v-v1)**2 / (2*v2**2) - log(2*pi*v2**2)/2,
+        -(v-v1)**2 / (2*v2**2) - log(2*pi*v2**2),
     'student': lambda v, v1, v2: log(tstudent.pdf(v, v1)),
     'uniform': lambda v, v1, v2: -log(v2-v1)}
 # true number of arguments defined here separately
-nargs = {'exp': 0, 'jeffrey': 0, 'lognormal': 2, 'normal': 2,
+nargs = {'exp': 0, 'jeffreys': 0, 'lognormal': 2, 'normal': 2,
          'student': 1, 'uniform': 2}
 for p in fixed_priors:
     nargs[p] = 0
@@ -61,7 +61,7 @@ def define_limits(prior, args):
     if prior == 'student':
         # cumulative probability ~ 3e-7
         return [0, 1000000]
-    if prior == 'jeffrey':
+    if prior == 'jeffreys':
         # no choice but to assume this number is of order 0-1
         # (but cannot be exactly zero)
         return [1e-10, 100]

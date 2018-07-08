@@ -2,13 +2,12 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import numpy as np
+from scipy import stats
 
 from .core import *
 from ...halomodel.hod import relations, scatter
-
-
-valid_priors = ('array', 'fixed', 'function', 'lognormal', 'normal',
-                'uniform')
+from ...sampling.priors import (
+    fixed_priors, free_priors, nargs as prior_nargs, valid_priors)
 
 
 def append_setup(parameters, nparams, setup):
@@ -69,28 +68,54 @@ def hod_parameters(names, parameters, priors, starting, line):
     """
     words = line.words
     if words[0] in ('name', 'function'):
+        priors.append('function')
+    elif words[1] in ('array', 'read'):
+        priors.append(words[1])
+    elif words[1] in fixed_priors:
         priors.append('fixed')
+    elif words[1] in valid_priors:
+        priors.append(words[1])
     else:
         assert prior_is_valid(line)
-        priors.append(words[1])
     names.append(words[0])
+
     if priors[-1] == 'array':
         parameters[0].append(np.array(words[2].split(','), dtype=float))
-    else:
+    elif priors[-1] == 'read':
+        parameters[0].append(
+            np.loadtxt(words[2], usecols=','.split(words[3])).T)
+    elif priors[-1] in fixed_priors:
         parameters[0].append(float(words[2]))
-    if priors[-1] in ('array', 'fixed'):
-        parameters[1].append(-1)
-    #if priors[-1] in ('lognormal', 'normal', 'uniform'):
+    elif prior_nargs[priors[-1]] > 0:
+        parameters[0].append(float(words[2]))
     else:
-        parameters[1].append(float(words[3]))
-        if len(words) > 5:
-            parameters[2].append(float(words[4]))
-            parameters[3].append(float(words[5]))
-        # starting only applies to free parameters
+        parameters[0].append(-1)
+
+    if priors[-1] in fixed_priors or priors[-1] in ('exp', 'jeffrey'):
+        parameters[1].append(-1)
+        starting = starting_values(starting, parameters, line)
+    else:
+        if prior_nargs[priors[-1]] == 2:
+            parameters[1].append(float(words[3]))
+            if len(words) > 5:
+                parameters[2].append(float(words[4]))
+                parameters[3].append(float(words[5]))
+        else:
+            parameters[1].append(-1)
+            if prior_nargs[priors[-1]] == 1 and len(words) > 4:
+                parameters[2].append(float(words[3]))
+                parameters[3].append(float(words[4]))
+            elif prior_nargs[priors[-1]] == 0 and len(words) > 3:
+                parameters[2].append(float(words[2]))
+                parameters[3].append(float(words[3]))
+        if priors[-1] == 'uniform':
+            parameters[2].append(parameters[0][-1])
+            parameters[3].append(parameters[1][-1])
         starting = starting_values(starting, parameters, line)
     if len(parameters[2]) < len(parameters[1]):
         parameters[2].append(-np.inf)
         parameters[3].append(np.inf)
+
     return names, parameters, priors, starting
 
 
@@ -118,46 +143,37 @@ def prior_is_valid(line):
 def starting_values(starting, parameters, line):
     words = line.words
     prior = words[1]
-    if prior in ('array', 'fixed'):
+    if prior in fixed_priors:
         return starting
-    if prior == 'uniform':
-        if len(words) == 5:
-            starting.append(float(words[4]))
-        else:
-            starting.append(np.random.uniform(
-                parameters[0][-1], parameters[1][-1], 1)[0])
-    elif prior in ('lognormal', 'normal'):
+    # these ones take two parameters
+    if prior in ('lognormal', 'normal', 'uniform'):
         if len(words) in (5,7):
             starting.append(float(words[-1]))
         elif prior == 'normal':
             starting.append(np.random.normal(
                 parameters[0][-1], parameters[1][-1], 1)[0])
-        else:
+        elif prior == 'lognormal':
             starting.append(10**np.random.normal(
                 np.log10(parameters[0][-1]),
                 np.log10(parameters[1][-1]), 1)[0])
+        elif prior == 'uniform':
+            starting.append(np.random.uniform(
+                parameters[0][-1], parameters[1][-1], 1)[0])
+    # these take one parameter
+    elif prior in ('student',):
+        if len(words) in (4,6):
+            starting.append(float(words[-1]))
+        if prior == 'student':
+            starting.append(stats.t.rvs(float(line.words[2]), 1))
+    # these take no parameters
+    elif prior in ('exp', 'jeffrey',):
+        if len(words) in (3,5):
+            starting.append(float(words[-1]))
+        if prior == 'exp':
+            satrting.append(stats.expon.rvs(1))
+        elif prior == 'jeffrey':
+            # until we have a random number generator with this prior
+            starting.append(np.random.uniform(
+                parameters[0][-1], parameters[1][-1], 1)[0])
     return starting
-
-
-def starting_value(line):
-    """
-    `line` must be a `configline` object
-    """
-    assert prior_is_valid(line)
-    words = line.words
-    prior = words[1]
-    v1 = float(words[2])
-    v2 = float(words[3])
-    if prior == 'fixed':
-        return v1
-    if prior == 'uniform':
-        if len(words) == 5:
-            return float(words[4])
-        return np.random.uniform(v1, v2, 1)[0]
-    if prior in ('normal', 'lognormal'):
-        if len(words) in (5, 7):
-            return float(words[-1])
-        if prior == 'normal':
-            return np.random.normal(v1, v2, 1)[0]
-        return 10**np.random.normal(np.log10(v1), np.log10(v2), 1)[0]
 

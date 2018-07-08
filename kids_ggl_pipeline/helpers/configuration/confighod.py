@@ -118,7 +118,7 @@ def starting_values(starting, parameters, line):
                 parameters[0][-1], parameters[1][-1], 1)[0])
     elif prior in ('lognormal', 'normal'):
         if len(words) in (5,7):
-            starting.append(words[-1])
+            starting.append(float(words[-1]))
         elif prior == 'normal':
             starting.append(np.random.normal(
                 parameters[0][-1], parameters[1][-1], 1)[0])

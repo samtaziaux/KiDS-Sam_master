@@ -93,28 +93,6 @@ def run_emcee(hm_options, sampling, args):
         'ERROR: Not all starting points defined for free parameters.'
     print('Starting values =', starting)
 
-    parameters[2] = [val1, val2, val3, val4]
-
-    # are we just running a demo?
-    if args.demo:
-        run_demo(function, R, esd, esd_err, cov, icov, parameters,
-                 params_join, starting, jfree, nparams, names, rng_obsbins,
-                 Ndatafiles)
-        sys.exit()
-
-    #write_hdr(
-        #output, datafile, datacols, covfile, covcols, exclude_bins,
-        #names, prior_types, val1, val2, val3, val4,
-        #nwalkers, nsteps, nburn, thin)
-    write_hdr(sampling, function, parameters, names, prior_types)
-
-    # set up starting point for all walkers
-    po = sampler_ball(
-        names, prior_types, jfree, starting, parameters,
-        sampling['nwalkers'], ndim)
-    lnprior = zeros(ndim)
-
-    print('output =', output)
     meta_names, fits_format = output
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
@@ -146,12 +124,31 @@ def run_emcee(hm_options, sampling, args):
     # the last numbers are data chi2, lnLdata
     for i in range(3):
         fail_value.append(9999)
+    # initialize
+    lnprior = zeros(ndim)
 
+    # are we just running a demo?
+    if args.demo:
+        run_demo(function, R, esd, esd_err, cov, icov, prior_types,
+                 parameters, params_join, starting, jfree, nparams, names,
+                 lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot,
+                 inf, outer, pi, zip)
+        sys.exit()
+
+    # write header file
+    write_hdr(sampling, function, parameters, names, prior_types)
+
+    # initialize sampler
     sampler = emcee.EnsembleSampler(
         sampling['nwalkers'], ndim, lnprob, threads=sampling['threads'],
         args=(R,esd,icov,function,names,prior_types[jfree],
               parameters,params_join,jfree,lnprior,likenorm,
               rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
+
+    # set up starting point for all walkers
+    po = sampler_ball(
+        names, prior_types, jfree, starting, parameters,
+        sampling['nwalkers'], ndim)
 
     # burn-in
     if sampling['nburn'] > 0:
@@ -239,7 +236,7 @@ def run_emcee(hm_options, sampling, args):
 
 
 def lnprob(theta, R, esd, icov, function, names, prior_types,
-           parameters, params_join, jfree, lnprior, likenorm,
+           parameters, nparams, params_join, jfree, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
@@ -284,7 +281,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
                         if v3 <= v <= v4 else -inf
                         for v, v1, v2, v3, v4
                         in zip(theta[j], v1free[j], v2free[j],
-                                v3free[j], v4free[j])])
+                               v3free[j], v4free[j])])
     j = (prior_types == 'lognormal')
     lnprior[j] = array([-(log10(v)-v1)**2 / (2*v2**2) - log(2*pi*v2**2)/2
                         if v3 <= v <= v4 else -inf
@@ -320,8 +317,14 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
         aux = [[v1j.pop(pi) for pi in p[1:][::-1]]
                 for p in params_join[::-1]]
         v1 = v1j #array(v1j) ??
+    # join into sections and subsections as per the config file
+    # by doing this I'm losing Rrange and angles, but I suppose
+    # those should be defined in the config file as well.
+    val1 = [val1[sum(nparams[:i]):sum(nparams[:i+1])]
+            for i in range(len(nparams))]
     # note that by now we discard the other v's!
-    parameters[2] = v1
+    #parameters[2] = [val1, val2, val3, val4]
+    parameters[2] = val1
 
     model = function(parameters, R)
     # no covariance
@@ -335,7 +338,6 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
         # model assumes comoving separations, changing data to accomodate for that
         redshift = read_redshift(val1, names, nparams)
         esd = esd / (1+redshift)**2
-        esd_err = esd_err / (1+redshift)**2
         residuals = (esd - model[0]) / (1+redshift)**2
     else:
         residuals = esd - model[0]
@@ -354,8 +356,10 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     return lnlike + lnprior_total, model
 
 
-def run_demo(function, R, esd, esd_err, cov, icov, parameters, params_join,
-             starting, jfree, nparams, names, rng_obsbins, Ndatafiles):
+def run_demo(function, R, esd, esd_err, cov, icov, prior_types, parameters,
+             params_join, starting, jfree, nparams, names, lnprior,
+             rng_obsbins, fail_value, Ndatafiles, array, dot, inf, outer,
+             pi, zip):
     def plot_demo(ax, Ri, gt, gt_err, f):
         Ri = Ri[1:]
         ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
@@ -367,47 +371,21 @@ def run_demo(function, R, esd, esd_err, cov, icov, parameters, params_join,
                         #color='r')
         return
 
-    ## all of this needs to go in a new function
-    val1 = parameters[2][0]
-    val1[where(jfree)] = starting
-    if params_join is not None:
-        v1 = list(val1)
-        for p in params_join:
-            # without this list comprehension numpy can't keep track of the
-            # data type. I believe this is because there are elements of
-            # different types in val1 and therefore its type is not
-            # well defined (so it gets "object")
-            v1[p[0]] = array([val1[pj] for pj in p])
-        # need to delete elements backwards to preserve indices
-        aux = [[v1.pop(pj) for pj in p[1:][::-1]]
-               for p in params_join[::-1]]
-        val1 = v1 #array(v1) ??
-    to = time()
-    # join into sections and subsections as per the config file
-    # by doing this I'm losing Rrange and angles, but I suppose
-    # those should be defined in the config file as well.
-    val1 = [val1[sum(nparams[:i]):sum(nparams[:i+1])]
-            for i in range(len(nparams))]
-    # note that we've discarded the other val's
-    parameters[2] = val1
-    ## up to the line just above
-
-    model = function(parameters, R)
-    print('Model evaluated in {0:.2e} seconds'.format(time() - to))
-    #residuals = esd - model[0]
-    if 'model' in str(function):
-        redshift = read_redshift(val1, names, nparams)
-        esd = esd / (1+redshift)**2
-        esd_err = esd_err / (1+redshift)**2
-        residuals = (esd - model[0]) / (1+redshift)**2
-    else:
-        residuals = esd - model[0]
-
+    parameters[2][0][where(jfree)] = starting
+    lnlike, model = lnprob(
+        starting, R, esd, icov, function, names, prior_types[jfree],
+        parameters, nparams, params_join, jfree, lnprior, 0, rng_obsbins,
+        fail_value, array, dot, inf, zip, outer, pi)
+    chi2 = model[-2]
     dof = esd.size - starting.size - 1
-    chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-                  for m in rng_obsbins for n in rng_obsbins]).sum()
+    print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
 
-    print(' ** chi2 = %.2f/%d **' %(chi2, dof))
+    # the rest are corrected in lnprob. We should work to remove
+    # this anyway
+    if 'model' in str(function):
+        redshift = read_redshift(parameters[2][0], names)
+        esd_err = esd_err / (1+redshift)**2
+
     fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
     if Ndatafiles == 1:
         plot_demo(axes, R[0], esd[0], esd_err[0], model[0][0])
@@ -546,14 +524,17 @@ def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
     return metadata, nwritten
 
 
-def read_redshift(val1, names, nparams):
+def read_redshift(val1, names, nparams=None):
     # model assumes comoving separations, changing data to accomodate
     # for that
     redshift_index = np.int(where(names == 'z')[0])
-    # val1 is no longer a flat array
-    jz = [np.arange(nparams.size)[np.cumsum(nparams) <= redshift_index+1][0]]
-    jz.append(redshift_index - nparams[jz[0]])
-    redshift = val1[jz[0]][jz[1]]
+    if nparams is None:
+        redshift = val1[redshift_index]
+    else:
+        # val1 is no longer a flat array
+        jz = [np.arange(nparams.size)[np.cumsum(nparams) <= redshift_index+1][0]]
+        jz.append(redshift_index - nparams[jz[0]])
+        redshift = val1[jz[0]][jz[1]]
     return redshift.T
 
 

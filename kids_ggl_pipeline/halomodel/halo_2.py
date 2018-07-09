@@ -579,7 +579,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                                                 rvir_range_2d_i))
                         for sur_den2_2_i in _izip(sur_den2_2)]) / 1e12
                          
-    
+    #"""
     d_sur_den2_3 = _array([np.nan_to_num(d_sigma(sur_den2_3_i,
                                                  rvir_range_3d_i,
                                                  rvir_range_2d_i))
@@ -603,7 +603,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
                          
     out_esd_tot_inter_2 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
                          
-    
+    #"""
     out_esd_tot_3 = _array([UnivariateSpline(rvir_range_2d_i,
                             np.nan_to_num(d_sur_den2_3_i), s=0)
                             for d_sur_den2_3_i in _izip(d_sur_den2_3)])
@@ -629,7 +629,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
     
     # Add other outputs as needed. Total ESD should always be first!
-
+    #"""
     sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
                             np.nan_to_num(wp_i), s=0)
                              for wp_i in _izip(w_p)])
@@ -637,7 +637,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
     sur_den2_2_out_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
     for i in xrange(M_bin_min.size):
         sur_den2_2_out_inter[i] = sur_den2_2_out[i](rvir_range_2d_i)
-
+    #"""
     # This is for w_p and esd, separated in bins
     """
     out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
@@ -659,6 +659,7 @@ def gamma(theta, R, lnk_min=-13., lnk_max=17., n_bins=10000):
 
     return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2_out_inter, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
     #return [wp_out]
+    #return [out_esd_tot_inter_2/out_esd_tot_inter]
     #return [k_range, Pg_c, Pg_s, Pg_2h, Pg_k, Pgg_s, Pgg_cs, Pgg_2h, Pgg_k, Pmm_1h, [hmf[0].power, hmf[1].power, hmf[2].power], Pmm]
 
 if __name__ == '__main__':

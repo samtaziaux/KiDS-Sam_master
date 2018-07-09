@@ -38,7 +38,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
-        z_epsilon, n_boot, cross_cov = \
+        z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 
@@ -84,7 +84,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
             path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
             centering, purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
-            filename_addition, cat_version)
+            filename_addition, cat_version, com)
     
     # Binnning information of the groups
     lenssel_binning = shear.define_lenssel(

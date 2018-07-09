@@ -102,6 +102,9 @@ If you have any questions, please (preferably) raise an issue in `github`, or co
 ---
 Update log:
 
+**2018 May 7** - Release v1.6.3. Features:
+- Fixed bug in the Tinker halo bias function used in the halo model. 
+
 **2018 January 19** - Release v1.6.2. Features:
 - ESD production fully tested in Python 3 after several bug fixes
 

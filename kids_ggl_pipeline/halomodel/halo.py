@@ -113,6 +113,7 @@ def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
     return (mass_func.power * b_g), b_g
 
 
+
 def model(theta, R):
 
     np.seterr(divide='ignore', over='ignore', under='ignore',

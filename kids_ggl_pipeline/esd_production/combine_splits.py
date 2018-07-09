@@ -39,7 +39,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
-        z_epsilon, n_boot, cross_cov = \
+        z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 Nsplit, Nsplits, binnum, blindcat, config_file)
 

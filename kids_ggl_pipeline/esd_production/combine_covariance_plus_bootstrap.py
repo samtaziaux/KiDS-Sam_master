@@ -35,7 +35,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
-        z_epsilon, n_boot, cross_cov = \
+        z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 
@@ -89,7 +89,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
             path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
             centering, purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
-            filename_addition, cat_version)
+            filename_addition, cat_version, com)
 
     galIDlist_matched = np.array([], dtype=np.int32)
     for kidscatname in kidscats:
@@ -249,12 +249,18 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     Zs_N1 = sheardat_N1['Zs']
                     if Cs_N1.size == 0:
                         continue
-
-                    e1 = sheardat_N1['e1'][:,blindcatnum]
-                    e2 = sheardat_N1['e2'][:,blindcatnum]
-                    lfweight = sheardat_N1['lfweight'][:,blindcatnum]
-                    srcmlist = sheardat_N1['bias_m']
-                    variance = sheardat_N1['variance(e[A,B,C,D])'][0]
+                    if len(blindcats) != 1:
+                        e1 = sheardat_N1['e1'][:,blindcatnum]
+                        e2 = sheardat_N1['e2'][:,blindcatnum]
+                        lfweight = sheardat_N1['lfweight'][:,blindcatnum]
+                        srcmlist = sheardat_N1['bias_m']
+                        variance = sheardat_N1['variance(e[A,B,C,D])'][0]
+                    else:
+                        e1 = sheardat_N1['e1']
+                        e2 = sheardat_N1['e2']
+                        lfweight = sheardat_N1['lfweight']
+                        srcmlist = sheardat_N1['bias_m']
+                        variance = sheardat_N1['variance(e[A,B,C,D])']
 
                     e1 = np.reshape(e1,[len(e1),1])
                     e2 = np.reshape(e2,[len(e2),1])

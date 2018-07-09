@@ -98,6 +98,9 @@ If you have any questions, please (preferably) raise an issue in `github`, or co
 ---
 Update log:
 
+**2018 July 9** - Release v1.7. Features:
+- Created version 1.7 for archive and backward compatibility. Same as v1.6.3.
+
 **2018 May 7** - Release v1.6.3. Features:
 - Fixed bug in the Tinker halo bias function used in the halo model. 
 

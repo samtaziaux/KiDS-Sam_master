@@ -560,7 +560,6 @@ def write_hdr(sampling, function, parameters, names, prior_types):
         print('ingredients {0}'.format(
             ','.join([key for key, item in parameters[1].items() if item])),
             file=hdr)
-        print(len(parameters[2]))
         for p, pt, v1, v2, v3, v4 in zip(names, prior_types, *parameters[2].T):
             try:
                 line = '%s  %s  ' %(p, pt)

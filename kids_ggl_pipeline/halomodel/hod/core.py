@@ -1,20 +1,11 @@
+"""HOD population functions"""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 from numpy import array, iterable
+from scipy.integrate import trapz
 
 from ..tools import Integrate
-
-
-"""
-# Population functions - average number of galaxies
-
-There should be two files that the user can edit: one with the mass-observable 
-scaling and one with the HOD (there could be standard functions with names such as 
-'power law'). Then we should identify these in the configuration file
-
-"""
-
 
 
 def number(mor, scatter_func, m, Mh, mor_args, scatter_args):
@@ -44,6 +35,15 @@ def number(mor, scatter_func, m, Mh, mor_args, scatter_args):
     """
     prob = probability(mor, scatter_func, m, Mh, mor_args, scatter_args)
     return array([Integrate(pi, m) for pi in prob])
+
+
+def obs_average(mor, scatter_func, m, Mh, mor_args, scatter_args):
+    """Effective average observable
+
+    For list of parameters see `number`
+    """
+    prob = probability(mor, scatter_func, m, Mh, mor_args, scatter_args)
+    return np.array([trapz(p*m, m) for p in prob])
 
 
 def probability(mor, scatter_func, m, Mh, mor_args, scatter_args):

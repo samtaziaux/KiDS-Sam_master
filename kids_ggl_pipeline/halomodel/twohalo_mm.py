@@ -69,7 +69,7 @@ def dsigma_mm(sigma_8, h, omegab_h2, omegam, omegav, n, z, R):
     h = H0/100.0
     cosmo_model = LambdaCDM(H0=H0, Ob0=omegab/h**2.0, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
 
-    transfer_params = {'sigma_8': sigma_8, 'n': n, 'lnk_min': k_min ,'lnk_max': k_max, 'dlnk': k_step, 'transfer_model': tf.CAMB, 'z':z}
+    transfer_params = {'sigma_8': sigma_8, 'n': n, 'lnk_min': k_min ,'lnk_max': k_max, 'dlnk': k_step, 'z':z}
     # Calculation
     
     

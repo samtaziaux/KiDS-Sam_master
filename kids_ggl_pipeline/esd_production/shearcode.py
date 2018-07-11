@@ -202,7 +202,7 @@ def run_esd(config_file):
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
         lens_selection, src_selection, cat_version, wizz, n_boot, \
-        cross_cov, blindcats = \
+        cross_cov, com, blindcats = \
             esd_utils.read_config(config_file)
 
     print('\n \n \n \n \n')

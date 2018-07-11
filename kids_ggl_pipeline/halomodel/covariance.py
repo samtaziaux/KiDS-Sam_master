@@ -187,7 +187,7 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
                     
         srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, weights=spec_weight_k, density=1)
         srcPZ_k = srcPZ_k/srcPZ_k.sum()
-        k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), Dcsbins, srcPZ_k, 3, Dc_epsilon)
+        k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), Dcsbins, srcPZ_k, 3, Dc_epsilon, np.array([lens_redshifts[i]]), False)
             
     k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 

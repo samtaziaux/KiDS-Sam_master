@@ -87,11 +87,13 @@ def run_emcee(hm_options, sampling, args):
     val1 = np.append(val1, [Rrange, angles])
 
     # identify fixed and free parameters
+
     jfree = np.array([(p in priors.free_priors) for p in prior_types])
     ndim = len(val1[where(jfree)])
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
     print('Starting values =', starting)
+
 
     meta_names, fits_format = output
     mshape = meta_names.shape
@@ -309,6 +311,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     #              for m in rng_obsbins for n in rng_obsbins]).sum()
 
     if 'model' in str(function):
+
         # model assumes comoving separations, changing data to accomodate for that
         redshift = read_redshift(v1, names, nparams)
         esd = esd / (1+redshift)**2

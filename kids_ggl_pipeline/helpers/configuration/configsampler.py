@@ -34,7 +34,5 @@ def sampling_dict(line, sampling):
 def add_defaults(sampling):
     if 'exclude' not in sampling:
         sampling['exclude'] = None
-    if 'precision' not in sampling:
-        sampling['precision'] = sampling['k']
     return sampling
 

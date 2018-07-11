@@ -78,6 +78,9 @@ def run_emcee(hm_options, sampling, args):
     cov, icov, likenorm, esd_err, cov2d = cov
 
     # needed for offset central profile
+    # for now (but this should probably not be in the sampler dictionary)
+    if 'precision' not in sampling:
+        sampling['precision'] = 7
     R, Rrange = sampling_utils.setup_integrand(
         R, sampling['precision'])
     angles = np.linspace(0, 2*pi, 540)
@@ -550,8 +553,8 @@ def write_hdr(sampling, function, parameters, names, prior_types):
         # being lazy for now
         print('observables  {0}'.format(parameters[0]), file=hdr)
         print('ingredients {0}'.format(
-            ','.join([key for key, item in parameters[1].items() if item])))
-        print(len(parameters[2]))
+            ','.join([key for key, item in parameters[1].items() if item])),
+            file=hdr)
         for p, pt, v1, v2, v3, v4 in zip(names, prior_types, *parameters[2].T):
             try:
                 line = '%s  %s  ' %(p, pt)

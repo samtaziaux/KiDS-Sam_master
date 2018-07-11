@@ -5,8 +5,7 @@ import numpy as np
 from six import string_types
 
 from . import confighod, configsampler
-from ...halomodel import (
-    nfw, nfw_stack, halo, halo_2, halo_2_mc, halo_sz, halo_sz_modular)
+from ...halomodel import nfw, nfw_stack, halo, halo_2, halo_2_mc
 
 # local, if present
 try:
@@ -164,8 +163,7 @@ class ConfigFile:
         if self._valid_modules is None:
             _modules = {
                 'nfw': nfw, 'nfw_stack': nfw_stack, 'halo': halo,
-                'halo_2': halo_2, 'halo_2_mc': halo_2_mc,
-                'halo_sz': halo_sz, 'halo_sz_modular': halo_sz_modular}
+                'halo_2': halo_2, 'halo_2_mc': halo_2_mc}
             try:
                 _modules['models'] = models
             except NameError:
@@ -226,11 +224,10 @@ class ConfigFile:
             elif section.parent in ('cosmo', 'hod'):
                 new = confighod.hod_entries(
                     line, section, these_names, these_params, these_priors,
-                starting)
+                    starting)
                 these_names, these_params, these_priors, starting = new
             elif section == 'setup':
                 setup = section.append_entry_setup(line, setup)
-                #setup[line.words[0]] = line.words[1]
             elif section == 'output':
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':

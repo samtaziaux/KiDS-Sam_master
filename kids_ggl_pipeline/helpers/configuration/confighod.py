@@ -7,7 +7,7 @@ from scipy import stats
 from .core import *
 from ...halomodel.hod import relations, scatter
 from ...sampling.priors import (
-    fixed_priors, free_priors, nargs as prior_nargs, valid_priors)
+    draw, fixed_priors, free_priors, nargs as prior_nargs, valid_priors)
 
 
 def append_setup(parameters, nparams, setup):
@@ -145,35 +145,9 @@ def starting_values(starting, parameters, line):
     prior = words[1]
     if prior in fixed_priors:
         return starting
-    # these ones take two parameters
-    if prior in ('lognormal', 'normal', 'uniform'):
-        if len(words) in (5,7):
-            starting.append(float(words[-1]))
-        elif prior == 'normal':
-            starting.append(np.random.normal(
-                parameters[0][-1], parameters[1][-1], 1)[0])
-        elif prior == 'lognormal':
-            starting.append(10**np.random.normal(
-                np.log10(parameters[0][-1]),
-                np.log10(parameters[1][-1]), 1)[0])
-        elif prior == 'uniform':
-            starting.append(np.random.uniform(
-                parameters[0][-1], parameters[1][-1], 1)[0])
-    # these take one parameter
-    elif prior in ('student',):
-        if len(words) in (4,6):
-            starting.append(float(words[-1]))
-        if prior == 'student':
-            starting.append(stats.t.rvs(float(line.words[2]), 1))
-    # these take no parameters
-    elif prior in ('exp', 'jeffrey',):
-        if len(words) in (3,5):
-            starting.append(float(words[-1]))
-        if prior == 'exp':
-            satrting.append(stats.expon.rvs(1))
-        elif prior == 'jeffrey':
-            # until we have a random number generator with this prior
-            starting.append(np.random.uniform(
-                parameters[0][-1], parameters[1][-1], 1)[0])
+    args = [p[-1] for p in parameters[:2]]
+    bounds = [parameters[2][-1], parameters[3][-1]]
+    starting.append(draw(prior, args, bounds, size=None))
     return starting
+
 

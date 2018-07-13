@@ -47,6 +47,9 @@ def hod_function(names, parameters, priors, section, line):
         parameters[0].append(getattr(relations, line.words[1]))
     elif 'scatter' in section:
         parameters[0].append(getattr(scatter, line.words[1]))
+    # not yet implemented
+    elif 'miscentring' in section:
+        parameters[0].append(line.words[1])
     parameters[1].append(0)
     parameters[2].append(-np.inf)
     parameters[3].append(np.inf)

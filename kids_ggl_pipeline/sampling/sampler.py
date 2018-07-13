@@ -56,17 +56,14 @@ def run_emcee(hm_options, sampling, args):
 
     # load data files
     Ndatafiles = len(sampling['data'][0])
+    assert Ndatafiles > 0, 'No data files found'
     # need to run this without exclude_bins to throw out invalid values in it
     R, esd = sampling_utils.load_datapoints(*sampling['data'])
-    #if 'exclude' in sampling:
     if sampling['exclude'] is not None:
         sampling['exclude'] = \
             sampling['exclude'][sampling['exclude'] < esd.shape[1]]
-    #else:
-        #exclude_bins = None
     R, esd = sampling_utils.load_datapoints(
-        sampling['data'][0], sampling['data'][1],
-        sampling['exclude'])
+        sampling['data'][0], sampling['data'][1], sampling['exclude'])
 
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
@@ -89,13 +86,11 @@ def run_emcee(hm_options, sampling, args):
     val1 = np.append(val1, [Rrange, angles])
 
     # identify fixed and free parameters
-
     jfree = np.array([(p in priors.free_priors) for p in prior_types])
     ndim = len(val1[where(jfree)])
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
     print('Starting values =', starting)
-
 
     meta_names, fits_format = output
     mshape = meta_names.shape

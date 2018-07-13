@@ -122,7 +122,6 @@ def model(theta, R):
     # new config
     observables, ingredients, theta, setup = theta
 
-    # here is where the differences start!
     cosmo, params_pm, params_cent, mor_cent, scatter_cent, miscentring, \
         params_sat, mor_sat, scatter_sat = theta
 

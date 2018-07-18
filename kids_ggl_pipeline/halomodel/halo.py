@@ -138,18 +138,14 @@ def model(theta, R):
     M_step = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
-    obs_bin_min, obs_bin_max, observable = observables
+    obsbins, observable = observables
+    nbins = obsbins.size - 1
     # this whole setup thing should be done outside of the model,
     # only once when setting up the sampler basically
-    if not iterable(obs_bin_min):
-        obs_bin_min = array([obs_bin_min])
-        obs_bin_max = array([obs_bin_max])
     if not iterable(f):
-        f = array([f]*obs_bin_min.size)
+        f = array([f]*nbins)
     if not iterable(fc_nsat):
-        fc_nsat = array([fc_nsat]*obs_bin_min.size)
-    if not iterable(observable):
-        observable = array([observable]*obs_bin_min.size)
+        fc_nsat = array([fc_nsat]*nbins)
 
     concentration = array(
         [Con(np.float64(z_i), mass_range, np.float64(f_i))
@@ -157,7 +153,7 @@ def model(theta, R):
     concentration_sat = array(
         [Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i))
          for z_i, f_i,fc_nsat_i in zip(z,f,fc_nsat)])
-    n_bins_obs = obs_bin_min.size
+    n_bins_obs = nbins
     bias = array([bias]*k_range_lin.size).T
 
     hod_observable = 10**array(
@@ -256,9 +252,9 @@ def model(theta, R):
     # If there is miscentring to be accounted for
     if ingredients['miscentring']:
         if not iterable(p_off):
-            p_off = array([p_off]*obs_bin_min.size)
+            p_off = array([p_off]*nbins)
         if not iterable(r_off):
-            r_off = array([r_off]*obs_bin_min.size)
+            r_off = array([r_off]*nbins)
         u_k = array(
             [NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i),
                    mass_range, rvir_range_lin_i, k_range_lin,
@@ -305,14 +301,14 @@ def model(theta, R):
                for Pg_k_i in zip(Pg_k)]
 
     # correlation functions
-    xi2 = np.zeros((obs_bin_min.size,rvir_range_3d.size))
-    for i in range(obs_bin_min.size):
+    xi2 = np.zeros((nbins,rvir_range_3d.size))
+    for i in range(nbins):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
 
     # projected surface density
     sur_den2 = array([sigma(xi2_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
                        for xi2_i, rho_mean_i in zip(xi2, rho_mean)])
-    for i in range(obs_bin_min.size):
+    for i in range(nbins):
         sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
         sur_den2[i] = fill_nan(sur_den2[i])
 
@@ -324,8 +320,8 @@ def model(theta, R):
     out_esd_tot = array(
         [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_sur_den2_i), s=0)
          for d_sur_den2_i in zip(d_sur_den2)])
-    out_esd_tot_inter = np.zeros((obs_bin_min.size, rvir_range_2d_i.size))
-    for i in range(obs_bin_min.size):
+    out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
+    for i in range(nbins):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
 
     if ingredients['pointmass']:

@@ -1,0 +1,27 @@
+.. KiDS-GGL Pipeline documentation master file, created by
+   sphinx-quickstart on Wed Jul 18 11:56:24 2018.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+.. include:: ../README.rst
+
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Installation
+
+    install
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Authors
+
+    credits
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

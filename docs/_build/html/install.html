@@ -1,0 +1,225 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>1. Installation &#8212; KiDS-GGL Pipeline v2.0.0b0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="installation">
+<h1>1. Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<p><strong>a)</strong> Contact Cristóbal Sifón (<a class="reference external" href="mailto:sifon&#37;&#52;&#48;astro&#46;princeton&#46;edu">sifon<span>&#64;</span>astro<span>&#46;</span>princeton<span>&#46;</span>edu</a>) to become a
+member of the KiDS-WL repository and join the KiDS-GGL team</p>
+<p><strong>b)</strong> Download <a class="reference external" href="https://github.com/KiDS-WL/KiDS-GGL/releases/latest">the latest stable version of the KiDS-GGL
+pipeline</a> and
+unpack,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">kids_ggl_folder</span>
+<span class="n">tar</span> <span class="n">xvf</span> <span class="n">KiDS</span><span class="o">-</span><span class="n">GGL</span><span class="o">-&lt;</span><span class="n">version</span><span class="o">&gt;.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+<p>or, if you chose to download the <code class="docutils literal notranslate"><span class="pre">.zip</span></code> file,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">unzip</span> <span class="n">KiDS</span><span class="o">-</span><span class="n">GGL</span><span class="o">-&lt;</span><span class="n">version</span><span class="o">&gt;.</span><span class="n">zip</span>
+</pre></div>
+</div>
+<p>where for instance <code class="docutils literal notranslate"><span class="pre">&lt;version&gt;=1.0.0</span></code>.</p>
+<p><strong>c)</strong> From within the same folder, run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span> <span class="p">[</span><span class="o">--</span><span class="n">user</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>where the <code class="docutils literal notranslate"><span class="pre">--user</span></code> flag is recommended so as not to require root
+privileges, and the package will typically be installed in
+<code class="docutils literal notranslate"><span class="pre">$HOME/.local/lib</span></code>. If instead you want to install it in a
+non-standard place, then type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span> <span class="o">--</span><span class="n">prefix</span><span class="o">=</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">installation</span><span class="o">/</span>
+</pre></div>
+</div>
+<p>The commands above will also install some additional packages required
+by the pipeline: <code class="docutils literal notranslate"><span class="pre">astropy&gt;=1.1.0</span></code> for astronomical utilities (e.g.,
+constants and units), <code class="docutils literal notranslate"><span class="pre">emcee&gt;=2.1.0</span></code> for MCMC, <code class="docutils literal notranslate"><span class="pre">hmf&gt;=3.0.1</span></code> for halo
+mass function utilities, <code class="docutils literal notranslate"><span class="pre">mpmath&gt;=0.19</span></code> for mathematical utilities,
+and <code class="docutils literal notranslate"><span class="pre">numpy&gt;=1.5.0</span></code>. Optionally, if you want to use the CAMB transfer
+functions in your halo models (preffered method), you should also instal
+CAMB using the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">egg</span> <span class="n">camb</span>
+</pre></div>
+</div>
+<p><strong>d)</strong> After the setup script has finished, you should have a copy of
+the <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> executable somewhere in your <code class="docutils literal notranslate"><span class="pre">$PATH</span></code>, which means you
+can run it out-of-the-box from anywhere in your computer. To make sure,
+type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">which</span> <span class="n">kids_ggl</span>
+</pre></div>
+</div>
+<p>If you do not see any message it means the place where the executable is
+is not part of your <code class="docutils literal notranslate"><span class="pre">$PATH</span></code>. To fix this, look through the
+installation messages where the file was placed (in my Macbook this
+place is
+<code class="docutils literal notranslate"><span class="pre">/Library/Frameworks/Python.framework/Versions/2.7/bin/kids_ggl</span></code>) and
+add the following statement to your <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.bash_profile</span></code>
+if your terminal shell is <code class="docutils literal notranslate"><span class="pre">bash</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export PATH=${PATH}:&lt;path_to_kids_ggl_folder&gt;
+</pre></div>
+</div>
+<p>or the following in your <code class="docutils literal notranslate"><span class="pre">~/.cshrc</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.tcshrc</span></code> if your shell is
+set to <code class="docutils literal notranslate"><span class="pre">csh</span></code> or <code class="docutils literal notranslate"><span class="pre">tcsh</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>setenv PATH ${PATH}:&lt;path_to_kids_ggl_folder&gt;
+</pre></div>
+</div>
+<p>where, in my case,
+<code class="docutils literal notranslate"><span class="pre">&lt;path_to_kids_ggl_folder&gt;=/Library/Frameworks/Python.framework/Versions/2.7/bin</span></code>.</p>
+<p><strong>e)</strong> You can run an example by typing (see below for details)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="n">demo</span><span class="o">/</span><span class="n">ggl_demo_nfw_stack</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">--</span><span class="n">demo</span>
+</pre></div>
+</div>
+<p>This should show three panels with data points and lines resembling the
+Early Science satellite galaxy-galaxy lensing results of Sifon et al.
+(2015) and, after closing it, show the 3x3x14 covariance matrix.</p>
+<p>At this point you are also able to import any component of the KiDS-GGL
+pipeline as <code class="docutils literal notranslate"><span class="pre">python</span></code> modules for use within your own code. Step <strong>c)</strong>
+above should ensure all the components are accessible by your <code class="docutils literal notranslate"><span class="pre">python</span></code>
+installation. For instance, to access the different density profiles
+(currently all based on modifications of the NFW profile) and their
+associated quantities (such as mass, lensing signal, etc), you may type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">kids_ggl_pipeline.halomodel</span> <span class="k">import</span> <span class="n">nfw</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="set-up-your-configuration-file">
+<h1>2. Set up your configuration file.<a class="headerlink" href="#set-up-your-configuration-file" title="Permalink to this headline">¶</a></h1>
+<p>See <code class="docutils literal notranslate"><span class="pre">demo/ggl_demo_nfw_stack.txt</span></code> and <code class="docutils literal notranslate"><span class="pre">demo/ggl_model_demo.txt</span></code> for
+guidance. The former is intended for a simple average NFW modelling of
+the signal and only works with <code class="docutils literal notranslate"><span class="pre">kids_ggl&lt;2.0.0</span></code>, while the latter is a
+full halo model and requires <code class="docutils literal notranslate"><span class="pre">kids_ggl&gt;=2.0.0</span></code>.</p>
+</div>
+<div class="section" id="run">
+<h1>3. Run!<a class="headerlink" href="#run" title="Permalink to this headline">¶</a></h1>
+<p>There are two major things the pipeline can do for you:</p>
+<p><strong>a)</strong> Measure the lensing signal. To do this, type:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">esd</span>
+</pre></div>
+</div>
+<p><strong>b)</strong> Estimate halo model parameters from the lensing signal. To do
+this, type:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span>
+</pre></div>
+</div>
+<p>The sampler module has a demo option which you should always try before
+running a particular model on the data. To this end, type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">--</span><span class="n">demo</span>
+</pre></div>
+</div>
+<p>This option will generate the ESD(s) for your chosen set of initial
+parameters, print the chi2/dof on screen, overplot the model to the data
+points and, once you close this plot, will display the full covariance
+matrix.</p>
+<p><em>New in ``v2``:</em> By default, if the output file exists the pipeline will
+ask the user whether they want to overwrite it. This can be skipped by
+setting the <code class="docutils literal notranslate"><span class="pre">-f</span></code> flag in the command line:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">-</span><span class="n">f</span>
+</pre></div>
+</div>
+<div class="section" id="some-suggestions-to-make-the-best-of-this-pipeline">
+<h2>Some suggestions to make the best of this pipeline:<a class="headerlink" href="#some-suggestions-to-make-the-best-of-this-pipeline" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Make sure you have tested your model using the demo before you set up
+a full run!</li>
+<li>After running a demo, run an MCMC chain of your model with as few
+steps as possible to make sure that the output looks the way you want
+it to look. Fix anything that you can and report any possible bugs.</li>
+<li>Always check how many cores are available in your machine before
+running in parallel.</li>
+<li><strong>Contribute!</strong></li>
+</ul>
+<p>If you have any questions, please (preferably) raise an issue in
+<code class="docutils literal notranslate"><span class="pre">github</span></code>, or contact Andrej Dvornik (<a class="reference external" href="mailto:dvornik&#37;&#52;&#48;strw&#46;leidenuniv&#46;nl">dvornik<span>&#64;</span>strw<span>&#46;</span>leidenuniv<span>&#46;</span>nl</a>),
+Margot Brouwer (<a class="reference external" href="mailto:brouwer&#37;&#52;&#48;strw&#46;leidenuniv&#46;nl">brouwer<span>&#64;</span>strw<span>&#46;</span>leidenuniv<span>&#46;</span>nl</a>) and/or Cristóbal Sifón
+(<a class="reference external" href="mailto:sifon&#37;&#52;&#48;astro&#46;princeton&#46;edu">sifon<span>&#64;</span>astro<span>&#46;</span>princeton<span>&#46;</span>edu</a>).</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1. Installation</a></li>
+<li><a class="reference internal" href="#set-up-your-configuration-file">2. Set up your configuration file.</a></li>
+<li><a class="reference internal" href="#run">3. Run!</a><ul>
+<li><a class="reference internal" href="#some-suggestions-to-make-the-best-of-this-pipeline">Some suggestions to make the best of this pipeline:</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/install.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Andrej Dvornik, Cristobal Sifon, KiDS Collaboration.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/install.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

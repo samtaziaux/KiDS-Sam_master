@@ -157,8 +157,8 @@ def model(theta, R):
     bias = array([bias]*k_range_lin.size).T
 
     hod_observable = 10**array(
-        [np.linspace(Xlo, Xhi, 200, dtype=np.longdouble)
-         for Xlo, Xhi in zip(obs_bin_min, obs_bin_max)])
+        [np.linspace(obsbins[i-1], obsbins[i], 200, dtype=np.longdouble)
+         for i in range(1, obsbins.size)])
 
     transfer_params = array([])
     for z_i in z:

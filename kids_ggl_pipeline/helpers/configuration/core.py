@@ -21,7 +21,7 @@ class ConfigLine(str):
         self._join_label = None
         self._section = None
         self._words = None
-        super().__init__()
+        super(ConfigLine, self).__init__()
         return
 
     @property
@@ -70,12 +70,12 @@ class ConfigLine(str):
         return _line
 
 
-class configsection(str):
+class ConfigSection(str):
 
     def __init__(self, name=''):
         self.name = name
         self._parent = None
-        super().__init__()
+        super(ConfigSection, self).__init__()
         return
 
     @property
@@ -185,7 +185,7 @@ class ConfigFile:
         Need to reshape parameters to return val1, val2, val3, val4
         instead of cosmo, hod separately.
         """
-        section = configsection()
+        section = ConfigSection()
         names = []
         parameters = []
         priors = []
@@ -211,7 +211,7 @@ class ConfigFile:
                     names = section.append_subsection_names(
                         names, these_names)
                 # initialize new section
-                section = configsection(line.section)
+                section = ConfigSection(line.section)
                 these_names = self.initialize_names()
                 these_params = self.initialize_parameters()
                 these_priors = self.initialize_priors()

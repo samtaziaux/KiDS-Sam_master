@@ -133,7 +133,7 @@ def ingredients(ingr, words):
 def observables(words):
     binning = np.array(words[1].split(','), dtype=float)
     means = np.array(words[2].split(','), dtype=float)
-    return [binning[:-1], binning[1:], means]
+    return [binning, means]
 
 
 def prior_is_valid(line):

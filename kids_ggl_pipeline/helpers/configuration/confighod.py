@@ -148,9 +148,16 @@ def starting_values(starting, parameters, line):
     prior = words[1]
     if prior in fixed_priors:
         return starting
-    args = [p[-1] for p in parameters[:2]]
-    bounds = [parameters[2][-1], parameters[3][-1]]
-    starting.append(draw(prior, args, bounds, size=None))
+    print('words =', words)
+    print('nargs =', prior_nargs[prior])
+    print('has_starting =', (len(words) - 2 - prior_nargs[prior]) % 2 == 1)
+    # if the starting points are defined in the config file
+    if (len(words) - 2 - prior_nargs[prior]) % 2 == 1:
+        starting.append(float(words[-1]))
+    else:
+        args = [p[-1] for p in parameters[:2]]
+        bounds = [parameters[2][-1], parameters[3][-1]]
+        starting.append(draw(prior, args, bounds, size=None))
     return starting
 
 

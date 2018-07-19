@@ -66,6 +66,7 @@ def define_limits(prior, args):
         # (but cannot be exactly zero)
         return [1e-10, 100]
 
+
 def draw(prior, args, bounds=None, size=None):
     """Draw random numbers given a prior function and limiting values"""
     # large enough to beat poisson noise (though if the range is too

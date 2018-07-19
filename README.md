@@ -99,7 +99,7 @@ This option will generate the ESD(s) for your chosen set of initial parameters, 
  
 If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristóbal Sifón (sifon@astro.princeton.edu).
 
----
+
 Update log:
 
 **2018 May 7** - Release v1.6.3. Features:

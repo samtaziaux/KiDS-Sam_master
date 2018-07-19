@@ -12,10 +12,11 @@
 .. _docs:
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Documentation
+    :maxdepth: 2
+    :caption: Documentation
 
-   install
+    install
+    releases
 
 
 Indices and tables

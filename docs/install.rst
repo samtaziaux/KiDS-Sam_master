@@ -177,7 +177,7 @@ setting the ``-f`` flag in the command line:
 
 
 Questions
-^^^^^^^^^
+=========
 
 If you have any questions, please (preferably) raise an issue in
 ``github``, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl),

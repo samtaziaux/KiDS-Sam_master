@@ -6,17 +6,16 @@
 .. include:: ../README.rst
 
 
+..
+    Table of contents
+
+.. _docs:
+
 .. toctree::
-    :maxdepth: 2
-    :caption: Installation
+   :maxdepth: 2
+   :caption: Documentation
 
-    install
-
-.. toctree::
-    :maxdepth: 2
-    :caption: Authors
-
-    credits
+   install
 
 
 Indices and tables

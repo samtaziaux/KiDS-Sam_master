@@ -237,7 +237,9 @@ def phi_c_sz(m, M, sigma, M_0, a, b):
     Mo = m_SZ(M, M_0, a, b)
 
     for i in xrange(M.size):
-        phi[i] = np.exp(-((np.log10(m)-np.log10(Mo[i]))**2.0) / (2.0*(sigma**2.0))) / ((2.0*pi)**0.5 * sigma * m * np.log(10.0))
+        phi[i] = np.exp(-((np.log10(m)-np.log10(Mo[i]))**2.0) \
+                        / (2.0*(sigma**2.0))) \
+                 / ((2.0*pi)**0.5 * sigma * m * np.log(10.0))
     return phi
 
 
@@ -251,7 +253,9 @@ def phi_s_sz(m, M, M_0, a, b, alpha, b_0, b_1, b_2, Ac2s):
     Mo = Ac2s * m_SZ(M, M_0, a, b)
 
     for i in xrange(M.size):
-        phi[i] = phi_0(M[i], b_0, b_1, b_2) * ((m/Mo[i])**(alpha + 1.0)) * exp(-(m/Mo[i])**2.0) / m
+        phi[i] = phi_0(M[i], b_0, b_1, b_2) \
+                 * ((m/Mo[i])**(alpha + 1.0)) \
+                 * exp(-(m/Mo[i])**2.0) / m
     return phi
 
 

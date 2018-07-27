@@ -1,53 +1,52 @@
 #!/usr/bin/env python
 """
-Satellite lensing EMCEE wrapper
+Galaxy-galaxy lensing EMCEE wrapper
 
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import emcee
-import numpy
+import numpy as np
 import os
 import sys
 from astropy.io.fits import BinTableHDU, Column, Header, PrimaryHDU
 from itertools import count
+from matplotlib import cm, pylab
 from numpy import all as npall, array, append, concatenate, dot, inf, isnan, \
                   isfinite, log, log10, outer, pi, sqrt, squeeze, transpose, \
-                  zeros
+                  where, zeros
 from os import remove
 from os.path import isfile
+from scipy import stats
 from time import ctime, time
 #import pickle
 
 # Python 2/3 compatibility
 if sys.version_info[0] == 2:
-    from itertools import izip
-else:
-    izip = zip
-    raw_input = input
-    xrange = range
+    from itertools import izip as zip
+    range = xrange
+    input = raw_input
 
 # local
-from . import sampling_utils
+from . import priors, sampling_utils
 
 
-def run_emcee(hm_options, sampling_options, args):
-    # load halo model setup
-    function, params, param_types, prior_types, \
-        val1, val2, val3, val4, params_join, hm_functions, \
-        starting, meta_names, fits_format = hm_options
-    # load MCMC sampler setup
-    datafile, datacols, covfile, covcols, \
-        exclude_bins, output, sampler, nwalkers, nsteps, nburn, \
-        thin, k, threads, sampler_type, update_freq = sampling_options
+def run_emcee(hm_options, sampling, args):
+
+    function, parameters, names, prior_types, nparams, starting, output = \
+        hm_options
+
+    val1, val2, val3, val4 = parameters[2]
+    params_join = []
 
     print('Running KiDS-GGL pipeline - sampler\n')
     if args.demo:
         print(' ** Running demo only **')
-    elif isfile(output):
-        msg = 'Warning: output file %s exists. Overwrite? [y/N] ' %output
-        answer = raw_input(msg)
+    elif isfile(sampling['output']) and not args.force_overwrite:
+        msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
+            sampling['output'])
+        answer = input(msg)
         if len(answer) == 0:
             exit()
         if answer.lower() not in ('y', 'yes'):
@@ -56,166 +55,44 @@ def run_emcee(hm_options, sampling_options, args):
         print('\n{0}: Started\n'.format(ctime()))
 
     # load data files
-    Ndatafiles = len(datafile)
+    Ndatafiles = len(sampling['data'][0])
+    assert Ndatafiles > 0, 'No data files found'
     # need to run this without exclude_bins to throw out invalid values in it
-    R, esd = sampling_utils.load_datapoints(datafile, datacols)
-    if exclude_bins is not None:
-        exclude_bins = exclude_bins[exclude_bins < esd.shape[1]]
-    R, esd = sampling_utils.load_datapoints(datafile, datacols, exclude_bins)
+    R, esd = sampling_utils.load_datapoints(*sampling['data'])
+    if sampling['exclude'] is not None:
+        sampling['exclude'] = \
+            sampling['exclude'][sampling['exclude'] < esd.shape[1]]
+    R, esd = sampling_utils.load_datapoints(
+        sampling['data'][0], sampling['data'][1], sampling['exclude'])
 
     Nobsbins, Nrbins = esd.shape
-    rng_obsbins = xrange(Nobsbins)
-    rng_rbins = xrange(Nrbins)
+    rng_obsbins = range(Nobsbins)
+    rng_rbins = range(Nrbins)
     # load covariance
-    cov = sampling_utils.load_covariance(covfile, covcols,
-                                         Nobsbins, Nrbins, exclude_bins)
+    cov = sampling_utils.load_covariance(
+        sampling['covariance'][0], sampling['covariance'][1],
+        Nobsbins, Nrbins, sampling['exclude'])
     cov, icov, likenorm, esd_err, cov2d = cov
 
     # needed for offset central profile
-    R, Rrange = sampling_utils.setup_integrand(R, k)
-    angles = numpy.linspace(0, 2*pi, 540)
-    val1 = numpy.append(val1, [Rrange, angles])
+    # only used in nfw_stack, not in the halo model proper
+    # this should *not* be part of the sampling dictionary
+    # but doing it this way so it is an optional parameter
+    if 'precision' not in sampling:
+        sampling['precision'] = 7
+    R, Rrange = sampling_utils.setup_integrand(
+        R, sampling['precision'])
+    angles = np.linspace(0, 2*pi, 540)
+    val1 = np.append(val1, [Rrange, angles])
 
     # identify fixed and free parameters
-    jfixed = (prior_types == 'fixed') | (prior_types == 'read') | \
-             (prior_types == 'function')
-    jfree = ~jfixed
-    ndim = len(val1[numpy.where(jfree)])
-    if len(starting) != ndim:
-        msg = 'ERROR: Not all starting points defined for free parameters.'
-        print(msg)
-        exit()
-    starting[starting == 0] = 1e-3
-    print('starting values =', starting)
+    jfree = np.array([(p in priors.free_priors) for p in prior_types])
+    ndim = len(val1[where(jfree)])
+    assert len(starting) == ndim, \
+        'ERROR: Not all starting points defined for free parameters.'
+    print('Starting values =', starting)
 
-    # identify the function. Raises an AttributeError if not found
-    #function = model.model()
-    #sat_profile = params.sat_profile()
-    #group_profile = params.group_profile()
-    #function = model
-
-    if not args.demo:
-        hdrfile = '.'.join(output.split('.')[:-1]) + '.hdr'
-        print('Printing header information to', hdrfile)
-        hdr = open(hdrfile, 'w')
-        print('Started', ctime(), file=hdr)
-        print('datafile', ','.join(datafile), file=hdr)
-        print('cols', ','.join([str(c) for c in datacols]), file=hdr)
-        print('covfile', covfile, file=hdr)
-        print('covcols', ','.join([str(c) for c in covcols]), file=hdr)
-        if exclude_bins is not None:
-            print('exclude_bins', ','.join([str(c) for c in exclude_bins]),
-                  file=hdr)
-        print('model {0} {1}'.format(*function), file=hdr)
-        for p, pt, v1, v2, v3, v4 in izip(params, prior_types,
-                                          val1, val2, val3, val4):
-            try:
-                line = '%s  %s  ' %(p, pt)
-                line += ','.join(numpy.array(v1, dtype=str))
-            except TypeError:
-                line = '%s  %s  %s' %(p, pt, str(v1))
-                if pt not in ('fixed', 'function', 'read'):
-                    # I don't know why v2, v3 and v4 are single-element
-                    # arrays instead of floats but who cares if all the rest
-                    # works... I'm leaving the try statement just in case they
-                    # might be floats at some point
-                    try:
-                        line += '  %s  %s  %s' \
-                                %tuple([str(v[0]) for v in (v2,v3,v4)])
-                    except TypeError:
-                        line += '  %s  %s  %s' \
-                                %tuple([str(v) for v in (v2,v3,v4)])
-            print(line, file=hdr)
-        print('nwalkers  {0:5d}'.format(nwalkers), file=hdr)
-        print('nsteps    {0:5d}'.format(nsteps), file=hdr)
-        print('nburn     {0:5d}'.format(nburn), file=hdr)
-        print('thin      {0:5d}'.format(thin), file=hdr)
-        hdr.close()
-    # I no longer need the name of the function
-    function = function[1]
-
-    # are we just running a demo?
-    if args.demo:
-        from matplotlib import cm
-        import matplotlib.pylab as pylab
-        def plot_demo(ax, Ri, gt, gt_err, f):
-            Ri = Ri[1:]
-            ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
-            ax.plot(Ri, f, 'r-', lw=3)
-            ax.set_xscale('log')
-            #for x, fi, gti, gei in izip(Ri, f, gt, gt_err):
-                #ax.annotate('{0:.2f}'.format((fi-gti)/gei),
-                            #xy=(x,gti+20), ha='center', va='bottom',
-                            #color='r')
-            return
-        val1[numpy.where(jfree)] = starting
-        if params_join is not None:
-            v1 = list(val1)
-            for p in params_join:
-                # without this list comprehension numpy can't keep track of the
-                # data type. I believe this is because there are elements of
-                # different types in val1 and therefore its type is not
-                # well defined (so it gets "object")
-                v1[p[0]] = array([val1[pj] for pj in p])
-            # need to delete elements backwards to preserve indices
-            aux = [[v1.pop(pj) for pj in p[1:][::-1]]
-                   for p in params_join[::-1]]
-            val1 = v1 #array(v1) ??
-        to = time()
-        model = function(val1, R)
-        print('Model evaluated in {0:.2e} seconds'.format(time() - to))
-        #residuals = esd - model[0]
-        if 'model' in str(function) and 'com' not in str(function):
-            # model assumes comoving separations, changing data to accomodate for that
-            redshift_index = numpy.int(numpy.where(params == 'z')[0])
-            redshift = array([val1[redshift_index]])
-            esd = esd/(1.0+redshift.T)**2.0
-            residuals = (esd - model[0])*(1.0+redshift.T)**2.0
-            esd_err = esd_err/(1.0+redshift.T)**2.0
-        else:
-            residuals = esd - model[0]
-
-        dof = esd.size - starting.size - 1
-        chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-                    for m in rng_obsbins for n in rng_obsbins]).sum()
-
-        print(' ** chi2 = %.2f/%d **' %(chi2, dof))
-        fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
-        if Ndatafiles == 1:
-            plot_demo(axes, R[0], esd[0], esd_err[0], model[0][0])
-        else:
-            for i in izip(axes, R, esd, esd_err, model[0]):
-                plot_demo(*i)
-        if npall(esd - esd_err > 0) or 'model' in str(function):
-            if Ndatafiles == 1:
-                axes.set_yscale('log')
-            else:
-                for ax in axes:
-                    ax.set_yscale('log')
-        #fig.tight_layout(w_pad=0.01)
-        pylab.show()
-        fig, axes = pylab.subplots(figsize=(10,8), nrows=cov.shape[0],
-                                   ncols=cov.shape[0])
-        vmin, vmax = numpy.percentile(cov, [1,99])
-        if Ndatafiles == 1:
-            for m in xrange(1):
-                for n in xrange(1):
-                    axes.imshow(cov[m][-n-1][::-1], interpolation='nearest',
-                            cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
-        else:
-            for m, axm in enumerate(axes):
-                for n, axmn in enumerate(axm):
-                    axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
-                            cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
-        #fig.tight_layout()
-        pylab.show()
-        exit()
-
-    # set up starting point for all walkers
-    #po = starting * numpy.random.uniform(0.9, 1.1, size=(nwalkers,ndim))
-    po = sampler_ball(params, prior_types, jfree, starting, val1, val2, val3,
-                      val4, ndim, nwalkers)
-    lnprior = zeros(ndim)
+    meta_names, fits_format = output
     mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
     # different scenario
@@ -224,15 +101,17 @@ def run_emcee(hm_options, sampling_options, args):
         n = 1 if len(fmt) == 1 else int(fmt[0])
         # is this value a scalar?
         if len(fmt) == 1:
-            size = nwalkers * nsteps // thin
+            size = sampling['nwalkers'] * sampling['nsteps'] \
+                // sampling['thin']
         else:
-            size = [nwalkers*nsteps//thin, int(fmt[:-1])]
+            size = [sampling['nwalkers']*sampling['nsteps']//sampling['thin'],
+                    int(fmt[:-1])]
             # only for ESDs. Note that there will be trouble if outputs
             # other than the ESD have the same length, so avoid them at
             # all cost.
-            if exclude_bins is not None \
-                    and size[1] == esd.shape[-1]+len(exclude_bins):
-                size[1] -= len(exclude_bins)
+            if sampling['exclude'] is not None \
+                    and size[1] == esd.shape[-1]+len(sampling['exclude']):
+                size[1] -= len(sampling['exclude'])
         metadata[j].append(zeros(size))
     metadata = [array(m) for m in metadata]
     metadata = [m[0] if m.shape[0] == 1 else m for m in metadata]
@@ -242,103 +121,121 @@ def run_emcee(hm_options, sampling_options, args):
         shape.remove(max(shape))
         fail_value.append(zeros(shape))
     # the last numbers are data chi2, lnLdata
-    for i in xrange(3):
+    for i in range(3):
         fail_value.append(9999)
+    # initialize
+    lnprior = zeros(ndim)
 
-    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob,
-                                    threads=threads,
-                                    args=(R,esd,icov,function,
-                                          params,prior_types[jfree],
-                                          val1,val2,val3,val4,params_join,
-                                          jfree,lnprior,likenorm,
-                                          rng_obsbins,fail_value,
-                                          array,dot,inf,izip,outer,pi))
+    # are we just running a demo?
+    if args.demo:
+        run_demo(function, R, esd, esd_err, cov, icov, prior_types,
+                 parameters, params_join, starting, jfree, nparams, names,
+                 lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot,
+                 inf, outer, pi, zip)
+        sys.exit()
+
+    # write header file
+    hdrfile = write_hdr(sampling, function, parameters, names, prior_types)
+
+    # initialize sampler
+    sampler = emcee.EnsembleSampler(
+        sampling['nwalkers'], ndim, lnprob, threads=sampling['threads'],
+        args=(R,esd,icov,function,names,prior_types[jfree],
+              parameters,nparams,params_join,jfree,lnprior,likenorm,
+              rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
+
+    # set up starting point for all walkers
+    po = sampler_ball(
+        names, prior_types, jfree, starting, parameters,
+        sampling['nwalkers'], ndim)
+
     # burn-in
-    if nburn > 0:
-        pos, prob, state, blobs = sampler.run_mcmc(po, nburn)
+    if sampling['nburn'] > 0:
+        pos, prob, state, blobs = sampler.run_mcmc(po, sampling['nburn'])
         sampler.reset()
-        print('{1}: {0} Burn-in steps finished'.format(nburn, ctime()))
+        print('{1}: {0} Burn-in steps finished'.format(
+            sampling['nburn'], ctime()))
     else:
         pos = po
+
     # incrementally save output
     # this array contains lnprior, chi2, lnlike
-    chi2 = [zeros(nwalkers*nsteps//thin) for i in xrange(3)]
+    chi2 = [zeros(sampling['nwalkers']*sampling['nsteps']//sampling['thin'])
+            for i in range(3)]
     nwritten = 0
-    for i, result in enumerate(sampler.sample(pos, iterations=nsteps,
-                                              thin=thin)):
-        if i > 0 and (i+1) * nwalkers > nwalkers * nwritten + update_freq:
-            out = write_to_fits(output, chi2, sampler, nwalkers, thin,
-                                params, jfree, metadata, meta_names,
-                                fits_format, update_freq, i, nwritten,
-                                Nobsbins, fail_value, array, BinTableHDU,
-                                Column, ctime, enumerate, isfile, izip,
-                                transpose, xrange)
+    for i, result in enumerate(
+            sampler.sample(pos, iterations=sampling['nsteps'],
+                           thin=sampling['thin'])):
+        if i > 0 and ((i+1)*sampling['nwalkers'] \
+                      > sampling['nwalkers']*nwritten + sampling['update']):
+            out = write_to_fits(
+                sampler, sampling, chi2, names, jfree, output, metadata, i,
+                nwritten, Nobsbins, fail_value, array, BinTableHDU,
+                Column, ctime, enumerate, isfile, zip, transpose, range)
             metadata, nwritten = out
 
-    hdr = open(hdrfile, 'a')
+    with open(hdrfile, 'a') as hdr:
 
-    try:
-        print('acceptance_fraction =', sampler.acceptance_fraction)
-        print('acceptance_fraction =', file=hdr, end=' ')
-        for af in sampler.acceptance_fraction:
-            print(af, file=hdr, end=' ')
-    except ImportError:
-        pass
+        try:
+            print('acceptance_fraction =', sampler.acceptance_fraction)
+            print('acceptance_fraction =', file=hdr, end=' ')
+            for af in sampler.acceptance_fraction:
+                print(af, file=hdr, end=' ')
+        except ImportError:
+            pass
 
-    #try:
-        #print('acor =', sampler.acor)
-        #print('\nacor =', file=hdr, end=' ')
-        #for ac in sampler.acor:
-            #print(ac, file=hdr, end=' ')
-    #except ImportError:
-        #pass
+        #try:
+            #print('acor =', sampler.acor)
+            #print('\nacor =', file=hdr, end=' ')
+            #for ac in sampler.acor:
+                #print(ac, file=hdr, end=' ')
+        #except ImportError:
+            #pass
 
-    # acor and get_autocorr_time() are the same
-    try:
-        print('acor =', sampler.get_autocorr_time())
-        print('\nacor_time =', file=hdr, end=' ')
-        for act in sampler.get_autocorr_time(c=5):
-            print(act, file=hdr, end=' ')
-    #except AttributeError:
-        #pass
-    #except emcee.autocorr.AutocorrError:
-        #pass
-    except:
-        pass
+        # acor and get_autocorr_time() are the same
+        try:
+            print('acor =', sampler.get_autocorr_time())
+            print('\nacor_time =', file=hdr, end=' ')
+            for act in sampler.get_autocorr_time(c=5):
+                print(act, file=hdr, end=' ')
+        #except AttributeError:
+            #pass
+        #except emcee.autocorr.AutocorrError:
+            #pass
+        except:
+            pass
 
-    # acor and get_autocorr_time() are the same
-    #try:
-        #print('acor_time =', sampler.get_autocorr_time())
-        #print('\nacor_time =', file=hdr, end=' ')
-        #for act in sampler.get_autocorr_time():
-            #print(act, file=hdr, end=' ')
-    #except AttributeError:
-        #pass
+        # acor and get_autocorr_time() are the same
+        #try:
+            #print('acor_time =', sampler.get_autocorr_time())
+            #print('\nacor_time =', file=hdr, end=' ')
+            #for act in sampler.get_autocorr_time():
+                #print(act, file=hdr, end=' ')
+        #except AttributeError:
+            #pass
 
-    print('\nFinished', ctime(), file=hdr)
-    hdr.close()
+        print('\nFinished', ctime(), file=hdr)
+
     print('Saved to', hdrfile)
 
-    tmp = output.replace('.fits', '.temp.fits')
-    cmd = 'mv {0} {1}'.format(output, tmp)
+    tmp = sampling['output'].replace('.fits', '.temp.fits')
+    cmd = 'mv {0} {1}'.format(sampling['output'], tmp)
     print(cmd)
     os.system(cmd)
-    print('Saving everything to {0}...'.format(output))
-    #print(i, nwalkers, nwritten)
-    write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
-                  metadata, meta_names, fits_format, update_freq, i+1,
-                  nwritten, Nobsbins, fail_value, array, BinTableHDU,
-                  Column, ctime, enumerate, isfile, izip, transpose, xrange)
+    print('Saving everything to {0}...'.format(sampling['output']))
+    write_to_fits(
+        sampler, sampling, chi2, names, jfree, output, metadata, i+1,
+        nwritten, Nobsbins, fail_value, array, BinTableHDU, Column, ctime,
+        enumerate, isfile, zip, transpose, range)
     if os.path.isfile(tmp):
         os.remove(tmp)
-    print('Everything saved to {0}!'.format(output))
+    print('Everything saved to {0}!'.format(sampling['output']))
     return
 
 
-def lnprob(theta, R, esd, icov, function, params, prior_types,
-           val1, val2, val3, val4, params_join, jfree, lnprior, likenorm,
-           rng_obsbins, fail_value, array, dot, inf, izip, outer, pi):
-           #array, dot, inf, izip, isfinite, log, log10, sqrt):
+def lnprob(theta, R, esd, icov, function, names, prior_types,
+           parameters, nparams, params_join, jfree, lnprior, likenorm,
+           rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
     given a model, times the prior on the model parameters.
@@ -348,7 +245,7 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
         theta
             whatever *free* parameters are received by the model selected.
         R
-            projected distances from the satellite
+            lens-source separations
         esd
             excess surface density at distances R
         icov
@@ -357,16 +254,11 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
             the model used to calculate the likelihood
         prior_types
             one value per parameter in *theta*, {'normal', 'uniform', 'fixed'}
-        val1
-            depends on each prior_type:
-                -normal : the mean of the gaussian
-                -uniform : the minimum allowed value
-                -fixed : the fixed value
-        val2
-            depends on each prior_type:
-                -normal : the half-width of the gaussian
-                -uniform : the maximum allowed value
-                -fixed : ignored (but must be there)
+        parameters
+            list of length 4, containing all parameters of the models. In
+            terms of the configuration file, these are [ingredients,
+            observable, parameters, setup]; where `parameters` is another
+            length-4 list
         jfree
             indices of the free values
         lnprior
@@ -375,41 +267,15 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
             time
 
     """
-    _log = log
-    v1free = val1[numpy.where(jfree)].flatten()
-    v2free = val2[numpy.where(jfree)].flatten()
-    v3free = val3[numpy.where(jfree)].flatten()
-    v4free = val4[numpy.where(jfree)].flatten()
-    if not isfinite(v1free.sum()):
-        return -inf, fail_value
-    j = (prior_types == 'normal')
-    lnprior[j] = array([-(v-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
-                        if v3 <= v <= v4 else -inf
-                        for v, v1, v2, v3, v4
-                        in izip(theta[j], v1free[j], v2free[j],
-                                v3free[j], v4free[j])])
-    j = (prior_types == 'lognormal')
-    lnprior[j] = array([-(log10(v)-v1)**2 / (2*v2**2) - _log(2*pi*v2**2)/2
-                        if v3 <= v <= v4 else -inf
-                        for v, v1, v2, v3, v4
-                        in izip(theta[j], v1free[j], v2free[j],
-                                v3free[j], v4free[j])])
-    j = (prior_types == 'uniform')
-    lnprior[j] = array([0-_log(v2-v1) if v1 <= v <= v2 else -inf
-                        for v, v1, v2
-                        in izip(theta[j], v1free[j], v2free[j])])
-    # note that exp is not normalized
-    j = (prior_types == 'exp')
-    lnprior[j] = array([v**v1 if v2 <= v <= v3 else -inf
-                        for v, v1, v2, v3
-                        in izip(theta[j], v1free[j], v2free[j], v3free[j])])
-    lnprior_total = lnprior.sum()
+    lnprior_total = priors.calculate_lnprior(
+        lnprior, theta, prior_types, parameters, jfree)
     if not isfinite(lnprior_total):
         return -inf, fail_value
-    # all other types ('fixed', 'read') should not contribute to the prior
+
+    # all other types ('fixed', 'read') do not contribute to the prior
     # run the given model
-    v1 = val1.copy()
-    v1[numpy.where(jfree)] = theta
+    v1 = parameters[2][0].copy()
+    v1[where(jfree)] = theta
     if params_join is not None:
         v1j = list(v1)
         for p in params_join:
@@ -422,26 +288,36 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
         aux = [[v1j.pop(pi) for pi in p[1:][::-1]]
                 for p in params_join[::-1]]
         v1 = v1j #array(v1j) ??
+    # join into sections and subsections as per the config file
+    # by doing this I'm losing Rrange and angles, but I suppose
+    # those should be defined in the config file as well.
+    v1 = np.array([v1[sum(nparams[:i]):sum(nparams[:i+1])]
+                   for i in range(len(nparams))])
+    # note that by now we discard the other v's!
+    # we don't want to overwrite the old list now that we've
+    # changed one of its components
+    newp = [p for p in parameters]
+    newp[2] = v1
 
-    model = function(v1, R)
+    model = function(newp, R)
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
     #residuals = esd - model[0]
     #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
     #              for m in rng_obsbins for n in rng_obsbins]).sum()
-    
-    if 'model' in str(function) and 'com' not in str(function):
+
+    if 'model' in str(function):
+
         # model assumes comoving separations, changing data to accomodate for that
-        redshift_index = numpy.int(numpy.where(params == 'z')[0])
-        redshift = array([v1[redshift_index]])
-        esd = esd/(1.0+redshift.T)**2.0
-        residuals = (esd - model[0])*(1.0+redshift.T)**2.0
+        redshift = read_redshift(v1, names, nparams)
+        esd = esd / (1+redshift)**2
+        residuals = (esd - model[0]) / (1+redshift)**2
     else:
         residuals = esd - model[0]
 
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-                    for m in rng_obsbins for n in rng_obsbins]).sum()
+                  for m in rng_obsbins for n in rng_obsbins]).sum()
 
     if not isfinite(chi2):
         return -inf, fail_value
@@ -451,37 +327,100 @@ def lnprob(theta, R, esd, icov, function, params, prior_types,
     model.append(lnprior_total)
     model.append(chi2)
     model.append(lnlike)
-    # model[-3] is lnPderived, removed in v1.3.0
-    #return lnlike + model[-3] + lnprior_total, model
+    # return to original content for future calls
+    #parameters[2] = [val1, val2, val3, val4]
     return lnlike + lnprior_total, model
 
 
-def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
-                  metadata, meta_names, fits_format, update_freq, iternum,
-                  nwritten, Nobsbins, fail_value, array, BinTableHDU,
-                  Column, ctime, enumerate, isfile, izip, transpose, xrange):
+def run_demo(function, R, esd, esd_err, cov, icov, prior_types, parameters,
+             params_join, starting, jfree, nparams, names, lnprior,
+             rng_obsbins, fail_value, Ndatafiles, array, dot, inf, outer,
+             pi, zip):
+    def plot_demo(ax, Ri, gt, gt_err, f):
+        Ri = Ri[1:]
+        ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
+        ax.plot(Ri, f, 'r-', lw=3)
+        ax.set_xscale('log')
+        #for x, fi, gti, gei in zip(Ri, f, gt, gt_err):
+            #ax.annotate('{0:.2f}'.format((fi-gti)/gei),
+                        #xy=(x,gti+20), ha='center', va='bottom',
+                        #color='r')
+        return
+
+    parameters[2][0][where(jfree)] = starting
+    lnlike, model = lnprob(
+        starting, R, esd, icov, function, names, prior_types[jfree],
+        parameters, nparams, params_join, jfree, lnprior, 0, rng_obsbins,
+        fail_value, array, dot, inf, zip, outer, pi)
+    chi2 = model[-2]
+    dof = esd.size - starting.size - 1
+    print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
+
+    # the rest are corrected in lnprob. We should work to remove
+    # this anyway
+    if 'model' in str(function):
+        redshift = read_redshift(parameters[2][0], names)
+        esd_err = esd_err / (1+redshift)**2
+
+    fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
+    if Ndatafiles == 1:
+        plot_demo(axes, R[0], esd[0], esd_err[0], model[0][0])
+    else:
+        for i in zip(axes, R, esd, esd_err, model[0]):
+            plot_demo(*i)
+    if npall(esd - esd_err > 0) or 'model' in str(function):
+        if Ndatafiles == 1:
+            axes.set_yscale('log')
+        else:
+            for ax in axes:
+                ax.set_yscale('log')
+    #fig.tight_layout(w_pad=0.01)
+    pylab.show()
+    fig, axes = pylab.subplots(
+        figsize=(10,8), nrows=cov.shape[0], ncols=cov.shape[0])
+    vmin, vmax = np.percentile(cov, [1,99])
+    if Ndatafiles == 1:
+        axes = [[axes]]
+        #for m in range(1):
+            #for n in range(1):
+                #axes.imshow(cov[m][-n-1][::-1], interpolation='nearest',
+                            #cmap=cm.CMRmap_r, vmin=vmin, vmax=vmax)
+    #else:
+    for m, axm in enumerate(axes):
+        for n, axmn in enumerate(axm):
+            axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
+                        vmin=vmin, vmax=vmax)
+    #fig.tight_layout()
+    pylab.show()
+    return
+
+
+def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
+                  iternum, nwritten, Nobsbins, fail_value, array, BinTableHDU,
+                  Column, ctime, enumerate, isfile, zip, transpose, range):
     nchi2 = len(chi2)
     # the two following lines should remain consistent if modified
     chi2_loc = -2
     lnprior, chi2, lnlike = chi2
-    if isfile(output):
-        remove(output)
+    if isfile(sampling['output']):
+        remove(sampling['output'])
     chain = transpose(sampler.chain, axes=(2,1,0))
     columns = [Column(name=param, format='E', array=data[:iternum].flatten())
-               for param, data in izip(params[jfree], chain)]
+               for param, data in zip(names[jfree], chain)]
     columns.append(Column(name='lnprob', format='E',
                           array=sampler.lnprobability.T[:iternum].flatten()))
 
+    meta_names, fits_format = output
     if len(meta_names) > 0:
         # save only the last chunk (starting from t),
         # all others are already in metadata.
         # j iterates over MCMC samples. Then each blob is a list of length
         # nwalkers containing the metadata
         nparams = len(metadata)
-        for j, blob in izip(xrange(nwritten, iternum),
+        for j, blob in zip(range(nwritten, iternum),
                             sampler.blobs[nwritten:]):
-            data = [zeros((nwalkers,m.shape[1]))
-                    if len(m.shape) == 2 else zeros(nwalkers)
+            data = [zeros((sampling['nwalkers'],m.shape[1]))
+                    if len(m.shape) == 2 else zeros(sampling['nwalkers'])
                     for m in metadata]
             # this loops over the walkers. In each iteration we then access
             # a list corresponding to the number of hm_output's
@@ -506,34 +445,33 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                         n += 1
             # store data
             n = 0
-            for k in xrange(len(data)):
-                
+            write_start = j * sampling['nwalkers']
+            write_end = (j+1) * sampling['nwalkers']
+            for k in range(len(data)):
                 # if using a single bin, there can be scalars
                 if not hasattr(data[k], '__iter__'):
-                    metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
+                    metadata[n][write_start:write_end] = data[k]
                     n += 1
                     continue
                 shape = data[k].shape
                 if len(shape) == 3:
                     for datum in data[k]:
                         for m, val in enumerate(datum):
-                            metadata[n][j*nwalkers:(j+1)*nwalkers] = val
+                            metadata[n][write_start:write_end] = val
                             n += 1
                 elif len(shape) == 2 and len(fits_format[n]) == 1:
                     datum = data[k].T
-                    for i in xrange(len(datum)):
-                        metadata[n][j*nwalkers:(j+1)*nwalkers] = datum[i]
+                    for i in range(len(datum)):
+                        metadata[n][write_start:write_end] = datum[i]
                         n += 1
                 else:
-                    metadata[n][j*nwalkers:(j+1)*nwalkers] = data[k]
+                    metadata[n][write_start:write_end] = data[k]
                     n += 1
-            #lnPderived[j*nwalkers:(j+1)*nwalkers] = array([b[-4]
-                                                           #for b in blob])
-            lnprior[j*nwalkers:(j+1)*nwalkers] = array([b[-3] for b in blob])
-            chi2[j*nwalkers:(j+1)*nwalkers] = array([b[-2] for b in blob])
-            lnlike[j*nwalkers:(j+1)*nwalkers] = array([b[-1] for b in blob])
-        # this handles exclude_bins properly
-        for name, val, fmt in izip(meta_names, metadata, fits_format):
+            lnprior[write_start:write_end] = array([b[-3] for b in blob])
+            chi2[write_start:write_end] = array([b[-2] for b in blob])
+            lnlike[write_start:write_end] = array([b[-1] for b in blob])
+        # this handles sampling['exclude'] properly
+        for name, val, fmt in zip(meta_names, metadata, fits_format):
             val = squeeze(val)
             if len(val.shape) == 1:
                 fmt = fmt[-1]
@@ -541,16 +479,15 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
                 fmt = '{0}{1}'.format(val.shape[1], fmt[-1])
             columns.append(Column(name=name, array=val, format=fmt))
     columns.append(Column(name='lnprior', format='E', array=lnprior))
-    #columns.append(Column(name='lnPderived', format='E', array=lnPderived))
     columns.append(Column(name='chi2', format='E', array=chi2))
     columns.append(Column(name='lnlike', format='E', array=lnlike))
     fitstbl = BinTableHDU.from_columns(columns)
-    fitstbl.writeto(output)
+    fitstbl.writeto(sampling['output'])
     nwritten = iternum
     print('{2}: Saved to {0} with {1} samples'.format(
-            output, nwritten*nwalkers, ctime()))
-    if thin > 1:
-        print('(printing every {0}th sample)'.format(thin))
+            sampling['output'], nwritten*sampling['nwalkers'], ctime()))
+    if sampling['thin'] > 1:
+        print('(printing every {0}th sample)'.format(sampling['thin']))
     #print('acceptance fraction =', sampler.acceptance_fraction)
     # these two are the same
     #print('autocorrelation length =', sampler.acor)
@@ -558,60 +495,93 @@ def write_to_fits(output, chi2, sampler, nwalkers, thin, params, jfree,
     return metadata, nwritten
 
 
-def sampler_ball(params, prior_types, jfree, starting, val1, val2, val3, val4,
-                 ndim, nwalkers):
+def read_redshift(val1, names, nparams=None):
+    # model assumes comoving separations, changing data to accomodate
+    # for that
+    redshift_index = np.int(where(names == 'z')[0])
+    if nparams is None:
+        redshift = val1[redshift_index]
+    else:
+        # val1 is no longer a flat array
+        jz = [np.arange(nparams.size)[np.cumsum(nparams) <= redshift_index+1][0]]
+        jz.append(redshift_index - nparams[jz[0]])
+        redshift = val1[jz[0]][jz[1]]
+    return redshift.T
+
+
+def sampler_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
     """
     This creates a ball around a starting value, taking prior ranges
     into consideration. It takes intervals (max-min)/2 around a
     starting value.
     """
-    v1free = val1[numpy.where(jfree)]
-    v2free = val2[numpy.where(jfree)]
-    v3free = val3[numpy.where(jfree)]
-    v4free = val4[numpy.where(jfree)]
-    params_free = params[numpy.where(jfree)]
-    prior_free = prior_types[numpy.where(jfree)]
+    val1, val2, val3, val4 = parameters[2]
+    v1free = val1[where(jfree)]
+    v2free = val2[where(jfree)]
+    v3free = val3[where(jfree)]
+    v4free = val4[where(jfree)]
+    names_free = names[where(jfree)]
+    prior_free = prior_types[where(jfree)]
 
-    ball = numpy.zeros((nwalkers, ndim))
-    for n, j in enumerate(params_free):
-        if prior_free[n] == 'normal':
-            lims = (v4free[n] - v3free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v3free[n]:
-                min = v3free[n]
-            if max >= v4free[n]:
-                max = v4free[n]
-            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
-
-        if prior_free[n] == 'lognormal':
-            lims = (v4free[n] - v3free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v3free[n]:
-                min = v3free[n]
-            if max >= v4free[n]:
-                max = v4free[n]
-            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
-
-        if prior_free[n] == 'uniform':
-            lims = (v2free[n] - v1free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v1free[n]:
-                min = v1free[n]
-            if max >= v2free[n]:
-                max = v2free[n]
-            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
-
-        if prior_free[n] == 'exp':
-            lims = (v3free[n] - v2free[n]) / 10.0
-            min = starting[n] - lims
-            max = starting[n] + lims
-            if min <= v2free[n]:
-                min = v2free[n]
-            if max >= v3free[n]:
-                max = v3free[n]
-            ball[:,n] = numpy.random.uniform(min, max, size=nwalkers)
-
+    ball = np.zeros((nw, ndim))
+    for n, p in enumerate(prior_free):
+        ball[:,n] = priors.draw(
+            p, (v1free[n],v2free[n]), (v3free[n],v4free[n]), size=nw)
     return ball
+
+
+def write_hdr(sampling, function, parameters, names, prior_types):
+    hdrfile = '.'.join(sampling['output'].split('.')[:-1]) + '.hdr'
+    print('Printing header information to', hdrfile)
+    #val1, val2, val3, val4 = parameters[2]
+    parameters[2] = np.transpose(parameters[2])
+    #hdr = open(hdrfile, 'w')
+    with open(hdrfile, 'w') as hdr:
+        print('Started', ctime(), file=hdr)
+        print('datafile', ','.join(sampling['data'][0]), file=hdr)
+        print('cols', ','.join([str(c) for c in sampling['data'][1]]),
+              file=hdr)
+        print('covfile', sampling['covariance'][0], file=hdr)
+        print('covcols',
+              ','.join([str(c) for c in sampling['covariance'][1]]),
+              file=hdr)
+        if sampling['exclude'] is not None:
+            print('exclude',
+                  ','.join([str(c) for c in sampling['exclude']]),
+                  file=hdr)
+        print('model {0}'.format(function), file=hdr)
+        # being lazy for now
+        print('observables  {0}'.format(parameters[0]), file=hdr)
+        print('ingredients {0}'.format(
+            ','.join([key for key, item in parameters[1].items() if item])),
+            file=hdr)
+        for p, pt, v1, v2, v3, v4 in zip(names, prior_types, *parameters[2].T):
+            try:
+                line = '%s  %s  ' %(p, pt)
+                line += ','.join(np.array(v1, dtype=str))
+            except TypeError:
+                line = '%s  %s  %s' %(p, pt, str(v1))
+                if pt not in ('fixed', 'function', 'read'):
+                    # I don't know why v2, v3 and v4 are single-element
+                    # arrays instead of floats but who cares if all the rest
+                    # works... I'm leaving the try statement just in case they
+                    # might be floats at some point
+                    try:
+                        line += '  %s  %s  %s' \
+                                %tuple([str(v[0]) for v in (v2,v3,v4)])
+                    except TypeError:
+                        line += '  %s  %s  %s' \
+                                %tuple([str(v) for v in (v2,v3,v4)])
+            print(line, file=hdr)
+
+        print('nwalkers  {0:5d}'.format(sampling['nwalkers']), file=hdr)
+        print('nsteps    {0:5d}'.format(sampling['nsteps']), file=hdr)
+        print('nburn     {0:5d}'.format(sampling['nburn']), file=hdr)
+        print('thin      {0:5d}'.format(sampling['thin']), file=hdr)
+
+    # back to its original shape
+    parameters[2] = np.transpose(parameters[2])
+
+    return hdrfile
+
+

@@ -65,7 +65,7 @@ At this point you are also able to import any component of the KiDS-GGL pipeline
 
 #### 2. Set up your configuration file.
     
-See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_demo_halo_specific.txt` for guidance.
+See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_model_demo.txt` for guidance. The former is intended for a simple average NFW modelling of the signal and only works with `kids_ggl<2.0.0`, while the latter is a full halo model and requires `kids_ggl>=2.0.0`.
 
 
 #### 3. Run! 
@@ -84,6 +84,10 @@ The sampler module has a demo option which you should always try before running 
         kids_ggl -c <config_file> --sampler --demo
 
 This option will generate the ESD(s) for your chosen set of initial parameters, print the chi2/dof on screen, overplot the model to the data points and, once you close this plot, will display the full covariance matrix.
+
+*New in `v2`:* By default, if the output file exists the pipeline will ask the user whether they want to overwrite it. This can be skipped by setting the `-f` flag in the command line:
+
+        kids_ggl -c <config_file> --sampler -f
 
 
 ### Some suggestions to make the best of this pipeline:

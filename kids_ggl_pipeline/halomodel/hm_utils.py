@@ -67,7 +67,7 @@ def read_config(config_file, version='0.5.7'):
                 msg = 'ERROR: Please provide only valid prior types in the' \
                       ' parameter file ({0}). Value {1} is invalid.' \
                       ' Valid types are {2}'.format(
-                            paramfile, line[1], valid_types)
+                            config_file, line[1], valid_types)
                 print(msg)
                 sys.exit()
             params.append(line[1])

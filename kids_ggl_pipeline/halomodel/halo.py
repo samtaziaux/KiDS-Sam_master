@@ -49,7 +49,6 @@ from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
 from . import baryons
-from . import hod
 from . import longdouble_utils as ld
 from .tools import (
     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
@@ -61,7 +60,7 @@ from .dark_matter import (
     NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
     GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10)
-from .cmf import *
+from .. import hod
 
 
 
@@ -222,6 +221,7 @@ def model(theta, R):
         pop_s = np.zeros(hod_observable.shape)
 
     pop_g = pop_c + pop_s
+
 
     ngal = array([n_gal(hmf_i, pop_g_i , mass_range)
                   for hmf_i, pop_g_i in zip(hmf, pop_g)])

@@ -6,15 +6,16 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import gc
-import numpy as np
-import sys
-import os
 import fnmatch
-import shlex
-import subprocess as sub
-import time
+import gc
 from glob import glob
+import numpy as np
+import os
+import shlex
+import six
+import subprocess as sub
+import sys
+import time
 
 from astropy import constants as const, units as u
 from astropy.cosmology import LambdaCDM
@@ -26,11 +27,10 @@ from matplotlib.colors import LogNorm
 from matplotlib import gridspec
 from matplotlib import rc, rcParams
 
-from . import distance, esd_utils
+if sys.version_info[0] == 2:
+    range = xrange
 
-if sys.version_info[0] == 3:
-    xrange = range
-    basestring = str
+from . import distance, esd_utils
 
 # Important constants(very preliminary!)
 G = const.G.to('pc3/Msun s2')
@@ -67,19 +67,10 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         blindcats = \
             esd_utils.read_config(config_file)
 
-    print()
     print('Running:', purpose)
 
     # Defining the number of the blind KiDS catalogue
-    if blindcat[0] == 'A':
-        blindcatnum = 0
-    if blindcat[0] == 'B':
-        blindcatnum = 1
-    if blindcat[0] == 'C':
-        blindcatnum = 2
-    if blindcat[0] == 'D':
-        blindcatnum = 3
-
+    blindcatnum = 'ABCD'.index(blindcat[0])
 
     # Defining the addition to the file name
     if filename_addition == 'None':
@@ -110,7 +101,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         msg = 'WARNING: With the Cen definition,'
         msg += ' you can only use Centrals (Rank = 1)'
         print(msg)
-    
+
     # Name of the Rbins
     if os.path.isfile(path_Rbins): # from a file
         name_Rbins = path_Rbins.split('.')[0]
@@ -167,12 +158,10 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
             for path in [path_splits, path_results]:
                 if not os.path.isdir(path):
                     os.makedirs(path)
-		    
-
 
     # Determining Ncat, the number of existing random catalogs
     splitslist = [] # This list will contain all created random splits
-    
+
     if ('random' in purpose):
 
         # Defining the name of the output files
@@ -184,8 +173,8 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
                                            name_Rbins, O_matter, \
                                            O_lambda, Ok, h)
         path_randomsplits = '%s/splits_%s'%(path_catalogs, purpose)
-        
-        for Ncat in xrange(100):
+
+        for Ncat in range(100):
             outname = '%s/%s_%i_%s%s_split%iof*.fits'\
                     %(path_randomsplits.replace('bootstrap', 'catalog'), \
                       purpose.replace('bootstrap', 'catalog'), Ncat+1, \
@@ -196,12 +185,12 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
 
             splitfiles = glob(outname)
             splitslist = np.append(splitslist, splitfiles)
-            
+
             if len(splitfiles) == 0:
                 break
 
         print(outname)
-        
+
 
     else:
         Ncat = 1
@@ -268,23 +257,19 @@ def define_filename_sel(filename_var, var_print, plottitle, selection):
                 #                plottitle, sellims[0])
                 #plottitle = '{0} \mathrm{{{1} \leq {2:g},}}'.format(
                 #                plottitle, selname, sellims[1])
-        
+
     return filename_var, var_print, plottitle
 
 
 def define_filename_sel_bin(filename_var, var_print, plottitle, selection, binnum, Nobsbins):
-    print(binnum)
-    if type(binnum) == int:
+    if isinstance(binnum, int):
         binnum = binnum-1
-    elif type(binnum) == str:
+    elif isinstance(binnum, six.string_types):
         binnum = Nobsbins-1
-    print(binnum)
-    print()
 
     selnames = np.sort(list(selection))
     for selname in selnames:
         sellims = (selection[selname])[1]
-        
         if 'ID' in selname:
             pass
         else:
@@ -368,19 +353,19 @@ def define_filename_var(purpose, centering, binname, binnum, Nobsbins, \
     filename_var = filename_var.replace('.', 'p')
     filename_var = filename_var.replace('-', 'm')
     filename_var = filename_var.replace('~', '-')
-    
+
     if 'covariance' not in purpose:
         print('Chosen %s-configuration: '%purpose)
         print(var_print)
         print(cosmo_print)
         print()
-    
+
     return filename_var
 
 
-def define_filename_splits(path_splits, purpose, filename_var, \
+def define_filename_splits(path_splits, purpose, filename_var,
                            Nsplit, Nsplits, filename_addition, blindcat):
-    
+
     # Defining the names of the shear/random catalog
     if 'covariance' in purpose:
         splitname = '%s/%s_%s.fits'%(path_splits, filename_var, Nsplit)
@@ -491,7 +476,7 @@ def define_Rbins(path_Rbins, Runit):
         Rbins = np.append(Rrangefile[0],Rmax)
         Rcenters = Rrangefile[1]
         nRbins = len(Rcenters)
-    
+
         print('path_Rbins', path_Rbins)
         print('Using: %i radial bins between %.1f and %.1f'%(nRbins, Rmin, Rmax))
         print('Rmin', Rmin)
@@ -511,7 +496,7 @@ def define_Rbins(path_Rbins, Runit):
         Rbins = 10.**np.arange(np.log10(Rmin), np.log10(Rmax), Rstep)
         Rbins = np.append(Rbins,Rmax)
         Rcenters = np.array([(Rbins[r]+Rbins[r+1])/2 \
-                                 for r in xrange(nRbins)])
+                                 for r in range(nRbins)])
 
     # Translating from k/Mpc to pc, or from arcmin/sec to deg
     Rconst = -999
@@ -521,20 +506,19 @@ def define_Rbins(path_Rbins, Runit):
             Rconst = 1e3
         if 'M' in Runit:
             Rconst = 1e6
-    
+
     if 'arc' in Runit:
         if 'sec' in Runit:
             Rconst = 1/(60.**2)
         if 'min' in Runit:
             Rconst = 1/60.
-    
+
     if Rconst == -999:
         print('*** Unit of radial bins not recognized! ***')
         raise SystemExit()
-        
+
     [Rmin, Rmax, Rbins] = [r*Rconst for r in [Rmin, Rmax, Rbins]]
 
-    
     return Rmin, Rmax, Rbins, Rcenters, nRbins, Rconst
 
 
@@ -665,7 +649,7 @@ def run_kidscoord(path_kidscats, cat_version):
         # of the KiDS catalogues with their RA and DEC
         kidscoord = dict()
         kidscat_end = ''
-        for i in xrange(len(kidscatlist)):
+        for i in range(len(kidscatlist)):
             # Of the KiDS file names, keep only "KIDS_RA_DEC"
 
             kidscatstring = kidscatlist[i].split('_',3)
@@ -701,7 +685,7 @@ def run_kidscoord(path_kidscats, cat_version):
             #print x
             #print kidscatname
 
-            for i in xrange(len(kidscatlist2)):
+            for i in range(len(kidscatlist2)):
                 # Of the KiDS file names, keep only "KIDS_RA_DEC"
     
                 kidscatstring = kidscatlist2[i].split('_',3)
@@ -726,8 +710,8 @@ def run_kidscoord_mocks(path_kidscats, cat_version):
     if cat_version == 0:
         kidscoord = dict()
         tile = np.arange(100)
-        for i in xrange(10):
-            for j in xrange(10):
+        for i in range(10):
+            for j in range(10):
                 kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])] = [i+0.5+150.0, j+0.5, path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])]
     
         #kidscoord['mock'] = [5.0, 5.0, 1.0]
@@ -852,7 +836,7 @@ def split(seq, size):
     """Split up the list of KiDS fields for parallel processing"""
     newseq = []
     splitsize = len(seq) / size
-    for i in xrange(size-1):
+    for i in range(size-1):
         newseq.append(
             seq[int(round(i*splitsize)):int(round((i+1)*splitsize))])
     newseq.append(seq[int(round((size-1)*splitsize)):len(seq)])
@@ -968,7 +952,7 @@ def import_spec_cat_pz(kidscatname, catmatch, srcNr):
     mask = np.in1d(spec_cat['SeqNr'],srcNr)
     Z_S = Z_S[mask]
     Z_S_out = np.zeros((len(srcNr), 70))
-    for i in xrange(len(srcNr)):
+    for i in range(len(srcNr)):
         Z_S_out[i,:] = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), Z_S[i,:])
         Z_S_out[i,:] = Z_S_out[i,:]/Z_S_out[i,:].sum()
     
@@ -1038,7 +1022,7 @@ def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
         n_z = np.zeros((z_n_bins, len(n_loops)-1))
         w_i = np.zeros((z_n_bins, len(n_loops)-1))
 
-        for i in xrange(len(n_loops)-1):
+        for i in range(len(n_loops)-1):
             manmask = spec_cat['MASK']
             srcmask = 0
             srcmask = (manmask==0)
@@ -1247,8 +1231,8 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     w = np.transpose(np.array([w for blind in blindcats]))
     srcPZ = kidscat['z_photometric']
     tile = np.empty(srcNr.size, dtype=object)
-    for i in xrange(10):
-        for j in xrange(10):
+    for i in range(10):
+        for j in range(10):
             cond = (srcRA > i+150.0) & (srcRA < i+1+150.0) & (srcDEC > j) & (srcDEC < j+1)
             tile[cond] = path_kidscats.split('/', -1)[-1]+'-'+str(i*10+j)
 
@@ -1327,7 +1311,7 @@ def create_obsbins(binname, Nobsbins, lenssel_binning, gamacat):
     
     # For every observable bin
     # append the observable value that contains the determined number of objects
-    for o in xrange(Nobsbins):
+    for o in range(Nobsbins):
         obsbins = np.append(obsbins, sorted_obslist[np.int(o*obsbin_size)])
     
     # Finally, append the max value of the observable
@@ -1379,7 +1363,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                 print('Lens binning: Lenses divided in %i %s-bins' \
                       %(Nobsbins, binname))
                 print('%s Min:          Max:          Mean:'%binname)
-                for b in xrange(Nobsbins):
+                for b in range(Nobsbins):
                     lenssel = lenssel_binning & (obsbins[b] <= obslist) \
                                 & (obslist < obsbins[b+1])
                     print('%g    %g    %g' \
@@ -1616,7 +1600,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
                       Rmask, klist, wlist, Nsrclist, srcm, Runit, blindcats):
     
     wlist = wlist.T
-    klist_t = np.array([klist for b in xrange(len(blindcats))]).T
+    klist_t = np.array([klist for b in range(len(blindcats))]).T
     
     # Calculating the needed errors
     if 'pc' not in Runit:
@@ -1642,7 +1626,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     Nsrc_tot = np.sum(Nsrclist, 1)
     
     srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
-    srcm = np.array([srcm for b in xrange(len(blindcats))]).T
+    srcm = np.array([srcm for b in range(len(blindcats))]).T
     foo = [] # Empty unused lists
     srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
     srcm = []
@@ -1656,16 +1640,16 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     gammaxlists = np.zeros([len(blindcats), len(incosphilist), len(incosphilist[0])])
 
     klist = np.ma.filled(np.ma.array(klist, mask = Rmask, fill_value = inf))
-    klist = np.array([klist for b in xrange(len(blindcats))]).T
+    klist = np.array([klist for b in range(len(blindcats))]).T
     if 'pc' not in Runit:
-        for g in xrange(len(blindcats)):
+        for g in range(len(blindcats)):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
                                    insinphilist) * wk2list[:,:,g].T)
             gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
                                    incosphilist) * wk2list[:,:,g].T)
 
     else:
-        for g in xrange(len(blindcats)):
+        for g in range(len(blindcats)):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
                                     insinphilist) * wk2list[:,:,g].T / \
                                     klist[:,:,g].T)
@@ -1675,12 +1659,12 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
 
 
-    gammat_tot = np.array([np.sum(gammatlists[g], 1) for g in xrange(len(blindcats))])
-    gammax_tot = np.array([np.sum(gammaxlists[g], 1) for g in xrange(len(blindcats))])
+    gammat_tot = np.array([np.sum(gammatlists[g], 1) for g in range(len(blindcats))])
+    gammax_tot = np.array([np.sum(gammaxlists[g], 1) for g in range(len(blindcats))])
 
-    wk2 = np.array([wk2_tot.T[b] for b in xrange(len(blindcats))])
-    w2k2 = np.array([w2k2_tot.T[b] for b in xrange(len(blindcats))])
-    srcm = np.array([srcm_tot.T[b] for b in xrange(len(blindcats))])
+    wk2 = np.array([wk2_tot.T[b] for b in range(len(blindcats))])
+    w2k2 = np.array([w2k2_tot.T[b] for b in range(len(blindcats))])
+    srcm = np.array([srcm_tot.T[b] for b in range(len(blindcats))])
 
     gc.collect()
     
@@ -1702,52 +1686,62 @@ def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
 
 
 # Write the shear or covariance catalog to a fits file
-def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
-                  output, outputnames, variance, purpose, e1, e2, w, srcm, blindcats):
-    
+def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
+                  output, outputnames, variance, purpose, e1, e2, w, srcm,
+                  blindcats):
     fitscols = []
-
-    Rmin = Rbins[0:nRbins]/Rconst
-    Rmax = Rbins[1:nRbins+1]/Rconst
+    Rmin = Rbins[0:nRbins] / Rconst
+    Rmax = Rbins[1:nRbins+1] / Rconst
 
     # Adding the radial bins
-    #print('galIDlist =', galIDlist, type(galIDlist[0]))
     if 'bootstrap' in purpose:
-        fitscols.append(pyfits.Column(name = 'Bootstrap', format='20A', \
-                                      array = galIDlist))
+        fitscols.append(
+            pyfits.Column(name='Bootstrap', format='20A', array=galIDlist))
     else:
-        # This need to be figured out, it is causing pipeline to stall if there is an empty lens list passed.
-        if isinstance(galIDlist[0], basestring):
+        # This need to be figured out, it is causing pipeline to stall
+        # if there is an empty lens list passed.
+        if isinstance(galIDlist[0], six.string_types):
             fmt = '50A'
         elif isinstance(galIDlist[0], int):
             fmt = 'J'
         else:
             fmt = 'E'
-        fitscols.append(pyfits.Column(name = 'ID', format=fmt, \
-                                      array = galIDlist))
+        fitscols.append(
+            pyfits.Column(name='ID', format=fmt, array=galIDlist))
 
-    fitscols.append(pyfits.Column(name = 'Rmin', format = '%iD'%nRbins, \
-                                  array = [Rmin]*len(galIDlist)))
-    fitscols.append(pyfits.Column(name = 'Rmax', format='%iD'%nRbins, \
-                                  array = [Rmax]*len(galIDlist)))
-    fitscols.append(pyfits.Column(name = 'Rcenter', format='%iD'%nRbins, \
-                                  array = [Rcenters]*len(galIDlist)))
+    fitscols.append(
+        pyfits.Column(name='Rmin', format='{}D'.format(nRbins),
+                      array=[Rmin]*len(galIDlist)))
+    fitscols.append(
+        pyfits.Column(name='Rmax', format='{}D'.format(nRbins),
+                      array=[Rmax]*len(galIDlist)))
+    fitscols.append(
+        pyfits.Column(name='Rcenter', format='{}D'.format(nRbins),
+                      array=[Rcenters]*len(galIDlist)))
 
     # Adding the output
-    [fitscols.append(pyfits.Column(name = outputnames[c], \
-                                   format = '%iD'%nRbins, \
-                                   array = output[c])) \
-    for c in xrange(len(outputnames))]
+    [fitscols.append(
+        pyfits.Column(name=outname, format='{}D'.format(nRbins),
+                      array=output[c]))
+     for c, outname in enumerate(outputnames)]
 
     if 'covariance' in purpose:
-        fitscols.append(pyfits.Column(name = 'e1', format='%iD'%len(blindcats), array= e1))
-        fitscols.append(pyfits.Column(name = 'e2', format='%iD'%len(blindcats), array= e2))
-        fitscols.append(pyfits.Column(name = 'lfweight', format='%iD'%len(blindcats), array= w))
-        fitscols.append(pyfits.Column(name = 'bias_m', format='1D', array= srcm))
+        fitscols.append(
+            pyfits.Column(name='e1', format='{}D'.format(len(blindcats)),
+                          array=e1))
+        fitscols.append(
+            pyfits.Column(name='e2', format='{}D'.format(len(blindcats)),
+                          array=e2))
+        fitscols.append(
+            pyfits.Column(name='lfweight',
+                          format='{}D'.format(len(blindcats)), array=w))
+        fitscols.append(pyfits.Column(name='bias_m', format='1D', array=srcm))
 
     # Adding the variance for the 4 blind catalogs
-    fitscols.append(pyfits.Column(name = 'variance(e[A,B,C,D])', format='%iD'%len(blindcats), \
-                                  array= [variance]*len(galIDlist)))
+    fitscols.append(
+        pyfits.Column(name='variance(e[A,B,C,D])',
+                      format='{}D'.format(len(variance)),
+                      array=[variance]*len(galIDlist)))
 
     cols = pyfits.ColDefs(fitscols)
     tbhdu = pyfits.BinTableHDU.from_columns(cols)
@@ -1822,7 +1816,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
-    fmt = ['%.4e' for i in xrange(data_out.shape[1])]
+    fmt = ['%.4e' for i in range(data_out.shape[1])]
     fmt[-1] = '%6d'
     np.savetxt(filename, data_out, delimiter=' '*4, fmt=fmt, header=filehead)
 
@@ -1842,10 +1836,10 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
             format='ascii.commented_header', overwrite=True)
         #np.savetxt(galIDsname, [galIDs_matched], delimiter=' ',
                    #header="ID's of all stacked lenses:", comments='# ')
-        
+
         print("Written: List of all stacked lens ID's"\
                 " that contribute to the signal:", galIDsname)
-        
+
     return
 
 
@@ -2056,8 +2050,8 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle,
     # just for labelling
     binname = binname.replace('_', '\\_')
 
-    for N1 in xrange(Nobsbins):
-        for N2 in xrange(Nobsbins):
+    for N1 in range(Nobsbins):
+        for N2 in range(Nobsbins):
 
             # Add subplots
             ax_sub = fig.add_subplot(gs[Nobsbins-N1-1,N2])

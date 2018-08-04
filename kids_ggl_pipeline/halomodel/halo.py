@@ -49,7 +49,6 @@ from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
 from . import baryons
-from . import hod
 from . import longdouble_utils as ld
 from .tools import (
     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
@@ -61,7 +60,7 @@ from .dark_matter import (
     NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
     GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10)
-from .cmf import *
+from .. import hod
 
 
 
@@ -135,7 +134,7 @@ def model(theta, R):
     k_range_lin = exp(k_range)
     mass_range = 10**linspace(
         setup['logM_min'], setup['logM_max'], setup['logM_bins'])
-    M_step = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
+    mstep = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
     obsbins, observable = observables
@@ -157,7 +156,7 @@ def model(theta, R):
     bias = array([bias]*k_range_lin.size).T
 
     hod_observable = 10**array(
-        [np.linspace(obsbins[i-1], obsbins[i], 200, dtype=np.longdouble)
+        [np.linspace(obsbins[i-1], obsbins[i], 100, dtype=np.longdouble)
          for i in range(1, obsbins.size)])
 
     transfer_params = array([])
@@ -176,7 +175,7 @@ def model(theta, R):
         H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
         hmf_temp = MassFunction(
-            Mmin=setup['logM_min'], Mmax=setup['logM_max'], dlog10m=M_step,
+            Mmin=setup['logM_min'], Mmax=setup['logM_max'], dlog10m=mstep,
             hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
             delta_c=1.686, **i)
         hmf_temp.update(cosmo_model=cosmo_model)
@@ -207,19 +206,19 @@ def model(theta, R):
 
     if ingredients['centrals']:
         pop_c = array(
-            [hod.number(mor_cent[0], scatter_cent[0], i, mass_range,
+            [hod.number(i, mass_range, mor_cent[0], scatter_cent[0],
                         mor_cent[1:], scatter_cent[1:])
              for i in hod_observable])
     else:
-        pop_c = np.zeros(hod_observable.shape)
+        pop_c = np.zeros(mass_range.shape)
 
     if ingredients['satellites']:
         pop_s = array(
-            [hod.number(mor_sat[0], scatter_sat[0], i, mass_range,
+            [hod.number(i, mass_range, mor_sat[0], scatter_sat[0],
                         mor_sat[1:], scatter_sat[1:])
              for i in hod_observable])
     else:
-        pop_s = np.zeros(hod_observable.shape)
+        pop_s = np.zeros(mass_range.shape)
 
     pop_g = pop_c + pop_s
 

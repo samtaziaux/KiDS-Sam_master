@@ -6,6 +6,8 @@ from six import string_types
 
 from . import confighod, configsampler
 from ...halomodel import nfw, nfw_stack, halo, halo_2, halo_2_mc
+from ...halomodel.observables import Observable
+from ...halomodel.selection import Selection
 
 # local, if present
 try:
@@ -181,11 +183,9 @@ class ConfigFile:
         return []
 
     def read(self):
-        """
-        Need to reshape parameters to return val1, val2, val3, val4
-        instead of cosmo, hod separately.
-        """
+        """Read the configuration file"""
         section = ConfigSection()
+        observables = []
         names = []
         parameters = []
         priors = []
@@ -217,7 +217,10 @@ class ConfigFile:
                 these_priors = self.initialize_priors()
                 continue
             if section == 'observables':
-                observables = confighod.observables(line.words)
+                #observables = confighod.observables(line.words)
+                observables.append(Observable(*line.words))
+            elif section == 'selection':
+                selection = Selection(*line.words)
             elif section == 'ingredients':
                 ingredients = confighod.ingredients(
                     ingredients, line.words)
@@ -234,7 +237,16 @@ class ConfigFile:
                 sampling = configsampler.sampling_dict(line, sampling)
         parameters, nparams = confighod.flatten_parameters(parameters)
         sampling = configsampler.add_defaults(sampling)
-        hod_params = [observables, ingredients, parameters, setup]
+        #hod_params = confighod.HODParams(
+            #'observables,selection,ingredients,parameters,setup'.split(','),
+            #[observables, selection, ingredients, parameters, setup])
+        #hod_params = {
+            #'observables': observables, 'selection': selection,
+            #'ingredients': ingredients, 'parameters': parameters,
+            #'setup': setup}
+        hod_params = [
+            'observables,selection,ingredients,parameters,setup'.split(','),
+            [observables, selection, ingredients, parameters, setup]]
         hm_params = [model, hod_params, np.array(names), np.array(priors),
                      np.array(nparams), np.array(starting), np.array(output)]
         return hm_params, sampling

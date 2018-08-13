@@ -30,7 +30,7 @@ valid_priors = append(fixed_priors, free_priors)
 
 
 def calculate_lnprior(lnprior, theta, prior_types, parameters, jfree):
-    val1, val2, val3, val4 = parameters[2]
+    val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     v1free = val1[where(jfree)].flatten()
     v2free = val2[where(jfree)].flatten()
     v3free = val3[where(jfree)].flatten()

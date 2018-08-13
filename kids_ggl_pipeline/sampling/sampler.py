@@ -30,6 +30,7 @@ if sys.version_info[0] == 2:
 
 # local
 from . import priors, sampling_utils
+from ..helpers.configuration.confighod import HODParams
 
 
 def run_emcee(hm_options, sampling, args):
@@ -37,7 +38,7 @@ def run_emcee(hm_options, sampling, args):
     function, parameters, names, prior_types, nparams, starting, output = \
         hm_options
 
-    val1, val2, val3, val4 = parameters[2]
+    val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     params_join = []
 
     print('Running KiDS-GGL pipeline - sampler\n')
@@ -274,7 +275,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
     # all other types ('fixed', 'read') do not contribute to the prior
     # run the given model
-    v1 = parameters[2][0].copy()
+    v1 = parameters[1][parameters[0].index('parameters')][0].copy()
     v1[where(jfree)] = theta
     if params_join is not None:
         v1j = list(v1)
@@ -296,8 +297,8 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     # note that by now we discard the other v's!
     # we don't want to overwrite the old list now that we've
     # changed one of its components
-    newp = [p for p in parameters]
-    newp[2] = v1
+    newp = [parameters[0], [p for p in parameters[1]]]
+    newp[1][newp[0].index('parameters')] = v1
 
     model = function(newp, R)
     # no covariance
@@ -328,7 +329,8 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     model.append(chi2)
     model.append(lnlike)
     # return to original content for future calls
-    #parameters[2] = [val1, val2, val3, val4]
+    #parameters.values[parameters.section_index('parameters')] \
+        #= [val1, val2, val3, val4]
     return lnlike + lnprior_total, model
 
 
@@ -347,19 +349,24 @@ def run_demo(function, R, esd, esd_err, cov, icov, prior_types, parameters,
                         #color='r')
         return
 
-    parameters[2][0][where(jfree)] = starting
+    iparams = parameters[0].index('parameters')
+    parameters[1][iparams][0][where(jfree)] = starting
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
         parameters, nparams, params_join, jfree, lnprior, 0, rng_obsbins,
         fail_value, array, dot, inf, zip, outer, pi)
     chi2 = model[-2]
+    if chi2 == fail_value[-2]:
+        msg = 'Could not calculate model prediction. It is likely that one' \
+              ' of the parameters is outside its allowed prior range.'
+        raise ValueError(msg)
     dof = esd.size - starting.size - 1
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
 
     # the rest are corrected in lnprob. We should work to remove
     # this anyway
     if 'model' in str(function):
-        redshift = read_redshift(parameters[2][0], names)
+        redshift = read_redshift(parameters[1][iparams][0], names)
         esd_err = esd_err / (1+redshift)**2
 
     fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
@@ -515,7 +522,7 @@ def sampler_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
     into consideration. It takes intervals (max-min)/2 around a
     starting value.
     """
-    val1, val2, val3, val4 = parameters[2]
+    val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     v1free = val1[where(jfree)]
     v2free = val2[where(jfree)]
     v3free = val3[where(jfree)]
@@ -532,10 +539,8 @@ def sampler_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
 
 def write_hdr(sampling, function, parameters, names, prior_types):
     hdrfile = '.'.join(sampling['output'].split('.')[:-1]) + '.hdr'
-    print('Printing header information to', hdrfile)
-    #val1, val2, val3, val4 = parameters[2]
-    parameters[2] = np.transpose(parameters[2])
-    #hdr = open(hdrfile, 'w')
+    iparams = parameters[0].index('parameters')
+    parameters[1][iparams] = np.transpose(parameters[1][iparams])
     with open(hdrfile, 'w') as hdr:
         print('Started', ctime(), file=hdr)
         print('datafile', ','.join(sampling['data'][0]), file=hdr)
@@ -551,11 +556,14 @@ def write_hdr(sampling, function, parameters, names, prior_types):
                   file=hdr)
         print('model {0}'.format(function), file=hdr)
         # being lazy for now
-        print('observables  {0}'.format(parameters[0]), file=hdr)
+        print('observables  {0}'.format(
+            parameters[1][parameters[0].index('observables')]), file=hdr)
+        ingredients = parameters[1][parameters[0].index('ingredients')]
         print('ingredients {0}'.format(
-            ','.join([key for key, item in parameters[1].items() if item])),
+            ','.join([key for key, item in ingredients.items() if item])),
             file=hdr)
-        for p, pt, v1, v2, v3, v4 in zip(names, prior_types, *parameters[2].T):
+        params = parameters[1][iparams]
+        for p, pt, v1, v2, v3, v4 in zip(names, prior_types, *params.T):
             try:
                 line = '%s  %s  ' %(p, pt)
                 line += ','.join(np.array(v1, dtype=str))
@@ -580,7 +588,7 @@ def write_hdr(sampling, function, parameters, names, prior_types):
         print('thin      {0:5d}'.format(sampling['thin']), file=hdr)
 
     # back to its original shape
-    parameters[2] = np.transpose(parameters[2])
+    parameters[1][iparams] = np.transpose(parameters[1][iparams])
 
     return hdrfile
 

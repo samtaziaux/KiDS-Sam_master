@@ -117,12 +117,6 @@ def model(theta, R):
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
     # new config
-    # devised theta as an object with the read_section method to make
-    # it easier to follow if new entries are added
-    #observables, selection, ingredients, theta, setup \
-        #= [theta.read_section(name)
-           #for name in ('observables', 'selection', 'ingredients',
-                        #'parameters', 'setup')]
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
@@ -224,16 +218,18 @@ def model(theta, R):
 
     """Calculating halo model"""
 
-    # selection function, as a function of observable
+    # interpolate selection function to the same grid as redshift and
+    # observable to be used in trapz
     completeness = np.array(
         [selection.interpolate([zi]*obs.size, obs, method='linear')
          for zi, obs in zip(z, hod_observable)])
+    completeness = np.ones_like(hod_observable)
 
-    #print('mor_cent =', mor_cent[0](mass_range, *mor_cent[1:]))
     if ingredients['centrals']:
         pop_c = hod.number(
             hod_observable, mass_range, mor_cent[0], scatter_cent[0],
-            mor_cent[1:], scatter_cent[1:])#, completeness)
+            mor_cent[1:], scatter_cent[1:], completeness)
+        print('pop_c =', pop_c)
     else:
         pop_c = np.zeros(mass_range.shape)
 
@@ -349,8 +345,9 @@ def model(theta, R):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
 
     if ingredients['pointmass']:
+        # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
         pointmass = array(
-            [(params_pm[1]*10**m_pm/1e12) / (np.pi*rvir_range_2d_i**2)
+            [params_pm[1]*10**m_pm / (np.pi*rvir_range_2d_i**2) / 1e12
              for m_pm in params_pm[0]])
         out_esd_tot_inter = out_esd_tot_inter + pointmass
 

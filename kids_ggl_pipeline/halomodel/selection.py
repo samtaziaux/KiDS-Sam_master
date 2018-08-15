@@ -22,7 +22,7 @@ class Selection():
     pairs in addition to the completeness at each coordinate. Support
     for irregular grids may be added in the future if requested.
 
-    If th (redshift,observable) grid is not provided, the functions
+    If the (redshift,observable) grid is not provided, the functions
     `expand_obs_range` and `expand_z_range` (used in KiDS-GGL) will
     fail. If the Selection object is defined in another context that
     does not require those methods then the condition of a regular grid

@@ -110,7 +110,7 @@ def Con(z, M, f, scaling='duffy08'):
     #duffy rho_crit
     #c = f * 6.71 * (M/2e12)**-0.091 * (1+z)**-0.44
     #duffy rho_mean
-    c = f * 10.14 * (M/2e12)**-0.081 * (1+z)**-1.01
+    c = f * 10.14 / (M/2e12)**0.081 / (1+z)**1.01
     #maccio08
     #c = 10**0.830 / (M*0.3/(1e12))**0.098
     #zehavi

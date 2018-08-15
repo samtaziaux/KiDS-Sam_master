@@ -6,7 +6,7 @@ from scipy import stats
 #from scipy.interpolate import 
 
 from .core import *
-from ...halomodel.hod import relations, scatter
+from ...hod import relations, scatter
 from ...halomodel.observables import Observable
 from ...sampling.priors import (
     draw, fixed_priors, free_priors, nargs as prior_nargs, valid_priors)

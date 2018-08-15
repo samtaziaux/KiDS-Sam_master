@@ -319,6 +319,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
+    print('chi2 =', chi2, theta)
 
     if not isfinite(chi2):
         return -inf, fail_value

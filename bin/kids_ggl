@@ -7,6 +7,7 @@ import sys
 sys.path.append('./')
 
 # KiDS-GGL modules
+from kids_ggl_pipeline import __version__
 from kids_ggl_pipeline.esd_production import shearcode
 from kids_ggl_pipeline.sampling import sampler, sampling_utils
 from kids_ggl_pipeline.halomodel import hm_utils
@@ -46,6 +47,8 @@ def parse_args():
     add('--sampler', dest='sampler', action='store_true',
         help='run the MCMC sampler')
     add('-c', '--config', dest='config_file')
+    add('-v', '--version', action='version',
+        version='%(prog)s {0}'.format(__version__))
     args = parser.parse_args()
     # options to turn on and off the data production or halo model?
     return args

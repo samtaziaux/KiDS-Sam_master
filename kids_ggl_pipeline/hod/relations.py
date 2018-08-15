@@ -7,8 +7,8 @@ from numpy import log10
 __all__ = ('powerlaw', 'double_powerlaw', 'double_powerlaw_scaled')
 
 
-def powerlaw(M, M0, a, b, return_log=False):
-    x = a + b*log10(M/M0)
+def powerlaw(M, logM0, a, b, return_log=True):
+    x = a + b*(log10(M)-logM0)
     if return_log:
         return x
     return 10**x

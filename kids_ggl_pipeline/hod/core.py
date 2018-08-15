@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import array, iterable, ones_like
+from numpy import array, iterable, newaxis, ones_like
 from scipy.integrate import trapz
 
 from ..halomodel.tools import Integrate
@@ -39,8 +39,8 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None):
     if selection is None:
         selection = ones_like(obs)
     prob = probability(obs, Mh, mor, scatter_func, mor_args, scatter_args)
-    return array(
-        [Integrate(p*s, o) for p, s, o in zip(prob, selection, obs)])
+    number = Integrate(prob*selection[newaxis], obs[newaxis], axis=2).T
+    return number
 
 
 def obs_average(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection):
@@ -82,9 +82,10 @@ def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args):
 
     Parameters
     ----------
-    obs : array, shape (N,)
+    obs : array, shape (nbins,N)
         locations at which the observable is evaluated for the
-        trapezoidal rule integration
+        trapezoidal rule integration. nbins is the number of observable
+        bins
     Mh : array, shape (P,)
         mean halo mass of interest
     mor : callable
@@ -98,7 +99,7 @@ def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args):
 
     Returns
     -------
-    phi : array, shape (P,)
+    phi : array, shape (nbins,P)
         occupation probability for each Mh
     """
     if not iterable(Mh):

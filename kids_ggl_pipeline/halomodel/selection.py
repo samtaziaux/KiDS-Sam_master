@@ -15,7 +15,7 @@ from scipy.interpolate import griddata
 import six
 
 
-class Selection():
+class Selection(object):
     """Sample selection object
 
     Read a table containing a *regular grid* of (redshift,observable)

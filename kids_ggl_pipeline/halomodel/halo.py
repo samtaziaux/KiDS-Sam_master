@@ -63,7 +63,6 @@ from .dark_matter import (
 from .. import hod
 
 
-
 """
 # Mass function from HMFcalc.
 """
@@ -154,6 +153,8 @@ def model(theta, R):
         f = array([f]*nbins)
     if not iterable(fc_nsat):
         fc_nsat = array([fc_nsat]*nbins)
+    if z.size == 1 and nbins > 1:
+        z = array(list(z)*nbins)
 
     #if delta != 200 and 
 
@@ -229,16 +230,15 @@ def model(theta, R):
         pop_c = hod.number(
             hod_observable, mass_range, mor_cent[0], scatter_cent[0],
             mor_cent[1:], scatter_cent[1:], completeness)
-        print('pop_c =', pop_c)
     else:
-        pop_c = np.zeros(mass_range.shape)
+        pop_c = np.zeros((nbins,mass_range.size))
 
     if ingredients['satellites']:
         pop_s = hod.number(
             hod_observable, mass_range, mor_sat[0], scatter_sat[0],
             mor_sat[1:], scatter_sat[1:], completeness)
     else:
-        pop_s = np.zeros(mass_range.shape)
+        pop_s = np.zeros((nbins,mass_range.size))
 
     pop_g = pop_c + pop_s
 

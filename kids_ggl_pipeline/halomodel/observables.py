@@ -5,7 +5,7 @@ import numpy as np
 import six
 
 
-class Observable():
+class Observable(object):
     """Observable object
 
     """
@@ -16,7 +16,7 @@ class Observable():
 
         """
         self.name = name
-        self.binning = binning
+        self._binning = binning
         self.means = means
         self._nbins = None
         self.sampling_size = sampling_size
@@ -24,13 +24,9 @@ class Observable():
 
     @property
     def binning(self):
+        if isinstance(self._binning, six.string_types):
+            self._binning = np.array(self._binning.split(','), dtype=float)
         return self._binning
-
-    @binning.setter
-    def binning(self, binning):
-        if isinstance(binning, six.string_types):
-            binning = binning.split(',')
-        self._binning = np.array(binning, dtype=float)
 
     @property
     def means(self):

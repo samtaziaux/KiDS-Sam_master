@@ -136,7 +136,7 @@ class ConfigSection(str):
         return self.name == self.parent
 
 
-class ConfigFile:
+class ConfigFile(object):
 
     def __init__(self, filename):
         """Initialize configuration file"""

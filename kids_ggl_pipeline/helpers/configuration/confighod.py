@@ -161,7 +161,7 @@ def starting_values(starting, parameters, line):
     return starting
 
 
-class HODParams():
+class HODParams(object):
     """Class to manage list of HOD parameters
 
     Attributes

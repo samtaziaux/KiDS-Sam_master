@@ -94,7 +94,6 @@ def run_emcee(hm_options, sampling, args):
     print('Starting values =', starting)
 
     meta_names, fits_format = output
-    mshape = meta_names.shape
     # this assumes that all parameters are floats -- can't imagine a
     # different scenario
     metadata = [[] for m in meta_names]
@@ -105,6 +104,7 @@ def run_emcee(hm_options, sampling, args):
             size = sampling['nwalkers'] * sampling['nsteps'] \
                 // sampling['thin']
         else:
+            print(fmt, fmt[:-1])
             size = [sampling['nwalkers']*sampling['nsteps']//sampling['thin'],
                     int(fmt[:-1])]
             # only for ESDs. Note that there will be trouble if outputs
@@ -129,7 +129,7 @@ def run_emcee(hm_options, sampling, args):
 
     # are we just running a demo?
     if args.demo:
-        run_demo(function, R, esd, esd_err, cov, icov, prior_types,
+        run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
                  parameters, params_join, starting, jfree, nparams, names,
                  lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot,
                  inf, outer, pi, zip)
@@ -319,7 +319,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
-    print('chi2 =', chi2, theta)
+    print('chi2 =', chi2, theta, model[-1])
 
     if not isfinite(chi2):
         return -inf, fail_value
@@ -335,10 +335,10 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     return lnlike + lnprior_total, model
 
 
-def run_demo(function, R, esd, esd_err, cov, icov, prior_types, parameters,
-             params_join, starting, jfree, nparams, names, lnprior,
-             rng_obsbins, fail_value, Ndatafiles, array, dot, inf, outer,
-             pi, zip):
+def run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
+             parameters, params_join, starting, jfree, nparams, names,
+             lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot, inf,
+             outer, pi, zip):
     def plot_demo(ax, Ri, gt, gt_err, f):
         Ri = Ri[1:]
         ax.errorbar(Ri, gt, yerr=gt_err, fmt='ko', ms=10)
@@ -384,6 +384,10 @@ def run_demo(function, R, esd, esd_err, cov, icov, prior_types, parameters,
                 ax.set_yscale('log')
     #fig.tight_layout(w_pad=0.01)
     pylab.show()
+
+    # covariance
+    if args.no_demo_cov:
+        return
     fig, axes = pylab.subplots(
         figsize=(10,8), nrows=cov.shape[0], ncols=cov.shape[0])
     vmin, vmax = np.percentile(cov, [1,99])

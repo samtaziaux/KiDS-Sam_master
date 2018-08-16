@@ -38,15 +38,22 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser()
     add = parser.add_argument
-    add('--demo', dest='demo', action='store_true',
-        help='evaluate a demo sample with the input parameters')
+    # configuration file
+    add('-c', '--config', dest='config_file')
+    # esd production options
     add('--esd', dest='esd', action='store_true',
         help='run the ESD production module')
-    add('-f', dest='force_overwrite', action='store_true',
-        help='Overwrite output file if it exists')
+    # sampling options
     add('--sampler', dest='sampler', action='store_true',
         help='run the MCMC sampler')
-    add('-c', '--config', dest='config_file')
+    add('-f', dest='force_overwrite', action='store_true',
+        help='Overwrite output file if it exists')
+    # model demo options
+    add('--demo', dest='demo', action='store_true',
+        help='evaluate a demo sample with the input parameters')
+    add('--no-cov', dest='no_demo_cov', action='store_true',
+        help='Do not plot the covariance when running in demo mode')
+    # print version
     add('-v', '--version', action='version',
         version='%(prog)s {0}'.format(__version__))
     args = parser.parse_args()

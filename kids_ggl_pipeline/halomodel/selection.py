@@ -55,6 +55,9 @@ class Selection(object):
     @property
     def table(self):
         if self._table is None:
+            if self.filename == 'None':
+                self._table = 'None'
+                return self._table
             self._table = ascii.read(
                 self.filename, format=self.format,
                 include_names=self.colnames)

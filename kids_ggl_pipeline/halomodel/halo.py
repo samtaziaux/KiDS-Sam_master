@@ -144,7 +144,6 @@ def model(theta, R):
     mstep = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
-    #obsbins, observable = observables
     obsbins = observable.binning
     nbins = observable.nbins
     # this whole setup thing should be done outside of the model,
@@ -167,10 +166,6 @@ def model(theta, R):
     n_bins_obs = nbins
     bias = array([bias]*k_range_lin.size).T
 
-    #hod_observable = 10**array(
-    #hod_observable = array(
-        #[np.linspace(obsbins[i-1], obsbins[i], 100, dtype=np.longdouble)
-         #for i in range(1, obsbins.size)])
     hod_observable = observable.sampling
 
     transfer_params = array([])
@@ -221,10 +216,12 @@ def model(theta, R):
 
     # interpolate selection function to the same grid as redshift and
     # observable to be used in trapz
-    completeness = np.array(
-        [selection.interpolate([zi]*obs.size, obs, method='linear')
-         for zi, obs in zip(z, hod_observable)])
-    completeness = np.ones_like(hod_observable)
+    if selection.filename == 'None':
+        completeness = np.ones_like(hod_observable)
+    else:
+        completeness = np.array(
+            [selection.interpolate([zi]*obs.size, obs, method='linear')
+             for zi, obs in zip(z, hod_observable)])
 
     if ingredients['centrals']:
         pop_c = hod.number(

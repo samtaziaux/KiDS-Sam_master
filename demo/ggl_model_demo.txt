@@ -6,29 +6,26 @@
 ########
 ##
 ## This file is ready to be used with
-##   $ kids_ggl -c ggl_model_demo.txt --sampler [--demo] [-f]
+##   $ kids_ggl -c ggl_model_demo.txt --sampler [--demo [--no-cov]] [-f]
 ##
 ## For help with the structure of this file see the docs.
 ##
 ########
 
 
-# Name of the function containing the desired model (several fiducial models
-# will be implemented)
-
 model             halo.model
 
-
 [observables]
-logmstar        10,12.5   11.315
+logmstar        10,11,12.5   10.4,11.5     log
 
+[selection]
+logmstar_selection.txt      z,logmstar,completeness      fixed_width
 
 [ingredients]
 centrals        True
 pointmass       True
 satellites      False
 miscentring     False
-
 
 [cosmo]
 sigma_8         fixed     0.8159
@@ -39,7 +36,6 @@ omegav          fixed     0.6911
 n               fixed     0.9667
 z               array     0.188
 
-
 [hod/pointmass]
 logmstar        array     11.315
 point_norm      normal    1         0.2
@@ -47,36 +43,29 @@ point_norm      normal    1         0.2
 [hod/centrals]
 fc              fixed       1
 bias            fixed       1
-
 [hod/centrals/mor]
 name            powerlaw
-logM_0          fixed       14.0
+logM0          fixed       14.0
 a               uniform     -5      5
-b               uniform     -5      5
-
+b               student     1
 [hod/centrals/scatter]
 name            lognormal
-sigma_c         uniform     0.05    3.0     1.0
-
+sigma_c         jeffreys
 [hod/centrals/miscentring]
 p_off           fixed       0
 R_off           fixed       0
 
-
 [hod/satellites]
 fc_nsat         fixed    1.0
-
 [hod/satellites/mor]
 name            double_powerlaw_scaled
 Ac2s            fixed     0.56
-
 [hod/satellites/scatter]
 name            lognormal
 alpha_s         fixed    -1.0
-b_0             fixed    -0.1   join:b
-b_1             fixed     1.0   join:b
-b_2             fixed     0.0   join:b
-
+b_0             fixed    -0.1
+b_1             fixed     1.0
+b_2             fixed     0.0
 
 [setup]
 expansion       100
@@ -87,12 +76,12 @@ lnk_max         17
 logM_min        5
 logM_max        16
 logM_bins       200
-
+delta           200
+delta_ref       mean
 
 [output]
-esd_total         8E
-Mavg              E
-
+esd_total         2,8E
+Mavg              2,E
 
 [sampler]
 path_data            data/y_c_2p0_inf/SNR_5_inf/ZB_0p1_0p9-Om_0p315-Ol_0p685-Ok_0-h_1/Rbins8_0p2_10_Mpc/shearcovariance/
@@ -102,11 +91,11 @@ covariance           shearcovariance_matrix_A.txt    4,6
 exclude              0,1
 output               halo_model_results/model_sz.fits
 sampler              emcee                    # MCMC sampler
-nwalkers	         20
+nwalkers	           20
 nsteps               10
-nburn		         0
-thin		         1
-threads		         2
-sampler_type	     ensemble
-update               200
+nburn		             0
+thin		             1
+threads		           2
+sampler_type	       ensemble
+update               100
 

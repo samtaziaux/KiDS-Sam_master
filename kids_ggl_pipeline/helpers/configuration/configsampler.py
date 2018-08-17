@@ -43,6 +43,7 @@ def sampling_dict(line, sampling):
 
 
 def add_defaults(sampling):
+    # replace old names for backward compatibility
     if 'exclude_bins' in sampling:
         sampling['exclude'] = sampling.pop('exclude_bins')
     if 'sampler_output' in sampling:

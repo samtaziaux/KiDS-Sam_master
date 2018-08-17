@@ -1753,10 +1753,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
     else:
         print('Writting new catalog:', filename)
     print()
-
     tbhdu.writeto(filename)
-    print('Catalog written.')
-    print()
 
     return
 

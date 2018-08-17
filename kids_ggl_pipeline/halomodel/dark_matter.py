@@ -106,26 +106,30 @@ def miscenter(p_off, r_off, m_x, r_x, k_x, c=None):
     return u_k
 
 
-def Con(z, M, f):
-
+def Con(z, M, f, scaling='duffy08'):
     #duffy rho_crit
-    #c = 6.71 * (M / (2.0 * 10.0 ** 12.0)) ** -0.091 * (1 + z) ** -0.44
-
+    #c = f * 6.71 * (M/2e12)**-0.091 * (1+z)**-0.44
     #duffy rho_mean
-    c = f * 10.14 * (M / (2.0 * 10.0 ** 12.0)) ** -0.081 * (1.0 + z) ** -1.01
-
+    c = f * 10.14 / (M/2e12)**0.081 / (1+z)**1.01
     #maccio08
     #c = 10**0.830 / (M*0.3/(1e12))**0.098
-
     #zehavi
     #c = ((M / 1.5e13) ** -0.13) * 9.0 / (1 + z)
-
     #bullock_rescaled
     #c = (M / 10 ** 12.47) ** (-0.13) * 11 / (1 + z)
-
     #c = c0 * (M/M0) ** b
-
     #c = f * np.ones(M.shape)
+    # more general version -- these are all calculated at delta=200
+    """
+    cM = {'duffy08':
+            {'crit': 6.71 / (M/2e12/h)**0.091 / (1+z)**0.44,
+             'mean': 10.14 / (M/2e12/h)**0.081 / (1+z)**1.01},
+          'maccio08':
+            {'crit': 10**0.83 / (M/1e12/h)**0.098},
+          'dutton14':
+            {'crit': 10**0.905 / (M/1e12/h)**0.101}
+         }
+    """
     return c
 
 
@@ -223,6 +227,13 @@ def Bias_Tinker10(hmf, r_x):
     
     func = Bias_Tinker10_func(hmf, r_x)
     return func / norm
+
+
+def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
+    b_g = trapz(mass_func.dndlnm * population \
+                * Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
+    return (mass_func.power * b_g), b_g
+
 
 
 """

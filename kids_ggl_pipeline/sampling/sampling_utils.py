@@ -3,17 +3,17 @@ from __future__ import (absolute_import, division, print_function,
 
 import numpy as np
 import os
+import six
 import sys
 from glob import glob
 
-if sys.version_info[0] == 3:
-    basestring = str
-    raw_input = input
-    xrange = range
+if sys.version_info[0] == 2:
+    input = raw_input
+    range = xrange
 
 
 def load_datapoints(datafile, datacols, exclude_bins=None):
-    if isinstance(datafile, basestring):
+    if isinstance(datafile, six.string_types):
         R, esd = np.loadtxt(datafile, usecols=datacols[:2]).T
         # better in Mpc
         if R[-1] > 500:
@@ -30,13 +30,13 @@ def load_datapoints(datafile, datacols, exclude_bins=None):
             oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
                               for df in datafile])
             esd /= oneplusk
-        for i in xrange(len(R)):
+        for i in range(len(R)):
             if R[i][-1] > 500:
                 R[i] /= 1000
     if exclude_bins is not None:
-        R = np.array([[Ri[j] for j in xrange(len(Ri))
+        R = np.array([[Ri[j] for j in range(len(Ri))
                           if j not in exclude_bins] for Ri in R])
-        esd = np.array([[esdi[j] for j in xrange(len(esdi))
+        esd = np.array([[esdi[j] for j in range(len(esdi))
                             if j not in exclude_bins] for esdi in esd])
     return R, esd
 
@@ -62,8 +62,8 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
             cov = np.delete(cov, b, axis=2)
     # product of the determinants
     detC = np.array([np.linalg.det(cov[m][n])
-                        for m in xrange(Nobsbins)
-                        for n in xrange(Nobsbins)])
+                        for m in range(Nobsbins)
+                        for n in range(Nobsbins)])
     prod_detC = detC[detC > 0].prod()
     # likelihood normalization
     likenorm = -(Nobsbins**2*np.log(2*np.pi) + np.log(prod_detC)) / 2
@@ -130,7 +130,7 @@ def read_config(config_file, version='0.5.7', path_data='',
             # create folder if it doesn't exist, asking the user first
             output_folder = os.path.split(output)[0]
             if not os.path.isdir(output_folder):
-                create_folder = raw_input(
+                create_folder = input(
                     '\nOutput folder {0} does not exist. Would you like' \
                     ' to create it? [Y/n] '.format(output_folder))
                 if create_folder.lower().startswith('n'):
@@ -176,6 +176,7 @@ def read_config(config_file, version='0.5.7', path_data='',
            sampler_type, update_freq)
     return out
 
+
 def read_function(function):
     print('Reading function', function)
     function_path = function.split('.')
@@ -187,6 +188,7 @@ def read_function(function):
         for attr in function_path:
             func = getattr(func, attr)
     return func
+
 
 def setup_integrand(R, k=7):
     """

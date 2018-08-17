@@ -26,6 +26,7 @@ def lognormal(obs, M, sigma, obs_is_log=False):
     """
     if obs_is_log:
         obs = 10**obs
+        M = 10**M
     return array([exp(-((log10(obs/Mi)**2) / (2*sigma**2))) \
                      / ((2*pi)**0.5 * sigma * obs * log(10))
                   for Mi in M])

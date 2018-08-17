@@ -10,7 +10,7 @@ class Observable(object):
 
     """
 
-    def __init__(self, name, binning, means, sampling_size=100):
+    def __init__(self, name, binning, means, notes='', sampling_size=100):
         """Construct an observable object from the information in the
         configuration file
 
@@ -19,6 +19,12 @@ class Observable(object):
         self._binning = binning
         self.means = means
         self._nbins = None
+        assert notes in ('', 'log'), \
+            'the fourth column in the observable definition is optional' \
+            ' but may only be given the value "log" if present. Found' \
+            ' "{0}" instead.'.format(notes)
+        self.notes = notes
+        self.is_log = (self.notes == 'log')
         self.sampling_size = sampling_size
         self._sampling = self.sample()
 
@@ -68,14 +74,6 @@ class Observable(object):
     @sampling.setter
     def sampling(self, sample):
         self._sampling = sample
-
-    def is_log(self):
-        """Check whether the observable is defined in log space
-
-        Returns
-        -------
-        """
-        return self.name.startswith('log')
 
     def sample(self, size=None):
         """Linearly sample each observable bin

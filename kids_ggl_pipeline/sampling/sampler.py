@@ -104,7 +104,6 @@ def run_emcee(hm_options, sampling, args):
             size = sampling['nwalkers'] * sampling['nsteps'] \
                 // sampling['thin']
         else:
-            print(fmt, fmt[:-1])
             size = [sampling['nwalkers']*sampling['nsteps']//sampling['thin'],
                     int(fmt[:-1])]
             # only for ESDs. Note that there will be trouble if outputs

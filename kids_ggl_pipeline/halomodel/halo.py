@@ -95,15 +95,6 @@ def f_k(k_x):
     return F
 
 
-def n_gal(mass_func, population, m_x):
-    """Calculates average number of galaxies"""
-    return trapz(mass_func.dndm * population, m_x)
-
-
-def eff_mass(z, mass_func, population, m_x):
-    return trapz(mass_func.dndlnm * population, m_x) \
-        / trapz(mass_func.dndm * population, m_x)
-
 #################
 ##
 ## Main function
@@ -139,8 +130,10 @@ def model(theta, R):
     k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
     k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
     k_range_lin = exp(k_range)
+    # endpoint must be False for mass_range to be equal to hmf.m
     mass_range = 10**linspace(
-        setup['logM_min'], setup['logM_max'], setup['logM_bins'])
+        setup['logM_min'], setup['logM_max'], setup['logM_bins'],
+        endpoint=False)
     mstep = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
@@ -179,7 +172,7 @@ def model(theta, R):
     # Calculation
     # Tinker10 should also be read from theta!
     hmf = array([])
-    h = H0/100.0
+    h = H0 / 100.0
     cosmo_model = LambdaCDM(
         H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
@@ -226,25 +219,23 @@ def model(theta, R):
     if ingredients['centrals']:
         pop_c = hod.number(
             hod_observable, mass_range, mor_cent[0], scatter_cent[0],
-            mor_cent[1:], scatter_cent[1:], completeness)
+            mor_cent[1:], scatter_cent[1:], completeness, observable.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
 
     if ingredients['satellites']:
         pop_s = hod.number(
             hod_observable, mass_range, mor_sat[0], scatter_sat[0],
-            mor_sat[1:], scatter_sat[1:], completeness)
+            mor_sat[1:], scatter_sat[1:], completeness, observable.is_log)
     else:
         pop_s = np.zeros((nbins,mass_range.size))
 
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
-    ngal = array([n_gal(hmf_i, pop_g_i , mass_range)
-                  for hmf_i, pop_g_i in zip(hmf, pop_g)])
-    effective_mass = array(
-        [eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range)
-         for z_i, hmf_i, pop_g_i in zip(z, hmf, pop_g)])
+    mass_function = array([hmf_i.dndm for hmf_i in hmf])
+    ngal = hod.nbar(mass_function, pop_g, mass_range)
+    meff = hod.Mh_effective(mass_function, pop_g, mass_range)
 
     """Power spectrum"""
 
@@ -284,15 +275,17 @@ def model(theta, R):
     u_k = u_k/u_k[:,0][:,None]
 
     # Galaxy - dark matter spectra (for lensing)
-    Pg_2h = bias * array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
-                            rvir_range_lin_i, mass_range)[0]
-                           for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
-                           zip(rvir_range_lin, hmf, ngal, pop_g)])
+    Pg_2h = bias * array(
+        [TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
+                 mass_range)[0]
+         for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+         in zip(rvir_range_lin, hmf, ngal, pop_g)])
 
-    bias_out = bias.T[0] * array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
-                            rvir_range_lin_i, mass_range)[1]
-                            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
-                            zip(rvir_range_lin, hmf, ngal, pop_g)])
+    bias_out = bias.T[0] * array(
+        [TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
+                 mass_range)[1]
+         for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+         in zip(rvir_range_lin, hmf, ngal, pop_g)])
 
     if ingredients['centrals']:
         Pg_c = F_k1 * array(
@@ -301,6 +294,7 @@ def model(theta, R):
              in zip(rho_bg, hmf, pop_c, ngal, u_k)])
     else:
         Pg_c = np.zeros((n_bins_obs,setup['lnk_bins']))
+
     if ingredients['satellites']:
         Pg_s = F_k1 * array(
             [GM_sat_analy(hmf_i, u_k_i, uk_s_i, rho_i, pop_s_i, ngal_i,
@@ -311,9 +305,7 @@ def model(theta, R):
         Pg_s = np.zeros((n_bins_obs,setup['lnk_bins']))
 
     Pg_k = array([(Pg_c_i + Pg_s_i) + Pg_2h_i
-               for Pg_c_i, Pg_s_i, Pg_2h_i
-               in zip(Pg_c, Pg_s, Pg_2h)])
-
+                  for Pg_c_i, Pg_s_i, Pg_2h_i in zip(Pg_c, Pg_s, Pg_2h)])
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                for Pg_k_i in zip(Pg_k)]
 
@@ -323,20 +315,21 @@ def model(theta, R):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
 
     # projected surface density
-    sur_den2 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-                       for xi2_i, rho_i in zip(xi2, rho_bg)])
+    surf_dens2 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
+                        for xi2_i, rho_i in zip(xi2, rho_bg)])
     for i in range(nbins):
-        sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
-        sur_den2[i] = fill_nan(sur_den2[i])
-
+        surf_dens2[i][(surf_dens2[i] <= 0.0) \
+                         | (surf_dens2[i] >= 1e20)] = np.nan
+        surf_dens2[i] = fill_nan(surf_dens2[i])
 
     # excess surface density
-    d_sur_den2 = array(
-        [np.nan_to_num(d_sigma(sur_den2_i, rvir_range_3d_i, rvir_range_2d_i))
-         for sur_den2_i in zip(sur_den2)]) / 1e12
+    d_surf_dens2 = array(
+        [np.nan_to_num(
+            d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+         for surf_dens2_i in zip(surf_dens2)]) / 1e12
     out_esd_tot = array(
-        [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_sur_den2_i), s=0)
-         for d_sur_den2_i in zip(d_sur_den2)])
+        [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+         for d_surf_dens2_i in zip(d_surf_dens2)])
     out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
     for i in range(nbins):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
@@ -349,8 +342,8 @@ def model(theta, R):
         out_esd_tot_inter = out_esd_tot_inter + pointmass
 
     # Add other outputs as needed. Total ESD should always be first!
-    return [out_esd_tot_inter, np.log10(effective_mass)]
-    #return out_esd_tot_inter, d_sur_den3, d_sur_den4, pointmass, nu(1)
+    return [out_esd_tot_inter, np.log10(meff)]
+    #return out_esd_tot_inter, d_surf_dens3, d_surf_dens4, pointmass, nu(1)
 
 
 if __name__ == '__main__':

@@ -90,8 +90,18 @@ class ConfigSection(str):
         """
         `line` should be a `ConfigLine` object
         """
-        output[0].append(line.words[0])
-        output[1].append(line.words[1])
+        fmt = line.words[1].split(',')
+        n = int(fmt[0]) if len(fmt) == 2 else 0
+        fmt = fmt[-1]
+        # a scalar or 1d array
+        if n == 0:
+            output[0].append(line.words[0])
+            output[1].append(line.words[1])
+        # a nd array
+        else:
+            for i in range(1, n+1):
+                output[0].append('{0}{1}'.format(line.words[0], i))
+                output[1].append(fmt)
         return output
 
     def append_entry_setup(self, line, setup):
@@ -217,7 +227,6 @@ class ConfigFile(object):
                 these_priors = self.initialize_priors()
                 continue
             if section == 'observables':
-                #observables = confighod.observables(line.words)
                 observables.append(Observable(*line.words))
             elif section == 'selection':
                 selection = Selection(*line.words)
@@ -237,18 +246,11 @@ class ConfigFile(object):
                 sampling = configsampler.sampling_dict(line, sampling)
         parameters, nparams = confighod.flatten_parameters(parameters)
         sampling = configsampler.add_defaults(sampling)
-        #hod_params = confighod.HODParams(
-            #'observables,selection,ingredients,parameters,setup'.split(','),
-            #[observables, selection, ingredients, parameters, setup])
-        #hod_params = {
-            #'observables': observables, 'selection': selection,
-            #'ingredients': ingredients, 'parameters': parameters,
-            #'setup': setup}
         hod_params = [
             'observables,selection,ingredients,parameters,setup'.split(','),
             [observables, selection, ingredients, parameters, setup]]
         hm_params = [model, hod_params, np.array(names), np.array(priors),
-                     np.array(nparams), np.array(starting), np.array(output)]
+                     np.array(nparams), np.array(starting), output]
         return hm_params, sampling
 
     def read_function(self, path):

@@ -8,7 +8,6 @@ from scipy.integrate import trapz
 from ..halomodel.tools import Integrate
 
 
-#def Mh_effective(mass_function, pop_number, Mh):
 def Mh_effective(mass_function, pop_number, Mh):
     """Effective halo mass in each observable bin
 
@@ -33,6 +32,7 @@ def Mh_effective(mass_function, pop_number, Mh):
     return trapz(Mh*mass_function * pop_number, Mh, axis=1) \
         / trapz(mass_function * pop_number, Mh, axis=1)
 
+
 def nbar(mass_function, pop_number, Mh):
     """Number of objects expected in each observable bin
 
@@ -55,6 +55,7 @@ def nbar(mass_function, pop_number, Mh):
         average number of objects in each observable bin
     """
     return trapz(mass_function * pop_number, Mh, axis=1)
+
 
 def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
            obs_is_log=False):
@@ -125,8 +126,6 @@ def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
         selection = ones_like(obs)
     prob = probability(
         obs, Mh, mor, scatter_func, mor_args, scatter_args, obs_is_log)
-    print('prob =', prob.shape, selection.shape, obs.shape)
-    #return array([trapz(p*s*o, o) for p, s, o in zip(prob, selection, obs)])
     return Integrate(prob*(selection*obs)[newaxis], obs[newaxis], axis=2).T
 
 

@@ -307,14 +307,19 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
     #              for m in rng_obsbins for n in rng_obsbins]).sum()
 
+    """
     if 'model' in str(function):
 
-        # model assumes comoving separations, changing data to accomodate for that
+        # Model assumes comoving separations, changing data to accomodate for that.
+        # This was moved to the model itself, with an additional 
+        # switch in the config file.
         redshift = read_redshift(v1, names, nparams)
         esd = esd / (1+redshift)**2
         residuals = (esd - model[0]) / (1+redshift)**2
     else:
         residuals = esd - model[0]
+    """
+    residuals = esd - model[0]
 
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
@@ -365,9 +370,9 @@ def run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
 
     # the rest are corrected in lnprob. We should work to remove
     # this anyway
-    if 'model' in str(function):
-        redshift = read_redshift(parameters[1][iparams][0], names)
-        esd_err = esd_err / (1+redshift)**2
+    #if 'model' in str(function):
+    #    redshift = read_redshift(parameters[1][iparams][0], names)
+    #    esd_err = esd_err / (1+redshift)**2
 
     fig, axes = pylab.subplots(figsize=(4*Ndatafiles,4), ncols=Ndatafiles)
     if Ndatafiles == 1:
@@ -507,6 +512,9 @@ def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
 
 
 def read_redshift(val1, names, nparams=None):
+    """
+    My guess is that this helping function for reading the redshift can be removed
+    """
     # model assumes comoving separations, changing data to accomodate
     # for that
     redshift_index = np.int(where(names == 'z')[0])

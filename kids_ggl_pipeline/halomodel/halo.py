@@ -342,7 +342,14 @@ def model(theta, R):
         out_esd_tot_inter = out_esd_tot_inter + pointmass
 
     # Add other outputs as needed. Total ESD should always be first!
-    return [out_esd_tot_inter, np.log10(meff)]
+
+    if setup['distances'] == 'comoving':
+        return [out_esd_tot_inter, np.log10(meff)]
+    if setup['distances'] == 'proper':
+        out_esd_tot_inter = array([out_esd_tot_inter_i * (1.0+z_i)**2.0
+                                   for out_esd_tot_inter_i, z_i
+                                   in zip(out_esd_tot_inter, z)])
+        return [out_esd_tot_inter, np.log10(meff)]
     #return out_esd_tot_inter, d_surf_dens3, d_surf_dens4, pointmass, nu(1)
 
 

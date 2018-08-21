@@ -48,8 +48,7 @@ from hmf import MassFunction
 from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
-from . import baryons
-from . import longdouble_utils as ld
+from . import baryons, longdouble_utils as ld, nfw
 from .tools import (
     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
     star_concentration, virial_mass, virial_radius)
@@ -117,12 +116,11 @@ def model(theta, R):
         ' If you would like this feature added please raise an issue.'
     observable = observables[0]
 
-    cosmo, params_pm, params_cent, mor_cent, scatter_cent, miscentring, \
-        params_sat, mor_sat, scatter_sat = theta
+    cosmo, \
+        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        s_concentration, s_mor, s_scatter = theta
 
     sigma8, H0, omegam, omegab, omegav, n, z = cosmo
-    f, bias = params_cent
-    fc_nsat = params_sat
 
     # HMF set up parameters
     # all of this can happen before the model is called, to save some
@@ -141,23 +139,27 @@ def model(theta, R):
     nbins = observable.nbins
     # this whole setup thing should be done outside of the model,
     # only once when setting up the sampler basically
-    if not iterable(f):
-        f = array([f]*nbins)
-    if not iterable(fc_nsat):
-        fc_nsat = array([fc_nsat]*nbins)
+    #if not iterable(f):
+        #f = array([f]*nbins)
+    #if not iterable(fc_nsat):
+        #fc_nsat = array([fc_nsat]*nbins)
     if z.size == 1 and nbins > 1:
         z = array(list(z)*nbins)
 
     #if delta != 200 and 
-
+    """
     concentration = array(
         [Con(np.float64(z_i), mass_range, np.float64(f_i))
          for z_i, f_i in zip(z,f)])
     concentration_sat = array(
         [Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i))
          for z_i, f_i,fc_nsat_i in zip(z,f,fc_nsat)])
-    n_bins_obs = nbins
-    bias = array([bias]*k_range_lin.size).T
+    """
+    # note that e.g. duffy08_crit takes h as a kwarg but we're not passing it
+    # here! This would just be accounted for by allowing a free normalization
+    # but it would become very error-prone
+    concentration = c_concentration[0](mass_range, *c_concentration[1:])
+    concentration_sat = s_concentration[0](mass_range, *s_concentration[1:])
 
     hod_observable = observable.sampling
 
@@ -218,15 +220,15 @@ def model(theta, R):
 
     if ingredients['centrals']:
         pop_c = hod.number(
-            hod_observable, mass_range, mor_cent[0], scatter_cent[0],
-            mor_cent[1:], scatter_cent[1:], completeness, observable.is_log)
+            hod_observable, mass_range, c_mor[0], c_scatter[0],
+            c_mor[1:], c_scatter[1:], completeness, observable.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
 
     if ingredients['satellites']:
         pop_s = hod.number(
-            hod_observable, mass_range, mor_sat[0], scatter_sat[0],
-            mor_sat[1:], scatter_sat[1:], completeness, observable.is_log)
+            hod_observable, mass_range, s_mor[0], s_scatter[0],
+            s_mor[1:], s_scatter[1:], completeness, observable.is_log)
     else:
         pop_s = np.zeros((nbins,mass_range.size))
 
@@ -242,11 +244,42 @@ def model(theta, R):
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
     # Fourier Transform of the NFW profile
-    u_k = array(
-        [NFW_f(np.float64(z_i), rho_i, np.float64(f_i), mass_range,
-               rvir_range_lin_i, k_range_lin, c=concentration_i)
-         for rvir_range_lin_i, rho_i, z_i, f_i, concentration_i
-         in zip(rvir_range_lin, rho_bg, z, f, concentration)])
+    if ingredients['centrals']:
+        """
+        # dummy
+        f = np.ones(mass_range.shape)
+        c = concentration
+        print('c =', c.shape, mass_range.shape, rvir_range_lin.shape, z.shape)
+        print('rho =', rho_bg.shape, k_range_lin.shape)
+        u_k = array(
+            [NFW_f(np.float64(z_i), rho_i, f, mass_range,
+                   rvir_range_lin_i, k_range_lin, c=concentration)
+             for rvir_range_lin_i, rho_i, z_i,
+             in zip(rvir_range_lin, rho_bg, z)])
+        u_k = array(
+            [nfw.uk(k_range_lin, mass_range, rvir_range_lin_i,
+                    concentration, zi, rho_i, setup['delta'])
+             for rvir_range_lin_i, zi, rho_i
+             in zip(rvir_range_lin, z, rho_bg)])
+        print('u_k:', np.allclose(u_k0, u_k), u_k.shape, u_k0.shape, end=' ')
+        diff = (u_k-u_k0) / u_k0
+        print(np.mean(diff), np.median(diff), np.std(diff),
+              np.std(diff)/diff.size**0.5)
+        """
+        # temporary, for compatibility with the current beta version
+        cc = c_concentration
+        # this only works if the concentration function is one of the
+        # predefined ones
+        f = cc[2] if len(cc) == 3 else 1
+        if not iterable(f):
+            f = array([f]*nbins)
+        u_k = array(
+            [NFW_f(np.float64(z_i), rho_i, np.float64(f_i), mass_range,
+                   rvir_range_lin_i, k_range_lin, c=concentration_i)
+             for rvir_range_lin_i, rho_i, z_i, f_i, concentration_i
+             in zip(rvir_range_lin, rho_bg, z, f, concentration)])
+    #else:
+        #u_k = np.ones
 
     # and of the NFW profile of the satellites
     uk_s = array(
@@ -258,6 +291,7 @@ def model(theta, R):
 
     # If there is miscentring to be accounted for
     if ingredients['miscentring']:
+        p_off, r_off = c_miscent
         if not iterable(p_off):
             p_off = array([p_off]*nbins)
         if not iterable(r_off):
@@ -275,17 +309,21 @@ def model(theta, R):
     u_k = u_k/u_k[:,0][:,None]
 
     # Galaxy - dark matter spectra (for lensing)
-    Pg_2h = bias * array(
-        [TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
-                 mass_range)[0]
-         for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-         in zip(rvir_range_lin, hmf, ngal, pop_g)])
-
-    bias_out = bias.T[0] * array(
-        [TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
-                 mass_range)[1]
-         for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-         in zip(rvir_range_lin, hmf, ngal, pop_g)])
+    bias = array([c_twohalo]*k_range_lin.size).T
+    if ingredients['twohalo']:
+        Pg_2h = bias * array(
+            [TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
+                     mass_range)[0]
+             for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+             in zip(rvir_range_lin, hmf, ngal, pop_g)])
+        # unused but not removing as we might want to use it later
+        #bias_out = bias.T[0] * array(
+            #[TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
+                     #mass_range)[1]
+             #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+             #in zip(rvir_range_lin, hmf, ngal, pop_g)])
+    else:
+        Pg_2h = np.zeros((nbins,setup['lnk_bins']))
 
     if ingredients['centrals']:
         Pg_c = F_k1 * array(
@@ -293,7 +331,7 @@ def model(theta, R):
              for rho_i, hmf_i, pop_c_i, ngal_i, u_k_i
              in zip(rho_bg, hmf, pop_c, ngal, u_k)])
     else:
-        Pg_c = np.zeros((n_bins_obs,setup['lnk_bins']))
+        Pg_c = np.zeros((nbins,setup['lnk_bins']))
 
     if ingredients['satellites']:
         Pg_s = F_k1 * array(
@@ -302,9 +340,9 @@ def model(theta, R):
              for rho_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i
              in zip(rho_bg, hmf, pop_s, ngal, u_k, uk_s)])
     else:
-        Pg_s = np.zeros((n_bins_obs,setup['lnk_bins']))
+        Pg_s = np.zeros((nbins,setup['lnk_bins']))
 
-    Pg_k = array([(Pg_c_i + Pg_s_i) + Pg_2h_i
+    Pg_k = array([(Pg_c_i+Pg_s_i) + Pg_2h_i
                   for Pg_c_i, Pg_s_i, Pg_2h_i in zip(Pg_c, Pg_s, Pg_2h)])
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                for Pg_k_i in zip(Pg_k)]
@@ -337,8 +375,8 @@ def model(theta, R):
     if ingredients['pointmass']:
         # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
         pointmass = array(
-            [params_pm[1]*10**m_pm / (np.pi*rvir_range_2d_i**2) / 1e12
-             for m_pm in params_pm[0]])
+            [c_pm[1]*10**m_pm / (np.pi*rvir_range_2d_i**2) / 1e12
+             for m_pm in c_pm[0]])
         out_esd_tot_inter = out_esd_tot_inter + pointmass
 
     # Add other outputs as needed. Total ESD should always be first!

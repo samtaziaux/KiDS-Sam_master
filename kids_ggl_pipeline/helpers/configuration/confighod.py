@@ -7,6 +7,7 @@ from scipy import stats
 
 from .core import *
 from ...hod import relations, scatter
+from ...halomodel import concentration
 from ...halomodel.observables import Observable
 from ...sampling.priors import (
     draw, fixed_priors, free_priors, nargs as prior_nargs, valid_priors)
@@ -49,6 +50,8 @@ def hod_function(names, parameters, priors, section, line):
         parameters[0].append(getattr(relations, line.words[1]))
     elif 'scatter' in section:
         parameters[0].append(getattr(scatter, line.words[1]))
+    elif 'concentration' in section:
+        parameters[0].append(getattr(concentration, line.words[1]))
     # not yet implemented
     elif 'miscentring' in section:
         parameters[0].append(line.words[1])

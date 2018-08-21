@@ -1,27 +1,25 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import numpy as np
+from numpy import log10
+
+from ..helpers.functions import powerlaw, powerlaw_mz
 
 
-def powerlaw(M, A, B, Mo=1e12):
-    return A * (M/Mo)**B
-
-
-def powerlaw_mz(M, z, A, B, C, Mo=1e12):
-    return A * (M/Mo)**B * (1+z)**C
-
+##
 ## Default relations
-
-def duffy08_crit(M, z, h=1):
-    return powerlaw_mz(M, z, 6.71, -0.091, -0.44, Mo=2e12/h)
+##
 
 
-def duffy08_mean(M, z, h=1):
-    return powerlaw_mz(M, z, 10.14, -0.081, -1.01, Mo=2e12/h)
+def duffy08_crit(M, z, f, h=1):
+    return f * powerlaw_mz(M, z, 12.301-log10(h), 0, 6.71, -0.091, -0.44)
 
 
-def dutton14(M, h=1):
-    return powerlaw(M, 8.035, -0.101, Mo=1e12/h)
+def duffy08_mean(M, z, f, h=1):
+    return f * powerlaw_mz(M, z, 12.301-log10(h), 0, 10.14, -0.081, -1.01)
+
+
+def dutton14(M, f, h=1):
+    return f * powerlaw(M, 12-log10(h), 8.035, -0.101)
 
 

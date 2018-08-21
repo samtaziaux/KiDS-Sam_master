@@ -56,9 +56,9 @@ from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata,
     wp, wp_beta_correction)
 from .dark_matter import (
-    NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
+    DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
-    GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10, TwoHalo)
+    GG_sat_analy, GG_cen_sat_analy, miscenter, TwoHalo)
 from .. import hod
 
 
@@ -146,15 +146,6 @@ def model(theta, R):
     if z.size == 1 and nbins > 1:
         z = array(list(z)*nbins)
 
-    #if delta != 200 and 
-    """
-    concentration = array(
-        [Con(np.float64(z_i), mass_range, np.float64(f_i))
-         for z_i, f_i in zip(z,f)])
-    concentration_sat = array(
-        [Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i))
-         for z_i, f_i,fc_nsat_i in zip(z,f,fc_nsat)])
-    """
     # note that e.g. duffy08_crit takes h as a kwarg but we're not passing it
     # here! This would just be accounted for by allowing a free normalization
     # but it would become very error-prone
@@ -245,71 +236,42 @@ def model(theta, R):
     F_k1 = f_k(k_range_lin)
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
-        """
-        # dummy
-        f = np.ones(mass_range.shape)
-        c = concentration
-        print('c =', c.shape, mass_range.shape, rvir_range_lin.shape, z.shape)
-        print('rho =', rho_bg.shape, k_range_lin.shape)
-        u_k = array(
-            [NFW_f(np.float64(z_i), rho_i, f, mass_range,
-                   rvir_range_lin_i, k_range_lin, c=concentration)
-             for rvir_range_lin_i, rho_i, z_i,
-             in zip(rvir_range_lin, rho_bg, z)])
-        u_k = array(
+        uk_c = array(
             [nfw.uk(k_range_lin, mass_range, rvir_range_lin_i,
                     concentration, zi, rho_i, setup['delta'])
              for rvir_range_lin_i, zi, rho_i
              in zip(rvir_range_lin, z, rho_bg)])
-        print('u_k:', np.allclose(u_k0, u_k), u_k.shape, u_k0.shape, end=' ')
-        diff = (u_k-u_k0) / u_k0
-        print(np.mean(diff), np.median(diff), np.std(diff),
-              np.std(diff)/diff.size**0.5)
-        """
-        # temporary, for compatibility with the current beta version
-        cc = c_concentration
-        # this only works if the concentration function is one of the
-        # predefined ones
-        f = cc[2] if len(cc) == 3 else 1
-        if not iterable(f):
-            f = array([f]*nbins)
-        u_k = array(
-            [NFW_f(np.float64(z_i), rho_i, np.float64(f_i), mass_range,
-                   rvir_range_lin_i, k_range_lin, c=concentration_i)
-             for rvir_range_lin_i, rho_i, z_i, f_i, concentration_i
-             in zip(rvir_range_lin, rho_bg, z, f, concentration)])
-    #else:
-        #u_k = np.ones
+    else:
+        uk_c = np.ones((nbins,k_range_lin.size,mass_range.size))
 
     # and of the NFW profile of the satellites
-    uk_s = array(
-        [NFW_f(np.float64(z_i), rho_i, np.float64(f_i), mass_range,
-               rvir_range_lin_i, k_range_lin, c=concentration_i)
-         for rvir_range_lin_i, rho_i, z_i, f_i, concentration_i
-         in zip(rvir_range_lin, rho_bg, z, f, concentration_sat)])
-    uk_s = uk_s/uk_s[:,0][:,None]
+    if ingredients['satellites']:
+        uk_s = array(
+            [nfw.uk(k_range_lin, mass_range, rvir_range_lin_i,
+                    concentration, zi, rho_i, setup['delta'])
+             for rvir_range_lin_i, zi, rho_i
+             in zip(rvir_range_lin, z, rho_bg)])
+        uk_s = uk_s/uk_s[:,0][:,None]
+    else:
+        uk_s = np.ones((nbins,k_range_lin.size,mass_range.size))
 
     # If there is miscentring to be accounted for
     if ingredients['miscentring']:
-        p_off, r_off = c_miscent
+        p_off, r_off = c_miscent[1:]
         if not iterable(p_off):
             p_off = array([p_off]*nbins)
         if not iterable(r_off):
             r_off = array([r_off]*nbins)
-        u_k = array(
-            [NFW_f(np.float64(z_i), rho_i, np.float64(f_i),
-                   mass_range, rvir_range_lin_i, k_range_lin,
-                    c=concentration_i) \
-             * miscenter(p_off_i, r_off_i, mass_range, rvir_range_lin_i,
-                         k_range_lin, c=concentration_i)
-             for (rvir_range_lin_i, rho_i, z_i, f_i, concentration_i,
-                  p_off_i, r_off_i)
-             in zip(rvir_range_lin, rho_bg, z, f, concentration,
-                     p_off, r_off)])
-    u_k = u_k/u_k[:,0][:,None]
+        uk_c = uk_c * array(
+            [miscenter(p_off_i, r_off_i, mass_range, rvir_range_lin_i,
+                       k_range_lin, concentration)
+             for rvir_range_lin_i, p_off_i, r_off_i
+             in zip(rvir_range_lin, p_off, r_off)])
+    uk_c = uk_c / uk_c[:,0][:,None]
 
     # Galaxy - dark matter spectra (for lensing)
-    bias = array([c_twohalo]*k_range_lin.size).T
+    bias = c_twohalo
+    bias = array([bias]*k_range_lin.size).T
     if ingredients['twohalo']:
         Pg_2h = bias * array(
             [TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
@@ -327,18 +289,18 @@ def model(theta, R):
 
     if ingredients['centrals']:
         Pg_c = F_k1 * array(
-            [GM_cen_analy(hmf_i, u_k_i, rho_i, pop_c_i, ngal_i, mass_range)
-             for rho_i, hmf_i, pop_c_i, ngal_i, u_k_i
-             in zip(rho_bg, hmf, pop_c, ngal, u_k)])
+            [GM_cen_analy(hmf_i, uk_c_i, rho_i, pop_c_i, ngal_i, mass_range)
+             for rho_i, hmf_i, pop_c_i, ngal_i, uk_c_i
+             in zip(rho_bg, hmf, pop_c, ngal, uk_c)])
     else:
         Pg_c = np.zeros((nbins,setup['lnk_bins']))
 
     if ingredients['satellites']:
         Pg_s = F_k1 * array(
-            [GM_sat_analy(hmf_i, u_k_i, uk_s_i, rho_i, pop_s_i, ngal_i,
+            [GM_sat_analy(hmf_i, uk_c_i, uk_s_i, rho_i, pop_s_i, ngal_i,
                           mass_range)
-             for rho_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i
-             in zip(rho_bg, hmf, pop_s, ngal, u_k, uk_s)])
+             for rho_i, hmf_i, pop_s_i, ngal_i, uk_c_i, uk_s_i
+             in zip(rho_bg, hmf, pop_s, ngal, uk_c, uk_s)])
     else:
         Pg_s = np.zeros((nbins,setup['lnk_bins']))
 

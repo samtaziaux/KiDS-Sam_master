@@ -20,14 +20,17 @@ def logify(func):
     --------
     >>> @logify
     >>> def f(x, a, b, return_log=True): return a + b*x
+    # return a+b*x
     >>> f(2, 0, 1, return_log=True)
     2
     >>> # now return 10 to the power of that:
     >>> f(2, 0, 1, return_log=False)
     100
     """
-    def decorated(*args, return_log=True, **kwargs):
-        if return_log:
-            return f(*args, **kwargs)
-        return 10**f(*args, **kwargs)
+    def decorated(*args, **kwargs):
+        if 'return_log' not in kwargs:
+            return func(*args, **kwargs)
+        if kwargs['return_log']:
+            return func(*args, **kwargs)
+        return 10**func(*args, **kwargs)
     return decorated

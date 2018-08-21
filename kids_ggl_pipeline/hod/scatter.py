@@ -16,7 +16,7 @@ Intrinsic scatter functions commonly used in the halo occupation distribution
 __all__ = ('lognormal', 'schechter_mod')
 
 
-def lognormal(obs, M, sigma, obs_is_log=False):
+def lognormal(obs, M, sigma, return_log=False):
     """Log-normal scatter
 
     Parameters
@@ -24,7 +24,7 @@ def lognormal(obs, M, sigma, obs_is_log=False):
     M : output of `occupation.Phi`
 
     """
-    if obs_is_log:
+    if return_log:
         obs = 10**obs
         M = 10**M
     return array([exp(-((log10(obs/Mi)**2) / (2*sigma**2))) \
@@ -32,7 +32,7 @@ def lognormal(obs, M, sigma, obs_is_log=False):
                   for Mi in M])
 
 
-def schechter_mod(obs, M, Mref, alpha, phi_s, b, obs_is_log=False):
+def schechter_mod(obs, M, Mref, alpha, phi_s, b, return_log=False):
     """Modified Schechter scatter (eq. 17 in van Uitert et al. 2016)
 
     This is generally used for satellite galaxies, and the mor
@@ -42,7 +42,7 @@ def schechter_mod(obs, M, Mref, alpha, phi_s, b, obs_is_log=False):
     ----------
     M : output of `occupation.Phi`
     """
-    if obs_is_log:
+    if return_log:
         obs = 10**obs
     phi_s = b[:,newaxis] * log10(Mref)**arange(b.size)[:,newaxis]
     return array([phi_s_i/obs * (obs/Mi)**alpha * exp(-(obs/Mi)**2)

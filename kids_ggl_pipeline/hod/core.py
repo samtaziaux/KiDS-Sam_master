@@ -58,7 +58,7 @@ def nbar(mass_function, pop_number, Mh):
 
 
 def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
-           obs_is_log=False):
+           return_log=False):
     """Expected number of objects (of a given type) of a given mass,
     < N_x | M >
 
@@ -79,7 +79,7 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
         arguments passed to `scatter_func`
     selection : array of floats, shape (nbins,N), optional
         completeness as a function of observable value
-    obs_is_log : bool, optional
+    return_log : bool, optional
         whether the observable provided is in log-space
 
     Returns
@@ -90,13 +90,13 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
     if selection is None:
         selection = ones_like(obs)
     prob = probability(
-        obs, Mh, mor, scatter_func, mor_args, scatter_args, obs_is_log)
+        obs, Mh, mor, scatter_func, mor_args, scatter_args, return_log)
     number = Integrate(prob*selection[newaxis], obs[newaxis], axis=2).T
     return number
 
 
 def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
-                  selection=None, obs_is_log=False):
+                  selection=None, return_log=False):
     """Effective average observable
 
     NOTE: I think this is giving the effective average *halo mass*
@@ -125,12 +125,11 @@ def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
     if selection is None:
         selection = ones_like(obs)
     prob = probability(
-        obs, Mh, mor, scatter_func, mor_args, scatter_args, obs_is_log)
+        obs, Mh, mor, scatter_func, mor_args, scatter_args, return_log)
     return Integrate(prob*(selection*obs)[newaxis], obs[newaxis], axis=2).T
 
 
-def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args,
-                obs_is_log):
+def probability(obs, Mh, mor, fscatter, mor_args, scatter_args, return_log):
     """Occupation probability, Phi(obs|M)
 
     Parameters
@@ -143,7 +142,7 @@ def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args,
         mean halo mass of interest
     mor : callable
         Mass-observable relation function
-    scatter_func : callable
+    fscatter : callable
         (Intrinsic) scatter function
     mor_args : array-like
         arguments passed to `mor`
@@ -157,6 +156,6 @@ def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args,
     """
     if not iterable(Mh):
         Mh = array([Mh])
-    Mo = mor(Mh, *mor_args, obs_is_log=obs_is_log)
-    return scatter_func(obs, Mo, *scatter_args, obs_is_log=obs_is_log)
+    Mo = mor(Mh, *mor_args, return_log=return_log)
+    return fscatter(obs, Mo, *scatter_args, return_log=return_log)
 

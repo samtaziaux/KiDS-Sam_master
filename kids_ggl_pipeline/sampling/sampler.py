@@ -512,6 +512,9 @@ def write_to_fits(sampler, sampling, chi2, names, jfree, output, metadata,
 
 
 def read_redshift(val1, names, nparams=None):
+    """
+    My guess is that this helping function for reading the redshift can be removed
+    """
     # model assumes comoving separations, changing data to accomodate
     # for that
     redshift_index = np.int(where(names == 'z')[0])

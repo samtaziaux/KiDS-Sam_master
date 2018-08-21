@@ -68,8 +68,7 @@ b_1             fixed     1.0
 b_2             fixed     0.0
 
 [setup]
-expansion       100
-expansion_stars 160
+distances       proper
 lnk_bins        10000
 lnk_min         -13
 lnk_max         17

@@ -75,10 +75,11 @@ try:
 except ImportError:
     izip = zip
 from numpy import arctan, arctanh, arccos, array, cos, \
-                  hypot, log, log10, logspace, \
-                  meshgrid, ones, sum as nsum, transpose, zeros
+                  hypot, iterable, log, log10, logspace, meshgrid, \
+                  ones, pi, sin, sum as nsum, transpose, zeros
 from scipy.integrate import cumtrapz, trapz
 from scipy.interpolate import interp1d
+from scipy.special import sici
 
 #-----------------------------------#
 #--    Excess surface densities
@@ -463,8 +464,34 @@ def rho_sharp(x, tau, delta_c, rho_bg):
 
 
 #-----------------------------------#
+#--    Fourier transforms
+#-----------------------------------#
+
+
+def uk(kx, mx, rx, c, z, rho_bg, overdensity=200):
+    """Fourier transform of the NFW profile
+
+    This function takes a different set of parameters from other
+    functions for convenience. Will try to change this later
+    """
+    u_k = zeros((kx.size,mx.size))
+    rs = rx / c
+    dc = delta(c, overdensity)
+    for i in range(mx.size):
+        ki = kx * rs[i]
+        bs, bc = sici(ki)
+        asi, ac = sici((1+c[i]) * ki)
+        u_k[:,i] = 4*pi * rho_bg * dc[i] * rs[i]**3 \
+            * (sin(ki)*(asi-bs) - (sin(c[i]*ki) / ((1+c[i])*ki)) \
+               + (cos(ki) * (ac-bc))) \
+            / mx[i]
+    return u_k
+
+
+#-----------------------------------#
 #--    Auxiliary functions
 #-----------------------------------#
+
 
 
 def F(x):
@@ -496,4 +523,4 @@ def Sigma_s(rs, delta_c, rho_c):
 
 
 def delta(c, overdensity=200.):
-    return overdensity * c**3 / (3 * (log(1.+c) - c / (1.+c)))
+    return overdensity * c**3 / (3 * (log(1+c) - c/(1+c)))

@@ -26,6 +26,7 @@ centrals        True
 pointmass       True
 satellites      False
 miscentring     False
+twohalo         True
 
 [cosmo]
 sigma_8         fixed     0.8159
@@ -36,13 +37,13 @@ omegav          fixed     0.6911
 n               fixed     0.9667
 z               array     0.188
 
-[hod/pointmass]
+[hod/centrals/pointmass]
 logmstar        array     11.315
 point_norm      normal    1         0.2
-
-[hod/centrals]
-fc              fixed       1
-bias            fixed       1
+[hod/centrals/concentration]
+name            duffy08_crit
+z               array     0.188
+fc              uniform     0.2     5       1
 [hod/centrals/mor]
 name            powerlaw
 logM0          fixed       14.0
@@ -52,16 +53,21 @@ b               student     1
 name            lognormal
 sigma_c         jeffreys
 [hod/centrals/miscentring]
+name            fiducial
 p_off           fixed       0
 R_off           fixed       0
+[hod/centrals/twohalo]
+bias            fixed       1
 
-[hod/satellites]
-fc_nsat         fixed    1.0
+[hod/satellites/concentration]
+name            duffy08_crit
+z               array    0.188
+fcsat           fixed    1.0
 [hod/satellites/mor]
 name            double_powerlaw_scaled
 Ac2s            fixed     0.56
 [hod/satellites/scatter]
-name            lognormal
+name            schechter_modified
 alpha_s         fixed    -1.0
 b_0             fixed    -0.1
 b_1             fixed     1.0

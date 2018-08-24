@@ -32,7 +32,7 @@ def lognormal(obs, M, sigma, return_log=False):
                   for Mi in M])
 
 
-def schechter_mod(obs, M, Mref, alpha, phi_s, b, return_log=False):
+def schechter_mod(obs, M, logMref, alpha, b0, b1, b2, return_log=False):
     """Modified Schechter scatter (eq. 17 in van Uitert et al. 2016)
 
     This is generally used for satellite galaxies, and the mor

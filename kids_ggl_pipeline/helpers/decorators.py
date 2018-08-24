@@ -7,7 +7,24 @@ This module contains custom decorators used in KiDS-GGL for convenience
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-def logify(func):
+
+def logify_dist(func):
+    """Account for whether observable and halo mass are in
+    linear or logarithmic space
+
+    """
+    def decorated(*args, **kwargs):
+        if 'obs_is_log' not in kwargs:
+            kwargs['obs_is_log'] = False
+        if kwargs['obs_is_log']:
+            args = list(args)
+            args[0] = 10**args[0]
+            args[1] = 10**args[1]
+        return func(*args, **kwargs)
+    return decorated
+
+
+def logify_function(func):
     """Make the output of a function linear or logarithmic as
     appropriate
 
@@ -29,7 +46,7 @@ def logify(func):
     """
     def decorated(*args, **kwargs):
         if 'return_log' not in kwargs:
-            return func(*args, **kwargs)
+            kwargs['return_log'] = False
         if kwargs['return_log']:
             return func(*args, **kwargs)
         return 10**func(*args, **kwargs)

@@ -58,7 +58,7 @@ def nbar(mass_function, pop_number, Mh):
 
 
 def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
-           return_log=False):
+           obs_is_log=False):
     """Expected number of objects (of a given type) of a given mass,
     < N_x | M >
 
@@ -79,7 +79,7 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
         arguments passed to `scatter_func`
     selection : array of floats, shape (nbins,N), optional
         completeness as a function of observable value
-    return_log : bool, optional
+    obs_is_log : bool, optional
         whether the observable provided is in log-space
 
     Returns
@@ -90,16 +90,17 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
     if selection is None:
         selection = ones_like(obs)
     prob = probability(
-        obs, Mh, mor, scatter_func, mor_args, scatter_args, return_log)
+        obs, Mh, mor, scatter_func, mor_args, scatter_args,
+        obs_is_log=obs_is_log)
+    if obs_is_log:
+        obs = 10**obs
     number = Integrate(prob*selection[newaxis], obs[newaxis], axis=2).T
     return number
 
 
 def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
-                  selection=None, return_log=False):
+                  selection=None, obs_is_log=False):
     """Effective average observable
-
-    NOTE: I think this is giving the effective average *halo mass*
 
     Parameters
     ----------
@@ -125,11 +126,14 @@ def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
     if selection is None:
         selection = ones_like(obs)
     prob = probability(
-        obs, Mh, mor, scatter_func, mor_args, scatter_args, return_log)
+        obs, Mh, mor, scatter_func, mor_args, scatter_args,
+        obs_is_log=obs_is_log)
+    if obs_is_log:
+        obs = 10**obs
     return Integrate(prob*(selection*obs)[newaxis], obs[newaxis], axis=2).T
 
 
-def probability(obs, Mh, mor, fscatter, mor_args, scatter_args, return_log):
+def probability(obs, Mh, mor, fscatter, mor_args, scatter_args, obs_is_log):
     """Occupation probability, Phi(obs|M)
 
     Parameters
@@ -156,6 +160,6 @@ def probability(obs, Mh, mor, fscatter, mor_args, scatter_args, return_log):
     """
     if not iterable(Mh):
         Mh = array([Mh])
-    Mo = mor(Mh, *mor_args, return_log=return_log)
-    return fscatter(obs, Mo, *scatter_args, return_log=return_log)
+    Mo = mor(Mh, *mor_args, return_log=obs_is_log)
+    return fscatter(obs, Mo, *scatter_args, obs_is_log=obs_is_log)
 

@@ -10,7 +10,7 @@ in `functions.py` which return one given the other.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import log10
+from numpy import array, exp, log, log10, pi
 
 from .decorators import logify_dist
 

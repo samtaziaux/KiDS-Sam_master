@@ -8,10 +8,22 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 
-def logify_dist(func):
+def logdist(func):
     """Account for whether observable and halo mass are in
     linear or logarithmic space
 
+    Examples
+    --------
+    >>> @logdist
+    >>> def lognormal(obs, M, sigma, obs_is_log=False):
+    >>>     return np.exp(-((np.log10(obs/M)**2) / (2*sigma**2))) \
+    >>>         / ((2*np.pi)**0.5 * sigma * obs * np.log(10))
+    # if obs and M are in log space:
+    >>> lognormal(9, 12, 0.3, obs_is_log=True)
+    1.11390724e-31
+    >>> # now use the linear-space quantities
+    >>> lognormal(1e9, 1e12, 0.3, obs_is_log=False)
+    1.11390724e-31
     """
     def decorated(*args, **kwargs):
         if 'obs_is_log' not in kwargs:
@@ -24,7 +36,7 @@ def logify_dist(func):
     return decorated
 
 
-def logify_function(func):
+def logfunc(func):
     """Make the output of a function linear or logarithmic as
     appropriate
 
@@ -33,9 +45,19 @@ def logify_function(func):
     ``return_log``. If said kwarg is not present, the function is
     returned in log space.
 
+    Note that this assumes that the function is defined in log-space.
+    For instance to use this decorator on a power law, define it as
+    a straight line:
+
+        > def powerlaw(x, a, b, return_log=True): return a + x*b
+
+    not to
+
+        > def powerlaw(x, a, b, return_log=True): return 10**a * x**b
+
     Examples
     --------
-    >>> @logify
+    >>> @logfunc
     >>> def f(x, a, b, return_log=True): return a + b*x
     # return a+b*x
     >>> f(2, 0, 1, return_log=True)

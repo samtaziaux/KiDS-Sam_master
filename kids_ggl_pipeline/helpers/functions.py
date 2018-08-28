@@ -12,21 +12,21 @@ from __future__ import (absolute_import, division, print_function,
 
 from numpy import log10
 
-from .decorators import logify_function
+from .decorators import logfunc
 
 
-@logify_function
+@logfunc
 def double_powerlaw(M, logM0, logM1, a, b, return_log=True):
     m = M / 10**logM1
     return logM0 + a*log10(m) - (a-b)*log10(1+m)
 
 
-@logify_function
+@logfunc
 def powerlaw(M, logM0, a, b, return_log=True):
     return a + b*(log10(M)-logM0)
 
 
-@logify_function
+@logfunc
 def powerlaw_mz(M, z, logM0, z0, a, b, c, return_log=True):
     return a + b*(log10(M)-logM0) + c*log10((1+z)/(1+z0))
 

@@ -2,13 +2,15 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import array, iterable, newaxis, ones_like, log, log10, e
+from numpy import array, iterable, newaxis, ones_like, log, log10
 from scipy.integrate import trapz
 
 from ..halomodel.tools import Integrate
+from ..helpers.decorators import logfunc
 
 
-def Mh_effective(mass_function, pop_number, Mh):
+@logfunc
+def Mh_effective(mass_function, pop_number, Mh, return_log=True):
     """Effective halo mass in each observable bin
 
     Average halo mass, weighted by the number of objects expected in
@@ -29,8 +31,8 @@ def Mh_effective(mass_function, pop_number, Mh):
     Mh_eff : array of floats, shape (nbins,)
         effective halo mass in each observable bin
     """
-    return trapz(Mh*mass_function * pop_number, Mh, axis=1) \
-        / trapz(mass_function * pop_number, Mh, axis=1)
+    return log10(trapz(Mh*mass_function * pop_number, Mh, axis=1) \
+                 / trapz(mass_function * pop_number, Mh, axis=1))
 
 
 def nbar(mass_function, pop_number, Mh):
@@ -133,7 +135,8 @@ def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
     return Integrate(prob*(selection*obs)[newaxis], obs[newaxis], axis=2).T
 
 
-def probability(obs, Mh, mor, fscatter, mor_args, scatter_args, obs_is_log):
+def probability(obs, Mh, mor, fscatter, mor_args, scatter_args,
+                obs_is_log=True):
     """Occupation probability, Phi(obs|M)
 
     Parameters
@@ -152,6 +155,8 @@ def probability(obs, Mh, mor, fscatter, mor_args, scatter_args, obs_is_log):
         arguments passed to `mor`
     scatter_args : array-like
         arguments passed to `scatter_func`
+    obs_is_log : bool, optional
+        whether the observable (and halo mass) are in log space
 
     Returns
     -------

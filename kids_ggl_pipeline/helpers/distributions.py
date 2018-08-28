@@ -12,10 +12,10 @@ from __future__ import (absolute_import, division, print_function,
 
 from numpy import array, exp, log, log10, pi
 
-from .decorators import logify_dist
+from .decorators import logdist
 
 
-@logify_dist
+@logdist
 def lognormal(obs, M, sigma, obs_is_log=False):
     """Log-normal scatter
 
@@ -43,7 +43,7 @@ def lognormal(obs, M, sigma, obs_is_log=False):
                   for Mi in M])
 
 
-@logify_dist
+@logdist
 def schechter_mod(obs, M, logMref, alpha, b0, b1, b2, obs_is_log=False):
     """Modified Schechter scatter (eq. 17 in van Uitert et al. 2016)
 

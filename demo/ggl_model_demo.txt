@@ -64,10 +64,13 @@ name            duffy08_crit
 z               array    0.188,0.195
 fcsat           fixed    1.0
 [hod/satellites/mor]
-name            double_powerlaw_scaled
-Ac2s            fixed     0.56
+name            double_powerlaw
+logM0           fixed       11.2
+logM1           fixed       11.7
+a               fixed       4.5
+b               fixed       0.05
 [hod/satellites/scatter]
-name            schechter_modified
+name            schechter_mod
 alpha_s         fixed    -1.0
 b_0             fixed    -0.1
 b_1             fixed     1.0
@@ -89,9 +92,9 @@ esd_total         2,8E
 Mavg              2,E
 
 [sampler]
-path_data            data/y_c_2p0_inf/SNR_5_inf/ZB_0p1_0p9-Om_0p315-Ol_0p685-Ok_0-h_1/Rbins8_0p2_10_Mpc/shearcovariance/
+path_data            <data_folder_tree>
 data                 shearcovariance_bin_1_A.txt     0,1,4
-path_covariance      data/y_c_2p0_inf/SNR_5_inf/ZB_0p1_0p9-Om_0p315-Ol_0p685-Ok_0-h_1/Rbins8_0p2_10_Mpc/shearcovariance/
+path_covariance      <covariance_folder_tree>
 covariance           shearcovariance_matrix_A.txt    4,6
 exclude              0,1
 output               halo_model_results/model_sz.fits

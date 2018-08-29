@@ -2,13 +2,15 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import array, iterable, newaxis, ones_like, log, log10, e
+from numpy import array, iterable, newaxis, ones_like, log, log10
 from scipy.integrate import trapz
 
 from ..halomodel.tools import Integrate
+from ..helpers.decorators import logfunc
 
 
-def Mh_effective(mass_function, pop_number, Mh):
+@logfunc
+def Mh_effective(mass_function, pop_number, Mh, return_log=True):
     """Effective halo mass in each observable bin
 
     Average halo mass, weighted by the number of objects expected in
@@ -29,8 +31,8 @@ def Mh_effective(mass_function, pop_number, Mh):
     Mh_eff : array of floats, shape (nbins,)
         effective halo mass in each observable bin
     """
-    return trapz(Mh*mass_function * pop_number, Mh, axis=1) \
-        / trapz(mass_function * pop_number, Mh, axis=1)
+    return log10(trapz(Mh*mass_function * pop_number, Mh, axis=1) \
+                 / trapz(mass_function * pop_number, Mh, axis=1))
 
 
 def nbar(mass_function, pop_number, Mh):
@@ -90,7 +92,10 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
     if selection is None:
         selection = ones_like(obs)
     prob = probability(
-        obs, Mh, mor, scatter_func, mor_args, scatter_args, obs_is_log)
+        obs, Mh, mor, scatter_func, mor_args, scatter_args,
+        obs_is_log=obs_is_log)
+    if obs_is_log:
+        obs = 10**obs
     number = Integrate(prob*selection[newaxis], obs[newaxis], axis=2).T
     return number
 
@@ -98,8 +103,6 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
 def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
                   selection=None, obs_is_log=False):
     """Effective average observable
-
-    NOTE: I think this is giving the effective average *halo mass*
 
     Parameters
     ----------
@@ -125,12 +128,15 @@ def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
     if selection is None:
         selection = ones_like(obs)
     prob = probability(
-        obs, Mh, mor, scatter_func, mor_args, scatter_args, obs_is_log)
+        obs, Mh, mor, scatter_func, mor_args, scatter_args,
+        obs_is_log=obs_is_log)
+    if obs_is_log:
+        obs = 10**obs
     return Integrate(prob*(selection*obs)[newaxis], obs[newaxis], axis=2).T
 
 
-def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args,
-                obs_is_log):
+def probability(obs, Mh, mor, fscatter, mor_args, scatter_args,
+                obs_is_log=True):
     """Occupation probability, Phi(obs|M)
 
     Parameters
@@ -143,12 +149,14 @@ def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args,
         mean halo mass of interest
     mor : callable
         Mass-observable relation function
-    scatter_func : callable
+    fscatter : callable
         (Intrinsic) scatter function
     mor_args : array-like
         arguments passed to `mor`
     scatter_args : array-like
         arguments passed to `scatter_func`
+    obs_is_log : bool, optional
+        whether the observable (and halo mass) are in log space
 
     Returns
     -------
@@ -157,6 +165,6 @@ def probability(obs, Mh, mor, scatter_func, mor_args, scatter_args,
     """
     if not iterable(Mh):
         Mh = array([Mh])
-    Mo = mor(Mh, *mor_args, obs_is_log=obs_is_log)
-    return scatter_func(obs, Mo, *scatter_args, obs_is_log=obs_is_log)
+    Mo = mor(Mh, *mor_args, return_log=obs_is_log)
+    return fscatter(obs, Mo, *scatter_args, obs_is_log=obs_is_log)
 

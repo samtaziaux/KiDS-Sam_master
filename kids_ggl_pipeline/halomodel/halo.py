@@ -33,7 +33,8 @@ import mpmath as mp
 import matplotlib.pyplot as pl
 import scipy
 import sys
-from numpy import arange, array, exp, iterable, linspace, logspace, ones
+from numpy import (
+    arange, array, exp, iterable, linspace, logspace, newaxis, ones)
 from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, UnivariateSpline
@@ -100,6 +101,7 @@ def f_k(k_x):
 ##
 #################
 
+
 def model(theta, R):
 
     np.seterr(
@@ -135,7 +137,6 @@ def model(theta, R):
     mstep = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
-    obsbins = observable.binning
     nbins = observable.nbins
     # this whole setup thing should be done outside of the model,
     # only once when setting up the sampler basically
@@ -145,6 +146,9 @@ def model(theta, R):
         #fc_nsat = array([fc_nsat]*nbins)
     if z.size == 1 and nbins > 1:
         z = array(list(z)*nbins)
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter
+    z = z[:,newaxis]
 
     # note that e.g. duffy08_crit takes h as a kwarg but we're not passing it
     # here! This would just be accounted for by allowing a free normalization
@@ -207,19 +211,21 @@ def model(theta, R):
     else:
         completeness = np.array(
             [selection.interpolate([zi]*obs.size, obs, method='linear')
-             for zi, obs in zip(z, hod_observable)])
+             for zi, obs in zip(z[:,0], hod_observable)])
 
     if ingredients['centrals']:
         pop_c = hod.number(
             hod_observable, mass_range, c_mor[0], c_scatter[0],
-            c_mor[1:], c_scatter[1:], completeness, observable.is_log)
+            c_mor[1:], c_scatter[1:], completeness,
+            obs_is_log=observable.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
 
     if ingredients['satellites']:
         pop_s = hod.number(
             hod_observable, mass_range, s_mor[0], s_scatter[0],
-            s_mor[1:], s_scatter[1:], completeness, observable.is_log)
+            s_mor[1:], s_scatter[1:], completeness,
+            obs_is_log=observable.is_log)
     else:
         pop_s = np.zeros((nbins,mass_range.size))
 
@@ -228,7 +234,8 @@ def model(theta, R):
     # note that pop_g already accounts for incompleteness
     mass_function = array([hmf_i.dndm for hmf_i in hmf])
     ngal = hod.nbar(mass_function, pop_g, mass_range)
-    meff = hod.Mh_effective(mass_function, pop_g, mass_range)
+    meff = hod.Mh_effective(
+        mass_function, pop_g, mass_range, return_log=observable.is_log)
 
     """Power spectrum"""
 
@@ -238,19 +245,18 @@ def model(theta, R):
     if ingredients['centrals']:
         uk_c = array(
             [nfw.uk(k_range_lin, mass_range, rvir_range_lin_i,
-                    concentration, zi, rho_i, setup['delta'])
-             for rvir_range_lin_i, zi, rho_i
-             in zip(rvir_range_lin, z, rho_bg)])
+                    ci, zi, rho_i, setup['delta'])
+             for rvir_range_lin_i, ci, zi, rho_i
+             in zip(rvir_range_lin, concentration, z[:,0], rho_bg)])
     else:
         uk_c = np.ones((nbins,k_range_lin.size,mass_range.size))
-
     # and of the NFW profile of the satellites
     if ingredients['satellites']:
         uk_s = array(
             [nfw.uk(k_range_lin, mass_range, rvir_range_lin_i,
-                    concentration, zi, rho_i, setup['delta'])
-             for rvir_range_lin_i, zi, rho_i
-             in zip(rvir_range_lin, z, rho_bg)])
+                    ci, zi, rho_i, setup['delta'])
+             for rvir_range_lin_i, ci, zi, rho_i
+             in zip(rvir_range_lin, concentration, z[:,0], rho_bg)])
         uk_s = uk_s/uk_s[:,0][:,None]
     else:
         uk_s = np.ones((nbins,k_range_lin.size,mass_range.size))
@@ -344,12 +350,12 @@ def model(theta, R):
     # Add other outputs as needed. Total ESD should always be first!
 
     if setup['distances'] == 'comoving':
-        return [out_esd_tot_inter, np.log10(meff)]
+        return [out_esd_tot_inter, meff]
     if setup['distances'] == 'proper':
-        out_esd_tot_inter = array([out_esd_tot_inter_i * (1.0+z_i)**2.0
-                                   for out_esd_tot_inter_i, z_i
-                                   in zip(out_esd_tot_inter, z)])
-        return [out_esd_tot_inter, np.log10(meff)]
+        out_esd_tot_inter = array(
+            [out_esd_tot_inter_i * (1+z_i)**2.0
+             for out_esd_tot_inter_i, z_i in zip(out_esd_tot_inter, z)])
+        return [out_esd_tot_inter, meff]
     #return out_esd_tot_inter, d_surf_dens3, d_surf_dens4, pointmass, nu(1)
 
 

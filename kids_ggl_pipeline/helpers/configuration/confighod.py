@@ -3,7 +3,6 @@ from __future__ import (absolute_import, division, print_function,
 
 import numpy as np
 from scipy import stats
-#from scipy.interpolate import 
 
 from .core import *
 from ...hod import relations, scatter
@@ -20,16 +19,27 @@ def append_setup(parameters, nparams, setup):
     return parameters, nparams
 
 
-def flatten_parameters(parameters):
+def flatten_parameters(parameters, names, repeat):
     flat = [[] for p in parameters]
-    nparams = [len(p) for p in parameters[0]]
+    flatnames = []
     # first the four sets for the priors
-    for i, params in enumerate(parameters):
-        for par in params:
-            for p in par:
-                flat[i].append(p)
+    for i, sections in enumerate(parameters):
+        # this iterates over sections
+        for s, sect in enumerate(sections):
+            pstart = sum([len(x) for x in sections[:s]])
+            for p, param in enumerate(sect):
+                flat[i].append(param)
+                if i > 0:
+                    continue
+                flatnames.append(names[s][p])
+                rloc = pstart + p
+                if repeat[rloc] != -1:
+                    r = repeat[rloc]
+                    repeat[rloc] = \
+                        sum([len(x) for x in sections[:r[0]]]) + r[1]
     flat = [np.array(i) for i in flat]
-    return flat, nparams
+    nparams = [len(p) for p in parameters[0]]
+    return flat, flatnames, repeat, nparams
 
 
 def hod_entries(line, section, names, parameters, priors, starting):
@@ -52,16 +62,18 @@ def hod_function(names, parameters, priors, section, line):
         parameters[0].append(getattr(scatter, line.words[1]))
     elif 'concentration' in section:
         parameters[0].append(getattr(concentration, line.words[1]))
-    # not yet implemented
+    # felixibility not yet implemented
     elif 'miscentring' in section:
         parameters[0].append(line.words[1])
     parameters[1].append(0)
     parameters[2].append(-np.inf)
     parameters[3].append(np.inf)
+    # option to provide a custom name to the function
+    # NOTE: not documented!
     if len(line.words) == 3:
         names.append(line.words[2])
     else:
-        names.append(':'.join([section.name, line.words[1]]))
+        names.append(line.words[1])
     priors.append('function')
     return names, parameters, priors
 
@@ -75,6 +87,15 @@ def hod_parameters(names, parameters, priors, starting, line):
     need to consider `join` instances here.
     """
     words = line.words
+    # reading a parameter from a different section. In this case,
+    # just assign None placeholders to everything except the name
+    if '.' in words[0]:
+        names.append(words[0])
+        for i in range(len(parameters)):
+            parameters[i].append(None)
+        priors.append(None)
+        #starting.append(None)
+        return names, parameters, priors, starting
     if words[0] in ('name', 'function'):
         priors.append('function')
     elif words[1] in ('array', 'read'):
@@ -92,6 +113,8 @@ def hod_parameters(names, parameters, priors, starting, line):
     elif priors[-1] == 'read':
         parameters[0].append(
             np.loadtxt(words[2], usecols=','.split(words[3])).T)
+    elif priors[-1] == 'repeat':
+        parameters[0].append(-1)
     elif priors[-1] in fixed_priors:
         parameters[0].append(float(words[2]))
     elif prior_nargs[priors[-1]] > 0:
@@ -99,7 +122,8 @@ def hod_parameters(names, parameters, priors, starting, line):
     else:
         parameters[0].append(-1)
 
-    if priors[-1] in fixed_priors or priors[-1] in ('exp', 'jeffrey'):
+    if priors[-1] == 'repeat' or priors[-1] in fixed_priors \
+            or priors[-1] in ('exp', 'jeffrey'):
         parameters[1].append(-1)
         starting = starting_values(starting, parameters, line)
     else:
@@ -153,6 +177,9 @@ def starting_values(starting, parameters, line):
     words = line.words
     prior = words[1]
     if prior in fixed_priors:
+        return starting
+    if prior == 'repeat':
+        starting.append(-999)
         return starting
     # if the starting points are defined in the config file
     if (len(words) - 2 - prior_nargs[prior]) % 2 == 1:

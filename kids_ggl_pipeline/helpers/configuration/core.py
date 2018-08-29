@@ -1,6 +1,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from itertools import count
 import numpy as np
 from six import string_types
 
@@ -108,39 +109,45 @@ class ConfigSection(str):
         """
         `line` should be a `ConfigLine` object
         """
-        #setup[0].append(line.words[0])
         for dtype in (int, float, str):
             try:
-                #setup[1].append(dtype(line.words[1]))
                 setup[line.words[0]] = dtype(line.words[1])
                 break
             except ValueError:
                 pass
         return setup
 
-    def append_subsection_names(self, names, these_names):
-        for n in these_names:
-            names.append(n)
-        return names
+    def append_parameters(
+            self, names, parameters, priors, repeat, section_names,
+            these_names, these_params, these_priors):
+        """Append parameters to the section once we're done reading it
 
-    def append_subsection_priors(self, priors, these_priors):
-        if self.name is None \
-                or self.name in ('ingredients', 'observables'):
-            return priors
-        #priors.append(np.array([these_priors]))
-        for p in these_priors:
-            priors.append(p)
-        return priors
-
-    def append_subsection_parameters(self, parameters, these_params):
+        Repeat parameters are processed here
+        """
+        names.append(these_names)
         if self.name is None:
-            return parameters
-        # initialize
+            return names, parameters, priors
+        # not sure I need this - will check later
         if len(parameters) == 0:
             parameters = [[] for i in these_params]
-        for i, p in enumerate(these_params):
-            parameters[i].append(p)
-        return parameters
+        if self.name not in ('ingredients', 'observables'):
+            for i, p in enumerate(these_params):
+                parameters[i].append(p)
+            for i, n, pr in zip(count(), these_names, these_priors):
+                if '.' in n:
+                    paramsection = '/'.join(n.split('.')[:-1])
+                    # the 3 here is to ignore observables, selection and
+                    # ingredients but I need to find a better way to do it
+                    j = section_names.index(paramsection) - 3
+                    jj = names[j].index(n.split('.')[-1])
+                    repeat.append([j,jj])
+                    priors.append('repeat')
+                    for ip in range(len(parameters)):
+                        parameters[ip][-1][i] = parameters[ip][j][jj]
+                else:
+                    priors.append(pr)
+                    repeat.append(-1)
+        return names, parameters, priors
 
     def is_parent(self):
         return self.name == self.parent
@@ -195,10 +202,12 @@ class ConfigFile(object):
     def read(self):
         """Read the configuration file"""
         section = ConfigSection()
+        section_names = []
         observables = []
         names = []
         parameters = []
         priors = []
+        repeat = []
         # starting values for free parameters
         starting = []
         ingredients = {}
@@ -214,14 +223,12 @@ class ConfigFile(object):
                 continue
             if line.is_section():
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
-                    parameters = section.append_subsection_parameters(
-                        parameters, these_params)
-                    priors = section.append_subsection_priors(
-                        priors, these_priors)
-                    names = section.append_subsection_names(
-                        names, these_names)
+                    names, parameters, priors = section.append_parameters(
+                        names, parameters, priors, repeat, section_names,
+                        these_names, these_params, these_priors)
                 # initialize new section
                 section = ConfigSection(line.section)
+                section_names.append(section.name)
                 these_names = self.initialize_names()
                 these_params = self.initialize_parameters()
                 these_priors = self.initialize_priors()
@@ -244,13 +251,15 @@ class ConfigFile(object):
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
-        parameters, nparams = confighod.flatten_parameters(parameters)
+        parameters, names, repeat, nparams = \
+            confighod.flatten_parameters(parameters, names, repeat)
         sampling = configsampler.add_defaults(sampling)
         hod_params = [
             'observables,selection,ingredients,parameters,setup'.split(','),
             [observables, selection, ingredients, parameters, setup]]
         hm_params = [model, hod_params, np.array(names), np.array(priors),
-                     np.array(nparams), np.array(starting), output]
+                     np.array(nparams), np.array(repeat), np.array(starting),
+                     output]
         return hm_params, sampling
 
     def read_function(self, path):

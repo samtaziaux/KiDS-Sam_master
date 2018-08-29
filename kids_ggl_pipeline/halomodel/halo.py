@@ -86,9 +86,6 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
         **cosmology_params)
 """
 
-"""
-# Integrals of mass functions with density profiles and population functions.
-"""
 
 def f_k(k_x):
     F = sp.erf(k_x/0.1) #0.05!
@@ -107,7 +104,6 @@ def model(theta, R):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-    # new config
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
@@ -122,7 +118,7 @@ def model(theta, R):
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter = theta
 
-    sigma8, H0, omegam, omegab, omegav, n, z = cosmo
+    sigma8, h, omegam, omegab, omegav, n, z = cosmo
 
     # HMF set up parameters
     # all of this can happen before the model is called, to save some
@@ -169,9 +165,8 @@ def model(theta, R):
     # Calculation
     # Tinker10 should also be read from theta!
     hmf = array([])
-    h = H0 / 100.0
     cosmo_model = LambdaCDM(
-        H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
+        H0=100*h, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i in transfer_params:
         hmf_temp = MassFunction(
             Mmin=setup['logM_min'], Mmax=setup['logM_max'], dlog10m=mstep,

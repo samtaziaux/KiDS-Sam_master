@@ -10,14 +10,19 @@ class Observable(object):
 
     """
 
-    def __init__(self, name, binning, means, notes='', sampling_size=100):
+    def __init__(self, name, binlows, binhighs, notes='', sampling_size=100):
         """Construct an observable object from the information in the
         configuration file
 
         """
         self.name = name
-        self._binning = binning
-        self.means = means
+        #self._binning = binning
+        #self.means = means
+        self._binlows = binlows
+        self._binhighs = binhighs
+        assert self.binlows.size == self.binhighs.size, \
+            'Must provide the same number of lower and upper observable bin' \
+            ' boundaries'
         self._nbins = None
         assert notes in ('', 'log'), \
             'the fourth column in the observable definition is optional' \
@@ -28,6 +33,19 @@ class Observable(object):
         self.sampling_size = sampling_size
         self._sampling = self.sample()
 
+    @property
+    def binlows(self):
+        if isinstance(self._binlows, six.string_types):
+            self._binlows = np.array(self._binlows.split(','), dtype=float)
+        return self._binlows
+
+    @property
+    def binhighs(self):
+        if isinstance(self._binhighs, six.string_types):
+            self._binhighs = np.array(self._binhighs.split(','), dtype=float)
+        return self._binhighs
+
+    """
     @property
     def binning(self):
         if isinstance(self._binning, six.string_types):
@@ -43,6 +61,7 @@ class Observable(object):
         if isinstance(means, six.string_types):
             means = means.split(',')
         self._means = np.array(means, dtype=float)
+    """
 
     @property
     def name(self):
@@ -55,7 +74,7 @@ class Observable(object):
     @property
     def nbins(self):
         if self._nbins is None:
-            self._nbins = self.binning.size - 1
+            self._nbins = self.binlows.size
         return self._nbins
 
     @property
@@ -75,6 +94,8 @@ class Observable(object):
     def sampling(self, sample):
         self._sampling = sample
 
+    ## methods ##
+
     def sample(self, size=None):
         """Linearly sample each observable bin
 
@@ -91,8 +112,8 @@ class Observable(object):
         if size is None:
             size = self.sampling_size
         return np.array(
-            [np.linspace(self.binning[i-1], self.binning[i], size)
-             for i in range(1, self.binning.size)])
+            [np.linspace(lo, hi, size)
+             for lo, hi in zip(self.binlows, self.binhighs)])
 
 
 

@@ -137,7 +137,6 @@ def model(theta, R):
     mstep = (setup['logM_max'] - setup['logM_min']) / setup['logM_bins']
 
     # this is the observable section
-    obsbins = observable.binning
     nbins = observable.nbins
     # this whole setup thing should be done outside of the model,
     # only once when setting up the sampler basically

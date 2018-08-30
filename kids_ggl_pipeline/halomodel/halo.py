@@ -195,7 +195,7 @@ def model(theta, R):
     rvir_range = np.log10(rvir_range_lin)
     rvir_range_3d = logspace(-3.2, 4, 200, endpoint=True)
     rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
-    rvir_range_2d_i = R[0][1:]
+    rvir_range_2d_i = R[0][1:] 
 
     """Calculating halo model"""
 

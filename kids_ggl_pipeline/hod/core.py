@@ -166,5 +166,5 @@ def probability(obs, Mh, mor, fscatter, mor_args, scatter_args,
     if not iterable(Mh):
         Mh = array([Mh])
     Mo = mor(Mh, *mor_args, return_log=obs_is_log)
-    return fscatter(obs, Mo, *scatter_args, obs_is_log=obs_is_log)
+    return fscatter(obs, Mo, Mh, *scatter_args, obs_is_log=obs_is_log)
 

@@ -16,14 +16,16 @@ from .decorators import logdist
 
 
 @logdist
-def lognormal(obs, M, sigma, obs_is_log=False):
+def lognormal(obs, Mo, Mh, sigma, obs_is_log=False):
     """Log-normal scatter
 
     Parameters
     ----------
     obs : float array, shape (nbins,N)
         observable. ``nbins`` is the number of observable bins
-    M : float array, shape (P,)
+    Mo : float array, shape (P,)
+        observable mass, from mor relation
+    Mh : float array, shape (P,)
         halo mass
     sigma : float or float array with shape (nbins,)
         scatter
@@ -40,11 +42,11 @@ def lognormal(obs, M, sigma, obs_is_log=False):
     """
     return array([exp(-((log10(obs/Mi)**2) / (2*sigma**2))) \
                      / ((2*pi)**0.5 * sigma * obs * log(10))
-                  for Mi in M])
+                  for Mi in Mo])
 
 
 @logdist
-def schechter_mod(obs, M, logMref, alpha, b0, b1, b2, obs_is_log=False):
+def schechter_mod(obs, Mo, Mh, logMref, alpha, b0, b1, b2, obs_is_log=False):
     """Modified Schechter scatter (eq. 17 in van Uitert et al. 2016)
 
     This is generally used for satellite galaxies, and the mor
@@ -54,7 +56,9 @@ def schechter_mod(obs, M, logMref, alpha, b0, b1, b2, obs_is_log=False):
     ----------
     obs : float array, shape (nbins,N)
         observable. ``nbins`` is the number of observable bins
-    M : float array, shape (P,)
+    Mo : float array, shape (P,)
+        observable mass, from mor relation
+    Mh : float array, shape (P,)
         halo mass
     logMref : float
         log of the characteristic mass
@@ -73,7 +77,8 @@ def schechter_mod(obs, M, logMref, alpha, b0, b1, b2, obs_is_log=False):
         distribution of observable values given halo mass
     """
     #phi_s = 10**(b[:,newaxis] * logMref**arange(b.size)[:,newaxis])
-    phi_s = 10**(b0 + b1*logMref + b2*logMref**2)
-    return array([phi_s_i/obs * (obs/Mi)**alpha * exp(-(obs/Mi)**2)
-                  for phi_s_i, Mi in zip(phi_s, M)])
+    logMphi = log10(Mh)-logMref
+    phi_s = 10**(b0 + b1*logMphi + b2*logMphi**2)
+    return array([(phi_s_i/Mi) * (obs/Mi)**alpha * exp(-(obs/Mi)**2)
+                  for phi_s_i, Mi in zip(phi_s, Mo)])
 

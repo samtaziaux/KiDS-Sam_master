@@ -305,7 +305,7 @@ def model(theta, R):
     else:
         Pg_s = np.zeros((nbins,setup['lnk_bins']))
 
-    Pg_k = array([(Pg_c_i+Pg_s_i) + Pg_2h_i
+    Pg_k = array([Pg_c_i + Pg_s_i + Pg_2h_i
                   for Pg_c_i, Pg_s_i, Pg_2h_i in zip(Pg_c, Pg_s, Pg_2h)])
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                for Pg_k_i in zip(Pg_k)]

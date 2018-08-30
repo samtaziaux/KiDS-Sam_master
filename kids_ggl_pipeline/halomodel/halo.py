@@ -195,7 +195,7 @@ def model(theta, R):
     rvir_range = np.log10(rvir_range_lin)
     rvir_range_3d = logspace(-3.2, 4, 200, endpoint=True)
     rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
-    rvir_range_2d_i = R[0][1:]
+    rvir_range_2d_i = R[0][1:] 
 
     """Calculating halo model"""
 
@@ -305,7 +305,7 @@ def model(theta, R):
     else:
         Pg_s = np.zeros((nbins,setup['lnk_bins']))
 
-    Pg_k = array([(Pg_c_i+Pg_s_i) + Pg_2h_i
+    Pg_k = array([Pg_c_i + Pg_s_i + Pg_2h_i
                   for Pg_c_i, Pg_s_i, Pg_2h_i in zip(Pg_c, Pg_s, Pg_2h)])
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                for Pg_k_i in zip(Pg_k)]

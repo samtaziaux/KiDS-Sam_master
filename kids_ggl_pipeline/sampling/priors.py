@@ -27,6 +27,7 @@ for p in fixed_priors:
 
 free_priors = list(lnprior_functions.keys())
 valid_priors = append(fixed_priors, free_priors)
+valid_priors = append(valid_priors, 'repeat')
 
 
 def calculate_lnprior(lnprior, theta, prior_types, parameters, jfree):

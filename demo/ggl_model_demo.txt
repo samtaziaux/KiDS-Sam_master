@@ -30,7 +30,7 @@ twohalo         True
 
 [cosmo]
 sigma_8         fixed     0.8159
-H0              fixed     67.74
+h               fixed     0.6774
 omegam          fixed     0.3089
 omegab          fixed     0.04860
 omegav          fixed     0.6911
@@ -42,8 +42,9 @@ logmstar        array     11.315
 point_norm      normal    1         0.2
 [hod/centrals/concentration]
 name            duffy08_crit
-z               array     0.188,0.195
+cosmo.z         repeat
 fc              uniform     0.2     5       1
+cosmo.h         repeat
 [hod/centrals/mor]
 name            powerlaw
 logM0           fixed       14.0
@@ -61,8 +62,9 @@ bias            fixed       1
 
 [hod/satellites/concentration]
 name            duffy08_crit
-z               array    0.188,0.195
+cosmo.z         repeat
 fcsat           fixed    1.0
+cosmo.h         repeat
 [hod/satellites/mor]
 name            double_powerlaw
 logM0           fixed       11.2

@@ -3,9 +3,10 @@
 This module contains custom decorators used in KiDS-GGL for convenience
 
 """
-
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+
+from functools import wraps
 
 
 def logdist(func):
@@ -25,6 +26,7 @@ def logdist(func):
     >>> lognormal(1e9, 1e12, 0.3, obs_is_log=False)
     1.11390724e-31
     """
+    @wraps(func)
     def decorated(*args, **kwargs):
         if 'obs_is_log' not in kwargs:
             kwargs['obs_is_log'] = False
@@ -66,6 +68,7 @@ def logfunc(func):
     >>> f(2, 0, 1, return_log=False)
     100
     """
+    @wraps(func)
     def decorated(*args, **kwargs):
         if 'return_log' not in kwargs:
             kwargs['return_log'] = False

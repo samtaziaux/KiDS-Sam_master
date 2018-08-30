@@ -30,13 +30,13 @@ if sys.version_info[0] == 2:
 
 # local
 from . import priors, sampling_utils
-from ..helpers.configuration.confighod import HODParams
 
 
 def run_emcee(hm_options, sampling, args):
 
-    function, parameters, names, prior_types, nparams, starting, output = \
-        hm_options
+    function, parameters, names, prior_types, \
+        nparams, repeat, starting, output = \
+            hm_options
 
     val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     params_join = []
@@ -129,9 +129,9 @@ def run_emcee(hm_options, sampling, args):
     # are we just running a demo?
     if args.demo:
         run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
-                 parameters, params_join, starting, jfree, nparams, names,
-                 lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot,
-                 inf, outer, pi, zip)
+                 parameters, params_join, starting, jfree, repeat, nparams,
+                 names, lnprior, rng_obsbins, fail_value, Ndatafiles, array,
+                 dot, inf, outer, pi, zip)
         sys.exit()
 
     # write header file
@@ -141,7 +141,7 @@ def run_emcee(hm_options, sampling, args):
     sampler = emcee.EnsembleSampler(
         sampling['nwalkers'], ndim, lnprob, threads=sampling['threads'],
         args=(R,esd,icov,function,names,prior_types[jfree],
-              parameters,nparams,params_join,jfree,lnprior,likenorm,
+              parameters,nparams,params_join,jfree,repeat,lnprior,likenorm,
               rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
 
     # set up starting point for all walkers
@@ -234,7 +234,7 @@ def run_emcee(hm_options, sampling, args):
 
 
 def lnprob(theta, R, esd, icov, function, names, prior_types,
-           parameters, nparams, params_join, jfree, lnprior, likenorm,
+           parameters, nparams, params_join, jfree, repeat, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
@@ -272,10 +272,11 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     if not isfinite(lnprior_total):
         return -inf, fail_value
 
-    # all other types ('fixed', 'read') do not contribute to the prior
-    # run the given model
     v1 = parameters[1][parameters[0].index('parameters')][0].copy()
     v1[where(jfree)] = theta
+    # repeat parameters
+    v1[repeat != -1] = v1[repeat[repeat != -1]]
+    # joined parameters
     if params_join is not None:
         v1j = list(v1)
         for p in params_join:
@@ -307,23 +308,10 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
     #              for m in rng_obsbins for n in rng_obsbins]).sum()
 
-    """
-    if 'model' in str(function):
-
-        # Model assumes comoving separations, changing data to accomodate for that.
-        # This was moved to the model itself, with an additional 
-        # switch in the config file.
-        redshift = read_redshift(v1, names, nparams)
-        esd = esd / (1+redshift)**2
-        residuals = (esd - model[0]) / (1+redshift)**2
-    else:
-        residuals = esd - model[0]
-    """
     residuals = esd - model[0]
-
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
-    print('chi2 =', chi2, theta, model[-1])
+    #print('chi2 =', chi2, theta, model[-1])
 
     if not isfinite(chi2):
         return -inf, fail_value
@@ -340,7 +328,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
 
 def run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
-             parameters, params_join, starting, jfree, nparams, names,
+             parameters, params_join, starting, jfree, repeat, nparams, names,
              lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot, inf,
              outer, pi, zip):
     def plot_demo(ax, Ri, gt, gt_err, f):
@@ -358,8 +346,8 @@ def run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
     parameters[1][iparams][0][where(jfree)] = starting
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
-        parameters, nparams, params_join, jfree, lnprior, 0, rng_obsbins,
-        fail_value, array, dot, inf, zip, outer, pi)
+        parameters, nparams, params_join, jfree, repeat, lnprior, 0,
+        rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
         msg = 'Could not calculate model prediction. It is likely that one' \

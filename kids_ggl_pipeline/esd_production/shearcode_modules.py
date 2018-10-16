@@ -43,27 +43,11 @@ inf = np.inf
 
 def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     
-    ## Input for the codes
-    #try:
-        #Nsplit = int(sys.argv[1])-1 # The number of this particular core/split
-        #Nsplits = int(sys.argv[2]) # The number cores/splits
-        #binnum = int(sys.argv[3]) # The number of this particular observable bin
-        #blindcat = str(sys.argv[4]) # The number of this blind KiDS catalog
-        #config_file = str(sys.argv[5]) # The path to the configuration file
-    #except:
-        #Nsplit = 1 # The number of this particular core/split
-        #Nsplits = 1 # The number cores/splits
-        #binnum = 1 # The number of this particular observable bin
-        #blindcat = 'D' # The number of this particular blind KiDS catalog
-        #config_file = str(sys.argv[1]) # The path to the configuration file
-
-        #print 'Warning: Input not found!'
-
     # Importing the input parameters from the config file
-    path_kidscats, path_gamacat, colnames, specz_file, O_matter, O_lambda, Ok, h, \
+    path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file, O_matter, O_lambda, Ok, h, \
         z_epsilon, path_output, filename_addition, purpose, \
         path_Rbins, Runit, Ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, cross_cov, com, \
+        lens_selection, src_selection, cat_version, n_boot, cross_cov, com, \
         blindcats = \
             esd_utils.read_config(config_file)
 
@@ -162,45 +146,14 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     # Determining Ncat, the number of existing random catalogs
     splitslist = [] # This list will contain all created random splits
 
-    if ('random' in purpose):
-
-        # Defining the name of the output files
-        filename_var = define_filename_var(purpose.replace('bootstrap', \
-                                                           'catalog'), \
-                                           centering, binname, binnum, \
-                                           Nobsbins, lens_selection, lens_binning, \
-                                           src_selection, lens_weights, \
-                                           name_Rbins, O_matter, \
-                                           O_lambda, Ok, h)
-        path_randomsplits = '%s/splits_%s'%(path_catalogs, purpose)
-
-        for Ncat in range(100):
-            outname = '%s/%s_%i_%s%s_split%iof*.fits'\
-                    %(path_randomsplits.replace('bootstrap', 'catalog'), \
-                      purpose.replace('bootstrap', 'catalog'), Ncat+1, \
-                      filename_var, filename_addition, Nsplit+1)
-            placeholder = outname.replace('*', '0')
-            if os.path.isfile(placeholder):
-                os.remove(placeholder)
-
-            splitfiles = glob(outname)
-            splitslist = np.append(splitslist, splitfiles)
-
-            if len(splitfiles) == 0:
-                break
-
-        print(outname)
-
-
-    else:
-        Ncat = 1
+    Ncat = 1 # Leftover from randoms.
     
     return Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        cat_version, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file, \
         z_epsilon, n_boot, cross_cov, com
 
 
@@ -435,7 +388,7 @@ def define_filename_results(path_results, purpose, filename_var, \
 
 # Importing all GAMA and KiDS data, and
 # information on radial bins and lens-field matching.
-def import_data(path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+def import_data(path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_kidscats,
                 centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
                 lens_weights, filename_addition, cat_version, com):
 
@@ -450,7 +403,7 @@ def import_data(path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
             O_lambda, Ok, h, Runit, lens_weights)
 
     # Determine the coordinates of the KiDS catalogues
-    kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
+    kidscoord, kidscat_end = run_kidscoord(path_kidscats, kidscolnames, cat_version)
 
     # Match the KiDS field and GAMA galaxy coordinates
     catmatch, kidscats, galIDs_infield = run_catmatch(
@@ -526,9 +479,7 @@ def define_Rbins(path_Rbins, Runit):
 def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
                    O_matter, O_lambda, Ok, h, Runit, lens_weights):
 
-    randomcatname = 'RandomsWindowedV01.fits'
     directory = os.path.dirname(os.path.realpath(path_gamacat))
-    randomcatname = os.path.join(directory, randomcatname)
 
     # Importing the GAMA catalogues
     print('Importing lens catalogue:', path_gamacat, '...')
@@ -569,27 +520,6 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galRAlist = gamacat[colnames[1]] # Central RA of the galaxy (in degrees)
         galDEClist = gamacat[colnames[2]] # Central DEC of the galaxy (in degrees)
 
-    if 'random' in purpose:
-        # Determine RA and DEC for the random/star catalogs
-        # The first item that will be chosen from the catalog
-        Ncatmin = Ncat # * len(galIDlist)
-        # The last item that will be chosen from the catalog
-        #Ncatmax = (Ncat+1) * len(galIDlist)
-        try:
-            randomcat = pyfits.open(randomcatname)[1].data
-        except:
-            print('Could not import random catalogue: ', randomcatname)
-            print('Make sure that the random catalogue is next to the GAMA catalogue!')
-            raise SystemExit()
-
-        galIDlist_random = randomcat['CATAID']
-        slice = np.in1d(galIDlist_random, galIDlist)
-        step = 792 #len(galIDlist_random[slice])/len(galIDlist)
-        # This is hardcoded for this set of randoms.
-        Ncatmax = step*len(galIDlist)
-
-        galRAlist = randomcat[colnames[1]][slice][Ncatmin:Ncatmax:step]
-        galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
 
     #Defining the lens weights
     weightname = list(lens_weights)[0]
@@ -605,8 +535,6 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             'Please provide the name of the redshift column if you want' \
             ' to use physical projected distances'
         galZlist = gamacat[colnames[3]] # Central Z of the galaxy
-        if 'random' in purpose:
-            galZlist = randomcat[colnames[3]][slice][Ncatmin:Ncatmax:step]
         #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
         #                    for z in galZlist])
         # Distance in pc/h, where h is the dimensionless Hubble constant
@@ -629,7 +557,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galweightlist, galZlist, Dcllist, Dallist
 
 
-def run_kidscoord(path_kidscats, cat_version):
+def run_kidscoord(path_kidscats, kidscolnames, cat_version):
     # Finding the central coordinates of the KiDS fields
     if cat_version == 0:
         return run_kidscoord_mocks(path_kidscats, cat_version)
@@ -674,13 +602,13 @@ def run_kidscoord(path_kidscats, cat_version):
             kidscatfile = '%s/%s'%(path_kidscats, x)
             try:
                 kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
-                test = kidscat['SeqNr']
+                test = kidscat[kidscolnames[0]]
             except:
                 kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
-                test = kidscat['SeqNr']
+                test = kidscat[kidscolnames[0]]
             #print kidscat['THELI_NAME']
             
-            kidscatlist2 = np.unique(np.array(kidscat['THELI_NAME']))
+            kidscatlist2 = np.unique(np.array(kidscat[kidscolnames[6]]))
             #kidscatname = np.full(kidscatlist2.shape, x, dtype=np.str)
             #print x
             #print kidscatname
@@ -846,8 +774,8 @@ def split(seq, size):
 def import_spec_cat(path_kidscats, kidscatname, kidscat_end, specz_file, \
                     src_selection, cat_version):
     filename = '../*specweight.cat'
-    if specz_file is None:
-        specz_file = os.path.join(path_kidscats, filename)
+    #if specz_file is None:
+    #    specz_file = os.path.join(path_kidscats, filename)
     files = glob(specz_file)
     if len(files) == 0:
         msg = 'Spec-z file {0} not found.'.format(filename)
@@ -898,284 +826,87 @@ def import_spec_cat_mocks(path_kidscats, kidscatname, kidscat_end, specz_file, \
     return Z_S[srcmask], spec_weight[srcmask]
 
 
-
-"""
-#Temp
-def import_spec_cat_pz(path_kidscats, kidscatname, kidscat_end, \
-                    src_selection, cat_version):
-    
-    print('Using direct callibration to estimate the redshifts.')
-    files = os.listdir(os.path.dirname('/disks/shear10/KiDS/All_tiles/'))
-    Z_S_varlist = np.zeros(351)
-    for i, filename in enumerate(files):
-        print i
-        try:
-            spec_cat = pyfits.open('/disks/shear10/KiDS/All_tiles/%s'%filename, memmap=True)[1].data
-        
-            Z_S = spec_cat['PZ_full']
-            manmask = spec_cat['MASK']
-        
-            srcmask = (manmask==0)
-        
-            # We apply any other cuts specified by the user for Z_B
-            srclims = src_selection['Z_B'][1]
-            if len(srclims) == 1:
-                srcmask *= (spec_cat['Z_B'] == binlims[0])
-            else:
-                srcmask *= (srclims[0] <= spec_cat['Z_B']) &\
-                (spec_cat['Z_B'] < srclims[1])
-            Z_S = Z_S[srcmask]
-    
-            Z_S_varlist += Z_S.sum(axis=0)
-            print Z_S_varlist[:20]
-        
-        except:
-            pass
-    
-
-    print Z_S_varlist.shape
-    return Z_S_varlist, 1.0
-"""
-
-"""
-#Temp
-def import_spec_cat_pz(kidscatname, catmatch, srcNr):
-    
-    #print('Using direct callibration to estimate the redshifts.')
-    
-    files = os.listdir(os.path.dirname('/disks/shear10/KiDS/All_tiles/'))
-    filename = str(fnmatch.filter(files, kidscatname+'*')[0])
-    print filename
-    spec_cat = pyfits.open('/disks/shear10/KiDS/All_tiles/%s'%filename, memmap=True)[1].data
-    
-    Z_S = spec_cat['PZ_full']
-    mask = np.in1d(spec_cat['SeqNr'],srcNr)
-    Z_S = Z_S[mask]
-    Z_S_out = np.zeros((len(srcNr), 70))
-    for i in range(len(srcNr)):
-        Z_S_out[i,:] = np.interp(np.linspace(0, 351, 70), np.linspace(0, 351, 351), Z_S[i,:])
-        Z_S_out[i,:] = Z_S_out[i,:]/Z_S_out[i,:].sum()
-    
-    # We apply any other cuts specified by the user for Z_B
-    return Z_S_out
-"""
-
-
-def import_spec_wizz(path_kidscats, kidscatname, kidscat_end, \
-                    src_selection, cat_version, filename_var, ncores):
-    
-    # Making selection of sources ...
-    try:
-        pattern = 'KiDS_COSMOS_DEEP2_stomp_masked.cat'
-    
-        files = os.listdir(os.path.dirname('%s'%(path_kidscats)))
-    
-        filename = str(fnmatch.filter(files, pattern)[0])
-    
-        spec_cat_file = os.path.dirname('%s'%(path_kidscats))+'/%s'%(filename)
-        path_wizz_data = os.path.dirname('%s'%(path_kidscats))
-        spec_cat = pyfits.open(spec_cat_file, memmap=True)[1].data
-        print()
-        print('Using The-wiZZ to estimate the redshifts.')
-    except:
-        print()
-        print('Cannot run The-wiZZ, please check the required files.')
-        raise SystemExit()
-
-
-    if os.path.isfile('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(\
-                                                        path_wizz_data,\
-                                                          filename_var)):
-        print('Loading precomputed The-wiZZ redshifts...')
-        print()
-        n_z = np.genfromtxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii'%(\
-                                                                path_wizz_data,\
-                                                                filename_var),\
-                                                                comments='#')
-    else:
-        
-        # Setting The-wiZZ parameters (for now hardcoded)
-        input_pair_hdf5_file = '%s/KiDS_COSMOS_DEEP2_The-wiZZ_pairs.hdf5'%(\
-                                                                path_wizz_data)
-        #use_inverse_weighting = True
-        n_target_load_size = 10000
-        z_n_bins = 70
-        z_max = 3.5
-        n_bootstrap = 1000
-        z_binning_type = 'linear'
-        pair_scale_name = 'kpc30t300'
-        n_processes = ncores
-        z_min = 0.025
-        #bootstrap_samples = None
-        #output_bootstraps_file = None
-        unknown_stomp_region_name = 'stomp_region'
-        unknown_index_name = 'SeqNr'
-        unknown_weight_name = 'recal_weight'
-        
-        srclims = src_selection['Z_B'][1]
-        src_z_max = srclims[1]
-        src_z_min = srclims[0]
-        step = np.ceil((src_z_max-src_z_min)/0.1)
-        n_loops = np.linspace(src_z_min, src_z_max, step, endpoint=True)
-        
-        
-        n_z = np.zeros((z_n_bins, len(n_loops)-1))
-        w_i = np.zeros((z_n_bins, len(n_loops)-1))
-
-        for i in range(len(n_loops)-1):
-            manmask = spec_cat['MASK']
-            srcmask = 0
-            srcmask = (manmask==0)
-            srcmask *= (n_loops[i] <= spec_cat['Z_B']) \
-                        & (spec_cat['Z_B'] < n_loops[i+1])
-            print('Preselecting sources in photo-z range between %f and %f'%(\
-                                                    n_loops[i], n_loops[i+1]))
-            # Writing reduced catalog with only selected sources ...
-            output_cat = spec_cat[srcmask]
-            #orig_cols = spec_cat_file[1].columns
-            hdu = pyfits.BinTableHDU(output_cat)
-            hdu.writeto('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.cat'%(\
-                                                            path_wizz_data,\
-                                                            filename_var),\
-                                                            clobber=True)
-
-
-            # Running The-wiZZ to obtain Z_S
-            directory = os.path.dirname(os.path.dirname(__file__))
-            indirectory = os.listdir(directory)
-            
-            unknown_sample_file = '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.cat'%(\
-                                                                path_wizz_data,\
-                                                                filename_var)
-            output_pdf_file_name = '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii'%(path_wizz_data, filename_var, i)
-
-            if 'The-wiZZ' in indirectory:
-                path_shearcodes = directory + '/' + 'The-wiZZ' + '/'
-            else:
-                print('Cannot locate The-wiZZ in the pipeline instalation.')
-                raise SystemExit()
-
-            ps = []
-            codename = '%spdf_maker.py'%(path_shearcodes)
-            runname = 'python %s'%codename
-            runname += ' --input_pair_hdf5_file %s --unknown_sample_file %s --output_pdf_file_name %s --use_inverse_weighting --n_target_load_size %i --z_n_bins %i --z_max %f --n_bootstrap %i --z_binning_type %s --pair_scale_name %s --n_processes %i --z_min %f --unknown_stomp_region_name %s --unknown_index_name %s --unknown_weight_name %s'%(input_pair_hdf5_file, unknown_sample_file, output_pdf_file_name, n_target_load_size, z_n_bins, z_max, n_bootstrap, z_binning_type , pair_scale_name, n_processes, z_min, unknown_stomp_region_name, unknown_index_name, unknown_weight_name)
-
-            try:
-                p = sub.Popen(shlex.split(runname))
-                ps.append(p)
-                for p in ps:
-                    p.wait()
-
-            except:
-                print()
-                print('Cannot run The-wiZZ, please check the required files.')
-                raise SystemExit()
-
-
-            # Reading in the calculated Z_S from The-wiZZ output file
-            n_z[:,i] = np.nan_to_num(np.genfromtxt(
-                '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii' \
-                    %(path_wizz_data, filename_var, i),
-                comments='#')[:,1])
-            w_i[:,i] = np.nan_to_num(np.genfromtxt(
-                '%s/KiDS_COSMOS_DEEP2_stomp_masked_%s_preselect_%i.ascii' \
-                    %(path_wizz_data, filename_var, i),
-                comments='#')[:,3])
-            #print n_z[:,i], w_i[:,i]
-
-        n_z = np.sum(n_z*w_i, axis=1)/np.sum(w_i, axis=1)
-        np.savetxt('%s/KiDS_COSMOS_DEEP2_stomp_masked_%s.ascii' \
-                        %(path_wizz_data, filename_var),
-                   n_z, delimiter='\t')
-        n_z[n_z < 0] = 0
-
-    return np.nan_to_num(n_z)
-
-
 # Import and mask all used data from the sources in this KiDS field
-def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
+def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
                    src_selection, cat_version, blindcats):
     
     # Full directory & name of the corresponding KiDS catalogue
     if cat_version == 2:
         kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end)
-        kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
+        kidscat = Table(pyfits.open(kidscatfile, memmap=True)[1].data)
     
     if cat_version == 3:
         kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
         try:
-            kidscat = pyfits.open(kidscatfile, memmap=True)[2].data
-            test = kidscat['SeqNr']
+            kidscat = Table(pyfits.open(kidscatfile, memmap=True)[2].data)
+            test = kidscat[kidscolnames[0]]
         except:
-            kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
-            test = kidscat['SeqNr']
-    
+            kidscat = Table(pyfits.open(kidscatfile, memmap=True)[1].data)
+            test = kidscat[kidscolnames[0]]
+
+    # Prefferentially we would like to assert the column names, but this cannot
+    # really be done with different blinds. If there is a better idea on how to
+    # deal with blinds, please do implement it.
+    """
+    for kidscolname in kidscolnames:
+        assert kidscolname in kidscat.colnames, \
+        'Full list of column names:\n{2}\n\n' \
+        'Column {0} not present in catalog {1}. See the full list of' \
+        'column names above'.format(kidscolname, path_kidscats, kidscat.colnames)
+    """
     if cat_version == 0:
         return import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
                                  src_selection, cat_version, blindcats)
-    
+
     # List of the ID's of all sources in the KiDS catalogue
-    srcNr = kidscat['SeqNr']
+    srcNr = kidscat[kidscolnames[0]]
     #srcNr = kidscat['SeqNr_field'] # If ever needed for p(z)
     # List of the RA's and DEC's of all sources in the KiDS catalogue
-    try:
-        srcRA = kidscat['ALPHA_J2000']
-        srcDEC = kidscat['DELTA_J2000']
-    except:
-        srcRA = kidscat['RAJ2000']
-        srcDEC = kidscat['DECJ2000']
+    srcRA = kidscat[kidscolnames[1]]
+    srcDEC = kidscat[kidscolnames[2]]
 
     if cat_version == 3:
         try:
-            w = np.array([kidscat['weight_'+blind] for blind in blindcats]).T
+            w = np.array([kidscat[kidscolnames[7]+'_'+blind] for blind in blindcats]).T
         except:
-            w = np.array([kidscat['weight']]).T
-        srcPZ = kidscat['Z_B']
-        SN = kidscat['model_SNratio']
-        manmask = kidscat['MASK']
-        tile = kidscat['THELI_NAME']
+            w = np.array([kidscat[kidscolnames[7]]]).T
+        srcPZ = kidscat[kidscolnames[3]]
+        SN = kidscat[kidscolnames[4]]
+        manmask = kidscat[kidscolnames[5]]
+        tile = kidscat[kidscolnames[6]]
         
     elif cat_version == 2:
-        srcPZ = kidscat['PZ_full'] # Full P(z) probability function
-        w = np.array([kidscat['weight'] for blind in blindcats]).T
+        srcPZ = kidscat[kidscolnames[3]] # Full P(z) probability function
+        w = np.array([kidscat[kidscolnames[7]] for blind in blindcats]).T
                                    
         # The Signal to Noise of the sources (needed for bias)
-        SN = kidscat['SNratio']
+        SN = kidscat[kidscolnames[4]]
         # The manual masking of bad sources (0=good, 1=bad)
-        manmask = kidscat['MAN_MASK']
+        manmask = kidscat[kidscolnames[5]]
         tile = np.zeros(srcNr.size, dtype=np.float64)
     
     if cat_version == 2:
-        srcm = kidscat['m_cor'] # The multiplicative bias m
+        srcm = kidscat[kidscolnames[8]] # The multiplicative bias m
     if cat_version == 3:
-        # Values are hardcoded, if image simulations give
-        # different results this must be changed!
+        # Dummy, mupltiplicative bias is not done per source in KiDS-450+
         srcm = np.zeros(srcNr.size, dtype=np.float64)
-        srcm[(0.1 < srcPZ) & (srcPZ <= 0.2)] = -0.0165984884074
-        srcm[(0.2 < srcPZ) & (srcPZ <= 0.3)] = -0.0107643100825
-        srcm[(0.3 < srcPZ) & (srcPZ <= 0.4)] = -0.0163154916657
-        srcm[(0.4 < srcPZ) & (srcPZ <= 0.5)] = -0.00983059386823
-        srcm[(0.5 < srcPZ) & (srcPZ <= 0.6)] = -0.0050563715617
-        srcm[(0.6 < srcPZ) & (srcPZ <= 0.7)] = -0.00931232658151
-        srcm[(0.7 < srcPZ) & (srcPZ <= 0.8)] = -0.0135538269718
-        srcm[(0.8 < srcPZ) & (srcPZ <= 0.9)] = -0.0286749355629
 
     # This needs to be modified so that columns without 'blind' suffix can be read in.
     try:
-        e_1 = np.array([kidscat['e1_'+blind] for blind in blindcats]).T
-        e_2 = np.array([kidscat['e2_'+blind] for blind in blindcats]).T
+        e_1 = np.array([kidscat[kidscolnames[9]+'_'+blind] for blind in blindcats]).T
+        e_2 = np.array([kidscat[kidscolnames[10]+'_'+blind] for blind in blindcats]).T
     except:
         # This is for the public release cats.
-        e_1 = np.array([kidscat['e1']]).T
-        e_2 = np.array([kidscat['e2']]).T
+        e_1 = np.array([kidscat[kidscolnames[9]]]).T
+        e_2 = np.array([kidscat[kidscolnames[10]]]).T
 
     try:
         try:
-            c_1 = np.array([kidscat['c1_'+blind] for blind in blindcats]).T
-            c_2 = np.array([kidscat['c2_'+blind] for blind in blindcats]).T
+            c_1 = np.array([kidscat[kidscolnames[11]+'_'+blind] for blind in blindcats]).T
+            c_2 = np.array([kidscat[kidscolnames[12]+'_'+blind] for blind in blindcats]).T
         except:
-            c_1 = np.array([kidscat['c1']]).T
-            c_2 = np.array([kidscat['c2']]).T
+            c_1 = np.array([kidscat[kidscolnames[11]]]).T
+            c_2 = np.array([kidscat[kidscolnames[12]]]).T
     except:
         c_1 = np.zeros(e_1.shape)
         c_2 = np.zeros(e_2.shape)
@@ -1187,7 +918,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscat_end, \
     if cat_version == 2:
         srcmask = (w.T[0]>0.0)&(SN>0.0)&(srcm<0.0)&(manmask==0)&(-1<c1_A)
     if cat_version == 3:
-        srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)&(srcm!=0)
+        srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)#&(srcm!=0)
         # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
 
     # We apply any other cuts specified by the user

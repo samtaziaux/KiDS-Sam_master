@@ -33,7 +33,7 @@ def read_config(config_file):
     gama_path = 'None'
     filename = 'None'
     colnames = ['ID','RA','DEC','Z']
-    wizz = 'False'
+    kidscolnames = ['SeqNr', 'ALPHA_J2000', 'DELTA_J2000', 'Z_B', 'model_SNratio', 'MASK', 'THELI_NAME', 'weight', 'm_cor', 'e1', 'e2', 'c1', 'c2']
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -52,6 +52,8 @@ def read_config(config_file):
             kids_path = line[1]
         elif line[0] == 'specz_file':
             specz_file = line[1]
+        elif line[0] == 'm_corr_file':
+            m_corr_file = line[1]
         elif line[0] == 'GAMA_path':
             gama_path = line[1]
         elif line[0] == 'lens_catalog':
@@ -62,8 +64,12 @@ def read_config(config_file):
                 'Parameter `lens_columns` must specify the three or four' \
                 ' required columns (depending on whether you want physical' \
                 ' distances)'
-        elif line[0] == 'The-wiZZ':
-            wizz = line[1]
+        elif line[0] == 'lens_columns':
+            kidscolnames = line[1].split(',')
+            assert len(kidscolnames) in (3,4), \
+                'Parameter `kids_columns` must specify all the required KiDS' \
+                ' required columns'
+    
 
         # Cosmology
         elif line[0] == 'Om':
@@ -158,10 +164,10 @@ def read_config(config_file):
     except:
         pass
 
-    out = (kids_path, gama_path, colnames, specz_file,
+    out = (kids_path, gama_path, colnames, kidscolnames, specz_file, m_corr_file,
             Om, Ol, Ok, h, z_epsilon,
             folder, filename, purpose, Rbins, Runit, ncores,
             lensid_file, lens_weights, lens_binning, lens_selection,
-            src_selection, cat_version, wizz, n_boot, cross_cov, com, blindcats)
+            src_selection, cat_version, n_boot, cross_cov, com, blindcats)
 
     return out

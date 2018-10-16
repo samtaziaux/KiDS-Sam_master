@@ -10,6 +10,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import astropy.io.fits as pyfits
 import multiprocessing as mp
+from glob import glob
 import numpy as np
 import sys
 import os
@@ -39,7 +40,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
                Runit, nRbins, Rconst, com, filename_var,
                filename, cat_version, blindcat, blindcats, srclists, path_splits,
                splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-               variance, h, path_kidscats, kidscatname, kidscat_end, src_selection):
+               variance, h, path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection):
     
     q1 = mp.Queue()
     procs = []
@@ -55,7 +56,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
             nRbins, Rconst, com, filename_var, filename, cat_version, blindcat, blindcats,
             srclists, path_splits, splitkidscats, catmatch, Dcsbins,
             Dc_epsilon, filename_addition, variance, h, path_kidscats,
-             kidscatname, kidscat_end, src_selection, q1))
+             kidscatname, kidscolnames, kidscat_end, src_selection, q1))
         procs.append(work)
         work.start()
         #work.join()
@@ -81,7 +82,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
          filename_var,
          filename, cat_version, blindcat, blindcats, srclists, path_splits,
          splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
-         variance, h, path_kidscats, kidscatname, kidscat_end, src_selection, q1):
+         variance, h, path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection, q1):
 
     # galaxy information
     galIDlist, galRAlist, galDEClist, galZlist, galweightlist, \
@@ -136,9 +137,6 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                     %(kidscatN, len(splitkidscats[Nsplit]), \
                       Nsplit+1, kidscatname, len(galIDs)))
 
-            if ('random' in purpose):
-                print('	of catalog:', Ncat+1)
-
             # Split the list of lenses into chunks of 100 max.
             # why 100? trying a few more here
             lenssplits = np.append(np.arange(0, len(galIDs), 100), len(galIDs))
@@ -146,7 +144,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
             # Import and mask all used data from the sources in this KiDS field
 
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
-                shear.import_kidscat(path_kidscats, kidscatname,
+                shear.import_kidscat(path_kidscats, kidscatname, kidscolnames,
                                      kidscat_end, src_selection, cat_version)
 
             if 'covariance' in purpose:
@@ -270,12 +268,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                 shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm, blindcats)
-        if ('random' in purpose):
-
-            if os.path.isfile(filename):
-                os.remove(filename)
-                print('Placeholder:', filename, 'is removed.')
-
+    
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, Nsplit+1, \
@@ -319,9 +312,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
             print('Analysing part %i/%i, process %i: %s (contains %i objects)'\
                             %(kidscatN, len(splitkidscats[Nsplit]), \
                               Nsplit+1, kidscatname, len(galIDs)))
-            if ('random' in purpose):
-                print('	of catalog:', Ncat+1)
-
+            
             # Split the list of lenses into chunks of 100 max.
             # why 100? trying larger numbers (CS)
             lenssplits = np.append(np.arange(0, len(galIDs), 100), len(galIDs))
@@ -473,12 +464,6 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm, blindcats)
 
-        if ('random' in purpose):
-
-            if os.path.isfile(filename):
-                os.remove(filename)
-                print('Placeholder:', filename, 'is removed.')
-
         if 'catalog' in purpose:
             filename = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, Nsplit+1, \
@@ -500,10 +485,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        cat_version, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file,\
         z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
@@ -547,12 +532,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     binnum, Nobsbins, lens_selection, lens_binning, src_selection, lens_weights, \
     name_Rbins, O_matter, O_lambda, Ok, h)
 
-    if ('random' in purpose):
-        filename_var = '%i_%s'%(Ncat+1, filename_var)
-        # Ncat is the number of existing catalogs, we want to go one beyond
-        print('Number of new catalog:', Ncat+1)
-    #		print 'Splits already written: \n', splitslist
-
     # Stop if the catalog already exists.
     outname = shear.define_filename_results(path_results, purpose, \
                                             filename_var, filename_addition, \
@@ -569,26 +548,16 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Printing a placeholder file, that tells other codes \
     #    that this catalog is being written.
-    if ('random' in purpose):
-        #filename = 0
-        for i in xrange(Nsplits):
-            filename = shear.define_filename_splits(path_splits, purpose, \
-                                                filename_var, i+1, \
-                                                Nsplits, filename_addition, \
-                                                blindcat)
+    filename = 0 # Leftover from random.
 
-            np.savetxt(filename, np.empty(0))
-            print('Placeholder:', filename, 'is written.')
 
-    else:
-        filename = 0
     # Importing all GAMA data, and the information
     # on radial bins and lens-field matching.
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = \
         shear.import_data(
-            path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+            path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_kidscats,
             centering, purpose, Ncat, O_matter, O_lambda, Ok, h,
             lens_weights, filename_addition, cat_version, com)
 
@@ -609,7 +578,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             # Import and mask all used data from the sources in this KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
-            shear.import_kidscat(path_kidscats, kidscatname, kidscat_end, \
+            shear.import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
                                  src_selection, cat_version, blindcats)
 
             # Make ellipticity- and lfweight-lists for the variance calculation
@@ -641,7 +610,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             # Import and mask all used data from the sources in this
             # KiDS field
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
-                shear.import_kidscat(path_kidscats, kidscatname,
+                shear.import_kidscat(path_kidscats, kidscatname, kidscolnames,
                                      kidscat_end, src_selection, cat_version, blindcats)
 
             srcNr_varlist = np.append(srcNr_varlist, srcNr)
@@ -685,39 +654,35 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     if cat_version == 3:
-        if wizz == 'False':
-            print('\nCalculating the lensing efficiency ...')
+        print('\nCalculating the lensing efficiency ...')
 
-            srclims = src_selection['Z_B'][1]
-            sigma_selection = {}
-            # 10 lens redshifts for calculation of Sigma_crit
-            lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
-            #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
-            #                          for y in lens_redshifts])
-            cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-            lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
+        srclims = src_selection['Z_B'][1]
+        sigma_selection = {}
+        # 10 lens redshifts for calculation of Sigma_crit
+        lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
+        #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
+        #                          for y in lens_redshifts])
+        cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
+        lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
     
             
-            lens_angular = lens_comoving/(1.0+lens_redshifts)
-            k = np.zeros_like(lens_redshifts)
+        lens_angular = lens_comoving/(1.0+lens_redshifts)
+        k = np.zeros_like(lens_redshifts)
             
-            for i in xrange(lens_redshifts.size):
-                sigma_selection['Z_B'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
-                srcNZ_k, spec_weight_k = shear.import_spec_cat(path_kidscats, kidscatname2,\
+        for i in xrange(lens_redshifts.size):
+            sigma_selection['Z_B'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
+            srcNZ_k, spec_weight_k = shear.import_spec_cat(path_kidscats, kidscatname2,\
                                         kidscat_end, specz_file, sigma_selection, \
                                         cat_version)
                 
-                srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, \
+            srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, \
                                 weights=spec_weight_k, density=1)
-                srcPZ_k = srcPZ_k/srcPZ_k.sum()
-                k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
+            srcPZ_k = srcPZ_k/srcPZ_k.sum()
+            k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
                             Dcsbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
             
-            k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
+        k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
-        if wizz == True:
-            print('\nThe-wiZZ is not yet supported, quitting ...')
-            raise SystemExit()
 
     if cat_version == 0:
         print('\nCalculating the lensing efficiency ...')
@@ -756,41 +721,37 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # different results this must be changed!
         print('\nCalculating average m correction...')
 
-        m_corr = np.unique(srcm_varlist)
+        #m_corr = np.unique(srcm_varlist)
+        # Import the m-corr values from file...
+        # This needs to be passed from config file!
+        m_file = glob(m_corr_file)
+        if len(m_file) == 0:
+            msg = 'm-corr file not found.'
+            raise IOError(msg)
+        elif len(m_file) > 1:
+            msg = 'm-corr file name {0} ambiguous. Using file {1}.'.format(
+                                                            filename, m_file[0])
+        m_corr = np.genfromtxt(m_file[0])
         m_selection = {}
-        dlsods = np.zeros(m_corr.shape)
-
-        for i, m in enumerate(m_corr):
-            srcm_i = srcm_varlist[srcm_varlist == m]
-            if m == -0.0165984884074:
-                m_selection['Z_B'] = ['self', np.array([0.1, 0.2])]
-            if m == -0.0107643100825:
-                m_selection['Z_B'] = ['self', np.array([0.2, 0.3])]
-            if m == -0.0163154916657:
-                m_selection['Z_B'] = ['self', np.array([0.3, 0.4])]
-            if m == -0.00983059386823:
-                m_selection['Z_B'] = ['self', np.array([0.4, 0.5])]
-            if m == -0.0050563715617:
-                m_selection['Z_B'] = ['self', np.array([0.5, 0.6])]
-            if m == -0.00931232658151:
-                m_selection['Z_B'] = ['self', np.array([0.6, 0.7])]
-            if m == -0.0135538269718:
-                m_selection['Z_B'] = ['self', np.array([0.7, 0.8])]
-            if m == -0.0286749355629:
-                m_selection['Z_B'] = ['self', np.array([0.8, 0.9])]
+        dlsods = np.zeros(m_corr[:,2].shape)
         
+        for i, m in enumerate(m_corr):
+            #srcm_i = srcm_varlist[srcm_varlist == m] ??
+            m_selection['Z_B'] = ['self', np.array([m[0], m[1]])]
         
             srcNZ_m, spec_weight_m = shear.import_spec_cat(path_kidscats, kidscatname2,\
                                 kidscat_end, specz_file, m_selection, \
                                 cat_version)
-                                                        
+
             srcPZ_m, bins_m = np.histogram(srcNZ_m, range=[0.025, 3.5], bins=70, \
                                                 weights=spec_weight_m, density=1)
+
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
             dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
                                 Dcsbins, srcPZ_m, cat_version, Dc_epsilon))
+            m_selection = {}
 
-        srcm_varlist = np.average(m_corr, weights=dlsods)
+        srcm_varlist = np.average(m_corr[:,2], weights=dlsods)
         srcm_varlist = srcm_varlist * np.ones(srcNr_varlist.shape)
 
 
@@ -829,7 +790,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                  Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                  blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
                  Dcsbins, Dc_epsilon, filename_addition, variance, h,
-                path_kidscats, kidscatname, kidscat_end, src_selection)
+                path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection)
 
     if 'covariance' in purpose:
         for i in xrange(Nobsbins):
@@ -849,7 +810,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                              Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                              blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
                              Dcsbins, Dc_epsilon, filename_addition, variance, h,
-                             path_kidscats, kidscatname, kidscat_end, src_selection)
+                             path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection)
 
     if out == 0:
         print('Splits finished properly.')

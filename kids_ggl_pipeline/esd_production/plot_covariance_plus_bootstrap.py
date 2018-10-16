@@ -34,10 +34,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        cat_version, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file,\
         z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
@@ -50,10 +50,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Plot settings:
 
     # Plotting the data for the separate observable bins
-    if 'random' in purpose:
-        plotstyle = 'lin' # What plotting style is used (lin or log)
-    else:
-        plotstyle = 'log'
+    
+    plotstyle = 'log'
     subplots = binnum # Are there subplots?
     Nrows = 1 # If so, how into many rows will the subplots be devided?
 
@@ -67,11 +65,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                              lens_weights, name_Rbins, \
                                              O_matter, O_lambda, Ok, h)
 
-    if ('random' in purpose) or ('star' in purpose):
-        filename_var = '%i_%s'%(Ncat, filename_var)
-        # Ncat is the number of existing randoms
-        print('Number of existing random catalogs:', Ncat)
-
     # Paths to the resulting files
     outname = shear.define_filename_results(path_results, purpose, \
                                             filename_var, filename_addition, \
@@ -82,7 +75,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
-            path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+            path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_kidscats,
             centering, purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
             filename_addition, cat_version, com)
     

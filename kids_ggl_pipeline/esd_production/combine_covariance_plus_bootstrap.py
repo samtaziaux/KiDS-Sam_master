@@ -31,10 +31,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        cat_version, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file, \
         z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
@@ -54,10 +54,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         purpose, centering, binname, 'binnum', Nobsbins, lens_selection,
         lens_binning, src_selection, lens_weights, name_Rbins, O_matter,
         O_lambda, Ok, h)
-    if ('random' or 'star') in purpose:
-        filename_var = '{0:d}_{1}'.format(Ncat, filename_var)
-        # Ncat is the number of existing randoms
-        print('Number of existing random catalogs: {0}'.format(Ncat))
 
     # Paths to the resulting files
     filename_N1 = filename_var.replace('binnum', '{0:d}'.format(binnum))
@@ -87,7 +83,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist = shear.import_data(
-            path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+            path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_kidscats,
             centering, purpose, Ncat, O_matter, O_lambda, Ok, h, lens_weights,
             filename_addition, cat_version, com)
 
@@ -145,10 +141,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 lens_binning, src_selection, lens_weights, name_Rbins,
                 O_matter, O_lambda, Ok, h)
 
-            if ('random' or 'star') in purpose:
-                filename_N1 = '{0:d}_{1}'.format(Ncat, filename_N1)
-                # Ncat is the number of existing randoms
-
             filenameESD = shear.define_filename_results(
                 path_results, purpose, filename_N1, filename_addition,
                 Nsplit, blindcat)
@@ -181,10 +173,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     purpose, centering, binname, N2+1, Nobsbins,
                     lens_selection, lens_binning, src_selection, lens_weights,
                     name_Rbins, O_matter, O_lambda, Ok, h)
-
-                if ('random' or 'star') in purpose:
-                    filename_N2 = '{0:d}_{1}'.format(Ncat, filename_N2)
-                    # Ncat is the number of existing randoms
 
                 shearcatname_N2 = shear.define_filename_splits(
                     path_splits, purpose, filename_N2, 0, 0,
@@ -223,8 +211,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 purpose, centering, binname, N1+1, Nobsbins, lens_selection,
                 lens_binning, src_selection, lens_weights, name_Rbins,
                 O_matter, O_lambda, Ok, h)
-            if ('random' or 'star') in purpose:
-                filename_N1 = '{0:d}_{1}'.format(Ncat, filename_N1)
 
             filenameESD = shear.define_filename_results(
                 path_results, purpose, filename_N1, filename_addition,
@@ -285,9 +271,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                             lens_selection, lens_binning, src_selection,
                             lens_weights, name_Rbins, O_matter, O_lambda, Ok,
                             h)
-
-                        if ('random' or 'star') in purpose:
-                            filename_N2 = '{0:d}_{1}'.format(Ncat, filename_N2)
 
                         shearcatname_N2 = shear.define_filename_splits(
                             path_splits, purpose,  filename_N2, kidscats[x],

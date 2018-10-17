@@ -23,7 +23,7 @@ def read_config(config_file):
     src_selection = {}
     model_params = []
     sampler_params = []
-    cat_version = 3#[]
+    cat_version = 3
     kids_path = 'None'
     specz_file = None
     z_epsilon = 0.2

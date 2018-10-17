@@ -40,15 +40,11 @@
 # conform to the GAMA-like catalogue format.
 # The following paths work if you run the pipeline in Leiden.
 
-# Option 1:
-#KiDS_path           /disks/shear10/KiDS/LF_cat_DR2_v2/
-#KiDS_version        2
-# Option 2:
 KiDS_path           /disks/shear10/dvornik/KidsCatalogues/DR3/
-KiDS_version        3
+KiDS_version        3 # NEW, DR1/DR2 not supported anymore. Use 0 for mocks or 3 for KiDS-450+, default is 3.
 # this entry is optional
 specz_file          /disks/shear10/KiDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat
-# this entry is required
+# NEW! This entry is required. It is a file with m-bias corrections in thin redhshift slices. See the same file in the demo folder for structure.
 m_corr_file        /data2/dvornik/KidsCatalogues/m_corr_kids_450.txt
 
 # Full path to the GAMA catalogue fits file, or to another lens catalog.
@@ -66,9 +62,9 @@ GAMA_path           /disks/shear10/brouwer_veersemeer/MergedCatalogues/GAMACatal
 # going to be used.
 lens_columns        ID,RA,DEC,Z
 
-# New in v1.8: The column names for all the required KiDS column MUST be given
-# comma-separated in the following entry. For KiDS use the correct column names for: ID,RA,DEC,Z (or comment out).
-# There is NO need to specify the blinding with weight_A, e_A, etc. If using with DR2 data, Z_B should be your full p(z) column.
+# New in v1.7lite: The column names for all the required KiDS column MUST be given
+# comma-separated in the following entry. For KiDS use the correct column names for the colums given below (example for KiDS-450).
+# There is NO need to specify the blinding with weight_A, e_A, etc.
 kids_columns        SeqNr, ALPHA_J2000, DELTA_J2000, Z_B, model_SNratio, MASK, THELI_NAME, weight, m_cor, e1, e2, c1, c2
 
 

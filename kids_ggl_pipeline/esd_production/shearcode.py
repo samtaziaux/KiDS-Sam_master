@@ -138,6 +138,11 @@ def run_esd(config_file):
         cross_cov, com, blindcats = \
             esd_utils.read_config(config_file)
 
+    if cat_version == 2:
+        print('\n \n \n \n \n')
+        print('KiDS-DR2 is no longer supported, please use v1.7')
+        raise SystemExit()
+
     print('\n \n \n \n \n')
     print('Running KiDS-GGL pipeline - signal extraction')
     #print 'Running:', purpose

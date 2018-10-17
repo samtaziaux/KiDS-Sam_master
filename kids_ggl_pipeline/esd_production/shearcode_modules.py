@@ -100,8 +100,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     # Path containing the output folders
     output_var = ''
     var_print = ''
-    #output_var, var_print, x = define_filename_sel(output_var, var_print,\
-    #                                                 '', src_selection)
+    
     if ('ID' in lens_binning) & ('No' in binname):# or ('ID' in lens_selection)
         output_var = 'IDs_from_file'
         path_output = '%s/%s%s' \
@@ -120,8 +119,8 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     path_catalogs = '%s/catalogs' %(path_output.rsplit('/',1)[0])
 
     # Path to the output splits and results
-    path_splits = '%s/splits_%s' %(path_output, purpose) #'%s/splits_%s' %(path_output, purpose)
-    path_results = path_output #'%s/results_%s' %(path_output, purpose)
+    path_splits = '%s/splits_%s' %(path_output, purpose)
+    path_results = path_output
 
     if (Nsplit == 0) and (blindcat == blindcats[0]) and (binnum == Nobsbins):
 
@@ -535,13 +534,6 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             'Please provide the name of the redshift column if you want' \
             ' to use physical projected distances'
         galZlist = gamacat[colnames[3]] # Central Z of the galaxy
-        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-        #                    for z in galZlist])
-        # Distance in pc/h, where h is the dimensionless Hubble constant
-        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-        #                            for z in galZlist])
-
-        # New method
         cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
         Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
 
@@ -565,10 +557,6 @@ def run_kidscoord(path_kidscats, kidscolnames, cat_version):
     # Load the names of all KiDS catalogues from the specified folder
     kidscatlist = os.listdir(path_kidscats)
 
-
-    if cat_version == 2:
-        pass
-
     if cat_version == 3:
         kidscoord = dict()
 
@@ -581,12 +569,8 @@ def run_kidscoord(path_kidscats, kidscolnames, cat_version):
             except:
                 kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
                 test = kidscat[kidscolnames[0]]
-            #print kidscat['THELI_NAME']
             
             kidscatlist2 = np.unique(np.array(kidscat[kidscolnames[6]]))
-            #kidscatname = np.full(kidscatlist2.shape, x, dtype=np.str)
-            #print x
-            #print kidscatname
 
             for i in range(len(kidscatlist2)):
                 # Of the KiDS file names, keep only "KIDS_RA_DEC"
@@ -806,13 +790,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
                    src_selection, cat_version, blindcats):
     
     # Full directory & name of the corresponding KiDS catalogue
-    if cat_version == 2:
-        print('KiDS-DR2 is no longer supported, please use v1.7')
-        raise SystemExit()
-        #kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end)
-        #kidscat = Table(pyfits.open(kidscatfile, memmap=True)[1].data)
     
-    #if cat_version == 3:
     kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
     try:
         kidscat = Table(pyfits.open(kidscatfile, memmap=True)[2].data)
@@ -1087,10 +1065,6 @@ def define_obslist(obsname, gamacat, h, Dcllist=[], galZlist=[]):
     if 'AngSep' in obsname and len(Dcllist) > 0:
         print('Applying cosmology correction to "AngSep"')
 
-        #Dclgama = np.array([distance.comoving(z, 0.25, 0.75, 1.)
-        #                    for z in gamacat['Z']])
-        
-        # New method
         cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
         Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
         
@@ -1171,10 +1145,9 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon, galZlist
     #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
     #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
-    if cat_version == 3:
-        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
-    else:
-        DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+    #else:
+    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
 
     DlsoDsmask = [] # Empty unused lists
 
@@ -1216,10 +1189,10 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
     #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
     #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
     
-    if cat_version == 3:
-        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
-    else:
-        DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    
+    DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+    #else:
+    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
 
     DlsoDsmask = [] # Empty unused lists
     Dcls = [] # Empty unused lists
@@ -1739,8 +1712,6 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle,
 
             # Add subplots
             ax_sub = fig.add_subplot(gs[Nobsbins-N1-1,N2])
-
-    #			print N1+1, N2+1, N1*Nobsbins+N2+1
 
             ax_sub.set_xscale('log')
             ax_sub.set_yscale('log')

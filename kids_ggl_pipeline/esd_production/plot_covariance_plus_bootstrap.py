@@ -148,22 +148,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         lens_binning, Rbins, Runit, h)
     #except:
     #    print "Failed to create Matrix Plot of", filenamecov
-    
-    # Addapted the removal of splits. They might be useful for sanity checks.
-    # 6.4.2016 - Andrej D.
-    
+
     # Remove the used splits
     # CS: path_splits doesn't exist when I run it - why?
     if (Nsplit==1) and (blindcat==blindcats[-1]) and os.path.isdir(path_splits):
-        #time.sleep(3) # Wait untill all blinds are done.
-        #msg = '\nWarning: do you want to delete split files? [y/n] \n'
-        #answer = raw_input(msg)
-        #if len(answer) == 0:
-        #    exit()
-        #if answer.lower() not in ('y', 'yes'):
-        #    exit()
         filelist = os.listdir(path_splits)
-
         for filename in filelist:
             try:
                 #os.remove('%s/%s'%(path_splits, filename))

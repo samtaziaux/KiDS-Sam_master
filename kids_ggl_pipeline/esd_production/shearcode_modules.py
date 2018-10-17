@@ -567,32 +567,7 @@ def run_kidscoord(path_kidscats, kidscolnames, cat_version):
 
 
     if cat_version == 2:
-        # Remove all files from the list that are not KiDS catalogues
-        for x in kidscatlist:
-            if 'KIDS_' not in x:
-                kidscatlist.remove(x)
-
-
-        # Create the dictionary that will hold the names
-        # of the KiDS catalogues with their RA and DEC
-        kidscoord = dict()
-        kidscat_end = ''
-        for i in range(len(kidscatlist)):
-            # Of the KiDS file names, keep only "KIDS_RA_DEC"
-
-            kidscatstring = kidscatlist[i].split('_',3)
-            kidscatname = '_'.join(kidscatstring[0:3])
-
-            # Extract the central coordinates of the field from the file name
-            coords = '_'.join(kidscatstring[1:3])
-            coords = ((coords.replace('p','.')).replace('m','-')).split('_')
-
-            # Fill the dictionary with the catalog's central RA
-            # and DEC: {"KIDS_RA_DEC": [RA, DEC]}
-            kidscoord[kidscatname] = [float(coords[0]),float(coords[1]), 0]
-
-            kidscat_end = kidscatstring[-1]
-
+        pass
 
     if cat_version == 3:
         kidscoord = dict()
@@ -891,19 +866,12 @@ def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
         e_1 = np.array([kidscat[kidscolnames[9]]]).T
         e_2 = np.array([kidscat[kidscolnames[10]]]).T
 
-    try:
-        try:
-            c_1 = np.array([kidscat[kidscolnames[11]+'_'+blind] for blind in blindcats]).T
-            c_2 = np.array([kidscat[kidscolnames[12]+'_'+blind] for blind in blindcats]).T
-        except:
-            c_1 = np.array([kidscat[kidscolnames[11]]]).T
-            c_2 = np.array([kidscat[kidscolnames[12]]]).T
-    except:
-        c_1 = np.zeros(e_1.shape)
-        c_2 = np.zeros(e_2.shape)
 
-    e1 = e_1 - c_1
-    e2 = e_2 - c_2
+    #c_1 = np.zeros(e_1.shape)
+    #c_2 = np.zeros(e_2.shape)
+
+    #e1 = e_1 - c_1
+    #e2 = e_2 - c_2
 
     # Masking: We remove sources with weight=0 and those masked by the catalog
     srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)#&(srcm!=0)

@@ -141,9 +141,14 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
 
+            if len(galIDs)==0:
+                print('NOT analysing part {0}/{1}, process {2}: {3} (contains {4} objects)'\
+                      .format(kidscatN, len(splitkidscats[Nsplit]), \
+                              Nsplit+1, kidscatname, len(galIDs)))
+                continue
             print('Analysing part {0}/{1}, process {2}: {3} (contains {4} objects)'\
-                                .format(kidscatN, len(splitkidscats[Nsplit]), \
-                                Nsplit+1, kidscatname, len(galIDs)))
+                  .format(kidscatN, len(splitkidscats[Nsplit]), \
+                          Nsplit+1, kidscatname, len(galIDs)))
             
             # Split the list of lenses into chunks of 100 max.
             # why 100? trying larger numbers (CS)

@@ -33,7 +33,7 @@ def read_config(config_file):
     gama_path = 'None'
     filename = 'None'
     colnames = ['ID','RA','DEC','Z']
-    kidscolnames = ['SeqNr', 'ALPHA_J2000', 'DELTA_J2000', 'Z_B', 'model_SNratio', 'MASK', 'THELI_NAME', 'weight', 'm_cor', 'e1', 'e2', 'c1', 'c2']
+    kidscolnames = ['SeqNr', 'ALPHA_J2000', 'DELTA_J2000', 'Z_B', 'model_SNratio', 'MASK', 'THELI_NAME', 'weight', 'm_cor', 'e1', 'e2']
     config = open(config_file)
     for line in config:
         if line.replace(' ', '').replace('\t', '')[0] == '#':
@@ -66,8 +66,8 @@ def read_config(config_file):
                 ' distances)'
         elif line[0] == 'kids_columns':
             kidscolnames = line[1].split(',')
-            
-    
+            assert len(kidscolnames) == 11, \
+                'Parameter `kids_columns` must specify the 11 required columns.'
 
         # Cosmology
         elif line[0] == 'Om':

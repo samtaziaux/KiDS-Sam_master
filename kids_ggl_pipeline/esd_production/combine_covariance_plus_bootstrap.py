@@ -279,9 +279,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
                 else:
                     # This message should be a lot more explicit
-                    print('ERROR: Not all fields are analysed! '\
-                                  'Please restart shear code!')
-                    raise SystemExit()
+                    #print('ERROR: Not all fields are analysed! '\
+                    #              'Please restart shear code!')
+                    #raise SystemExit()
+                    print('ERROR: No galaxies in this field, skipping ...')
 
             # Calculating the final output values of the
             # accompanying shear data

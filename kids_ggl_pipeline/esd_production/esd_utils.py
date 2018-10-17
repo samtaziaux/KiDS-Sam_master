@@ -23,7 +23,7 @@ def read_config(config_file):
     src_selection = {}
     model_params = []
     sampler_params = []
-    cat_version = []
+    cat_version = 3#[]
     kids_path = 'None'
     specz_file = None
     z_epsilon = 0.2
@@ -64,11 +64,9 @@ def read_config(config_file):
                 'Parameter `lens_columns` must specify the three or four' \
                 ' required columns (depending on whether you want physical' \
                 ' distances)'
-        elif line[0] == 'lens_columns':
+        elif line[0] == 'kids_columns':
             kidscolnames = line[1].split(',')
-            assert len(kidscolnames) in (3,4), \
-                'Parameter `kids_columns` must specify all the required KiDS' \
-                ' required columns'
+            
     
 
         # Cosmology

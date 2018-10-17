@@ -76,12 +76,12 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     centers = np.array(['Cen', 'IterCen', 'BCG'])
     centering = 'None'
     for cen in centers:
-        if ('rank%s'%cen in binname) or \
-            ('rank%s'%cen in lens_selection.keys()):
+        if ('rank{}'.format(cen) in binname) or \
+            ('rank{}'.format(cen) in lens_selection.keys()):
             centering = cen
-            print('Center definition = %s'%centering)
+            print('Center definition = {}'.format(centering))
     if centering == 'Cen':
-        lens_selection['rank%s'%centering] = ['self', np.array([1])]
+        lens_selection['rank{}'.format(centering)] = ['self', np.array([1])]
         msg = 'WARNING: With the Cen definition,'
         msg += ' you can only use Centrals (Rank = 1)'
         print(msg)
@@ -832,17 +832,19 @@ def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
     
     # Full directory & name of the corresponding KiDS catalogue
     if cat_version == 2:
-        kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end)
-        kidscat = Table(pyfits.open(kidscatfile, memmap=True)[1].data)
+        print('KiDS-DR2 is no longer supported, please use v1.7')
+        raise SystemExit()
+        #kidscatfile = '%s/%s_%s'%(path_kidscats, kidscatname, kidscat_end)
+        #kidscat = Table(pyfits.open(kidscatfile, memmap=True)[1].data)
     
-    if cat_version == 3:
-        kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
-        try:
-            kidscat = Table(pyfits.open(kidscatfile, memmap=True)[2].data)
-            test = kidscat[kidscolnames[0]]
-        except:
-            kidscat = Table(pyfits.open(kidscatfile, memmap=True)[1].data)
-            test = kidscat[kidscolnames[0]]
+    #if cat_version == 3:
+    kidscatfile = '%s/%s'%(path_kidscats, kidscatname)
+    try:
+        kidscat = Table(pyfits.open(kidscatfile, memmap=True)[2].data)
+        test = kidscat[kidscolnames[0]]
+    except:
+        kidscat = Table(pyfits.open(kidscatfile, memmap=True)[1].data)
+        test = kidscat[kidscolnames[0]]
 
     # Prefferentially we would like to assert the column names, but this cannot
     # really be done with different blinds. If there is a better idea on how to
@@ -865,31 +867,20 @@ def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
     srcRA = kidscat[kidscolnames[1]]
     srcDEC = kidscat[kidscolnames[2]]
 
-    if cat_version == 3:
-        try:
-            w = np.array([kidscat[kidscolnames[7]+'_'+blind] for blind in blindcats]).T
-        except:
-            w = np.array([kidscat[kidscolnames[7]]]).T
-        srcPZ = kidscat[kidscolnames[3]]
-        SN = kidscat[kidscolnames[4]]
-        manmask = kidscat[kidscolnames[5]]
-        tile = kidscat[kidscolnames[6]]
-        
-    elif cat_version == 2:
-        srcPZ = kidscat[kidscolnames[3]] # Full P(z) probability function
-        w = np.array([kidscat[kidscolnames[7]] for blind in blindcats]).T
-                                   
-        # The Signal to Noise of the sources (needed for bias)
-        SN = kidscat[kidscolnames[4]]
-        # The manual masking of bad sources (0=good, 1=bad)
-        manmask = kidscat[kidscolnames[5]]
-        tile = np.zeros(srcNr.size, dtype=np.float64)
     
-    if cat_version == 2:
-        srcm = kidscat[kidscolnames[8]] # The multiplicative bias m
-    if cat_version == 3:
-        # Dummy, mupltiplicative bias is not done per source in KiDS-450+
-        srcm = np.zeros(srcNr.size, dtype=np.float64)
+    try:
+        w = np.array([kidscat[kidscolnames[7]+'_'+blind] for blind in blindcats]).T
+    except:
+        w = np.array([kidscat[kidscolnames[7]]]).T
+    srcPZ = kidscat[kidscolnames[3]]
+    SN = kidscat[kidscolnames[4]]
+    manmask = kidscat[kidscolnames[5]]
+    tile = kidscat[kidscolnames[6]]
+
+
+    #srcm = kidscat[kidscolnames[8]] # The multiplicative bias m. I am keeping this in in the case it is needed in future
+    # Dummy, mupltiplicative bias is not done per source in KiDS-450+
+    srcm = np.zeros(srcNr.size, dtype=np.float64)
 
     # This needs to be modified so that columns without 'blind' suffix can be read in.
     try:
@@ -915,11 +906,8 @@ def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
     e2 = e_2 - c_2
 
     # Masking: We remove sources with weight=0 and those masked by the catalog
-    if cat_version == 2:
-        srcmask = (w.T[0]>0.0)&(SN>0.0)&(srcm<0.0)&(manmask==0)&(-1<c1_A)
-    if cat_version == 3:
-        srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)#&(srcm!=0)
-        # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
+    srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)#&(srcm!=0)
+    # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
 
     # We apply any other cuts specified by the user
     for param in src_selection.keys():
@@ -1062,8 +1050,8 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
         if 'ID' in binname:
             Nobsbins = len(list(lens_binning))
             if len(lenssel_binning) > 0:
-                print('Lens binning: Lenses divided in %i lens-ID bins' \
-                      %(Nobsbins))
+                print('Lens binning: Lenses divided in {0:i} lens-ID bins'\
+                      .format(Nobsbins))
 
         else:
             obsbins = lens_binning[binname][1]
@@ -1085,20 +1073,20 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
                     obslist = define_obslist(
                         binname, gamacat, 0.7, Dcllist, galZlist)
                 else:
-                    print('Using %s from %s' %(binname, obsfile))
+                    print('Using {0} from {1}'.format(binname, obsfile))
                     obscat = pyfits.open(obsfile)[1].data
                     obslist = obscat[binname]
 
                 
                 print()
-                print('Lens binning: Lenses divided in %i %s-bins' \
-                      %(Nobsbins, binname))
-                print('%s Min:          Max:          Mean:'%binname)
+                print('Lens binning: Lenses divided in {0:i} {1}-bins'\
+                      .format(Nobsbins, binname))
+                print('{} Min:          Max:          Mean:'.format(binname))
                 for b in range(Nobsbins):
                     lenssel = lenssel_binning & (obsbins[b] <= obslist) \
                                 & (obslist < obsbins[b+1])
-                    print('%g    %g    %g' \
-                          %(obsbins[b], obsbins[b+1],
+                    print('{0:g}    {0:g}    {0:g}'\
+                          .format(obsbins[b], obsbins[b+1],
                             np.mean(obslist[lenssel])))
             
     else: # If there is no binning
@@ -1169,7 +1157,7 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
         if obsfile == 'self':
             obslist = define_obslist(param, gamacat, h, Dcllist, galZlist)
         else:
-            print('Using %s from %s'%(param, obsfile))
+            print('Using {0} from {1}'.format(param, obsfile))
             bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[param]
         
@@ -1190,7 +1178,7 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
             else:
                 obslist = define_obslist(binname, gamacat, h, Dcllist, galZlist)
         else:
-            print('Using %s from %s'%(binname, obsfile))
+            print('Using {0} from {1}'.format(binname, obsfile))
             bincat = pyfits.open(obsfile)[1].data
             obslist = bincat[binname]
         

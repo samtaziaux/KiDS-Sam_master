@@ -106,27 +106,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
-        #gammat = np.zeros([Nobsbins,nRbins])
-        #gammax = np.zeros([Nobsbins,nRbins])
-        #wk2 = np.zeros([Nobsbins,nRbins])
-        #srcm = np.zeros([Nobsbins,nRbins])
-        #Nsrc = np.zeros([Nobsbins,nRbins])
         gammat, gammax, wk2, srcm, Nsrc = np.zeros((5,Nobsbins,nRbins))
 
-    #ESDt_tot = np.zeros([Nobsbins,nRbins])
-    #ESDx_tot = np.zeros([Nobsbins,nRbins])
-    #error_tot = np.zeros([Nobsbins,nRbins])
-    #bias_tot = np.zeros([Nobsbins,nRbins])
     ESDt_tot, ESDx_tot, error_tot, bias_tot = np.zeros((4,Nobsbins,nRbins))
 
     # These lists will contain the final covariance matrix
-    #radius1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    #radius2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    #bin1 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    #bin2 = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    #cov = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    #cor = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
-    #covbias = np.zeros([Nobsbins,Nobsbins,nRbins,nRbins])
     radius1, radius2, bin1, bin2, cov, cor, covbias = \
         np.zeros((7,Nobsbins,Nobsbins,nRbins,nRbins))
 
@@ -340,10 +324,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                             (wk2[N1,R1]*wk2[N2,R2])
     
 
-    header = '{0}_min[m]    {0}_min[n]    Radius[i](kpc/h{1:g})' \
-             '    Radius[j](kpc/h{1:g})    covariance(h{1:g}*M_sun/pc^2)^2' \
+    header = '{0}_min[m]    {0}_min[n]    Radius[i]({2}/h{1:g})' \
+             '    Radius[j]({2}/h{1:g})    covariance(h{1:g}*M_sun/pc^2)^2' \
              '    correlation    bias(1+K[m,i])(1+K[n,j])'.format(
-                    binname, 100*h)
+                    binname, 100*h, Runit)
 
     file = np.empty((Nobsbins*Nobsbins*nRbins*nRbins, 7))
     index_out = 0

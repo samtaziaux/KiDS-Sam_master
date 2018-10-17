@@ -127,7 +127,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     for r in centers:
         combcol.append(pyfits.Column(name=r, format='%iD'%Rbins, \
-                                     array=sheardat[r], unit='kpc/h%g'%h*100))
+                    array=sheardat[r], unit='{0}/h{1:g}'.format(Runit, h*100)))
                                      
         print('Combining:', r)
 
@@ -164,9 +164,9 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     if os.path.isfile(outname):
         os.remove(outname)
-        print('Old file "%s" overwritten.'%outname)
+        print('Old file "{}" overwritten.'.format(outname))
     else:
-        print('New file "%s" written.'%outname)
+        print('New file "{}" written.'.format(outname))
 
     tbhdu.writeto(outname)
 

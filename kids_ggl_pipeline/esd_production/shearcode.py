@@ -68,18 +68,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                    blindcat, blindcats, config_file):
 
     # The shear calculation starts here
-    directory = os.path.dirname(os.path.realpath(__file__)) #os.getcwd()
-    indirectory = os.listdir('.')
-    #path_shearcodes = 'esd_production'
-    if 'esd_production' in directory:
-        path_shearcodes = directory + '/'
-    if 'esd_production' in indirectory:
-        path_shearcodes = 'esd_production'
-
-    # it's easier to debug if we don't use multiprocessing, so it will
-    # only be used if it is asked for
-
-
+    
     out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     
     # Combine the splits according to the purpose

@@ -617,13 +617,8 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
     if com == True:
         Rfield = np.radians(np.sqrt(2.0)/2.0) * Dcllist
-    if 'oldcatmatch' in filename_addition:
-        print("*** Using old lens-field matching procedure! ***")
-    else:
-        Rmax = Rmax + Rfield
-        #print "*** Using new lens-field matching procedure ***"
-        #print "(for 'early science' mode, select"\
-        #        " 'oldcatmatch' in 'ESD_output_filename')"
+
+    Rmax = Rmax + Rfield
 
     totgalIDs = np.array([])
 
@@ -653,7 +648,6 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         # Creating a dictionary that contains the corresponding
         # Gama galaxies for each KiDS field.
         if len(galIDs)>0:
-
             catmatch[kidscat] = np.array([])
             catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
 

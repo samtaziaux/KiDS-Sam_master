@@ -848,8 +848,8 @@ def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
     #c_1 = np.zeros(e_1.shape)
     #c_2 = np.zeros(e_2.shape)
 
-    #e1 = e_1 - c_1
-    #e2 = e_2 - c_2
+    e1 = e_1# - c_1
+    e2 = e_2# - c_2
 
     # Masking: We remove sources with weight=0 and those masked by the catalog
     srcmask = (w.T[0]>0.0)&(SN > 0.0)&(manmask==0)#&(srcm!=0)

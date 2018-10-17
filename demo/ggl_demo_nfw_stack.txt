@@ -45,7 +45,7 @@ KiDS_version        3 # NEW, DR1/DR2 not supported anymore. Use 0 for mocks or 3
 # this entry is optional
 specz_file          /disks/shear10/KiDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat
 # NEW! This entry is required. It is a file with m-bias corrections in thin redhshift slices. See the same file in the demo folder for structure.
-m_corr_file        /data2/dvornik/KidsCatalogues/m_corr_kids_450.txt
+m_corr_file       m_corr_kids_450.txt
 
 # Full path to the GAMA catalogue fits file, or to another lens catalog.
 # This catalog should contain at least a right ascension and a declination

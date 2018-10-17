@@ -140,7 +140,7 @@ def run_esd(config_file):
 
     if cat_version == 2:
         print('\n \n \n \n \n')
-        print('KiDS-DR2 is no longer supported, please use v1.7')
+        print('KiDS-DR1/2 is no longer supported, please use v1.7')
         raise SystemExit()
 
     print('\n \n \n \n \n')

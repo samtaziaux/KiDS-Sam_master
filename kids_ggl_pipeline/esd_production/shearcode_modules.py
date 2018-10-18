@@ -649,7 +649,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         y = np.sin(-cDEC)*np.cos(galDEC)*np.cos(galRA) + np.cos(-cDEC)*np.sin(galDEC)
 
         lat_out = np.arcsin(y)
-        lon_out = np.arccos(x)#-np.sign(galRA)*np.arccos(x/np.cos(lat_out))
+        lon_out = -np.sign(galRA)*np.arccos(x)#-np.sign(galRA)*np.arccos(x/np.cos(lat_out))
 
         lat_out = np.degrees(lat_out)
         lon_out = np.degrees(lon_out)

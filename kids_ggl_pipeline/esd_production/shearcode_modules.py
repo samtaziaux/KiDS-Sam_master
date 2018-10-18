@@ -636,11 +636,27 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         catDEC = kidscoord[kidscat][1]
 
         # The difference in RA and DEC between the field and the lens centers
-        dRA = catRA-galRAlist
-        dDEC = catDEC-galDEClist
+        #dRA = catRA-galRAlist
+        #dDEC = catDEC-galDEClist
+        
+        cRA = np.radians(catRA)
+        cDEC = np.radians(catDEC)
+        
+        galRA = np.radians(galRAlist)
+        galDEC = np.radians(galDEClist)
+        
+        x = np.cos(-cDEC)*np.cos(galDEC)*np.cos(galRA) - np.sin(cDEC)*np.sin(galDEC)
+        y = np.sin(-cDEC)*np.cos(galDEC)*np.cos(galRA) + np.cos(-cDEC)*np.sin(galDEC)
 
+        lat_out = np.arcsin(y)
+        lon_out = np.arccos(x)#-np.sign(galRA)*np.arccos(x/np.cos(lat_out))
+
+        lat_out = np.degrees(lat_out)
+        lon_out = np.degrees(lon_out)
+        
         # Masking the lenses that are outside the field
-        coordmask = (abs(dRA) < 0.5) & (abs(dDEC) < 0.5)
+        #coordmask = (abs(dRA) <= 0.5) & (abs(dDEC) <= 0.5)
+        coordmask = (abs(lon_out) <= 0.5) & (abs(lat_out) <= 0.5)
         galIDs = (galIDlist[coordmask])
         name = kidscoord[kidscat][2]
 

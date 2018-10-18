@@ -145,12 +145,12 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     for r in centers:
         combcol.append(pyfits.Column(name=r, format='%iD'%Rbins, \
-                                     array=sheardat[r], unit='kpc/h%g'%h*100))
-                                     
+                            array=sheardat[r], unit='%s/h%g'%(Runit, h*100)))
+    
         print('Combining:', r)
 
     # Adding all the columns that need to be stacked
-
+    
     for col in xrange(len(columns)):
         sumcol = 0
         print('Combining:', columns[col])

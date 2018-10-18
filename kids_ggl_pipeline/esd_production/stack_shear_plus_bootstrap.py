@@ -135,7 +135,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Nsrclist = sheardat['Nsources']
 
     # Adding the lens weights
-    galweightlist = np.reshape(galweightlist, [len(galIDlist),1])
+    if 'mps2' not in Runit:
+        galweightlist = np.reshape(galweightlist, [len(galIDlist),1])
+    else:
+        galweightlist = np.ones([len(galIDlist),1])
+    
     gammatlist, gammaxlist, wk2list, w2k2list, srcmlist, Nsrclist = \
         [gallist*galweightlist for gallist
          in [gammatlist, gammaxlist, wk2list, w2k2list*galweightlist,

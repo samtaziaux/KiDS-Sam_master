@@ -109,7 +109,7 @@ def read_config(config_file):
             if weightname == 'None':
                 weightfile = ''
             else:
-                weightfile = weightfile = line[2]
+                weightfile = line[2]
             lens_weights = {weightname: weightfile}
 
         elif line[0] == 'lens_binning':

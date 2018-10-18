@@ -189,7 +189,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
             if len(splitfiles) == 0:
                 break
 
-        print(outname)
+        print('Output name:', outname)
 
 
     else:
@@ -448,7 +448,7 @@ def import_data(path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
         Dcllist, Dallist = import_gamacat(
             path_gamacat, colnames, centering, purpose, Ncat, O_matter,
             O_lambda, Ok, h, Runit, lens_weights)
-
+        
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats, cat_version)
 
@@ -500,7 +500,7 @@ def define_Rbins(path_Rbins, Runit):
 
     # Translating from k/Mpc to pc, or from arcmin/sec to deg
     Rconst = -999
-    if 'pc' in Runit:
+    if ('pc' in Runit) or ('mps2' in Runit):
         Rconst = 1.
         if 'k' in Runit:
             Rconst = 1e3
@@ -591,6 +591,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galRAlist = randomcat[colnames[1]][slice][Ncatmin:Ncatmax:step]
         galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
 
+    """
     #Defining the lens weights
     weightname = list(lens_weights)[0]
     if 'No' not in weightname:
@@ -598,9 +599,22 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             path_gamacat, ignore_missing_end=True)[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
+    """
+    
+    #Defining the lens weights
+    weightname = lens_weights.keys()[0]
+    weightfile = lens_weights.values()[0]
+    if 'No' not in weightname:
+        if weightfile == 'self':
+            galweightlist = gamacat[weightname]
+        else:
+            print('Using %s from %s'%(weightname, weightfile))
+            galweightlist = pyfits.open(weightfile)[1].data[weightname]
+    else:
+        galweightlist = np.ones(len(galIDlist))
 
     # Defining the comoving and angular distance to the galaxy center
-    if 'pc' in Runit: # Rbins in a multiple of pc
+    if ('pc' in Runit) or ('mps2' in Runit): # Rbins in a multiple of pc
         assert len(colnames) == 4, \
             'Please provide the name of the redshift column if you want' \
             ' to use physical projected distances'
@@ -708,13 +722,32 @@ def run_kidscoord(path_kidscats, cat_version):
 
 def run_kidscoord_mocks(path_kidscats, cat_version):
     if cat_version == 0:
+
+        # Fill the dictionary with the catalog's central RA
+        # and DEC: {"KIDS_RA_DEC": [RA, DEC]}
         kidscoord = dict()
-        tile = np.arange(100)
-        for i in range(10):
-            for j in range(10):
-                kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])] = [i+0.5+150.0, j+0.5, path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*10+j])]
-    
-        #kidscoord['mock'] = [5.0, 5.0, 1.0]
+        
+        # Find the limits of the mock field
+        src_cat = pyfits.open(path_kidscats, memmap=True)[1].data
+        srcRA = src_cat['ra_gal']
+        srcDEC = src_cat['dec_gal']
+        
+        srcRAlims = [np.around(np.amin(srcRA)), np.around(np.amax(srcRA))]
+        srcDEClims = [np.around(np.amin(srcDEC)), np.around(np.amax(srcDEC))]
+        Ntiles_RA = int(srcRAlims[1]-srcRAlims[0])
+        Ntiles_DEC = int(srcDEClims[1]-srcDEClims[0])
+        
+        print('Mock field limits: RA = [%i, %i] deg, DEC = [%i, %i] deg'\
+        %(srcRAlims[0], srcRAlims[1], srcDEClims[0], srcDEClims[1]))
+        
+        # Divide the mock field into 1 deg2 tiles
+        tile = np.arange(Ntiles_RA*Ntiles_DEC)
+        for i in range(Ntiles_RA):
+            for j in range(Ntiles_DEC):
+                kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*Ntiles_RA+j])] \
+                 = [srcRAlims[0]+i+0.5, srcDEClims[0]+j+0.5, path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*Ntiles_RA+j])]
+        
+        #kidscoord['mock'] = [10.0, 10.0, 0] # [RA, DEC, tile name]
                                            
         kidscat_end = ''
     
@@ -756,7 +789,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         coordmask = (abs(dRA) < 0.5) & (abs(dDEC) < 0.5)
         galIDs = (galIDlist[coordmask])
         name = kidscoord[kidscat][2]
-
+        
         # Add the proper lenses to the list with all matched lenses
         totgalIDs = np.append(totgalIDs, galIDs)
 
@@ -882,18 +915,18 @@ def import_spec_cat_mocks(path_kidscats, kidscatname, kidscat_end, specz_file, \
     spec_cat = pyfits.open(path_kidscats, memmap=True)[1].data
 
 
-    Z_S = spec_cat['z_spectroscopic']
+    Z_S = spec_cat['z_cgal']
     spec_weight = np.ones(Z_S.shape, dtype=np.float64)
     
     srcmask = (spec_weight==1)
     
     # We apply any other cuts specified by the user for Z_B
-    srclims = src_selection['z_photometric'][1]
+    srclims = src_selection['z_cgal'][1]
     if len(srclims) == 1:
-        srcmask *= (spec_cat['z_photometric'] == srclims[0])
+        srcmask *= (spec_cat['z_cgal'] == srclims[0])
     else:
-        srcmask *= (srclims[0] <= spec_cat['z_photometric']) &\
-            (spec_cat['z_photometric'] < srclims[1])
+        srcmask *= (srclims[0] <= spec_cat['z_cgal']) &\
+            (spec_cat['z_cgal'] < srclims[1])
 
     return Z_S[srcmask], spec_weight[srcmask]
 
@@ -1222,24 +1255,35 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     kidscat = pyfits.open(kidscatfile, memmap=True)[1].data
 
 
-    srcRA = (kidscat['x_arcmin']/60.0) + 150.0
-    srcDEC = kidscat['y_arcmin']/60.0
-    
+    #srcRA = (kidscat['x_arcmin']/60.0) + 150.0
+    #srcDEC = kidscat['y_arcmin']/60.0
+    srcRA = kidscat['ra_gal']
+    srcDEC = kidscat['dec_gal']
+        
     srcNr = np.arange(srcRA.size, dtype=np.float64)
 
     w = np.ones(srcNr.size, dtype=np.float64)
     w = np.transpose(np.array([w for blind in blindcats]))
-    srcPZ = kidscat['z_photometric']
+    srcPZ = kidscat['z_cgal']
     tile = np.empty(srcNr.size, dtype=object)
-    for i in range(10):
-        for j in range(10):
-            cond = (srcRA > i+150.0) & (srcRA < i+1+150.0) & (srcDEC > j) & (srcDEC < j+1)
-            tile[cond] = path_kidscats.split('/', -1)[-1]+'-'+str(i*10+j)
+    
+    srcRAlims = [np.around(np.amin(srcRA)), np.around(np.amax(srcRA))]
+    srcDEClims = [np.around(np.amin(srcDEC)), np.around(np.amax(srcDEC))]
+    Ntiles_RA = int(srcRAlims[1]-srcRAlims[0])
+    Ntiles_DEC = int(srcDEClims[1]-srcDEClims[0])
+    
+    for i in range(Ntiles_RA):
+        for j in range(Ntiles_DEC):
+            #cond = (srcRA > i+150.0) & (srcRA < i+1+150.0) & (srcDEC > j) & (srcDEC < j+1)
+            #tile[cond] = path_kidscats.split('/', -1)[-1]+'-'+str(i*10+j)
+            cond = (srcRAlims[0]+i < srcRA) & (srcRA < srcRAlims[0]+i+1) & (srcDEClims[0]+j < srcDEC) & (srcDEC < srcDEClims[0]+j+1)
+            tile[cond] = path_kidscats.split('/', -1)[-1]+'-'+str(i*Ntiles_RA + j)
+    
 
     srcm = np.zeros(srcNr.size, dtype=np.float64) # The multiplicative bias m
 
-    e1 = np.transpose(np.array([kidscat['eps_obs1'] for blind in blindcats]))
-    e2 = np.transpose(np.array([kidscat['eps_obs2'] for blind in blindcats]))
+    e1 = np.transpose(np.array([-kidscat['gamma1'] for blind in blindcats]))
+    e2 = np.transpose(np.array([kidscat['gamma2'] for blind in blindcats]))
 
     srcmask = (srcm==0.0)
     for param in src_selection.keys():
@@ -1547,11 +1591,13 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
 
 # Calculate the projected distance (srcR) and the
 # shear (gamma_t and gamma_x) of every lens-source pair
-def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, com):
+def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, com, Runit, galweights_split):
 
     galRA, srcRA = np.meshgrid(galRAs, srcRA)
     galDEC, srcDEC = np.meshgrid(galDECs, srcDEC)
-
+    
+    #print('Da:', Dals)
+    
     # Defining the distance R and angle phi between the lens'
     # center and its surrounding background sources
     # Physical
@@ -1568,6 +1614,13 @@ def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, c
                                 np.cos(np.radians(galRA-srcRA))+\
                                 np.sin(np.radians(galDEC))*\
                                 np.sin(np.radians(srcDEC)))
+    
+    #print('srcR (before):', srcR)
+    if Runit == 'mps2':
+        # Change distance R into baryonic acceleration a_bar (in m/s^2)
+        logMb = galweights_split
+        srcR = (G.value * 10.**logMb)/(srcR)**2 * 3.08567758e16 # in m/s^2
+    #print('srcR (after):', srcR)
     
     # Masking all lens-source pairs that have a
     # relative distance beyond the maximum distance Rmax
@@ -1603,10 +1656,10 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     klist_t = np.array([klist for b in range(len(blindcats))]).T
     
     # Calculating the needed errors
-    if 'pc' not in Runit:
-        wk2list = wlist
-    else:
+    if ('pc' in Runit) or ('mps2' in Runit):
         wk2list = wlist*klist_t**2
+    else:
+        wk2list = wlist
 
     w_tot = np.sum(wlist, 0)
     w2_tot = np.sum(wlist**2, 0)
@@ -1616,11 +1669,12 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     wk2_tot = np.sum(wk2list, 0)
     w2k4_tot = np.sum(wk2list**2, 0)
-    if 'pc' not in Runit:
-        w2k2_tot = np.sum(wlist**2, 0)
-    else:
-        w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
 
+    if ('pc' in Runit) or ('mps2' in Runit):
+        w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+    else:
+        w2k2_tot = np.sum(wlist**2, 0)
+    
     wlist = []
 
     Nsrc_tot = np.sum(Nsrclist, 1)
@@ -1641,14 +1695,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     klist = np.ma.filled(np.ma.array(klist, mask = Rmask, fill_value = inf))
     klist = np.array([klist for b in range(len(blindcats))]).T
-    if 'pc' not in Runit:
-        for g in range(len(blindcats)):
-            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
-                                   insinphilist) * wk2list[:,:,g].T)
-            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
-                                   incosphilist) * wk2list[:,:,g].T)
-
-    else:
+    if ('pc' in Runit) or ('mps2' in Runit):
         for g in range(len(blindcats)):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
                                     insinphilist) * wk2list[:,:,g].T / \
@@ -1656,9 +1703,13 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
             gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
                                     incosphilist) * wk2list[:,:,g].T / \
                                     klist[:,:,g].T)
-
-
-
+    else:
+        for g in range(len(blindcats)):
+            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
+                                   insinphilist) * wk2list[:,:,g].T)
+            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
+                                   incosphilist) * wk2list[:,:,g].T)
+    
     gammat_tot = np.array([np.sum(gammatlists[g], 1) for g in range(len(blindcats))])
     gammax_tot = np.array([np.sum(gammaxlists[g], 1) for g in range(len(blindcats))])
 
@@ -1672,9 +1723,12 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
 
 # For each radial bin of each lens we calculate the output shears and weights
-def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
+def calc_covariance_output(incosphilist, insinphilist, klist, galweights, Runit):
     
-    galweights = np.reshape(galweights, [len(galweights), 1])
+    if 'mps2' not in Runit:
+        galweights = np.reshape(galweights, [len(galweights), 1])
+    else:
+        galweights = np.ones([len(galweights), 1])
 
     # For each radial bin of each lens we calculate
     # the weighted sum of the tangential and cross shear
@@ -1698,6 +1752,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
         fitscols.append(
             pyfits.Column(name='Bootstrap', format='20A', array=galIDlist))
     else:
+
         # This need to be figured out, it is causing pipeline to stall
         # if there is an empty lens list passed.
         if isinstance(galIDlist[0], six.string_types):
@@ -1749,9 +1804,9 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
     #	print
     if os.path.isfile(filename):
         os.remove(filename)
-        print('Overwritting old catalog:', filename)
+        print('Overwriting old catalog:', filename)
     else:
-        print('Writting new catalog:', filename)
+        print('Writing new catalog:', filename)
     print()
     tbhdu.writeto(filename)
 
@@ -1782,7 +1837,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
-    if 'pc' in Runit:
+    if ('pc' in Runit) or ('mps2' in Runit):
         filehead = '# Radius({0})	ESD_t(h{1:g}*M_sun/pc^2)' \
                    '   ESD_x(h{1:g}*M_sun/pc^2)' \
                    '    error(h{1:g}*M_sun/pc^2)^2	bias(1+K)' \
@@ -1813,7 +1868,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
-    fmt = ['%.4e' for i in range(data_out.shape[1])]
+    fmt = ['%.10e' for i in range(data_out.shape[1])]
     fmt[-1] = '%6d'
     np.savetxt(filename, data_out, delimiter=' '*4, fmt=fmt, header=filehead)
 
@@ -1891,9 +1946,12 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
         plt.title(plottitle,fontsize=title_size)
 
     # Define the labels for the plot
-    if 'pc' in Runit:
-        xlabel = r'Radial distance R (%s/h$_{%g}$)'%(Runit, h*100)
+    if ('pc' in Runit) or ('mps2' in Runit):
         ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h$_{%g}$ M$_{\odot}$/pc$^2$]'%(h*100)
+        if 'pc' in Runit:
+            xlabel = r'Radial distance R (%s/h$_{%g}$)'%(Runit, h*100)
+        elif 'mps2' in Runit:
+            xlabel = r'Expected baryonic acceleration M$_{\rm bar}$ (h$_{%g}$ m/s$^2$)'%(h*100)
     else:
         xlabel = r'Radial distance $\theta$ (%s)'%Runit
         ylabel = r'Shear $\gamma$'
@@ -1958,7 +2016,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
         errorl[errorl>=data_y] = ((data_y[errorl>=data_y])*0.9999999999)
 
 
-        if 'pc' in Runit:
+        if ('pc' in Runit) or ('mps2' in Runit):
             plt.ylim(0.1, 1e3)
         else:
             plt.ylim(1e-3, 1)

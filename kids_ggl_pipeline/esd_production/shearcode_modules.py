@@ -592,10 +592,15 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galDEClist = randomcat[colnames[2]][slice][Ncatmin:Ncatmax:step]
 
     #Defining the lens weights
-    weightname = list(lens_weights)[0]
+    weightname = lens_weights.keys()[0]
+    weightfile = lens_weights.values()[0]
     if 'No' not in weightname:
-        galweightlist = pyfits.open(
-            path_gamacat, ignore_missing_end=True)[1].data[weightname]
+        if weightfile == 'self':
+            galweightlist = gamacat[weightname]
+        else:
+            print('Using %s from %s'%(weightname, weightfile))
+            galweightlist = pyfits.open(weightfile, \
+                        ignore_missing_end=True)[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
 

@@ -637,26 +637,35 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
 
         # The difference in RA and DEC between the field and the lens centers
         #dRA = catRA-galRAlist
-        #dDEC = catDEC-galDEClist
+        dDEC = catDEC-galDEClist
+        dRA = (catRA-galRAlist)*np.cos(galDEClist)
         
+        """
+        # Needs to be revisited and tested! It seems that only inclusion of cos(dec) seems to
+        # mathematically solve the problem.
         cRA = np.radians(catRA)
         cDEC = np.radians(catDEC)
         
         galRA = np.radians(galRAlist)
         galDEC = np.radians(galDEClist)
         
-        x = np.cos(-cDEC)*np.cos(galDEC)*np.cos(galRA) - np.sin(cDEC)*np.sin(galDEC)
-        y = np.sin(-cDEC)*np.cos(galDEC)*np.cos(galRA) + np.cos(-cDEC)*np.sin(galDEC)
+        cosc = np.sin(cDEC)*np.sin(galDEC) + np.cos(cDEC)*np.cos(galDEC)*np.cos(galRA-cRA)
+        x = (np.cos(galDEC)*np.sin(galRA-cRA))/cosc
+        y = (np.cos(cDEC)*np.sin(galDEC) + np.sin(cDEC)*np.cos(galDEC)*np.cos(galRA-cRA))/cosc
+
 
         lat_out = np.arcsin(y)
-        lon_out = -np.sign(galRA)*np.arccos(x)#-np.sign(galRA)*np.arccos(x/np.cos(lat_out))
+        lon_out = np.arccos(x)
 
         lat_out = np.degrees(lat_out)
         lon_out = np.degrees(lon_out)
         
+        #dRA = catRA - lon_out
+        #dDEC = catDEC - lat_out
+        """
         # Masking the lenses that are outside the field
-        #coordmask = (abs(dRA) <= 0.5) & (abs(dDEC) <= 0.5)
-        coordmask = (abs(lon_out) <= 0.5) & (abs(lat_out) <= 0.5)
+        coordmask = (abs(dRA) <= 0.5) & (abs(dDEC) <= 0.5)
+        #coordmask = (abs(lon_out) <= 0.5) & (abs(lat_out) <= 0.5)
         galIDs = (galIDlist[coordmask])
         name = kidscoord[kidscat][2]
 

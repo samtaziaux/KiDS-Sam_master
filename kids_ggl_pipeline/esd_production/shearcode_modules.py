@@ -521,10 +521,15 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
 
 
     #Defining the lens weights
-    weightname = list(lens_weights)[0]
+    weightname = lens_weights.keys()[0]
+    weightfile = lens_weights.values()[0]
     if 'No' not in weightname:
-        galweightlist = pyfits.open(
-            path_gamacat, ignore_missing_end=True)[1].data[weightname]
+        if weightfile == 'self':
+            galweightlist = gamacat[weightname]
+        else:
+            print('Using %s from %s'%(weightname, weightfile))
+            galweightlist = pyfits.open(weightfile, \
+                ignore_missing_end=True)[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
 
@@ -665,18 +670,11 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
 
         # Defining the distance R between the lens center
         # and its surrounding background sources
+        theta = vincenty_sphere_dist(np.radians(galRAlist), np.radians(galDEClist), np.radians(catRA), np.radians(catDEC))
         if com == False:
-            catR = Dallist*np.arccos(np.cos(np.radians(galDEClist))*\
-                                     np.cos(np.radians(catDEC))*\
-                                     np.cos(np.radians(galRAlist-catRA))+\
-                                     np.sin(np.radians(galDEClist))*\
-                                     np.sin(np.radians(catDEC)))
+            catR = Dallist*theta
         if com == True:
-            catR = Dcllist*np.arccos(np.cos(np.radians(galDEClist))*\
-                                     np.cos(np.radians(catDEC))*\
-                                     np.cos(np.radians(galRAlist-catRA))+\
-                                     np.sin(np.radians(galDEClist))*\
-                                     np.sin(np.radians(catDEC)))
+            catR = Dcllist*theta
         
         coordmask = (catR < Rmax)
 
@@ -1208,20 +1206,14 @@ def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, c
 
     # Defining the distance R and angle phi between the lens'
     # center and its surrounding background sources
+    
+    theta = vincenty_sphere_dist(np.radians(galRA), np.radians(galDEC), np.radians(srcRA), np.radians(srcDEC))
     # Physical
     if com == False:
-        srcR = Dals * np.arccos(np.cos(np.radians(galDEC))*\
-                                np.cos(np.radians(srcDEC))*\
-                                np.cos(np.radians(galRA-srcRA))+\
-                                np.sin(np.radians(galDEC))*\
-                                np.sin(np.radians(srcDEC)))
+        srcR = Dals * theta
     # Comoving
     if com == True:
-        srcR = Dcls * np.arccos(np.cos(np.radians(galDEC))*\
-                                np.cos(np.radians(srcDEC))*\
-                                np.cos(np.radians(galRA-srcRA))+\
-                                np.sin(np.radians(galDEC))*\
-                                np.sin(np.radians(srcDEC)))
+        srcR = Dcls * theta
     
     # Masking all lens-source pairs that have a
     # relative distance beyond the maximum distance Rmax
@@ -1235,9 +1227,7 @@ def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, c
     
     # Calculation the sin/cos of the angle (phi)
     # between the gal and its surrounding galaxies
-    theta = np.arccos(np.sin(np.radians(galDEC))*np.sin(np.radians(srcDEC))+\
-                      np.cos(np.radians(galDEC))*np.cos(np.radians(srcDEC))*\
-                      np.cos(np.radians(galRA-srcRA))) # in radians
+    theta = vincenty_sphere_dist(np.radians(galRA), np.radians(galDEC), np.radians(srcRA), np.radians(srcDEC))
     incosphi = ((-np.cos(np.radians(galDEC))*(np.arctan(np.tan(np.radians(galRA-srcRA)))))**2-\
                 (np.radians(galDEC-srcDEC))**2)/(theta)**2
     insinphi = 2.0*(-np.cos(np.radians(galDEC))*\
@@ -1807,7 +1797,32 @@ def plot_covariance_matrix(filename, plottitle1, plottitle2, plotstyle,
     return
 
 
-
+def vincenty_sphere_dist(lon1, lat1, lon2, lat2):
+    """
+    Vincenty formula for angular distance on a sphere: stable at poles and
+    antipodes but more complex/computationally expensive.
+    Note that this is the only version actually used in the `AngularSeparation`
+    classes, so the other `*_spher_dist` functions are only for possible
+    future internal use.
+    Inputs must be in radians.
+    
+    Adapted from astropy to use the numpy instead of math package!
+    """
+    #FIXME: array: use numpy functions
+    from numpy import arctan2, sin, cos
+    
+    sdlon = sin(lon2 - lon1)
+    cdlon = cos(lon2 - lon1)
+    slat1 = sin(lat1)
+    slat2 = sin(lat2)
+    clat1 = cos(lat1)
+    clat2 = cos(lat2)
+    
+    num1 = clat2 * sdlon
+    num2 = clat1 * slat2 - slat1 * clat2 * cdlon
+    denominator = slat1 * slat2 + clat1 * clat2 * cdlon
+    
+    return arctan2((num1 ** 2 + num2 ** 2) ** 0.5, denominator)
 
 
 

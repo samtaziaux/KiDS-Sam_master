@@ -448,7 +448,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             e1_varlist = np.hstack([e1_varlist, e1.T])
             e2_varlist = np.hstack([e2_varlist, e2.T])
             srcNr, srcRA, srcDEC, w, srcPZ, e1, e2, srcm, tile = \
-                [[] for i in range(9)]
+                [[] for j in range(9)]
 
     # Calculating the variance of the ellipticity for this source selection
     variance = shear.calc_variance(e1_varlist, e2_varlist, w_varlist)

@@ -75,6 +75,7 @@ There are two major things the pipeline can do for you:
 
         kids_ggl -c <config_file> --esd
 
+####  Missing from this version:
 **b)** Estimate halo model parameters from the lensing signal. To do this, type:
 
         kids_ggl -c <config_file> --sampler
@@ -107,6 +108,12 @@ If you have any questions, please (preferably) raise an issue in `github`, or co
 
 ---
 Update log:
+
+**2018 Oct 19** - Release v1.7lite. Features:
+- Support for all KiDS catalogues, except DR1/DR2
+- The user MUST specify the names of the required KiDS columns in the configuration file. See configuration file for details.
+- Bug fixes, most importantly RA=0 issues and galaxy selection at high declinations.
+- Only esd production part, for modelling use v1.7.
 
 **2018 May 7** - Release v1.6.3. Features:
 - Fixed bug in the Tinker halo bias function used in the halo model. 

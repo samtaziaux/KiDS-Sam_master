@@ -40,12 +40,8 @@ inf = np.inf
 def define_runparams(purpose, lens_binning, ncores, blindcats):
 
     # The number of catalogues that will be ran
-    if 'random' in purpose:
-        nruns = 100
-        if ncores == 0:
-            nruns = 0
-    else:
-        nruns = 1
+    
+    nruns = 1
 
     # Binnning information of the groups
     obsbins = shear.define_obsbins(1, lens_binning, [], [])
@@ -72,73 +68,28 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
                    blindcat, blindcats, config_file):
 
     # The shear calculation starts here
-    directory = os.path.dirname(os.path.realpath(__file__)) #os.getcwd()
-    indirectory = os.listdir('.')
-    #path_shearcodes = 'esd_production'
-    if 'esd_production' in directory:
-        path_shearcodes = directory + '/'
-    if 'esd_production' in indirectory:
-        path_shearcodes = 'esd_production'
-
-    # it's easier to debug if we don't use multiprocessing, so it will
-    # only be used if it is asked for
-
-    if nruns > 1:
-        #pool = mp.Pool(processes=nruns)
-        #out = [pool.apply_async(shearcov.main,
-        #                        args=(nsplit,nsplits,nobsbin,blindcat,
-        #                              config_file, 0))
-        #       for n in xrange(nruns)]
-        #pool.close()
-        #pool.join()
-        #for i in out:
-        #    i.get()
-
-        # This is only for randoms, and because child processes are not allowed
-        # to spawn new child processes, this needs to be run like this.
-        for n in xrange(nruns):
-            out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
-
-    else:
-        out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
+    
+    out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     
     # Combine the splits according to the purpose
     
 
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
-        #ps = []
-        #codename = '%scombine_splits.py'%(path_shearcodes)
-        #runname = 'python -W ignore %s'%codename
-        #runname += ' %i %i %i %s %s &' \
-                #%(nsplit, nsplits, nobsbin, blindcat, config_file)
-        #p = sub.Popen(shlex.split(runname))
-        #ps.append(p)
-        #for p in ps:
-            #p.wait()
         combine_splits.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     
     # Stacking the lenses into an ESD profile
     if ('bootstrap' in purpose) or ('catalog' in purpose):
-        #runblinds('%sstack_shear+bootstrap.py' \
-                  #%(path_shearcodes), blindcats,
-                    #nsplit, nsplits, nobsbin, config_file, purpose)
         runblinds(stack_shearboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
     
     # Creating the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
-        #runblinds('%scombine_covariance+bootstrap.py' \
-                  #%(path_shearcodes), blindcats,
-                    #nsplit, nsplits, nobsbin, config_file, purpose)
         runblinds(combine_covboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
     
     # Plotting the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
-        #runblinds('%splot_covariance+bootstrap.py' \
-                  #%(path_shearcodes), blindcats,
-                    #nsplit, nsplits, nobsbin, config_file, 'covariance')
         runblinds(plot_covboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
     return
@@ -160,24 +111,6 @@ def runblinds(func, blindcats, nsplit, nsplits, nobsbin, config_file, purpose):
         if len(blindcats) > 1:
             pool = mp.Pool(len(blindcats))
 
-        #if 'bootstrap' in purpose:
-            #ps = []
-            #for blindcat in blindcats:
-                #runname = 'python -W ignore %s'%codename
-                #runname += ' %i %i %i %s %s &' \
-                    #%(nsplit, nsplits, nobsbin, blindcat, config_file)
-                #p = sub.Popen(shlex.split(runname))
-                #p.wait()
-        #else:
-            #ps = []
-            #for blindcat in blindcats:
-                #runname = 'python -W ignore %s'%codename
-                #runname += ' %i %i %i %s %s &' \
-                    #%(nsplit, nsplits, nobsbin, blindcat, config_file)
-                #p = sub.Popen(shlex.split(runname))
-                #ps.append(p)
-            #for p in ps:
-                #p.wait()
         if len(blindcats) > 1:
             out = [pool.apply_async(func, args=(nsplit,nsplits,nobsbin,
                                             blindcat,config_file, fn))
@@ -198,12 +131,17 @@ def run_esd(config_file):
           invalid='ignore')
           
     # Input for the codes
-    kids_path, gama_path, colnames, specz_file, Om, Ol, Ok, h, z_epsilon, \
+    kids_path, gama_path, colnames, kidscolnames, specz_file, m_corr_file, Om, Ol, Ok, h, z_epsilon, \
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, wizz, n_boot, \
+        lens_selection, src_selection, cat_version, n_boot, \
         cross_cov, com, blindcats = \
             esd_utils.read_config(config_file)
+
+    if cat_version == 2:
+        print('\n \n \n \n \n')
+        print('KiDS-DR1/2 is no longer supported, please use v1.7')
+        raise SystemExit()
 
     print('\n \n \n \n \n')
     print('Running KiDS-GGL pipeline - signal extraction')

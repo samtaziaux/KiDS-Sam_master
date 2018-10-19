@@ -31,10 +31,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
+        cat_version, path_Rbins, name_Rbins, Runit, path_output, path_splits, \
         path_results, purpose, O_matter, O_lambda, Ok, h, filename_addition, Ncat, \
         splitslist, blindcats, blindcat, blindcatnum, path_kidscats, \
-        path_gamacat, colnames, specz_file, z_epsilon, n_boot, cross_cov, com = \
+        path_gamacat, colnames, kidscolnames, specz_file, m_corr_file, z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 
@@ -60,11 +60,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         Nobsbins, lens_selection, lens_binning, src_selection, lens_weights,
         name_Rbins, O_matter, O_lambda, Ok, h)
 
-    if ('random' or 'star') in purpose:
-        filename_var = '%i_%s'%(Ncat, filename_var)
-        # Ncat is the number of existing randoms
-        print('Number of existing random catalogs:', Ncat)
-
     filenameESD = shear.define_filename_results(
         path_results, purpose, filename_var, filename_addition,
         Nsplit, blindcat)
@@ -75,9 +70,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         'shearcatalog', centering, 'None', -999, -999, {'None': np.array([])},
         {'None': np.array([])}, src_selection, ['None', ''], name_Rbins,
         O_matter, O_lambda, Ok, h)
-    if ('random' in purpose):
-        # Ncat is the number of existing randoms
-        filename_var = '%i_%s'%(Ncat, filename_var)
 
     # Importing the relevant data from the shear catalog
     shearcatname = shear.define_filename_results(
@@ -94,7 +86,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, galDEClist, \
     galweightlist, galZlist, Dcllist, Dallist = \
         shear.import_data(
-            path_Rbins, Runit, path_gamacat, colnames, path_kidscats,
+            path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_kidscats,
             centering, purpose.replace('catalog', 'bootstrap'), Ncat,
             O_matter, O_lambda, Ok, h, lens_weights, filename_addition,
             cat_version, com)
@@ -112,11 +104,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         purpose.replace('catalog',''), centering, binname, 'binnum', Nobsbins,
         lens_selection, lens_binning, src_selection, lens_weights, name_Rbins,
         O_matter, O_lambda, Ok, h)
-
-    if 'random' in purpose:
-        filename_var = '{}_{}'.format(Ncat, filename_var)
-        # Ncat is the number of existing randoms
-        print('Number of existing random catalogs:', Ncat)
 
     # ID of all galaxies in the shear catalog
     galIDlist = sheardat['ID']
@@ -327,10 +314,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             src_selection)
 
         # What plotting style is used (lin or log)
-        if 'random' in purpose:
-            plotstyle = 'lin'
-        else:
-            plotstyle = 'log'
+        plotstyle = 'log'
         if 'No' in binname:
             plotlabel = r'ESD$_t$'
         else:

@@ -629,12 +629,6 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
 
     catmatch = dict()
     # Adding the lenses to the list that are inside each field
-    #import matplotlib.pyplot as pl
-    #import matplotlib.patches as patches
-    #fig,ax = pl.subplots(1)
-    #ax.scatter(galRAlist, galDEClist, color='black', marker='.')
-    #ax.set_xlim([320, 360])
-    #ax.set_ylim([-35, -28])
     for kidscat in kidscoord.keys():
 
         # The RA and DEC of the KiDS catalogs
@@ -645,13 +639,9 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         dRA = catRA-galRAlist
         dDEC = catDEC-galDEClist
         
-        #rect = patches.Rectangle((catRA-0.5,catDEC-0.5),1.0/np.cos(np.radians(catDEC)),1.0,linewidth=1,edgecolor='blue',facecolor='none')
-        #ax.add_patch(rect)
-        
         # Masking the lenses that are outside the field
         #coordmask = (abs(dRA) < 0.5) & (abs(dDEC) < 0.5)
-        coordmask = (abs(dRA)*np.cos(np.radians(galDEClist)) <= 0.5) & (abs(dDEC) <= 0.5)
-        ax.scatter(galRAlist[coordmask], galDEClist[coordmask], marker='.')
+        coordmask = (abs(dRA)*np.cos(np.radians(galDEClist)) < 0.5) & (abs(dDEC) < 0.5)
         galIDs = (galIDlist[coordmask])
         name = kidscoord[kidscat][2]
 
@@ -666,7 +656,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         if len(galIDs)>0:
             catmatch[kidscat] = np.array([])
             catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
-    #pl.show()
+  
     # The list of fields with lens centers in them
     kidscats = list(catmatch)
     # The galaxies that have their centers in a field

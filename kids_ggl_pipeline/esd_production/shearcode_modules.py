@@ -629,6 +629,12 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
 
     catmatch = dict()
     # Adding the lenses to the list that are inside each field
+    #import matplotlib.pyplot as pl
+    #import matplotlib.patches as patches
+    #fig,ax = pl.subplots(1)
+    #ax.scatter(galRAlist, galDEClist, color='black', marker='.')
+    #ax.set_xlim([320, 360])
+    #ax.set_ylim([-35, -28])
     for kidscat in kidscoord.keys():
 
         # The RA and DEC of the KiDS catalogs
@@ -636,36 +642,16 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         catDEC = kidscoord[kidscat][1]
 
         # The difference in RA and DEC between the field and the lens centers
-        #dRA = catRA-galRAlist
+        dRA = catRA-galRAlist
         dDEC = catDEC-galDEClist
-        dRA = (catRA-galRAlist)*np.cos(galDEClist)
         
-        """
-        # Needs to be revisited and tested! It seems that only inclusion of cos(dec) seems to
-        # mathematically solve the problem.
-        cRA = np.radians(catRA)
-        cDEC = np.radians(catDEC)
+        #rect = patches.Rectangle((catRA-0.5,catDEC-0.5),1.0/np.cos(np.radians(catDEC)),1.0,linewidth=1,edgecolor='blue',facecolor='none')
+        #ax.add_patch(rect)
         
-        galRA = np.radians(galRAlist)
-        galDEC = np.radians(galDEClist)
-        
-        cosc = np.sin(cDEC)*np.sin(galDEC) + np.cos(cDEC)*np.cos(galDEC)*np.cos(galRA-cRA)
-        x = (np.cos(galDEC)*np.sin(galRA-cRA))/cosc
-        y = (np.cos(cDEC)*np.sin(galDEC) + np.sin(cDEC)*np.cos(galDEC)*np.cos(galRA-cRA))/cosc
-
-
-        lat_out = np.arcsin(y)
-        lon_out = np.arccos(x)
-
-        lat_out = np.degrees(lat_out)
-        lon_out = np.degrees(lon_out)
-        
-        #dRA = catRA - lon_out
-        #dDEC = catDEC - lat_out
-        """
         # Masking the lenses that are outside the field
-        coordmask = (abs(dRA) <= 0.5) & (abs(dDEC) <= 0.5)
-        #coordmask = (abs(lon_out) <= 0.5) & (abs(lat_out) <= 0.5)
+        #coordmask = (abs(dRA) < 0.5) & (abs(dDEC) < 0.5)
+        coordmask = (abs(dRA)*np.cos(np.radians(galDEClist)) <= 0.5) & (abs(dDEC) <= 0.5)
+        ax.scatter(galRAlist[coordmask], galDEClist[coordmask], marker='.')
         galIDs = (galIDlist[coordmask])
         name = kidscoord[kidscat][2]
 
@@ -680,7 +666,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         if len(galIDs)>0:
             catmatch[kidscat] = np.array([])
             catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
-
+    #pl.show()
     # The list of fields with lens centers in them
     kidscats = list(catmatch)
     # The galaxies that have their centers in a field

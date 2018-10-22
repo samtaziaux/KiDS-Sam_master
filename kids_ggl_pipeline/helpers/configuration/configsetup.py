@@ -62,7 +62,6 @@ def append_entry(line, setup):
 def check_entry_types(setup):
     for key, value in setup.items():
         valid = _valid_entries[key]
-        print(key, value, valid)
         if isinstance(valid, type):
             try:
                 setup[key] = valid(value)

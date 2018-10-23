@@ -74,7 +74,7 @@ try:
     from itertools import izip
 except ImportError:
     izip = zip
-from numpy import arctan, arctanh, arccos, array, cos, \
+from numpy import append, arctan, arctanh, arccos, array, cos, \
                   hypot, iterable, log, log10, logspace, meshgrid, \
                   ones, pi, sin, sum as nsum, transpose, zeros
 from scipy.integrate import cumtrapz, trapz
@@ -468,24 +468,19 @@ def rho_sharp(x, tau, delta_c, rho_bg):
 #-----------------------------------#
 
 
-def uk(kx, mx, rx, c, z, rho_bg, overdensity=200):
+def uk(kx, mx, rx, c, rho_bg, overdensity=200):
     """Fourier transform of the NFW profile
 
     This function takes a different set of parameters from other
     functions for convenience. Will try to change this later
     """
-    u_k = zeros((kx.size,mx.size))
     rs = rx / c
     dc = delta(c, overdensity)
-    for i in range(mx.size):
-        ki = kx * rs[i]
-        bs, bc = sici(ki)
-        asi, ac = sici((1+c[i]) * ki)
-        u_k[:,i] = 4*pi * rho_bg * dc[i] * rs[i]**3 \
-            * (sin(ki)*(asi-bs) - (sin(c[i]*ki) / ((1+c[i])*ki)) \
-               + (cos(ki) * (ac-bc))) \
-            / mx[i]
-    return u_k
+    k = rs * kx[:,None]
+    bs, bc = sici(k)
+    asi, ac = sici((1+c)*k)
+    return  4*pi * rho_bg * dc * rs**3 / mx \
+        * (sin(k)*(asi-bs) - sin(c*k)/((1+c)*k) + cos(k)*(ac-bc))
 
 
 #-----------------------------------#

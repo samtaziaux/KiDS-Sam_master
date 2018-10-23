@@ -146,8 +146,9 @@ def model(theta, R):
     concentration = c_concentration[0](mass_range, *c_concentration[1:])
     concentration_sat = s_concentration[0](mass_range, *s_concentration[1:])
 
-    mass_func = np.zeros((z.size, mass_range.size))
+    #mass_func = np.zeros((z.size, mass_range.size))
     rho_mean = np.zeros(z.size)
+    #print('mass_func =', mass_func.shape)
 
     # Calculation
     # Tinker10 should also be read from theta!
@@ -155,19 +156,32 @@ def model(theta, R):
     hmf = []
     cosmo_model = LambdaCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
-    for zi in z:
+    print('Load cosmology in {0:.2e} seconds'.format(time()-to))
+    to = time()
+    for i, zi in enumerate(z):
         transfer_params = \
             {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
              'lnk_max': setup['lnk_max'], 'dlnk': k_step, 'z': np.float64(zi)}
+        ti = time()
         hmf_temp = MassFunction(
             Mmin=setup['logM_min'], Mmax=setup['logM_max'], dlog10m=mstep,
             hmf_model=ff.Tinker10, delta_h=setup['delta'],
             delta_wrt=setup['delta_ref'], delta_c=1.686, **transfer_params)
         hmf_temp.update(cosmo_model=cosmo_model)
-        hmf.append(hmf_temp)
-        mass_func[i] = hmf[i].dndlnm
-        rho_mean[i] = hmf[i].mean_density0
-    print('rho_mean =', rho_mean, rho_mean.shape)
+        print('Loaded a mass function in {0:.2e} seconds'.format(time()-ti))
+        ti = time()
+        #hmf.append(hmf_temp)
+        hmf = np.append(hmf, hmf_temp)
+        print('appended to hmf in {0:.2e} seconds'.format(time()-ti))
+        #ti = time()
+        #hmf_temp.dndlnm
+        #print('calculated abundance in {0:.2e} seconds'.format(time()-ti))
+        #ti = time()
+        #mass_func[i] = hmf_temp.dndlnm
+        #print('appended abundance in {0:.2e} seconds'.format(time()-ti))
+        ti = time()
+        rho_mean[i] = hmf_temp.mean_density0
+        print('appended rho in {0:.2e} seconds'.format(time()-ti))
     print('setup mass function in {0:.2e} seconds'.format(time()-to))
 
     #omegab = hmf[0].cosmo.Ob0
@@ -218,7 +232,9 @@ def model(theta, R):
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
+    ti = time()
     mass_function = array([hmf_i.dndm for hmf_i in hmf])
+    print('loaded abundance in {0:.2e} seconds'.format(time()-ti))
     ngal = hod.nbar(mass_function, pop_g, mass_range)
     meff = hod.Mh_effective(
         mass_function, pop_g, mass_range, return_log=observable.is_log)

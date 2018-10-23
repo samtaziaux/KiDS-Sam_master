@@ -36,15 +36,16 @@ omegab          fixed     0.04860
 omegav          fixed     0.6911
 n               fixed     0.9667
 z               array     0.188,0.195
+h               fixed     0.7
 
 [hod/centrals/pointmass]
 logmstar        array     11.315
 point_norm      normal    1         0.2
 [hod/centrals/concentration]
 name            duffy08_crit
-cosmo.z         repeat
+cosmo.z
 fc              uniform     0.2     5       1
-cosmo.h         repeat
+cosmo.h
 [hod/centrals/mor]
 name            powerlaw
 logM0           fixed       14.0
@@ -62,9 +63,9 @@ bias            fixed       1
 
 [hod/satellites/concentration]
 name            duffy08_crit
-cosmo.z         repeat
+cosmo.z
 fcsat           fixed    1.0
-cosmo.h         repeat
+cosmo.h
 [hod/satellites/mor]
 name            double_powerlaw
 logM0           fixed       11.2
@@ -90,14 +91,14 @@ delta           200
 delta_ref       mean
 
 [output]
-esd_total         2,8E
-Mavg              2,E
+esd_total         8E
+Mavg              E
 
 [sampler]
-path_data            <data_folder_tree>
-data                 shearcovariance_bin_1_A.txt     0,1,4
-path_covariance      <covariance_folder_tree>
-covariance           shearcovariance_matrix_A.txt    4,6
+path_data            earlyscience_satellites
+data                 esd_*.txt     0,1,4
+path_covariance      earlyscience_satellites
+covariance           covariance.txt 4,6
 exclude              0,1
 output               halo_model_results/model_sz.fits
 sampler              emcee                    # MCMC sampler

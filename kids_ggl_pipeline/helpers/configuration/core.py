@@ -5,7 +5,7 @@ from itertools import count
 import numpy as np
 from six import string_types
 
-from . import confighod, configsampler
+from . import confighod, configsampler, configsetup
 from ...halomodel import nfw, nfw_stack, halo, halo_2, halo_2_mc
 from ...halomodel.observables import Observable
 from ...halomodel.selection import Selection
@@ -105,18 +105,6 @@ class ConfigSection(str):
                 output[1].append(fmt)
         return output
 
-    def append_entry_setup(self, line, setup):
-        """
-        `line` should be a `ConfigLine` object
-        """
-        for dtype in (int, float, str):
-            try:
-                setup[line.words[0]] = dtype(line.words[1])
-                break
-            except ValueError:
-                pass
-        return setup
-
     def append_parameters(
             self, names, parameters, priors, repeat, section_names,
             these_names, these_params, these_priors):
@@ -134,12 +122,17 @@ class ConfigSection(str):
             for i, p in enumerate(these_params):
                 parameters[i].append(p)
             for i, n, pr in zip(count(), these_names, these_priors):
+                # then the parameter is repeated from a previous section
                 if '.' in n:
-                    paramsection = '/'.join(n.split('.')[:-1])
+                    n = n.split('.')
+                    paramsection = '/'.join(n[:-1])
                     # the 3 here is to ignore observables, selection and
                     # ingredients but I need to find a better way to do it
                     j = section_names.index(paramsection) - 3
-                    jj = names[j].index(n.split('.')[-1])
+                    assert n[-1] in names[j], \
+                        'parameter {0} not found in section {1}'.format(
+                            n[-1], paramsection)
+                    jj = names[j].index(n[-1])
                     repeat.append([j,jj])
                     priors.append('repeat')
                     for ip in range(len(parameters)):
@@ -246,7 +239,7 @@ class ConfigFile(object):
                     starting)
                 these_names, these_params, these_priors, starting = new
             elif section == 'setup':
-                setup = section.append_entry_setup(line, setup)
+                setup = configsetup.append_entry(line, setup)
             elif section == 'output':
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':
@@ -254,6 +247,8 @@ class ConfigFile(object):
         parameters, names, repeat, nparams = \
             confighod.flatten_parameters(parameters, names, repeat)
         sampling = configsampler.add_defaults(sampling)
+        # add defaults and check types
+        setup = configsetup.check_setup(setup)
         hod_params = [
             'observables,selection,ingredients,parameters,setup'.split(','),
             [observables, selection, ingredients, parameters, setup]]

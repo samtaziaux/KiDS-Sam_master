@@ -13,6 +13,9 @@ def sampling_dict(line, sampling):
     assert len(words) >= 2, \
         'Value for quantity {0} not provided'.format(words[0])
     if words[0] in ('data', 'covariance'):
+        assert len(words) >= 3, \
+            'line {0} must have at least three entries ({1} instead)'.format(
+                line.line, len(line.line))
         path_label = 'path_{0}'.format(words[0])
         if path_label not in sampling:
             sampling[path_label] = ''
@@ -33,6 +36,9 @@ def sampling_dict(line, sampling):
             except ValueError:
                 pass
     else:
+        assert len(words) >= 2, \
+            'line {0} must have at least two entries ({1} instead)'.format(
+                line.line, len(line.line))
         for dtype in (int, float, str):
             try:
                 sampling[words[0]] = dtype(words[1])

@@ -109,7 +109,10 @@ If you have any questions, please (preferably) raise an issue in `github`, or co
 ---
 Update log:
 
-**2018 Oct 19** - Release v1.7lite. Features:
+**2018 Oct 23** - Release v1.7.1-lite. Features:
+- Solved issue with module imports
+
+**2018 Oct 19** - Release v1.7-lite. Features:
 - Support for all KiDS catalogues, except DR1/DR2
 - The user MUST specify the names of the required KiDS columns in the configuration file. See configuration file for details.
 - Bug fixes, most importantly RA=0 issues and galaxy selection at high declinations.

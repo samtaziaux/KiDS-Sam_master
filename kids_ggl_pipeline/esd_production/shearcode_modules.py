@@ -638,6 +638,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         # The difference in RA and DEC between the field and the lens centers
         dRA = catRA-galRAlist
         dDEC = catDEC-galDEClist
+        dRA = (dRA + 180.0) % 360.0 - 180.0
         
         # Masking the lenses that are outside the field
         #coordmask = (abs(dRA) < 0.5) & (abs(dDEC) < 0.5)
@@ -1228,11 +1229,13 @@ def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, c
     
     # Calculation the sin/cos of the angle (phi)
     # between the gal and its surrounding galaxies
+    dRA = galRA-srcRA
+    dRA = (dRA + 180.0) % 360.0 - 180.0
     theta = vincenty_sphere_dist(np.radians(galRA), np.radians(galDEC), np.radians(srcRA), np.radians(srcDEC))
-    incosphi = ((-np.cos(np.radians(galDEC))*(np.arctan(np.tan(np.radians(galRA-srcRA)))))**2-\
+    incosphi = ((-np.cos(np.radians(galDEC))*(np.arctan(np.tan(np.radians(dRA)))))**2-\
                 (np.radians(galDEC-srcDEC))**2)/(theta)**2
     insinphi = 2.0*(-np.cos(np.radians(galDEC))*\
-                (np.arctan(np.tan(np.radians(galRA-srcRA)))))*np.radians(galDEC-srcDEC)/(theta)**2
+                (np.arctan(np.tan(np.radians(dRA)))))*np.radians(galDEC-srcDEC)/(theta)**2
 
     incosphi = incosphi.T
     insinphi = insinphi.T

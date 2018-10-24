@@ -119,7 +119,7 @@ def model(theta, R):
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter = theta
 
-    sigma8, h, omegam, omegab, omegav, n, z, h = cosmo
+    sigma8, h, omegam, omegab, omegav, n, z = cosmo
 
     # HMF set up parameters
     # all of this can happen before the model is called, to save some
@@ -233,7 +233,7 @@ def model(theta, R):
         uk_s = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin[:,None],
             concentration[:,None], rho_bg[:,None,None], setup['delta'])
-        uk_s = uk_s/uk_s[:,0]
+        uk_s = uk_s/uk_s[:,0][:,None]
     else:
         uk_s = np.ones((nbins,k_range_lin.size,mass_range.size))
 

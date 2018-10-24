@@ -297,7 +297,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                         kidscatname, 0, \
                                                         filename_addition, \
                                                         blindcat)
-                shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
+                if len(srcNr)==0:
+                    print('\033[91m' + 'No sources in this tile ...' + '\033[0m')
+                    continue
+                else:
+                    shear.write_catalog(filename, srcNr, Rbins, Rcenters, nRbins, \
                                     Rconst, output, outputnames, variance, \
                                     purpose, e1, e2, w, srcm, blindcats)
 

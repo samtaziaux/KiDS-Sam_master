@@ -990,7 +990,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
         if 'ID' in binname:
             Nobsbins = len(list(lens_binning))
             if len(lenssel_binning) > 0:
-                print('Lens binning: Lenses divided in {0:i} lens-ID bins'\
+                print('Lens binning: Lenses divided in {0} lens-ID bins'\
                       .format(Nobsbins))
 
         else:
@@ -1019,7 +1019,7 @@ def define_obsbins(binnum, lens_binning, lenssel_binning, gamacat,
 
                 
                 print()
-                print('Lens binning: Lenses divided in {0:i} {1}-bins'\
+                print('Lens binning: Lenses divided in {0} {1}-bins'\
                       .format(Nobsbins, binname))
                 print('{} Min:          Max:          Mean:'.format(binname))
                 for b in range(Nobsbins):

@@ -8,7 +8,8 @@ _default_entries = {
     'lnk_min': 'minimum value for lnk in the power spectrum calculations',
     'logM_bins': 'number of (log-spaced) bins in halo mass',
     'logM_max': 'maximum value of logM for halo mass function calculations',
-    'logM_min': 'minimum value of logM for halo mass function calculations'
+    'logM_min': 'minimum value of logM for halo mass function calculations',
+    'transfer': 'name of the transfer function used by hmf'
     }
 
 _default_values = {
@@ -18,6 +19,7 @@ _default_values = {
     'logM_bins': 200,
     'logM_max': 16.,
     'logM_min': 5.,
+    'transfer':'EH',
     }
 
 _necessary_entries = {
@@ -35,7 +37,8 @@ _valid_entries = {
     'lnk_max': float,
     'logM_bins': int,
     'logM_min': float,
-    'logM_max': float
+    'logM_max': float,
+    'transfer': str
     }
 
 

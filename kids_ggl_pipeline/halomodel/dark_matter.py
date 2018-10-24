@@ -94,15 +94,13 @@ def NFW_f(z, rho_mean, f, m_x, r_x, k_x, c=None):
 
 
 def miscenter(p_off, r_off, m_x, r_x, k_x, c=None):
-    
     u_k = np.zeros((k_x.size,m_x.size))
     if c is None:
         c = Con(z, m_x, f)
     else:
         c = c * np.ones(m_x.size)
-    for i in xrange(m_x.size):
-        r_s = NFW_RS(c[i], r_x[i])
-        u_k[:,i] = (1.0 - p_off + p_off*np.exp(-0.5*(k_x**2.0)*(r_s*r_off)**2.0))
+    rs = NFW_RS(c, r_x)
+    u_k = 1 - p_off + p_off*np.exp(-0.5*(k_x[:,None]**2)*(rs*r_off)**2)
     return u_k
 
 

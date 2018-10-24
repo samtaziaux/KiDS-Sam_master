@@ -76,3 +76,9 @@ def logfunc(func):
             return func(*args, **kwargs)
         return 10**func(*args, **kwargs)
     return decorated
+
+def inMpc(a):
+    return
+
+def array(a):
+    return

@@ -38,7 +38,7 @@ _valid_entries = {
     'logM_bins': int,
     'logM_min': float,
     'logM_max': float,
-    'transfer': str
+    'transfer': ('CAMB', 'EH')
     }
 
 

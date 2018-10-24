@@ -148,16 +148,12 @@ def model(theta, R):
 
     #mass_func = np.zeros((z.size, mass_range.size))
     rho_mean = np.zeros(z.size)
-    #print('mass_func =', mass_func.shape)
 
     # Calculation
     # Tinker10 should also be read from theta!
-    to = time()
     hmf = []
     cosmo_model = LambdaCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
-    print('Load cosmology in {0:.2e} seconds'.format(time()-to))
-    to = time()
     for i, zi in enumerate(z):
         transfer_params = \
             {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
@@ -166,23 +162,11 @@ def model(theta, R):
         hmf_temp = MassFunction(
             Mmin=setup['logM_min'], Mmax=setup['logM_max'], dlog10m=mstep,
             hmf_model=ff.Tinker10, delta_h=setup['delta'],
-            delta_wrt=setup['delta_ref'], delta_c=1.686, **transfer_params)
+            delta_wrt=setup['delta_ref'], delta_c=1.686,
+            transfer_model=setup['transfer'], **transfer_params)
         hmf_temp.update(cosmo_model=cosmo_model)
-        print('Loaded a mass function in {0:.2e} seconds'.format(time()-ti))
-        ti = time()
-        #hmf.append(hmf_temp)
-        hmf = np.append(hmf, hmf_temp)
-        print('appended to hmf in {0:.2e} seconds'.format(time()-ti))
-        #ti = time()
-        #hmf_temp.dndlnm
-        #print('calculated abundance in {0:.2e} seconds'.format(time()-ti))
-        #ti = time()
-        #mass_func[i] = hmf_temp.dndlnm
-        #print('appended abundance in {0:.2e} seconds'.format(time()-ti))
-        ti = time()
+        hmf.append(hmf_temp)
         rho_mean[i] = hmf_temp.mean_density0
-        print('appended rho in {0:.2e} seconds'.format(time()-ti))
-    print('setup mass function in {0:.2e} seconds'.format(time()-to))
 
     #omegab = hmf[0].cosmo.Ob0
     #omegac = hmf[0].cosmo.Om0-omegab
@@ -202,16 +186,13 @@ def model(theta, R):
 
     # interpolate selection function to the same grid as redshift and
     # observable to be used in trapz
-    to = time()
     if selection.filename == 'None':
         completeness = np.ones_like(hod_observable)
     else:
         completeness = np.array(
             [selection.interpolate([zi]*obs.size, obs, method='linear')
              for zi, obs in zip(z[:,0], hod_observable)])
-    print('interpolate completeness in {0:.2e} seconds'.format(time()-to))
 
-    to = time()
     if ingredients['centrals']:
         pop_c = hod.number(
             hod_observable, mass_range, c_mor[0], c_scatter[0],
@@ -219,7 +200,6 @@ def model(theta, R):
             obs_is_log=observable.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
-    print('centrals HOD in {0:.2e} seconds'.format(time()-to))
 
     if ingredients['satellites']:
         pop_s = hod.number(
@@ -232,9 +212,7 @@ def model(theta, R):
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
-    ti = time()
     mass_function = array([hmf_i.dndm for hmf_i in hmf])
-    print('loaded abundance in {0:.2e} seconds'.format(time()-ti))
     ngal = hod.nbar(mass_function, pop_g, mass_range)
     meff = hod.Mh_effective(
         mass_function, pop_g, mass_range, return_log=observable.is_log)
@@ -244,14 +222,12 @@ def model(theta, R):
     # damping of the 1h power spectra at small k
     F_k1 = f_k(k_range_lin)
     # Fourier Transform of the NFW profile
-    to = time()
     if ingredients['centrals']:
         uk_c = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin[:,None],
             concentration[:,None], rho_bg[:,None,None], setup['delta'])
     else:
         uk_c = np.ones((nbins,k_range_lin.size,mass_range.size))
-    print('Fourier transform in {0:.2e} seconds'.format(time()-to))
     # and of the NFW profile of the satellites
     if ingredients['satellites']:
         uk_s = nfw.uk(
@@ -263,7 +239,6 @@ def model(theta, R):
 
     # If there is miscentring to be accounted for
     if ingredients['miscentring']:
-        to = time()
         p_off, r_off = c_miscent[1:]
         if not iterable(p_off):
             p_off = array([p_off]*nbins)
@@ -274,20 +249,17 @@ def model(theta, R):
                        k_range_lin, concentration)
              for rvir_range_lin_i, p_off_i, r_off_i
              in zip(rvir_range_lin, p_off, r_off)])
-        print('miscentring in {0:.2e} seconds'.format(time()-to))
     uk_c = uk_c / uk_c[:,0][:,None]
 
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*k_range_lin.size).T
     if ingredients['twohalo']:
-        to = time()
         Pg_2h = bias * array(
             [TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
                      mass_range)[0]
              for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
              in zip(rvir_range_lin, hmf, ngal, pop_g)])
-        print('2-halo in {0:.2e} seconds'.format(time()-to))
         # unused but not removing as we might want to use it later
         #bias_out = bias.T[0] * array(
             #[TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
@@ -298,12 +270,10 @@ def model(theta, R):
         Pg_2h = np.zeros((nbins,setup['lnk_bins']))
 
     if ingredients['centrals']:
-        to = time()
         Pg_c = F_k1 * array(
             [GM_cen_analy(hmf_i, uk_c_i, rho_i, pop_c_i, ngal_i, mass_range)
              for rho_i, hmf_i, pop_c_i, ngal_i, uk_c_i
              in zip(rho_bg, hmf, pop_c, ngal, uk_c)])
-        print('Centrals power spectra in {0:.2e} seconds'.format(time()-to))
     else:
         Pg_c = np.zeros((nbins,setup['lnk_bins']))
 
@@ -322,24 +292,20 @@ def model(theta, R):
                for Pg_k_i in zip(Pg_k)]
 
     # correlation functions
-    to = time()
     xi2 = np.zeros((nbins,rvir_range_3d.size))
     for i in range(nbins):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
-    print('correlation functions in {0:.2e} seconds'.format(time()-to))
 
     # projected surface density
-    to = time()
+    # this is the slowest part of the function
     surf_dens2 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
                         for xi2_i, rho_i in zip(xi2, rho_bg)])
     for i in range(nbins):
         surf_dens2[i][(surf_dens2[i] <= 0.0) \
                          | (surf_dens2[i] >= 1e20)] = np.nan
         surf_dens2[i] = fill_nan(surf_dens2[i])
-    print('surface density in {0:.2e} seconds'.format(time()-to))
 
     # excess surface density
-    to = time()
     d_surf_dens2 = array(
         [np.nan_to_num(
             d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
@@ -350,7 +316,6 @@ def model(theta, R):
     out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
     for i in range(nbins):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-    print('ESDs in {0:.2e} seconds'.format(time()-to))
 
     if ingredients['pointmass']:
         # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
@@ -361,13 +326,9 @@ def model(theta, R):
 
     # Add other outputs as needed. Total ESD should always be first!
 
-    if setup['distances'] == 'comoving':
-        return [out_esd_tot_inter, meff]
     if setup['distances'] == 'proper':
-        out_esd_tot_inter = array(
-            [out_esd_tot_inter_i * (1+z_i)**2.0
-             for out_esd_tot_inter_i, z_i in zip(out_esd_tot_inter, z)])
-        return [out_esd_tot_inter, meff]
+        out_esd_tot_inter = out_esd_tot_inter * (1+z)**2
+    return [out_esd_tot_inter, meff]
     #return out_esd_tot_inter, d_surf_dens3, d_surf_dens4, pointmass, nu(1)
 
 

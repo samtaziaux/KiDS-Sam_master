@@ -539,7 +539,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             path_gamacat, ignore_missing_end=True)[1].data)
     except IOError:
         gamacat = ascii.read(path_gamacat)
-
+    
     # skip the ID column name since if it doesn't exist we create it below
     for colname in colnames[1:]:
         assert colname in gamacat.colnames, \
@@ -547,7 +547,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             'Column {0} not present in catalog {1}. See the full list of' \
             'column names above'.format(
                 colname, path_gamacat, gamacat.colnames)
-
+    
     # IDs of all galaxies
     if colnames[0] not in gamacat.colnames:
         gamacat[colnames[0]] = np.arange(gamacat[colnames[1]].size, dtype=int)
@@ -621,21 +621,22 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galZlist = gamacat[colnames[3]] # Central Z of the galaxy
         if 'random' in purpose:
             galZlist = randomcat[colnames[3]][slice][Ncatmin:Ncatmax:step]
-        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-        #                    for z in galZlist])
+
         # Distance in pc/h, where h is the dimensionless Hubble constant
-        #Dcllist = np.array([distance.comoving(z, O_matter, O_lambda, h) \
-        #                            for z in galZlist])
 
         # New method
         cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-        Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
-
+        #Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
+        
+        galZbins = np.sort(np.unique(galZlist)) # Find and sort the unique redshift values
+        Dclbins = np.array((cosmo.comoving_distance(galZbins).to('pc')).value) # Calculate the corresponding distances
+        Dcllist = Dclbins[np.digitize(galZlist, galZbins)-1] # Assign the appropriate Dcl to all lens redshifts
+        
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
         # Distance in degree on the sky
         Dcllist = np.degrees(np.ones(len(galIDlist)))
-
+    
     # The angular diameter distance to the galaxy center
     Dallist = Dcllist/(1.0+galZlist)
 
@@ -1449,7 +1450,11 @@ def define_obslist(obsname, gamacat, h, Dcllist=[], galZlist=[]):
         
         # New method
         cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
-        Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
+        #Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
+        
+        galZbins = np.sort(np.unique(galZlist)) # Find and sort the unique redshift values
+        Dclbins = np.array((cosmogama.comoving_distance(galZbins).to('pc')).value) # Calculate the corresponding distances
+        Dclgama = Dclbins[np.digitize(galZlist, galZbins)-1] # Assign the appropriate Dcl to all lens redshifts
         
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list

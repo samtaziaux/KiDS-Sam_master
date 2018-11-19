@@ -42,20 +42,20 @@ def flatten_parameters(parameters, names, repeat):
     return flat, flatnames, repeat, nparams
 
 
-def hod_entries(line, section, names, parameters, priors, starting):
+def hod_entries(line, section, names, parameters, priors, starting, join):
     """
     `line` should be a `configline` object
     """
     if line.words[0] == 'name':
         names, parameters, priors = hod_function(
-            names, parameters, priors, section, line)
+            line, names, parameters, priors, section)
     else:
         names, parameters, priors, starting = \
-            hod_parameters(names, parameters, priors, starting, line)
+            hod_parameters(line, names, parameters, priors, starting, join)
     return names, parameters, priors, starting
 
 
-def hod_function(names, parameters, priors, section, line):
+def hod_function(line, names, parameters, priors, section):
     if 'mor' in section:
         parameters[0].append(getattr(relations, line.words[1]))
     elif 'scatter' in section:
@@ -78,7 +78,7 @@ def hod_function(names, parameters, priors, section, line):
     return names, parameters, priors
 
 
-def hod_parameters(names, parameters, priors, starting, line):
+def hod_parameters(line, names, parameters, priors, starting, join):
     """
     To deal with parameters with priors (including fixed values)
 
@@ -94,8 +94,8 @@ def hod_parameters(names, parameters, priors, starting, line):
         for i in range(len(parameters)):
             parameters[i].append(None)
         priors.append(None)
-        #starting.append(None)
         return names, parameters, priors, starting
+    # check that the prior is valid
     if words[0] in ('name', 'function'):
         priors.append('function')
     elif words[1] in ('array', 'read'):
@@ -123,7 +123,7 @@ def hod_parameters(names, parameters, priors, starting, line):
         parameters[0].append(-1)
 
     if priors[-1] == 'repeat' or priors[-1] in fixed_priors \
-            or priors[-1] in ('exp', 'jeffrey'):
+            or priors[-1] in ('exp', 'jeffreys'):
         parameters[1].append(-1)
         starting = starting_values(starting, parameters, line)
     else:

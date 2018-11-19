@@ -344,16 +344,20 @@ def run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
 
     iparams = parameters[0].index('parameters')
     parameters[1][iparams][0][where(jfree)] = starting
+    to = time()
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
         parameters, nparams, params_join, jfree, repeat, lnprior, 0,
         rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
+    print()
+    print('Demo run took {0:.2e} seconds'.format(time()-to))
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
         msg = 'Could not calculate model prediction. It is likely that one' \
               ' of the parameters is outside its allowed prior range.'
         raise ValueError(msg)
     dof = esd.size - starting.size - 1
+    print()
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
 
     # the rest are corrected in lnprob. We should work to remove

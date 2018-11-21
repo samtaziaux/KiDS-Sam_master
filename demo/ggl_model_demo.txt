@@ -75,9 +75,9 @@ b               fixed       0.05
 [hod/satellites/scatter]
 name            schechter_mod
 alpha_s         fixed    -1.0
-b_0             fixed    -0.1
-b_1             fixed     1.0
-b_2             fixed     0.0
+b_0             fixed    -0.1       join:b
+b_1             fixed     1.0       join:b
+b_2             fixed     0.0       join:b
 
 [setup]
 delta           200

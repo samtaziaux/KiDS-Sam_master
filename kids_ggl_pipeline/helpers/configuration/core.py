@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 from itertools import count
 import numpy as np
 from six import string_types
+import sys
 
 from . import confighod, configsampler, configsetup
 from ...halomodel import nfw, nfw_stack, halo, halo_2, halo_2_mc
@@ -21,11 +22,14 @@ class ConfigLine(str):
 
     def __init__(self, line):
         self.line = line
+        self._remove_comments()
         self._join_label = None
         self._section = None
         self._words = None
         super(ConfigLine, self).__init__()
         return
+
+    ### attributes ###
 
     @property
     def join_label(self):
@@ -50,6 +54,14 @@ class ConfigLine(str):
                 self._words = self._words[:-1]
         return self._words
 
+    ### hidden methods ###
+
+    def _remove_comments(self):
+        if '#' in self.line:
+            self.line = self.line[:self.line.index('#')]
+
+    ### methods ###
+
     def is_comment(self):
         if self.is_empty():
             return False
@@ -60,11 +72,6 @@ class ConfigLine(str):
 
     def is_section(self):
         return self.line[0] == '['
-
-    def remove_comments(self):
-        if '#' in self.line:
-            return self.line[:self.line.index('#')]
-        return self.line
 
     def split_words(self):
         _line = '{0}'.format(self.line)
@@ -164,9 +171,7 @@ class ConfigFile(object):
                 line = ConfigLine(line)
                 if line.is_empty() or line.is_comment():
                     continue
-                if '#' in line:
-                    line = line.remove_comments()
-                _data.append(line)
+                _data.append(line.line)
             self._data = _data
         return self._data
 
@@ -201,6 +206,7 @@ class ConfigFile(object):
         parameters = []
         priors = []
         repeat = []
+        join = []
         # starting values for free parameters
         starting = []
         ingredients = {}
@@ -236,16 +242,17 @@ class ConfigFile(object):
             elif section.parent in ('cosmo', 'hod'):
                 new = confighod.hod_entries(
                     line, section, these_names, these_params, these_priors,
-                    starting)
-                these_names, these_params, these_priors, starting = new
+                    starting, join)
+                these_names, these_params, these_priors, starting, join = new
             elif section == 'setup':
                 setup = configsetup.append_entry(line, setup)
             elif section == 'output':
                 output = section.append_entry_output(line, output)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
+        join = confighod.format_join(join)
         parameters, names, repeat, nparams = \
-            confighod.flatten_parameters(parameters, names, repeat)
+            confighod.flatten_parameters(parameters, names, repeat, join)
         sampling = configsampler.add_defaults(sampling)
         # add defaults and check types
         setup = configsetup.check_setup(setup)
@@ -253,8 +260,8 @@ class ConfigFile(object):
             'observables,selection,ingredients,parameters,setup'.split(','),
             [observables, selection, ingredients, parameters, setup]]
         hm_params = [model, hod_params, np.array(names), np.array(priors),
-                     np.array(nparams), np.array(repeat), np.array(starting),
-                     output]
+                     np.array(nparams), np.array(repeat), join,
+                     np.array(starting), output]
         return hm_params, sampling
 
     def read_function(self, path):

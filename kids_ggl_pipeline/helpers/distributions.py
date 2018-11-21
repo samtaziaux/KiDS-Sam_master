@@ -10,7 +10,8 @@ in `functions.py` which return one given the other.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import array, exp, log, log10, pi
+import numpy as np
+from numpy import arange, array, exp, log, log10, pi
 
 from .decorators import logdist
 
@@ -24,7 +25,7 @@ def lognormal(obs, Mo, Mh, sigma, obs_is_log=False):
     obs : float array, shape (nbins,N)
         observable. ``nbins`` is the number of observable bins
     Mo : float array, shape (P,)
-        observable mass, from mor relation
+        observable mass, from mass-observable relation
     Mh : float array, shape (P,)
         halo mass
     sigma : float or float array with shape (nbins,)
@@ -46,7 +47,7 @@ def lognormal(obs, Mo, Mh, sigma, obs_is_log=False):
 
 
 @logdist
-def schechter_mod(obs, Mo, Mh, logMref, alpha, b0, b1, b2, obs_is_log=False):
+def modschechter(obs, Mo, Mh, logMref, alpha, b, obs_is_log=False):
     """Modified Schechter scatter (eq. 17 in van Uitert et al. 2016)
 
     This is generally used for satellite galaxies, and the mor
@@ -76,9 +77,7 @@ def schechter_mod(obs, Mo, Mh, logMref, alpha, b0, b1, b2, obs_is_log=False):
     distribution : float array, shape (nbins,P,N)
         distribution of observable values given halo mass
     """
-    #phi_s = 10**(b[:,newaxis] * logMref**arange(b.size)[:,newaxis])
     logMphi = log10(Mh)-logMref
-    phi_s = 10**(b0 + b1*logMphi + b2*logMphi**2)
-    return array([(phi_s_i/Mi) * (obs/Mi)**alpha * exp(-(obs/Mi)**2)
-                  for phi_s_i, Mi in zip(phi_s, Mo)])
-
+    phi_s = 10**np.sum([bi * logMphi**i for i, bi in enumerate(b)], axis=0)
+    Mo = Mo[:,None,None]
+    return ((phi_s[:,None,None]/Mo) * (obs/Mo)**alpha * exp(-(obs/Mo)**2))

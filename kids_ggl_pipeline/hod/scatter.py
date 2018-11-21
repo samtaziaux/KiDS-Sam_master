@@ -6,7 +6,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import sys
 
-from ..helpers.distributions import lognormal, schechter_mod
+from ..helpers.distributions import *
 
 
 # don't forget to update this!

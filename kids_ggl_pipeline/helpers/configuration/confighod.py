@@ -19,7 +19,7 @@ def append_setup(parameters, nparams, setup):
     return parameters, nparams
 
 
-def flatten_parameters(parameters, names, repeat):
+def flatten_parameters(parameters, names, repeat, join):
     flat = [[] for p in parameters]
     flatnames = []
     # first the four sets for the priors
@@ -38,24 +38,51 @@ def flatten_parameters(parameters, names, repeat):
                     repeat[rloc] = \
                         sum([len(x) for x in sections[:r[0]]]) + r[1]
     flat = [np.array(i) for i in flat]
+    # count number of parameters per section
     nparams = [len(p) for p in parameters[0]]
+    # remove joined parameters from count
+    join = np.array([ji for j in join for ji in j])
+    end = 0
+    for i, npar in enumerate(nparams):
+        # previous values in nparams have changed so we cannot
+        # sum over its elements every time
+        start = end
+        end = start + npar
+        joined = np.sum((join >= start) & (join < end))
+        if joined > 0:
+            nparams[i] -= joined - 1
     return flat, flatnames, repeat, nparams
 
 
-def hod_entries(line, section, names, parameters, priors, starting):
+def format_join(join):
+    join = np.array(join)
+    rng = np.arange(join.size)
+    join_labels = np.unique(join[join != '-1'])
+    join_arrays = []
+    for label in join_labels:
+        j = (join == label)
+        join[j] = rng[j][0]
+        join_arrays.append(rng[j])
+    return join_arrays
+
+
+def hod_entries(line, section, names, parameters, priors, starting, join):
     """
     `line` should be a `configline` object
     """
+    # record 'join' first just in case we want to add this
+    # functionality to repeat parameters
+    join.append(line.join_label if line.join_label else '-1')
     if line.words[0] == 'name':
         names, parameters, priors = hod_function(
-            names, parameters, priors, section, line)
+            line, names, parameters, priors, section)
     else:
         names, parameters, priors, starting = \
-            hod_parameters(names, parameters, priors, starting, line)
-    return names, parameters, priors, starting
+            hod_parameters(line, names, parameters, priors, starting)
+    return names, parameters, priors, starting, join
 
 
-def hod_function(names, parameters, priors, section, line):
+def hod_function(line, names, parameters, priors, section):
     if 'mor' in section:
         parameters[0].append(getattr(relations, line.words[1]))
     elif 'scatter' in section:
@@ -78,7 +105,7 @@ def hod_function(names, parameters, priors, section, line):
     return names, parameters, priors
 
 
-def hod_parameters(names, parameters, priors, starting, line):
+def hod_parameters(line, names, parameters, priors, starting):
     """
     To deal with parameters with priors (including fixed values)
 
@@ -94,8 +121,8 @@ def hod_parameters(names, parameters, priors, starting, line):
         for i in range(len(parameters)):
             parameters[i].append(None)
         priors.append(None)
-        #starting.append(None)
         return names, parameters, priors, starting
+    # check that the prior is valid
     if words[0] in ('name', 'function'):
         priors.append('function')
     elif words[1] in ('array', 'read'):
@@ -123,7 +150,7 @@ def hod_parameters(names, parameters, priors, starting, line):
         parameters[0].append(-1)
 
     if priors[-1] == 'repeat' or priors[-1] in fixed_priors \
-            or priors[-1] in ('exp', 'jeffrey'):
+            or priors[-1] in ('exp', 'jeffreys'):
         parameters[1].append(-1)
         starting = starting_values(starting, parameters, line)
     else:
@@ -162,7 +189,6 @@ def ingredients(ingr, words):
 def observables(words):
     binning = np.array(words[1].split(','), dtype=float)
     means = np.array(words[2].split(','), dtype=float)
-    #return [binning, means]
     return Observable(words[0], binning, means)
 
 

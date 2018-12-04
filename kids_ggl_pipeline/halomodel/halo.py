@@ -119,7 +119,7 @@ def model(theta, R):
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter = theta
 
-    sigma8, h, omegam, omegab, omegav, n, z = cosmo
+    sigma8, h, omegam, omegab, omegav, n, z, h = cosmo
 
     # HMF set up parameters
     # all of this can happen before the model is called, to save some

@@ -20,7 +20,7 @@ from os import remove
 from os.path import isfile
 from scipy import stats
 from time import ctime, time
-#import pickle
+
 
 # Python 2/3 compatibility
 if sys.version_info[0] == 2:
@@ -35,11 +35,10 @@ from . import priors, sampling_utils
 def run_emcee(hm_options, sampling, args):
 
     function, parameters, names, prior_types, \
-        nparams, repeat, starting, output = \
+        nparams, repeat, join, starting, output = \
             hm_options
 
     val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
-    params_join = []
 
     print('Running KiDS-GGL pipeline - sampler\n')
     if args.demo:
@@ -49,9 +48,9 @@ def run_emcee(hm_options, sampling, args):
             sampling['output'])
         answer = input(msg)
         if len(answer) == 0:
-            exit()
+            sys.exit()
         if answer.lower() not in ('y', 'yes'):
-            exit()
+            sys.exit()
     if not args.demo:
         print('\n{0}: Started\n'.format(ctime()))
 
@@ -129,7 +128,7 @@ def run_emcee(hm_options, sampling, args):
     # are we just running a demo?
     if args.demo:
         run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
-                 parameters, params_join, starting, jfree, repeat, nparams,
+                 parameters, join, starting, jfree, repeat, nparams,
                  names, lnprior, rng_obsbins, fail_value, Ndatafiles, array,
                  dot, inf, outer, pi, zip)
         sys.exit()
@@ -141,7 +140,7 @@ def run_emcee(hm_options, sampling, args):
     sampler = emcee.EnsembleSampler(
         sampling['nwalkers'], ndim, lnprob, threads=sampling['threads'],
         args=(R,esd,icov,function,names,prior_types[jfree],
-              parameters,nparams,params_join,jfree,repeat,lnprior,likenorm,
+              parameters,nparams,join,jfree,repeat,lnprior,likenorm,
               rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
 
     # set up starting point for all walkers
@@ -234,7 +233,7 @@ def run_emcee(hm_options, sampling, args):
 
 
 def lnprob(theta, R, esd, icov, function, names, prior_types,
-           parameters, nparams, params_join, jfree, repeat, lnprior, likenorm,
+           parameters, nparams, join, jfree, repeat, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
@@ -277,22 +276,18 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     # repeat parameters
     v1[repeat != -1] = v1[repeat[repeat != -1]]
     # joined parameters
-    if params_join is not None:
-        v1j = list(v1)
-        for p in params_join:
-            # without this list comprehension numpy can't keep track of the
-            # data type. I believe this is because there are elements of
-            # different types in val1 and therefore its type is not
-            # well defined (so it gets "object")
-            v1j[p[0]] = array([v1[pi] for pi in p])
-        # need to delete elements backwards to preserve indices
-        aux = [[v1j.pop(pi) for pi in p[1:][::-1]]
-                for p in params_join[::-1]]
-        v1 = v1j #array(v1j) ??
+    v1_list = list(v1)
+    # these loops go backwards to preserve indexing
+    for j in join[::-1]:
+        v1_list[j[0]] = np.array(v1[j], dtype=float)
+        # remove parameters that have just been joined
+        for i in j[1:][::-1]:
+            v1_list.pop(i)
+
     # join into sections and subsections as per the config file
     # by doing this I'm losing Rrange and angles, but I suppose
     # those should be defined in the config file as well.
-    v1 = np.array([v1[sum(nparams[:i]):sum(nparams[:i+1])]
+    v1 = np.array([v1_list[sum(nparams[:i]):sum(nparams[:i+1])]
                    for i in range(len(nparams))])
     # note that by now we discard the other v's!
     # we don't want to overwrite the old list now that we've
@@ -315,20 +310,16 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
     if not isfinite(chi2):
         return -inf, fail_value
-    # remember that the last value returned by the models must be a lnprior
-    # from the derived parameters
     lnlike = -chi2/2. + likenorm
     model.append(lnprior_total)
     model.append(chi2)
     model.append(lnlike)
-    # return to original content for future calls
-    #parameters.values[parameters.section_index('parameters')] \
-        #= [val1, val2, val3, val4]
+
     return lnlike + lnprior_total, model
 
 
 def run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
-             parameters, params_join, starting, jfree, repeat, nparams, names,
+             parameters, join, starting, jfree, repeat, nparams, names,
              lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot, inf,
              outer, pi, zip):
     def plot_demo(ax, Ri, gt, gt_err, f):
@@ -344,16 +335,19 @@ def run_demo(args, function, R, esd, esd_err, cov, icov, prior_types,
 
     iparams = parameters[0].index('parameters')
     parameters[1][iparams][0][where(jfree)] = starting
+    to = time()
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
-        parameters, nparams, params_join, jfree, repeat, lnprior, 0,
+        parameters, nparams, join, jfree, repeat, lnprior, 0,
         rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
+    print('\nDemo run took {0:.2e} seconds'.format(time()-to))
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
         msg = 'Could not calculate model prediction. It is likely that one' \
               ' of the parameters is outside its allowed prior range.'
         raise ValueError(msg)
     dof = esd.size - starting.size - 1
+    print()
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
 
     # the rest are corrected in lnprob. We should work to remove

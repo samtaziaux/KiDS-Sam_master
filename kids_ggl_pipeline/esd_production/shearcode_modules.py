@@ -1580,7 +1580,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
                          marker='o', ls='', label=plotlabel)
 
             plt.axis([1e1,1e4,-5e3,2e4])
-            plt.ylim(-5e3,1e5)
+            #plt.ylim(-5e3,1e5)
 
         if plotstyle == 'lin':
             linlabel = r'%s'%(ylabel)
@@ -1596,7 +1596,7 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
                      marker='o', label=plotlabel)
 
             plt.axis([1e1,1e4,-5e3,2e4])
-            plt.ylim(-5e3,1e5)
+            #plt.ylim(-5e3,1e5)
 
         plt.ylabel(r'%s'%linlabel,fontsize=15)
 
@@ -1605,12 +1605,12 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
         plt.yscale('log')
         errorl[errorl>=data_y] = ((data_y[errorl>=data_y])*0.9999999999)
 
-
+        """
         if 'pc' in Runit:
             plt.ylim(0.1, 1e3)
         else:
             plt.ylim(1e-3, 1)
-
+        """
         if plotstyle == 'log':
             plt.errorbar(data_x, data_y, yerr=[errorl,errorh], ls='', \
                          marker='o', label=plotlabel)

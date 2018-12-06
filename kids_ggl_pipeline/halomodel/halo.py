@@ -232,7 +232,7 @@ def model(theta, R):
     if ingredients['satellites']:
         uk_s = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin[:,None],
-            concentration[:,None], rho_bg[:,None,None], setup['delta'])
+            concentration_sat[:,None], rho_bg[:,None,None], setup['delta'])
         uk_s = uk_s/uk_s[:,0][:,None]
     else:
         uk_s = np.ones((nbins,k_range_lin.size,mass_range.size))
@@ -288,6 +288,10 @@ def model(theta, R):
 
     Pg_k = array([Pg_c_i + Pg_s_i + Pg_2h_i
                   for Pg_c_i, Pg_s_i, Pg_2h_i in zip(Pg_c, Pg_s, Pg_2h)])
+    print('Pg_k =', Pg_k.shape)
+    if setup['return'] == 'power':
+        # note this doesn't include the point mass!
+        return [Pg_k, meff]
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                for Pg_k_i in zip(Pg_k)]
 
@@ -295,6 +299,9 @@ def model(theta, R):
     xi2 = np.zeros((nbins,rvir_range_3d.size))
     for i in range(nbins):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
+    print('xi2 =', xi2.shape)
+    if setup['return'] == 'xi':
+        return [xi2, meff]
 
     # projected surface density
     # this is the slowest part of the function
@@ -304,6 +311,9 @@ def model(theta, R):
         surf_dens2[i][(surf_dens2[i] <= 0.0) \
                          | (surf_dens2[i] >= 1e20)] = np.nan
         surf_dens2[i] = fill_nan(surf_dens2[i])
+    print('sigma =', surf_dens2.shape)
+    if setup['return'] == 'sigma':
+        return [surf_dens2, meff]
 
     # excess surface density
     d_surf_dens2 = array(
@@ -317,6 +327,7 @@ def model(theta, R):
     for i in range(nbins):
         out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
 
+    # this should be moved to the power spectrum calculation
     if ingredients['pointmass']:
         # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
         pointmass = array(
@@ -326,6 +337,7 @@ def model(theta, R):
 
     # Add other outputs as needed. Total ESD should always be first!
 
+    # this should also probably be moved higher up!
     if setup['distances'] == 'proper':
         out_esd_tot_inter = out_esd_tot_inter * (1+z)**2
     return [out_esd_tot_inter, meff]

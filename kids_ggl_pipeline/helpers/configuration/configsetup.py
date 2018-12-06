@@ -25,7 +25,8 @@ _default_values = {
 _necessary_entries = {
     'delta': 'overdensity for mass definition (typically 200 or 500)',
     'delta_ref': 'background density reference: {"mean","crit"}',
-    'distances': 'whether to use "proper" or "comoving" distances'
+    'distances': 'whether to use "proper" or "comoving" distances',
+    'return': 'which quantity should the halo model return'
     }
 
 _valid_entries = {
@@ -38,7 +39,8 @@ _valid_entries = {
     'logM_bins': int,
     'logM_min': float,
     'logM_max': float,
-    'transfer': ('CAMB', 'EH')
+    'transfer': ('CAMB', 'EH'),
+    'return': ('esd', 'power', 'sigma', 'xi')
     }
 
 

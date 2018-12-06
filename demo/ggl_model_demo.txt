@@ -36,7 +36,6 @@ omegab          fixed     0.04860
 omegav          fixed     0.6911
 n               fixed     0.9667
 z               array     0.188,0.195
-h               fixed     0.7
 
 [hod/centrals/pointmass]
 logmstar        array     11.315

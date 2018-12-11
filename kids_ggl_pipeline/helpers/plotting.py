@@ -28,7 +28,7 @@ def covariance(R, cov, output=None):
         for n, axmn in enumerate(axm):
             axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
                         vmin=vmin, vmax=vmax)
-    fig.tight_layout(pad=0.1)
+    fig.tight_layout(pad=0.4)
     if output:
         save(output, fig, 'covariance')
     else:
@@ -71,11 +71,17 @@ def signal(R, y, yerr, model, observable, output=None):
         ax.set_xscale('log')
         # do something fancier later
         ax.set_xlabel('$k$' if observable == 'power' else '$R$')
-        ax.set_ylabel(r'${0}$'.format(ylabel))
+    axes[0].set_ylabel(r'${0}$'.format(ylabel))
     if np.all(y-yerr > 0):
         for ax in axes:
             ax.set_yscale('log')
-    fig.tight_layout(w_pad=0.1)
+    ylims = np.array([ax.get_ylim() for ax in axes])
+    ylim = (ylims[:,0].min(), ylims[:,1].max())
+    for ax in axes:
+        ax.set_ylim(*ylim)
+    for ax in axes[1:]:
+        ax.set_yticklabels([])
+    fig.tight_layout(pad=0.4)
     if output:
         save(output, fig, 'signal')
     else:

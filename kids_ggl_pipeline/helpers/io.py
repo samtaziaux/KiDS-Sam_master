@@ -6,7 +6,155 @@ from astropy.io import fits
 from astropy.io.fits import BinTableHDU, Column
 import numpy as np
 import os
+import six
 from time import ctime
+
+import sys
+if sys.version_info[0] == 2:
+    range = xrange
+
+# local
+# this shouldn't happen!
+from ..sampling import sampling_utils
+
+
+def finalize_hdr(sampler, hdrfile):
+    with open(hdrfile, 'a') as hdr:
+
+        try:
+            print('acceptance_fraction =', sampler.acceptance_fraction)
+            print('acceptance_fraction =', file=hdr, end=' ')
+            for af in sampler.acceptance_fraction:
+                print(af, file=hdr, end=' ')
+        except ImportError:
+            pass
+        #try:
+            #print('acor =', sampler.acor)
+            #print('\nacor =', file=hdr, end=' ')
+            #for ac in sampler.acor:
+                #print(ac, file=hdr, end=' ')
+        #except ImportError:
+            #pass
+        # acor and get_autocorr_time() are the same
+        try:
+            print('acor =', sampler.get_autocorr_time())
+            print('\nacor_time =', file=hdr, end=' ')
+            for act in sampler.get_autocorr_time(c=5):
+                print(act, file=hdr, end=' ')
+        #except AttributeError:
+            #pass
+        #except emcee.autocorr.AutocorrError:
+            #pass
+        except:
+            pass
+        # acor and get_autocorr_time() are the same
+        #try:
+            #print('acor_time =', sampler.get_autocorr_time())
+            #print('\nacor_time =', file=hdr, end=' ')
+            #for act in sampler.get_autocorr_time():
+                #print(act, file=hdr, end=' ')
+        #except AttributeError:
+            #pass
+        print('\nFinished', ctime(), file=hdr)
+    print('Saved to', hdrfile)
+    return
+
+
+def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
+    cov = np.loadtxt(covfile, usecols=[covcols[0]])
+    if len(covcols) == 2:
+        cov /= np.loadtxt(covfile, usecols=[covcols[1]])
+    if exclude_bins is None:
+        nexcl = 0
+    else:
+        nexcl = len(exclude_bins)
+    # 4-d matrix
+    cov = cov.reshape((Nobsbins,Nobsbins,Nrbins+nexcl,Nrbins+nexcl))
+    cov2d = cov.transpose(0,2,1,3)
+    cov2d = cov2d.reshape(
+        (Nobsbins*(Nrbins+nexcl), Nobsbins*(Nrbins+nexcl)))
+    icov = np.linalg.inv(cov2d)
+    # are there any bins excluded?
+    if exclude_bins is not None:
+        for b in exclude_bins[::-1]:
+            cov = np.delete(cov, b, axis=3)
+            cov = np.delete(cov, b, axis=2)
+    # product of the determinants
+    detC = np.array(
+        [np.linalg.det(cov[m][n])
+         for m in range(Nobsbins) for n in range(Nobsbins)])
+    prod_detC = detC[detC > 0].prod()
+    # likelihood normalization
+    likenorm = -(Nobsbins**2*np.log(2*np.pi) + np.log(prod_detC)) / 2
+    # switch axes to have the diagonals aligned consistently to make it
+    # a 2d array
+    cov2d = cov.transpose(0,2,1,3)
+    cov2d = cov2d.reshape((Nobsbins*Nrbins,Nobsbins*Nrbins))
+    # errors are sqrt of the diagonal of the covariance matrix
+    esd_err = np.sqrt(np.diag(cov2d)).reshape((Nobsbins,Nrbins))
+    # invert
+    icov = np.linalg.inv(cov2d)
+    # reshape back into the desired shape (with the right axes order)
+    icov = icov.reshape((Nobsbins,Nrbins,Nobsbins,Nrbins))
+    icov = icov.transpose(2,0,3,1)
+    # Hartlap correction
+    #icov = (45.0 - Nrbins - 2.0)/(45.0 - 1.0)*icov
+    return cov, icov, likenorm, esd_err, cov2d
+
+
+def load_data(options):
+    # need to run this without exclude_bins to throw out invalid values in it
+    R, esd = load_datapoints(*options['data'])
+    if options['exclude'] is not None:
+        options['exclude'] = \
+            options['exclude'][options['exclude'] < esd.shape[1]]
+    R, esd = load_datapoints(
+        options['data'][0], options['data'][1], options['exclude'])
+
+    Nobsbins, Nrbins = esd.shape
+    # load covariance
+    cov = load_covariance(
+          options['covariance'][0], options['covariance'][1],
+          Nobsbins, Nrbins, options['exclude'])
+    # needed for offset central profile
+    # only used in nfw_stack, not in the halo model proper
+    # this should *not* be part of the sampling dictionary
+    # but doing it this way so it is an optional parameter
+    if 'precision' not in options:
+        options['precision'] = 7
+    R, Rrange = sampling_utils.setup_integrand(
+        R, options['precision'])
+    angles = np.linspace(0, 2*np.pi, 540)
+    return R, esd, cov, Rrange, angles
+
+
+def load_datapoints(datafile, datacols, exclude_bins=None):
+    if isinstance(datafile, six.string_types):
+        R, esd = np.loadtxt(datafile, usecols=datacols[:2]).T
+        # better in Mpc
+        if R[-1] > 500:
+            R /= 1000
+        if len(datacols) == 3:
+            oneplusk = np.loadtxt(datafile, usecols=[datacols[2]]).T
+            esd /= oneplusk
+        R = np.array([R])
+        esd = np.array([esd])
+    else:
+        R, esd = np.transpose([np.loadtxt(df, usecols=datacols[:2])
+                                  for df in datafile], axes=(2,0,1))
+        if len(datacols) == 3:
+            oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
+                              for df in datafile])
+            esd /= oneplusk
+        for i in range(len(R)):
+            if R[i][-1] > 500:
+                R[i] /= 1000
+    if exclude_bins is not None:
+        R = np.array([[Ri[j] for j in range(len(Ri))
+                          if j not in exclude_bins] for Ri in R])
+        esd = np.array([[esdi[j] for j in range(len(esdi))
+                            if j not in exclude_bins] for esdi in esd])
+    return R, esd
 
 
 def write_chain(sampler, options, chi2, names, jfree, output, metadata,

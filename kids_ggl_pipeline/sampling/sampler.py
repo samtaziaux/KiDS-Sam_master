@@ -32,7 +32,7 @@ from . import priors, sampling_utils
 from ..helpers import io, plotting
 
 
-def run_emcee(hm_options, options, args):
+def run(hm_options, options, args):
 
     function, parameters, names, prior_types, \
         nparams, repeat, join, starting, output = \
@@ -41,50 +41,7 @@ def run_emcee(hm_options, options, args):
     val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     setup = parameters[1][parameters[0].index('setup')]
 
-    print('Running KiDS-GGL pipeline - sampler\n')
-    if args.demo:
-        print(' ** Running demo only **')
-    elif isfile(options['output']) and not args.force_overwrite:
-        msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
-            options['output'])
-        answer = input(msg)
-        if len(answer) == 0:
-            sys.exit()
-        if answer.lower() not in ('y', 'yes'):
-            sys.exit()
-    if not args.demo:
-        print('\n{0}: Started\n'.format(ctime()))
-
-    # load data files
-    Ndatafiles = len(options['data'][0])
-    assert Ndatafiles > 0, 'No data files found'
-    # need to run this without exclude_bins to throw out invalid values in it
-    R, esd = sampling_utils.load_datapoints(*options['data'])
-    if options['exclude'] is not None:
-        options['exclude'] = \
-            options['exclude'][options['exclude'] < esd.shape[1]]
-    R, esd = sampling_utils.load_datapoints(
-        options['data'][0], options['data'][1], options['exclude'])
-
-    Nobsbins, Nrbins = esd.shape
-    rng_obsbins = range(Nobsbins)
-    rng_rbins = range(Nrbins)
-    # load covariance
-    cov = sampling_utils.load_covariance(
-        options['covariance'][0], options['covariance'][1],
-        Nobsbins, Nrbins, options['exclude'])
-    cov, icov, likenorm, esd_err, cov2d = cov
-
-    # needed for offset central profile
-    # only used in nfw_stack, not in the halo model proper
-    # this should *not* be part of the sampling dictionary
-    # but doing it this way so it is an optional parameter
-    if 'precision' not in options:
-        options['precision'] = 7
-    R, Rrange = sampling_utils.setup_integrand(
-        R, options['precision'])
-    angles = np.linspace(0, 2*pi, 540)
-    val1 = np.append(val1, [Rrange, angles])
+    print_opening_msg(args, options)
 
     # identify fixed and free parameters
     jfree = np.array([(p in priors.free_priors) for p in prior_types])
@@ -93,38 +50,29 @@ def run_emcee(hm_options, options, args):
         'ERROR: Not all starting points defined for free parameters.'
     print('Starting values =', starting)
 
-    meta_names, fits_format = output
-    # this assumes that all parameters are floats -- can't imagine a
-    # different scenario
-    metadata = [[] for m in meta_names]
-    for j, fmt in enumerate(fits_format):
-        n = 1 if len(fmt) == 1 else int(fmt[0])
-        # is this value a scalar?
-        if len(fmt) == 1:
-            size = options['nwalkers'] * options['nsteps'] \
-                // options['thin']
-        else:
-            size = [options['nwalkers']*options['nsteps']//options['thin'],
-                    int(fmt[:-1])]
-            # only for ESDs. Note that there will be trouble if outputs
-            # other than the ESD have the same length, so avoid them at
-            # all cost.
-            if options['exclude'] is not None \
-                    and size[1] == esd.shape[-1]+len(options['exclude']):
-                size[1] -= len(options['exclude'])
-        metadata[j].append(zeros(size))
-    metadata = [array(m) for m in metadata]
-    metadata = [m[0] if m.shape[0] == 1 else m for m in metadata]
-    fail_value = []
-    for m in metadata:
-        shape = list(m.shape)
-        shape.remove(max(shape))
-        fail_value.append(zeros(shape))
-    # the last numbers are data chi2, lnLdata
-    for i in range(3):
-        fail_value.append(9999)
+    metadata, meta_names, fits_format = \
+        sampling_utils.initialize_metadata(options, output)
+
+    # generate a mock measurement
+    #if args.mock:
+        #mock(args, function, options, setup)
+
+    # some additional requirements of lnprob
+    fail_value = sampling_utils.initialize_fail_value(metadata)
     # initialize
-    lnprior = zeros(ndim)
+    lnprior = np.zeros(ndim)
+
+    # load data files
+    Ndatafiles = len(options['data'][0])
+    assert Ndatafiles > 0, 'No data files found'
+    # Rrange, angles are used in nfw_stack only
+    R, esd, cov, Rrange, angles = io.load_data(options)
+    #val1 = np.append(val1, [Rrange, angles])
+    cov, icov, likenorm, esd_err, cov2d = cov
+    # utility variables
+    Nobsbins, Nrbins = esd.shape
+    rng_obsbins = range(Nobsbins)
+    rng_rbins = range(Nrbins)
 
     # are we just running a demo?
     if args.demo:
@@ -132,11 +80,10 @@ def run_emcee(hm_options, options, args):
              prior_types, parameters, join, starting, jfree, repeat, nparams,
              names, lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot,
              inf, outer, pi, zip)
-        #sys.exit()
         return
 
     # write header file
-    hdrfile = io.write_hdr(sampling, function, parameters, names, prior_types)
+    hdrfile = io.write_hdr(options, function, parameters, names, prior_types)
 
     # initialize sampler
     sampler = emcee.EnsembleSampler(
@@ -146,7 +93,7 @@ def run_emcee(hm_options, options, args):
               rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
 
     # set up starting point for all walkers
-    po = ball(
+    po = sample_ball(
         names, prior_types, jfree, starting, parameters,
         options['nwalkers'], ndim)
 
@@ -169,59 +116,12 @@ def run_emcee(hm_options, options, args):
                            thin=options['thin'])):
         if i > 0 and ((i+1)*options['nwalkers'] \
                       > options['nwalkers']*nwritten + options['update']):
-            #out = write_to_fits(
-                #sampler, sampling, chi2, names, jfree, output, metadata, i,
-                #nwritten, Nobsbins, fail_value, array, BinTableHDU,
-                #Column, ctime, enumerate, isfile, zip, transpose, range)
             out = io.write_chain(
-                sampler, sampling, chi2, names, jfree, output, metadata, i,
+                sampler, options, chi2, names, jfree, output, metadata, i,
                 nwritten, Nobsbins, fail_value)
             metadata, nwritten = out
 
-    # move this to io(?) as well
-    with open(hdrfile, 'a') as hdr:
-
-        try:
-            print('acceptance_fraction =', sampler.acceptance_fraction)
-            print('acceptance_fraction =', file=hdr, end=' ')
-            for af in sampler.acceptance_fraction:
-                print(af, file=hdr, end=' ')
-        except ImportError:
-            pass
-
-        #try:
-            #print('acor =', sampler.acor)
-            #print('\nacor =', file=hdr, end=' ')
-            #for ac in sampler.acor:
-                #print(ac, file=hdr, end=' ')
-        #except ImportError:
-            #pass
-
-        # acor and get_autocorr_time() are the same
-        try:
-            print('acor =', sampler.get_autocorr_time())
-            print('\nacor_time =', file=hdr, end=' ')
-            for act in sampler.get_autocorr_time(c=5):
-                print(act, file=hdr, end=' ')
-        #except AttributeError:
-            #pass
-        #except emcee.autocorr.AutocorrError:
-            #pass
-        except:
-            pass
-
-        # acor and get_autocorr_time() are the same
-        #try:
-            #print('acor_time =', sampler.get_autocorr_time())
-            #print('\nacor_time =', file=hdr, end=' ')
-            #for act in sampler.get_autocorr_time():
-                #print(act, file=hdr, end=' ')
-        #except AttributeError:
-            #pass
-
-        print('\nFinished', ctime(), file=hdr)
-
-    print('Saved to', hdrfile)
+    io.finalize_hdr(sampler, hdrfile)
 
     tmp = options['output'].replace('.fits', '.temp.fits')
     cmd = 'mv {0} {1}'.format(options['output'], tmp)
@@ -230,11 +130,12 @@ def run_emcee(hm_options, options, args):
     print('Saving everything to {0}...'.format(options['output']))
     #write_to_fits(
     io.write_chain(
-        sampler, sampling, chi2, names, jfree, output, metadata, i+1,
+        sampler, options, chi2, names, jfree, output, metadata, i+1,
         nwritten, Nobsbins, fail_value)
     if os.path.isfile(tmp):
         os.remove(tmp)
     print('Everything saved to {0}!'.format(options['output']))
+
     return
 
 
@@ -308,6 +209,69 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
         lnprior, theta, prior_types, parameters, jfree)
     if not isfinite(lnprior_total):
         return -inf, fail_value
+
+    p = update_parameters(theta, parameters, nparams, join, jfree, repeat)
+    # run model!
+    model = function(p, R)
+    # no covariance
+    #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
+    # full covariance included
+    residuals = esd - model[0]
+    chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
+                  for m in rng_obsbins for n in rng_obsbins]).sum()
+    if not isfinite(chi2):
+        return -inf, fail_value
+    lnlike = -chi2/2. + likenorm
+    model.append(lnprior_total)
+    model.append(chi2)
+    model.append(lnlike)
+    return lnlike + lnprior_total, model
+
+
+def mock():
+    
+    return
+
+
+def print_opening_msg(args, options):
+    print('Running KiDS-GGL pipeline - sampler\n')
+    if args.demo:
+        print(' ** Running demo only **')
+    elif isfile(options['output']) and not args.force_overwrite:
+        msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
+            options['output'])
+        answer = input(msg)
+        if len(answer) == 0:
+            sys.exit()
+        if answer.lower() not in ('y', 'yes'):
+            sys.exit()
+    if not args.demo:
+        print('\n{0}: Started\n'.format(ctime()))
+    return
+
+
+def sample_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
+    """
+    This creates a ball around a starting value, taking prior ranges
+    into consideration. It takes intervals (max-min)/2 around a
+    starting value.
+    """
+    val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
+    v1free = val1[where(jfree)]
+    v2free = val2[where(jfree)]
+    v3free = val3[where(jfree)]
+    v4free = val4[where(jfree)]
+    names_free = names[where(jfree)]
+    prior_free = prior_types[where(jfree)]
+
+    ball = np.zeros((nw, ndim))
+    for n, p in enumerate(prior_free):
+        ball[:,n] = priors.draw(
+            p, (v1free[n],v2free[n]), (v3free[n],v4free[n]), size=nw)
+    return ball
+
+
+def update_parameters(theta, parameters, nparams, join, jfree, repeat):
     # update parameters
     v1 = parameters[1][parameters[0].index('parameters')][0].copy()
     v1[where(jfree)] = theta
@@ -329,45 +293,9 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     # note that by now we discard the other v's!
     # we don't want to overwrite the old list now that we've
     # changed one of its components
-    newp = [parameters[0], [p for p in parameters[1]]]
-    newp[1][newp[0].index('parameters')] = v1
-    # run model!
-    model = function(newp, R)
-    # no covariance
-    #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
-    # full covariance included
-    #residuals = esd - model[0]
-    #chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-    #              for m in rng_obsbins for n in rng_obsbins]).sum()
-    residuals = esd - model[0]
-    chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
-                  for m in rng_obsbins for n in rng_obsbins]).sum()
-    if not isfinite(chi2):
-        return -inf, fail_value
-    lnlike = -chi2/2. + likenorm
-    model.append(lnprior_total)
-    model.append(chi2)
-    model.append(lnlike)
-    return lnlike + lnprior_total, model
+    p = [parameters[0], [p for p in parameters[1]]]
+    p[1][p[0].index('parameters')] = v1
+    return p
 
 
-def ball(names, prior_types, jfree, starting, parameters, nw, ndim):
-    """
-    This creates a ball around a starting value, taking prior ranges
-    into consideration. It takes intervals (max-min)/2 around a
-    starting value.
-    """
-    val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
-    v1free = val1[where(jfree)]
-    v2free = val2[where(jfree)]
-    v3free = val3[where(jfree)]
-    v4free = val4[where(jfree)]
-    names_free = names[where(jfree)]
-    prior_free = prior_types[where(jfree)]
-
-    ball = np.zeros((nw, ndim))
-    for n, p in enumerate(prior_free):
-        ball[:,n] = priors.draw(
-            p, (v1free[n],v2free[n]), (v3free[n],v4free[n]), size=nw)
-    return ball
 

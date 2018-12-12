@@ -8,6 +8,7 @@ import numpy as np
 def axlabel(return_value):
     # probably want to have units in `setup` as well
     labels = {'esd': r'\Delta\Sigma',
+              'kappa': r'\kappa',
               'power': r'\P(k)',
               'sigma': r'\Sigma',
               'xi': r'\xi'}

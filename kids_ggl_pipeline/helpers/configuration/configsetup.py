@@ -40,10 +40,10 @@ _valid_entries = {
     'logM_min': float,
     'logM_max': float,
     'transfer': ('CAMB', 'EH'),
-    #'return': ('esd', 'power', 'sigma', 'xi')
+    #'return': ('esd', 'kappa', 'power', 'sigma', 'xi')
     # will implement others in the future, require handling different
     # x-values
-    'return': ('esd',)
+    'return': ('esd', 'kappa', 'sigma')
     }
 
 

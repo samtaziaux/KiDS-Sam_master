@@ -54,8 +54,8 @@ from .tools import (
     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
     star_concentration, virial_mass, virial_radius)
 from .lens import (
-    power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata,
-    wp, wp_beta_correction)
+    power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
+    power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
     DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
     delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
@@ -119,7 +119,16 @@ def model(theta, R):
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter = theta
 
-    sigma8, h, omegam, omegab, omegav, n, z = cosmo
+    sigma8, h, omegam, omegab, omegav, n, z = cosmo[:7]
+    # cheap hack. I'll use this for CMB lensing, but we can
+    # also use this to account for difference between shear
+    # and reduced shear
+    if len(cosmo) == 8:
+        zs = cosmo[7]
+    elif setup['return'] == 'kappa':
+        raise ValueError(
+            'If return=kappa then you must provide a source redshift as' \
+            ' the last cosmological parameter')
 
     # HMF set up parameters
     # all of this can happen before the model is called, to save some
@@ -146,12 +155,9 @@ def model(theta, R):
     concentration = c_concentration[0](mass_range, *c_concentration[1:])
     concentration_sat = s_concentration[0](mass_range, *s_concentration[1:])
 
-    #mass_func = np.zeros((z.size, mass_range.size))
-    rho_mean = np.zeros(z.size)
-
-    # Calculation
     # Tinker10 should also be read from theta!
     hmf = []
+    rho_mean = np.zeros(z.size)
     cosmo_model = LambdaCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
     for i, zi in enumerate(z):
@@ -167,18 +173,13 @@ def model(theta, R):
         hmf_temp.update(cosmo_model=cosmo_model)
         hmf.append(hmf_temp)
         rho_mean[i] = hmf_temp.mean_density0
-
-    #omegab = hmf[0].cosmo.Ob0
-    #omegac = hmf[0].cosmo.Om0-omegab
-    #omegav = hmf[0].cosmo.Ode0
-    #rho_crit = rho_mean / (omegac+omegab)
-    #rho_dm = rho_mean * baryons.f_dm(omegab, omegac)
     rho_bg = rho_mean if setup['delta_ref'] == 'mean' \
         else rho_mean / omegam
 
     rvir_range_lin = virial_radius(mass_range, rho_bg[:,None], setup['delta'])
-    #rvir_range = np.log10(rvir_range_lin)
     rvir_range_3d = logspace(-3.2, 4, 200, endpoint=True)
+    # these are not very informative names but the "i" stands for
+    # integrand
     rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
     rvir_range_2d_i = R[0][1:]
 
@@ -288,7 +289,7 @@ def model(theta, R):
 
     Pg_k = array([Pg_c_i + Pg_s_i + Pg_2h_i
                   for Pg_c_i, Pg_s_i, Pg_2h_i in zip(Pg_c, Pg_s, Pg_2h)])
-    #print('Pg_k =', Pg_k.shape)
+    # not yet allowed
     if setup['return'] == 'power':
         # note this doesn't include the point mass! also, we probably
         # need to return k
@@ -300,21 +301,34 @@ def model(theta, R):
     xi2 = np.zeros((nbins,rvir_range_3d.size))
     for i in range(nbins):
         xi2[i] = power_to_corr_ogata(P_inter[i], rvir_range_3d)
-    #print('xi2 =', xi2.shape)
+    # not yet allowed
     if setup['return'] == 'xi':
         return [xi2, meff]
 
     # projected surface density
-    # this is the slowest part of the function
-    surf_dens2 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-                        for xi2_i, rho_i in zip(xi2, rho_bg)])
+    # this is the slowest part of the model
+    if setup['return'] in ('sigma', 'kappa'):
+        # this avoids the interpolation necessary for better
+        # accuracy of the ESD
+        surf_dens2 = array(
+            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_2d_i)
+             for xi2_i, rho_i in zip(xi2, rho_bg)])
+    else:
+        surf_dens2 = array(
+            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
+             for xi2_i, rho_i in zip(xi2, rho_bg)])
     for i in range(nbins):
         surf_dens2[i][(surf_dens2[i] <= 0.0) \
                          | (surf_dens2[i] >= 1e20)] = np.nan
         surf_dens2[i] = fill_nan(surf_dens2[i])
-    #print('sigma =', surf_dens2.shape)
-    if setup['return'] == 'sigma':
-        # need to do the interpolation here (also for the others above)
+    if setup['return'] in ('kappa', 'sigma'):
+        surf_dens2_r = array([UnivariateSpline(
+                                  rvir_range_2d_i, np.nan_to_num(si), s=0)
+                              for si in zip(surf_dens2)])
+        surf_dens2 = np.array(
+            [s_r(rvir_range_2d_i) for s_r in surf_dens2_r])
+        if setup['return'] == 'kappa':
+            return [surf_dens2/sigma_crit(cosmo_model, z, zs), meff]
         return [surf_dens2, meff]
 
     # excess surface density

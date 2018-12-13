@@ -48,14 +48,18 @@ def run(hm_options, options, args):
     ndim = len(val1[where(jfree)])
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
+
+    if args.mock:
+        #mock_options = parameters[1][parameters[0].index('mock')]
+        generate_mock(
+            args, function, options, setup,# mock_options,
+            parameters, join, starting, jfree, repeat, nparams)
+        return
+
     print('Starting values =', starting)
 
     metadata, meta_names, fits_format = \
         sampling_utils.initialize_metadata(options, output)
-
-    # generate a mock measurement
-    #if args.mock:
-        #mock(args, function, options, setup)
 
     # some additional requirements of lnprob
     fail_value = sampling_utils.initialize_fail_value(metadata)
@@ -73,6 +77,7 @@ def run(hm_options, options, args):
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
     rng_rbins = range(Nrbins)
+    print('R =', R.shape)
 
     # are we just running a demo?
     if args.demo:
@@ -171,6 +176,36 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
     return
 
 
+def generate_mock(args, function, options, setup,
+                  parameters, join, starting, jfree, repeat, nparams):
+    """Generate mock observations given a set of cosmological and
+    astrophysical parameters, as well as the observational setup
+
+    Perhaps this function can be used to generate the covariance
+    including astrophysical terms through the --cov cmd line option
+
+    steps:
+    * call halo.model just like in lnprob
+    * call covariance module, and pass mock_options to it (it
+      should be possible to disable this though)
+    """
+    R = np.array(
+        [np.logspace(setup['logR_min'], setup['logR_max'],
+                     setup['logR_bins'])])
+    R, _ = sampling_utils.setup_integrand(R, options['precision'])
+    p = update_parameters(starting, parameters, nparams, join, jfree, repeat)
+    # run model!
+    model = function(p, R)
+    # this is vestigial from when I integrated the offset
+    # centrals for the satellite lensing measurements
+    R = R[0,1:]
+    # save
+    outputs = io.write_signal(R, model[0], options, setup)
+    print('Saved mock signal to {0}'.format(outputs))
+    # now get covariance matrix
+    return
+
+
 def lnprob(theta, R, esd, icov, function, names, prior_types,
            parameters, nparams, join, jfree, repeat, lnprior, likenorm,
            rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
@@ -228,15 +263,15 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     return lnlike + lnprior_total, model
 
 
-def mock():
-    
-    return
-
 
 def print_opening_msg(args, options):
     print('Running KiDS-GGL pipeline - sampler\n')
-    if args.demo:
+    if args.cov:
+        print(' ** Calculating covariance matrix only **')
+    elif args.demo:
         print(' ** Running demo only **')
+    elif args.mock:
+        print(' ** Generating mock observations **')
     elif isfile(options['output']) and not args.force_overwrite:
         msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
             options['output'])

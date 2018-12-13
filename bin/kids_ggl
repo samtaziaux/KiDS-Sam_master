@@ -22,14 +22,15 @@ def main():
     if args.esd:
         shearcode.run_esd(args.config_file)
 
-    if args.sampler or args.demo:
+    # not doing elif in case someone wants to run both the ESD and
+    # sampler in one call, although this is discouraged
+    if args.sampler or args.demo or args.mock:
         # set up halo model and sampler
         cfg = configuration.ConfigFile(args.config_file)
         hm_options, sampling_options = cfg.read()
         # run!
-        sampler.run_emcee(hm_options, sampling_options, args)
-
-    if not (args.sampler or args.demo or args.esd):
+        sampler.run(hm_options, sampling_options, args)
+    elif not args.esd:
         print('Nothing to do.\n')
 
     return
@@ -38,26 +39,33 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser()
     add = parser.add_argument
+
     # configuration file
     add('-c', '--config', dest='config_file')
     # esd production options
     add('--esd', dest='esd', action='store_true',
-        help='run the ESD production module')
+        help='Run the ESD production module')
+    # calculate the astrophysical covariance
+    add('--cov', dest='cov', action='store_true',
+        help='Calculate the astrophysical covariance terms')
+    # generate mock observations
+    add('--mock', dest='mock', action='store_true',
+        help='Generate a mock dataset')
     # sampling options
     add('--sampler', dest='sampler', action='store_true',
-        help='run the MCMC sampler')
+        help='Run the MCMC sampler')
     add('-f', dest='force_overwrite', action='store_true',
         help='Overwrite output file if it exists')
     # model demo options
     add('--demo', dest='demo', action='store_true',
-        help='evaluate a demo sample with the input parameters')
+        help='Evaluate a demo sample with the input parameters')
     add('--no-cov', dest='no_demo_cov', action='store_true',
         help='Do not plot the covariance when running in demo mode')
     # print version
     add('-v', '--version', action='version',
         version='%(prog)s {0}'.format(__version__))
     args = parser.parse_args()
-    # options to turn on and off the data production or halo model?
+
     return args
 
 

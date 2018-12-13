@@ -2,8 +2,9 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from astropy.io import fits
+from astropy.io import ascii, fits
 from astropy.io.fits import BinTableHDU, Column
+from itertools import count
 import numpy as np
 import os
 import six
@@ -11,6 +12,7 @@ from time import ctime
 
 import sys
 if sys.version_info[0] == 2:
+    from itertools import izip as zip
     range = xrange
 
 # local
@@ -120,8 +122,8 @@ def load_data(options):
     # only used in nfw_stack, not in the halo model proper
     # this should *not* be part of the sampling dictionary
     # but doing it this way so it is an optional parameter
-    if 'precision' not in options:
-        options['precision'] = 7
+    #if 'precision' not in options:
+        #options['precision'] = 7
     R, Rrange = sampling_utils.setup_integrand(
         R, options['precision'])
     angles = np.linspace(0, 2*np.pi, 540)
@@ -309,5 +311,24 @@ def write_hdr(options, function, parameters, names, prior_types):
     # back to its original shape (do we need this??)
     parameters[1][iparams] = np.transpose(parameters[1][iparams])
     return hdrfile
+
+
+def write_signal(R, y, options, setup, err=None, output_path='mock'):
+    """
+    Write the signal to an ascii file
+    """
+    if not os.path.isdir(output_path):
+        os.makedirs(output_path)
+    outputs = []
+    if len(y.shape) == 1:
+        y = np.array([y])
+    for i, yi in zip(count(), y):
+        output = os.path.join(
+            output_path,
+            'kids_ggl_mock_{0}_{1}.txt'.format(setup['return'], i))
+        ascii.write([R, yi], output, names=('R',setup['return']),
+                    format='fixed_width')
+        outputs.append(output)
+    return outputs
 
 

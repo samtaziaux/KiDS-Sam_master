@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 
 from astropy.io import ascii, fits
 from astropy.io.fits import BinTableHDU, Column
+from glob import glob
 from itertools import count
 import numpy as np
 import os
@@ -62,14 +63,49 @@ def finalize_hdr(sampler, hdrfile):
     return
 
 
-def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
+def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
+    """Load covariance from a kids_ggl-compatible covariance file
+
+    Parameters
+    ----------
+    covfile : str
+        filename of covariance file
+    covcols : list-like or int
+        the index of the column(s) containing the covariance matrix
+        and, if applicable, the multiplicative bias correction, (1+K)
+        in the notation of Viola et al. (2015, MNRAS, 452, 3529)
+    Nrbins : int
+        number of data points per observable bin
+    Nobsbins : int, optional
+        number of observable bins (default 1). Must be provided if >1
+    exclude : list-like, optional
+        bins to be excluded from the covariance. Only supports one set
+        of bins, which is excluded from the entire dataset
+
+    Returns
+    -------
+    cov : array, shape (Nobsbins,Nobsbins,Nrbins,Nrbins)
+        four-dimensional covariance matrix
+    icov : array, shape (Nobsbins,Nobsbins,Nrbins,Nrbins)
+        four-dimensional inverse covariance matrix
+    likenorm : float
+        constant additive term for the likelihood
+    esd_err : array, shape (Nobsbins,Nrbins)
+        square root of the diagonal elements of the covariance matrix
+    cov2d : array, shape (Nobsbins*Nrbins,Nobsbins*Nrbins)
+        re-shaped covariance matrix, for plotting or other uses
+    """
+    if not hasattr(covcols, '__iter__'):
+        covcols = [covcols]
     cov = np.loadtxt(covfile, usecols=[covcols[0]])
     if len(covcols) == 2:
         cov /= np.loadtxt(covfile, usecols=[covcols[1]])
-    if exclude_bins is None:
+    if exclude is None:
         nexcl = 0
     else:
-        nexcl = len(exclude_bins)
+        if not hasattr(exclude, '__iter__'):
+            exclude = [exclude]
+        nexcl = len(exclude)
     # 4-d matrix
     cov = cov.reshape((Nobsbins,Nobsbins,Nrbins+nexcl,Nrbins+nexcl))
     cov2d = cov.transpose(0,2,1,3)
@@ -77,8 +113,8 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
         (Nobsbins*(Nrbins+nexcl), Nobsbins*(Nrbins+nexcl)))
     icov = np.linalg.inv(cov2d)
     # are there any bins excluded?
-    if exclude_bins is not None:
-        for b in exclude_bins[::-1]:
+    if exclude is not None:
+        for b in exclude[::-1]:
             cov = np.delete(cov, b, axis=3)
             cov = np.delete(cov, b, axis=2)
     # product of the determinants
@@ -105,7 +141,7 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude_bins=None):
 
 
 def load_data(options):
-    # need to run this without exclude_bins to throw out invalid values in it
+    # need to run this without exclude to throw out invalid values in it
     R, esd = load_datapoints(*options['data'])
     if options['exclude'] is not None:
         options['exclude'] = \
@@ -120,42 +156,26 @@ def load_data(options):
           Nobsbins, Nrbins, options['exclude'])
     # needed for offset central profile
     # only used in nfw_stack, not in the halo model proper
-    # this should *not* be part of the sampling dictionary
-    # but doing it this way so it is an optional parameter
-    #if 'precision' not in options:
-        #options['precision'] = 7
     R, Rrange = sampling_utils.setup_integrand(
         R, options['precision'])
     angles = np.linspace(0, 2*np.pi, 540)
     return R, esd, cov, Rrange, angles
 
 
-def load_datapoints(datafile, datacols, exclude_bins=None):
-    if isinstance(datafile, six.string_types):
-        R, esd = np.loadtxt(datafile, usecols=datacols[:2]).T
-        # better in Mpc
-        if R[-1] > 500:
-            R /= 1000
-        if len(datacols) == 3:
-            oneplusk = np.loadtxt(datafile, usecols=[datacols[2]]).T
-            esd /= oneplusk
-        R = np.array([R])
-        esd = np.array([esd])
-    else:
-        R, esd = np.transpose([np.loadtxt(df, usecols=datacols[:2])
-                                  for df in datafile], axes=(2,0,1))
-        if len(datacols) == 3:
-            oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
-                              for df in datafile])
-            esd /= oneplusk
-        for i in range(len(R)):
-            if R[i][-1] > 500:
-                R[i] /= 1000
-    if exclude_bins is not None:
+def load_datapoints(datafiles, datacols, exclude=None):
+    if isinstance(datafiles, six.string_types):
+        datafiles = sorted(glob(datafiles))
+    R, esd = np.transpose([np.loadtxt(df, usecols=datacols[:2])
+                           for df in datafiles], axes=(2,0,1))
+    if len(datacols) == 3:
+        oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
+                             for df in datafiles])
+        esd /= oneplusk
+    if exclude is not None:
         R = np.array([[Ri[j] for j in range(len(Ri))
-                          if j not in exclude_bins] for Ri in R])
+                       if j not in exclude] for Ri in R])
         esd = np.array([[esdi[j] for j in range(len(esdi))
-                            if j not in exclude_bins] for esdi in esd])
+                         if j not in exclude] for esdi in esd])
     return R, esd
 
 

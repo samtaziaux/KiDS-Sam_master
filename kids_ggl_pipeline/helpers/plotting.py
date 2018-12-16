@@ -1,8 +1,12 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from glob import glob
 import matplotlib.pyplot as plt
 import numpy as np
+import six
+
+from . import io
 
 
 def axlabel(return_value):
@@ -53,26 +57,44 @@ def save(output, fig=None, name='', tight=True, close=True,
     return
 
 
-def signal(R, y, yerr, model, observable, output=None):
+def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
+           output=None):
     """
     observable should be the name of the thing on the y axis
 
     how exactly should we decide when the y axis should be
     log scale?
     """
+    if len(R.shape) == 1:
+        R = [R]
+    if len(y.shape) == 1:
+        y = [y]
+    if len(yerr.shape) == 1:
+        yerr = [yerr]
     n = len(R)
-    fig, axes = plt.subplots(figsize=(4*n,4), ncols=n)
-    ylabel = axlabel(observable)
+    if axes is None:
+        fig, axes = plt.subplots(figsize=(4*n,4), ncols=n)
+    elif fig is None:
+        fig = plt
+    if observable:
+        ylabel = axlabel(observable)
+    if model is None:
+        model = [[] for _ in R]
     if n == 1:
         axes = [axes]
     for ax, Ri, yi, ei, fi in zip(axes, R, y, yerr, model):
-        Ri = Ri[1:]
+        # this would actually only happen when calling this function
+        # from within the model
+        if Ri[0] == 0 and len(Ri) == len(yi) + 1:
+            Ri = Ri[1:]
         ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10)
-        ax.plot(Ri, fi, 'r-', lw=3)
+        if len(fi) == len(Ri):
+            ax.plot(Ri, fi, 'r-', lw=3)
         ax.set_xscale('log')
         # do something fancier later
         ax.set_xlabel('$k$' if observable == 'power' else '$R$')
-    axes[0].set_ylabel(r'${0}$'.format(ylabel))
+    if observable:
+        axes[0].set_ylabel(r'${0}$'.format(ylabel))
     if np.all(y-yerr > 0):
         for ax in axes:
             ax.set_yscale('log')
@@ -87,6 +109,31 @@ def signal(R, y, yerr, model, observable, output=None):
         save(output, fig, 'signal')
     else:
         plt.show()
-    return
+    return fig, axes
+
+
+def signal_from_files(data_files, cov_file, data_cols=(0,1,4), cov_cols=(4,6),
+                      exclude=None, **kwargs):
+    """Plot signal from files as produced by kids_ggl
+
+    Load the data and then call ``signal``. You may pass any keyword
+    arguments accepted by ``signal``
+
+    Only one observable implemented for now
+    """
+    if isinstance(data_files, six.string_types):
+        data_files = sorted(glob(data_files))
+    if '*' in cov_file:
+        cov_file = sorted(glob(cov_file))
+        assert len(cov_file) == 1, \
+            'more than one covariance file provided'
+        cov_file = cov_file[0]
+    R, y = io.load_datapoints(data_files, data_cols, exclude)
+    Nobsbins, Nrbins = R.shape
+    cov = io.load_covariance(cov_file, cov_cols, Nobsbins, Nrbins, exclude)
+    yerr = cov[3]
+    fig, axes = signal(R, y, yerr, **kwargs)
+    return fig, axes
+
 
 

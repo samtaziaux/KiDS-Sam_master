@@ -42,13 +42,14 @@ if sys.version_info[0] == 2:
     from itertools import izip as zip
     range = xrange
 from time import time
-from astropy.cosmology import LambdaCDM
+from astropy.cosmology import Flatw0waCDM
 
 from hmf import MassFunction
 from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
+from . import covariance
 from . import profiles
 from .tools import (
     Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
@@ -99,11 +100,14 @@ def f_k(k_x):
 #################
 
 
-def model(theta, R):
+def model(theta, R, calculate_covariance=False):
 
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
+    # this has to happen before because theta is re-purposed below
+    if calculate_covariance:
+        covar = theta[1][theta[0].index('covariance')]
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
@@ -119,12 +123,12 @@ def model(theta, R):
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter = theta
 
-    sigma8, h, omegam, omegab, omegav, n, z = cosmo[:7]
+    sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
     # cheap hack. I'll use this for CMB lensing, but we can
     # also use this to account for difference between shear
     # and reduced shear
-    if len(cosmo) == 8:
-        zs = cosmo[7]
+    if len(cosmo) == 10:
+        zs = cosmo[9]
     elif setup['return'] == 'kappa':
         raise ValueError(
             'If return=kappa then you must provide a source redshift as' \
@@ -158,8 +162,11 @@ def model(theta, R):
     # Tinker10 should also be read from theta!
     hmf = []
     rho_mean = np.zeros(z.size)
-    cosmo_model = LambdaCDM(
-        H0=100*h, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
+    cosmo_model = Flatw0waCDM(
+        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725,
+        Neff=Neff, w0=w0, wa=wa)
+    # this assumes that each z corresponds to one bin. But what if I
+    # want to integrate the lens redshift distribution?
     for i, zi in enumerate(z):
         transfer_params = \
             {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
@@ -297,6 +304,16 @@ def model(theta, R):
     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                for Pg_k_i in zip(Pg_k)]
 
+    if calculate_covariance:
+        # this is a single number, in units 1/radians. Need to multiply
+        # by the area in each annulus - in radians, of course -- and the
+        # number of annuli (i.e., lenses) I presume?
+        shape = np.array(
+            [covariance.shape_noise(i.cosmo, zi, rho_i, covar, i)
+             for i, zi, rho_i in zip(hmf, z, rho_bg)])
+        print('shape =', shape)
+        return
+
     # correlation functions
     xi2 = np.zeros((nbins,rvir_range_3d.size))
     for i in range(nbins):
@@ -313,6 +330,10 @@ def model(theta, R):
         surf_dens2 = array(
             [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_2d_i)
              for xi2_i, rho_i in zip(xi2, rho_bg)])
+        if ingredients['pointmass']:
+            pointmass = 3*c_pm[1]/(2*np.pi*1e12) * array(
+                [10**m_pm / rvir_range_2d_i**2 for m_pm in c_pm[0]])
+            surf_dens2 = surf_dens2 + pointmass
     else:
         surf_dens2 = array(
             [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
@@ -346,16 +367,15 @@ def model(theta, R):
     # this should be moved to the power spectrum calculation
     if ingredients['pointmass']:
         # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
-        pointmass = array(
-            [c_pm[1]*10**m_pm / (np.pi*rvir_range_2d_i**2) / 1e12
-             for m_pm in c_pm[0]])
+        pointmass = c_pm[1]/(np.pi*1e12) * array(
+            [10**m_pm / (rvir_range_2d_i**2) for m_pm in c_pm[0]])
         out_esd_tot_inter = out_esd_tot_inter + pointmass
-
-    # Add other outputs as needed. Total ESD should always be first!
 
     # this should also probably be moved higher up!
     if setup['distances'] == 'proper':
         out_esd_tot_inter = out_esd_tot_inter * (1+z)**2
+
+    # Add other outputs as needed. Total ESD should always be first!
     return [out_esd_tot_inter, meff]
     #return out_esd_tot_inter, d_surf_dens3, d_surf_dens4, pointmass, nu(1)
 

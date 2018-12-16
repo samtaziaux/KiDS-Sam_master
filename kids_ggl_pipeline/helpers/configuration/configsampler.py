@@ -21,7 +21,6 @@ def sampling_dict(line, sampling):
             sampling[path_label] = ''
         path = os.path.join(sampling[path_label], words[1])
         if words[0] == 'data':
-            print(os.path.join(sampling[path_label], words[1]))
             sampling[words[0]] = \
                 [sorted(glob(os.path.join(sampling[path_label], words[1])))]
         else:

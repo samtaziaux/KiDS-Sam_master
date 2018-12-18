@@ -49,9 +49,9 @@ def run(hm_options, options, args):
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
 
-    if args.mock:
+    if args.cov or args.mock:
         #mock_options = parameters[1][parameters[0].index('mock')]
-        generate_mock(
+        mock(
             args, function, options, setup,# mock_options,
             parameters, join, starting, jfree, repeat, nparams)
         return
@@ -77,7 +77,6 @@ def run(hm_options, options, args):
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
     rng_rbins = range(Nrbins)
-    print('R =', R.shape)
 
     # are we just running a demo?
     if args.demo:
@@ -129,9 +128,10 @@ def run(hm_options, options, args):
     io.finalize_hdr(sampler, hdrfile)
 
     tmp = options['output'].replace('.fits', '.temp.fits')
-    cmd = 'mv {0} {1}'.format(options['output'], tmp)
-    print(cmd)
-    os.system(cmd)
+    if os.path.isfile(options['output']):
+        cmd = 'mv {0} {1}'.format(options['output'], tmp)
+        print(cmd)
+        os.system(cmd)
     print('Saving everything to {0}...'.format(options['output']))
     #write_to_fits(
     io.write_chain(
@@ -168,7 +168,9 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
     # make plots
     output = '{0}_demo_{1}.pdf'.format(
         '.'.join(options['output'].split('.')[:-1]), setup['return'])
-    plotting.signal(R, esd, esd_err, model[0], setup['return'], output)
+    plotting.signal(
+        R, esd, esd_err, model=model[0], observable=setup['return'],
+        output=output)
     if not args.no_demo_cov:
         output = output.replace('.pdf', '_cov.pdf')
         plotting.covariance(R, cov, output)
@@ -176,8 +178,8 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
     return
 
 
-def generate_mock(args, function, options, setup,
-                  parameters, join, starting, jfree, repeat, nparams):
+def mock(args, function, options, setup, parameters, join, starting, jfree,
+         repeat, nparams):
     """Generate mock observations given a set of cosmological and
     astrophysical parameters, as well as the observational setup
 
@@ -195,14 +197,16 @@ def generate_mock(args, function, options, setup,
     R, _ = sampling_utils.setup_integrand(R, options['precision'])
     p = update_parameters(starting, parameters, nparams, join, jfree, repeat)
     # run model!
-    model = function(p, R)
+    model = function(p, R, calculate_covariance=args.cov)
     # this is vestigial from when I integrated the offset
     # centrals for the satellite lensing measurements
     R = R[0,1:]
     # save
-    outputs = io.write_signal(R, model[0], options, setup)
-    print('Saved mock signal to {0}'.format(outputs))
-    # now get covariance matrix
+    if args.cov:
+        pass
+    else:
+        outputs = io.write_signal(R, model[0], options, setup)
+        print('Saved mock signal to {0}'.format(outputs))
     return
 
 
@@ -265,7 +269,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
 
 def print_opening_msg(args, options):
-    print('Running KiDS-GGL pipeline - sampler\n')
+    print('\nRunning KiDS-GGL pipeline - sampler\n')
     if args.cov:
         print(' ** Calculating covariance matrix only **')
     elif args.demo:
@@ -286,10 +290,8 @@ def print_opening_msg(args, options):
 
 
 def sample_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
-    """
-    This creates a ball around a starting value, taking prior ranges
-    into consideration. It takes intervals (max-min)/2 around a
-    starting value.
+    """Create a ball around the starting values by drawing random
+    samples from the prior
     """
     val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     v1free = val1[where(jfree)]

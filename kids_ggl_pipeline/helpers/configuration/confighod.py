@@ -138,8 +138,9 @@ def hod_parameters(line, names, parameters, priors, starting):
     if priors[-1] == 'array':
         parameters[0].append(np.array(words[2].split(','), dtype=float))
     elif priors[-1] == 'read':
+        usecols = np.array(words[3].split(','), dtype=int)
         parameters[0].append(
-            np.loadtxt(words[2], usecols=','.split(words[3])).T)
+            np.loadtxt(words[2], usecols=usecols, unpack=True))
     elif priors[-1] == 'repeat':
         parameters[0].append(-1)
     elif priors[-1] in fixed_priors:

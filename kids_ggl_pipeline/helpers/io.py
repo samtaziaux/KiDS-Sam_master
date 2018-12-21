@@ -179,6 +179,32 @@ def load_datapoints(datafiles, datacols, exclude=None):
     return R, esd
 
 
+def read_ascii(file, columns=None):
+    """Read a table file into a np array
+
+    np.loadtxt is doing weird things to read priors such that the array
+    cannot be converted to a float numpy array
+    """
+    if columns is None:
+        data = []
+    else:
+        data = [[] for i in columns]
+    with open(file) as f:
+        for line in f:
+            if line.lstrip()[0] == '#':
+                continue
+            if '#' in line:
+                line = line[:line.index('#')]
+            line = line.split()
+            if columns is None:
+                for col in line:
+                    data.append(col)
+            else:
+                for i, col in enumerate(columns):
+                    data[i].append(line[col])
+    return np.array(data, dtype=float)
+
+
 def write_chain(sampler, options, chi2, names, jfree, output, metadata,
                 iternum, nwritten, Nobsbins, fail_value):
     nchi2 = len(chi2)

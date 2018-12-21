@@ -8,6 +8,7 @@ from .core import *
 from ...hod import relations, scatter
 from ...halomodel import concentration
 from ...halomodel.observables import Observable
+from ...helpers import io
 from ...sampling.priors import (
     draw, fixed_priors, free_priors, nargs as prior_nargs, valid_priors)
 
@@ -138,9 +139,8 @@ def hod_parameters(line, names, parameters, priors, starting):
     if priors[-1] == 'array':
         parameters[0].append(np.array(words[2].split(','), dtype=float))
     elif priors[-1] == 'read':
-        usecols = np.array(words[3].split(','), dtype=int)
-        parameters[0].append(
-            np.loadtxt(words[2], usecols=usecols, unpack=True))
+        cols = np.array(words[3].split(','), dtype=int)
+        parameters[0].append(io.read_ascii(words[2], columns=cols))
     elif priors[-1] == 'repeat':
         parameters[0].append(-1)
     elif priors[-1] in fixed_priors:

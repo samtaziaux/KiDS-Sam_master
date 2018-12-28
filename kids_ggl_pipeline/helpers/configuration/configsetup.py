@@ -18,10 +18,10 @@ _default_entries = {
 
 _default_values = {
     'lnk_bins': 10000,
-    'lnk_min': -13.,
-    'lnk_max': 17.,
+    'lnk_min': -15.,
+    'lnk_max': 10.,
     'logM_bins': 200,
-    'logM_min': 5.,
+    'logM_min': 10.,
     'logM_max': 16.,
     'transfer':'EH',
     'logR_bins': 20,
@@ -39,7 +39,7 @@ _necessary_entries = {
 _valid_entries = {
     'delta': float,
     'delta_ref': ('mean', 'crit', 'critical'),
-    'distances': ('comoving', 'proper'),
+    'distances': ('comoving', 'proper', 'angular'),
     'lnk_bins': int,
     'lnk_min': float,
     'lnk_max': float,

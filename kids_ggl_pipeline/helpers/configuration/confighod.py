@@ -10,8 +10,16 @@ from ...halomodel import concentration
 from ...halomodel.observables import Observable
 from ...helpers import io
 from ...sampling.priors import (
-    draw, fixed_priors, free_priors, nargs as prior_nargs, valid_priors)
+    define_limits, draw, fixed_priors, free_priors, nargs as prior_nargs,
+    valid_priors)
 
+
+def add_default_ingredients(ingredients):
+    default = {'zlens_weights': False}
+    for key, val in default.items():
+        if key not in ingredients:
+            ingredients[key] = val
+    return ingredients
 
 def append_setup(parameters, nparams, setup):
     for i in setup:
@@ -137,22 +145,25 @@ def hod_parameters(line, names, parameters, priors, starting):
     names.append(words[0])
 
     if priors[-1] == 'array':
-        parameters[0].append(np.array(words[2].split(','), dtype=float))
+        p0 = np.array(words[2].split(','), dtype=float)
     elif priors[-1] == 'read':
         cols = np.array(words[3].split(','), dtype=int)
-        parameters[0].append(io.read_ascii(words[2], columns=cols))
+        p0 = io.read_ascii(words[2], columns=cols)
+        if len(cols) == 1:
+            p0 = p0[0]
     elif priors[-1] == 'repeat':
-        parameters[0].append(-1)
+        p0 = -1
     elif priors[-1] in fixed_priors:
-        parameters[0].append(float(words[2]))
+        p0 = float(words[2])
     elif prior_nargs[priors[-1]] > 0:
-        parameters[0].append(float(words[2]))
+        p0 = float(words[2])
     else:
-        parameters[0].append(-1)
+        p0 = -99
+    parameters[0].append(p0)
 
     if priors[-1] == 'repeat' or priors[-1] in fixed_priors \
             or priors[-1] in ('exp', 'jeffreys'):
-        parameters[1].append(-1)
+        parameters[1].append(-99)
         starting = starting_values(starting, parameters, line)
     else:
         if prior_nargs[priors[-1]] == 2:
@@ -161,7 +172,7 @@ def hod_parameters(line, names, parameters, priors, starting):
                 parameters[2].append(float(words[4]))
                 parameters[3].append(float(words[5]))
         else:
-            parameters[1].append(-1)
+            parameters[1].append(-99)
             if prior_nargs[priors[-1]] == 1 and len(words) > 4:
                 parameters[2].append(float(words[3]))
                 parameters[3].append(float(words[4]))
@@ -172,9 +183,15 @@ def hod_parameters(line, names, parameters, priors, starting):
             parameters[2].append(parameters[0][-1])
             parameters[3].append(parameters[1][-1])
         starting = starting_values(starting, parameters, line)
+
     if len(parameters[2]) < len(parameters[1]):
-        parameters[2].append(-np.inf)
-        parameters[3].append(np.inf)
+        if priors[-1] in fixed_priors:
+            parameters[2].append(-np.inf)
+            parameters[3].append(np.inf)
+        else:
+            lims = define_limits(priors[-1], words[2:])
+            parameters[2].append(lims[0])
+            parameters[3].append(lims[1])
 
     return names, parameters, priors, starting
 

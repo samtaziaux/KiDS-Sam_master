@@ -192,6 +192,7 @@ class ConfigFile(object):
         return []
 
     def initialize_parameters(self):
+        # the four elements correspond to [mean, std, lower, upper]
         return [[] for i in range(4)]
 
     def initialize_priors(self):
@@ -210,6 +211,7 @@ class ConfigFile(object):
         # starting values for free parameters
         starting = []
         ingredients = {}
+        covar = {}
         setup = {}
         # dictionaries don't preserve order
         output = [[], []]
@@ -244,10 +246,15 @@ class ConfigFile(object):
                     line, section, these_names, these_params, these_priors,
                     starting, join)
                 these_names, these_params, these_priors, starting, join = new
-            elif section == 'setup':
-                setup = configsetup.append_entry(line, setup)
+            elif section == 'covariance':
+                # using configsampler just because it provides the
+                # required functionality
+                #covar = section.append_entry_output(line, covar)
+                covar = configsampler.sampling_dict(line, covar)
             elif section == 'output':
                 output = section.append_entry_output(line, output)
+            elif section == 'setup':
+                setup = configsetup.append_entry(line, setup)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
         join = confighod.format_join(join)
@@ -255,10 +262,13 @@ class ConfigFile(object):
             confighod.flatten_parameters(parameters, names, repeat, join)
         sampling = configsampler.add_defaults(sampling)
         # add defaults and check types
+        ingredients = confighod.add_default_ingredients(ingredients)
         setup = configsetup.check_setup(setup)
+        hod_param_names = ['observables', 'selection', 'ingredients',
+                           'parameters', 'setup', 'covariance']
         hod_params = [
-            'observables,selection,ingredients,parameters,setup'.split(','),
-            [observables, selection, ingredients, parameters, setup]]
+            hod_param_names,
+            [observables, selection, ingredients, parameters, setup, covar]]
         hm_params = [model, hod_params, np.array(names), np.array(priors),
                      np.array(nparams), np.array(repeat), join,
                      np.array(starting), output]

@@ -25,6 +25,7 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import time
+from hmf import MassFunction, fitting_functions as ff
 import numpy as np
 import matplotlib.pyplot as pl
 import scipy
@@ -167,22 +168,41 @@ def extrap2d(interpolator):
 	#~ return a
 
 
+def f_k(k_x):
+    F = sp.erf(k_x/0.1) #0.05!
+    return F
+
+
 def fill_nan(a):
-
-	not_nan = np.logical_not(np.isnan(a))
-	indices = np.arange(len(a))
-
-	if a[not_nan].size == 0 or indices[not_nan].size == 0:
-		return a
-	else:
-		b = np.interp(indices, indices[not_nan], a[not_nan])
-
-		return b
+    not_nan = np.logical_not(np.isnan(a))
+    indices = np.arange(len(a))
+    if not_nan.sum() == 0:
+        return a
+    else:
+        return np.interp(indices, indices[not_nan], a[not_nan])
 
 
 def gas_concentration(mass, x_1, power):
 	r_c = 0.05 * (mass/(x_1))**(power)
 	return r_c
+
+
+def load_hmf(z, setup, cosmo_model, transfer_params):
+    hmf = []
+    rho_mean = np.zeros(z.shape[0])
+    for i, zi in enumerate(z):
+        hmf.append(MassFunction(
+            Mmin=setup['logM_min'], Mmax=setup['logM_max'],
+            dlog10m=setup['mstep'],
+            hmf_model=ff.Tinker10, delta_h=setup['delta'],
+            delta_wrt=setup['delta_ref'], delta_c=1.686,
+            cosmo_model=cosmo_model, z=zi,
+            transfer_model=setup['transfer'], **transfer_params)
+            )
+        # shouldn't this be the mean density at the lens redshift?
+        rho_mean[i] = hmf[-1].mean_density0
+    return hmf, rho_mean
+
 
 
 def star_concentration(mass, x_1, power):

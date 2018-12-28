@@ -19,6 +19,7 @@ from numpy import all as npall, array, append, concatenate, dot, inf, isnan, \
 from os import remove
 from os.path import isfile
 from scipy import stats
+from six import string_types
 from time import ctime, time
 
 # Python 2/3 compatibility
@@ -148,8 +149,6 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
          prior_types, parameters, join, starting, jfree, repeat, nparams,
          names, lnprior, rng_obsbins, fail_value, Ndatafiles,
          array, dot, inf, outer, pi, zip):
-    iparams = parameters[0].index('parameters')
-    parameters[1][iparams][0][where(jfree)] = starting
     to = time()
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
@@ -312,16 +311,28 @@ def update_parameters(theta, parameters, nparams, join, jfree, repeat):
     # update parameters
     v1 = parameters[1][parameters[0].index('parameters')][0].copy()
     v1[where(jfree)] = theta
-    # repeat parameters
-    v1[repeat != -1] = v1[repeat[repeat != -1]]
     # joined parameters
     v1_list = list(v1)
-    # these loops go backwards to preserve indexing
     for j in join[::-1]:
-        v1_list[j[0]] = np.array(v1[j], dtype=float)
+        try:
+            v1_list[j[0]] = np.array(v1[j], dtype=float)
+        except ValueError:
+            v1_list[j[0]] = v1[j]
+    # repeat parameters
+    for i, j in enumerate(repeat):
+        if j != -1:
+            v1_list[i] = v1_list[j]
+    # do this all the way at the end to preserve indices
+    for j in join:
         # remove parameters that have just been joined
         for i in j[1:][::-1]:
             v1_list.pop(i)
+    # convert histograms (especially joined histograms) into np arrays
+    for i, v in enumerate(v1_list):
+        if not isinstance(v, string_types) and hasattr(v, '__iter__'):
+            if hasattr(v[0], '__iter__'):
+                v1_list[i] = [np.array(vi) for vi in v]
+            v1_list[i] = np.array(v1_list[i], dtype=float)
     # join into sections and subsections as per the config file
     # by doing this I'm losing Rrange and angles, but I suppose
     # those should be defined in the config file as well.

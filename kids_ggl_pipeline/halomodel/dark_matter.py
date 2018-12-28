@@ -93,14 +93,16 @@ def NFW_f(z, rho_mean, f, m_x, r_x, k_x, c=None):
     return u_k
 
 
-def miscenter(p_off, r_off, m_x, r_x, k_x, c=None):
-    u_k = np.zeros((k_x.size,m_x.size))
+def miscenter(p_off, r_off, m_x, r_x, k_x, c=None, shape=None):
+    if shape is None:
+        shape = (k_x.size, m_x.size)
+    u_k = np.zeros(shape)
     if c is None:
         c = Con(z, m_x, f)
-    else:
-        c = c * np.ones(m_x.size)
+    #else:
+        #c = c * np.ones(m_x.size)
     rs = NFW_RS(c, r_x)
-    u_k = 1 - p_off + p_off*np.exp(-0.5*(k_x[:,None]**2)*(rs*r_off)**2)
+    u_k = 1 - p_off + p_off*np.exp(-0.5*(k_x**2)*(rs*r_off)**2)
     return u_k
 
 
@@ -227,10 +229,15 @@ def Bias_Tinker10(hmf, r_x):
     return func / norm
 
 
-def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
-    b_g = trapz(mass_func.dndlnm * population \
-                * Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
-    return (mass_func.power * b_g), b_g
+def TwoHalo(hmf, ngal, population, r_x, m_x, **kwargs):
+    """
+    Note that I removed the argument k_x which was required but not
+    used
+    """
+    b_g = trapz(
+        hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x,
+        m_x, **kwargs) / ngal
+    return (hmf.power * b_g), b_g
 
 
 
@@ -243,14 +250,13 @@ def MM_analy(mass_func, uk, rho_dm, m_x):
              m_x, axis=1) / (rho_dm**2.0)
 
 
-def GM_cen_analy(mass_func, uk, rho_dm, population, ngal, m_x):
-    return trapz(mass_func.dndlnm * population * uk,
-                 m_x, axis=1) / (rho_dm*ngal)
+def GM_cen_analy(dndlnm, uk, rho_dm, population, ngal, m_x):
+    return trapz(dndlnm * population * uk, m_x, axis=-2) / (rho_dm*ngal)
 
 
-def GM_sat_analy(mass_func, uk_m, uk_s, rho_dm, population, ngal, m_x):
-    return trapz(mass_func.dndlnm * population * uk_m * uk_s,
-                 m_x, axis=1) / (rho_dm*ngal)
+def GM_sat_analy(dndlnm, uk_m, uk_s, rho_dm, population, ngal, m_x):
+    return trapz(dndlnm * population * uk_m * uk_s, m_x, axis=-2) \
+        / (rho_dm*ngal)
 
 
 def GG_cen_analy(mass_func, ncen, ngal, m_x):

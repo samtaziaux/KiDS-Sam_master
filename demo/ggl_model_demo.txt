@@ -16,7 +16,7 @@
 model             halo.model
 
 [observables]
-logmstar        10,11,12   11.5,12.5,13.5     log
+logmstar        10,10.5,11   10.5,11,12     log
 
 [selection]
 logmstar_selection.txt      z,logmstar,completeness      fixed_width
@@ -27,16 +27,18 @@ pointmass       True
 satellites      False
 miscentring     False
 twohalo         True
+zlens_weights   False
 
 [cosmo]
 sigma_8         fixed     0.8159
 h               fixed     0.6774
 omegam          fixed     0.3089
 omegab          fixed     0.04860
-omegav          fixed     0.6911
 n               fixed     0.9667
+w0              fixed     -1.0
+wa              fixed     0.0
+Neff            fixed     3.046
 z               array     0.188,0.195
-h               fixed     0.7
 
 [hod/centrals/pointmass]
 logmstar        array     11.315
@@ -75,20 +77,21 @@ b               fixed       0.05
 [hod/satellites/scatter]
 name            schechter_mod
 alpha_s         fixed    -1.0
-b_0             fixed    -0.1       join:b
-b_1             fixed     1.0       join:b
-b_2             fixed     0.0       join:b
+b               fixed    -0.1       join:b
+b               fixed     1.0       join:b
+b               fixed     0.0       join:b
 
 [setup]
+return          esd
 delta           200
 delta_ref       mean
-distances       proper
+distances       comoving
 # these are optional
 transfer        EH
-lnk_bins        10000
-lnk_min         -13
-lnk_max         17
-logM_min        5
+lnk_bins        1000
+lnk_min         -10
+lnk_max         10
+logM_min        10
 logM_max        16
 logM_bins       200
 

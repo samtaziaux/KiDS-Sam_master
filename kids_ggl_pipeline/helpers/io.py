@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 
 from astropy.io import ascii, fits
 from astropy.io.fits import BinTableHDU, Column
+from astropy.table import Table
 from glob import glob
 from itertools import count
 import numpy as np
@@ -368,12 +369,14 @@ def write_signal(R, y, options, setup, err=None, output_path='mock'):
     outputs = []
     if len(y.shape) == 1:
         y = np.array([y])
+    yname = setup['return']
     for i, yi in zip(count(), y):
         output = os.path.join(
             output_path,
-            'kids_ggl_mock_{0}_{1}.txt'.format(setup['return'], i))
-        ascii.write([R, yi], output, names=('R',setup['return']),
-                    format='fixed_width')
+            'kids_ggl_mock_{0}_{1}.txt'.format(yname, i))
+        ascii.write(
+            [R, yi], output, names=('R',yname), format='commented_header',
+            formats={'R':'.2e',yname:'.2e'})
         outputs.append(output)
     return outputs
 

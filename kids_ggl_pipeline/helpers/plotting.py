@@ -42,7 +42,7 @@ def covariance(R, cov, output=None):
 
 
 def save(output, fig=None, name='', tight=True, close=True,
-         verbose=True, pad=0.1, **kwargs):
+         verbose=True, pad=0.4, **kwargs):
     if fig is None:
         fig = plt
     if tight:
@@ -58,7 +58,7 @@ def save(output, fig=None, name='', tight=True, close=True,
 
 
 def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
-           output=None):
+           output=None, **save_kwargs):
     """
     observable should be the name of the thing on the y axis
 
@@ -93,11 +93,12 @@ def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
         ax.set_xscale('log')
         # do something fancier later
         ax.set_xlabel('$k$' if observable == 'power' else '$R$')
+        ax.set_yscale('log')
     if observable:
         axes[0].set_ylabel(r'${0}$'.format(ylabel))
-    if np.all(y-yerr > 0):
-        for ax in axes:
-            ax.set_yscale('log')
+    #if np.all(y-yerr > 0):
+        #for ax in axes:
+            #ax.set_yscale('log')
     ylims = np.array([ax.get_ylim() for ax in axes])
     ylim = (ylims[:,0].min(), ylims[:,1].max())
     for ax in axes:
@@ -106,7 +107,7 @@ def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
         ax.set_yticklabels([])
     fig.tight_layout(pad=0.4)
     if output:
-        save(output, fig, 'signal')
+        save(output, fig, 'signal', **save_kwargs)
     else:
         plt.show()
     return fig, axes

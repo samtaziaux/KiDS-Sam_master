@@ -130,17 +130,18 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
 
             # The ID's of the galaxies that lie in this field
             matched_galIDs = np.array(catmatch[kidscatname][0])
-
+            
             # Find the selected lenses that lie in this KiDS field
             if 'catalog' in purpose:
                 galIDmask = np.in1d(galIDlist, matched_galIDs)
             if 'covariance' in purpose:
                 galIDmask = np.in1d(galIDlist, matched_galIDs) & lenssel
+            
             [galIDs, galRAs, galDECs, galweights, galZs, Dcls, Dals] = \
             [gallist[galIDmask] for gallist in [galIDlist, galRAlist, \
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
-
+                                                
             if len(galIDs)==0:
                 print('NOT analysing part {0}/{1}, process {2}: {3} (contains {4} objects)'\
                       .format(kidscatN, len(splitkidscats[Nsplit]), \
@@ -486,7 +487,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         srclims = src_selection['Z_B'][1]
         sigma_selection = {}
         # 10 lens redshifts for calculation of Sigma_crit
-        lens_redshifts = np.linspace(0.0, 0.7, 14, endpoint=True)
+        lens_redshifts = np.linspace(0.001, 0.7, 14, endpoint=True)
         #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
         #                          for y in lens_redshifts])
         cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
@@ -517,7 +518,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         srclims = src_selection['z_photometric'][1]
         sigma_selection = {}
         # 10 lens redshifts for calculation of Sigma_crit
-        lens_redshifts = np.linspace(0.0, 0.7, 14, endpoint=True)
+        lens_redshifts = np.linspace(0.001, 0.7, 14, endpoint=True)
         #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
         #                          for y in lens_redshifts])
         cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)

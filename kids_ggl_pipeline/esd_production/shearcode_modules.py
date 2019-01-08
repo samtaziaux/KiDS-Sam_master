@@ -622,11 +622,9 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
     if com == True:
         Rfield = np.radians(np.sqrt(2.0)/2.0) * Dcllist
-
     Rmax = Rmax + Rfield
 
     totgalIDs = np.array([])
-
     catmatch = dict()
     # Adding the lenses to the list that are inside each field
     for kidscat in kidscoord.keys():
@@ -642,7 +640,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         
         # Masking the lenses that are outside the field
         #coordmask = (abs(dRA) < 0.5) & (abs(dDEC) < 0.5)
-        coordmask = (abs(dRA)*np.cos(np.radians(galDEClist)) < 0.5) & (abs(dDEC) < 0.5)
+        coordmask = (abs(dRA)*np.cos(np.radians(galDEClist)) <= 0.5) & (abs(dDEC) <= 0.5)
         galIDs = (galIDlist[coordmask])
         name = kidscoord[kidscat][2]
         
@@ -660,12 +658,12 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
 
     # The list of fields with lens centers in them
     kidscats = list(catmatch)
+
     # The galaxies that have their centers in a field
     galIDs_infield = totgalIDs
 
     # Adding the lenses outside the fields to the dictionary
     for kidscat in kidscoord.keys():
-
         # The RA and DEC of the KiDS catalogs
         catRA = kidscoord[kidscat][0]
         catDEC = kidscoord[kidscat][1]
@@ -678,7 +676,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         if com == True:
             catR = Dcllist*theta
         
-        coordmask = (catR < Rmax)
+        coordmask = (catR <= Rmax)
 
         galIDs = np.array(galIDlist[coordmask])
         name = kidscoord[kidscat][2]
@@ -695,11 +693,13 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         totgalIDs = np.append(totgalIDs, galIDs)
 
         if len(galIDs)>0:
+            #print('Number of lenses outside this field:', len(galIDs))
             if kidscat not in kidscats:
-                catmatch[kidscat] = []
-            catmatch[kidscat] = np.append(
-                catmatch[kidscat], [galIDs, name], 0)
-
+                catmatch[kidscat] = np.array([])
+                catmatch[kidscat] = np.append(catmatch[kidscat], [galIDs, name], 0)
+            else:
+                catmatch[kidscat][0] = np.append(catmatch[kidscat][0], galIDs, 0)
+        
     kidscats = list(catmatch)
 
     print()
@@ -1457,7 +1457,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     wk2_tot[index] = int(-999)
     w2k2_tot[index] = int(-999)
     Nsrc[index] = int(-999)
-
+    
     data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T

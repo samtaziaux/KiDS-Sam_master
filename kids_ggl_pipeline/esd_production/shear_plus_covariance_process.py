@@ -487,9 +487,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         srclims = src_selection['Z_B'][1]
         sigma_selection = {}
         # 10 lens redshifts for calculation of Sigma_crit
-        lens_redshifts = np.linspace(0.001, 0.7, 14, endpoint=True)
-        #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
-        #                          for y in lens_redshifts])
+        lens_redshifts = np.arange(0.001, srclims[1]-z_epsilon, 0.05)
+
         cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
         lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
     
@@ -518,9 +517,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         srclims = src_selection['z_photometric'][1]
         sigma_selection = {}
         # 10 lens redshifts for calculation of Sigma_crit
-        lens_redshifts = np.linspace(0.001, 0.7, 14, endpoint=True)
-        #lens_comoving = np.array([distance.comoving(y, O_matter, O_lambda, h) \
-        #                          for y in lens_redshifts])
+        lens_redshifts = np.arange(0.001, srclims[1]-z_epsilon, 0.05)
+        
         cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
         lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
         

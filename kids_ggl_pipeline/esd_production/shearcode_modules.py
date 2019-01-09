@@ -540,7 +540,10 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             ' to use physical projected distances'
         galZlist = gamacat[colnames[3]] # Central Z of the galaxy
         cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-        Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
+        #Dcllist = np.array((cosmo.comoving_distance(galZlist).to('pc')).value)
+        galZbins = np.sort(np.unique(galZlist)) # Find the unique redshift values
+        Dclbins = np.array((cosmo.comoving_distance(galZbins).to('pc')).value) # Calculate the corresponding distances
+        Dcllist = Dclbins[np.digitize(galZlist, galZbins)-1] # Assign the appropriate Dcl to all lens redshifts
 
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
@@ -1060,7 +1063,10 @@ def define_obslist(obsname, gamacat, h, Dcllist=[], galZlist=[]):
         print('Applying cosmology correction to "AngSep"')
 
         cosmogama = LambdaCDM(H0=100., Om0=0.25, Ode0=0.75)
-        Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
+        #Dclgama = (cosmogama.comoving_distance(galZlist).to('pc')).value
+        galZbins = np.sort(np.unique(galZlist)) # Find the unique redshift values
+        Dclbins = np.array((cosmogama.comoving_distance(galZbins).to('pc')).value) # Calculate the corresponding distances
+        Dclgama = Dclbins[np.digitize(galZlist, galZbins)-1] # Assign the appropriate Dcl to all lens redshifts
         
         corr_list = Dcllist/Dclgama
         obslist = obslist * corr_list

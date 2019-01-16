@@ -75,7 +75,7 @@ logM1           fixed       11.7
 a               fixed       4.5
 b               fixed       0.05
 [hod/satellites/scatter]
-name            schechter_mod
+name            modschechter
 alpha_s         fixed    -1.0
 b               fixed    -0.1       join:b
 b               fixed     1.0       join:b

@@ -438,6 +438,8 @@ def model(theta, R, calculate_covariance=False):
              #for xi2_i, rho_i in zip(xi2, rho_bg)])
             [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
              for xi2_i, rho_i in zip(xi2, rho_bg[:,0])])
+        if setup['distances'] == 'proper':
+            surf_dens2 = surf_dens2 * (1+z)**2.0
         #print('surf_dens2 in {0:.2e} s'.format(time()-ti))
     # units of Msun/pc^2
     surf_dens2 = surf_dens2 / 1e12

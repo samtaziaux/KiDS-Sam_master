@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import array, iterable, newaxis, ones_like, log, log10
+from numpy import array, iterable, newaxis, ones_like, log, log10, moveaxis
 from scipy.integrate import trapz
 
 from ..halomodel.tools import Integrate
@@ -31,8 +31,8 @@ def Mh_effective(mass_function, pop_number, Mh, return_log=True):
     Mh_eff : array of floats, shape (nbins,)
         effective halo mass in each observable bin
     """
-    return log10(trapz(Mh*mass_function * pop_number, Mh, axis=1) \
-                 / trapz(mass_function * pop_number, Mh, axis=1))
+    return log10(trapz(Mh*mass_function * pop_number, Mh, axis=-1) \
+                 / trapz(mass_function * pop_number, Mh, axis=-1))
 
 
 def nbar(mass_function, pop_number, Mh):
@@ -56,7 +56,7 @@ def nbar(mass_function, pop_number, Mh):
     nbar : array of floats, shape (nbins,)
         average number of objects in each observable bin
     """
-    return trapz(mass_function * pop_number, Mh, axis=1)
+    return trapz(mass_function * pop_number, Mh, axis=-1)
 
 
 def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
@@ -96,7 +96,8 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
         obs_is_log=obs_is_log)
     if obs_is_log:
         obs = 10**obs
-    number = Integrate(prob*selection[newaxis], obs[newaxis], axis=2).T
+    number = moveaxis(
+        Integrate(prob*selection[newaxis], obs[newaxis], axis=-1), -1, -2)
     return number
 
 

@@ -74,7 +74,7 @@ try:
     from itertools import izip
 except ImportError:
     izip = zip
-from numpy import append, arctan, arctanh, arccos, array, cos, \
+from numpy import append, arctan, arctanh, arccos, array, cos, expand_dims, \
                   hypot, iterable, log, log10, logspace, meshgrid, \
                   ones, pi, sin, sum as nsum, transpose, zeros
 from scipy.integrate import cumtrapz, trapz
@@ -476,7 +476,7 @@ def uk(kx, mx, rx, c, rho_bg, overdensity=200):
     """
     rs = rx / c
     dc = delta(c, overdensity)
-    k = rs * kx[:,None]
+    k = rs * kx
     bs, bc = sici(k)
     asi, ac = sici((1+c)*k)
     return  4*pi * rho_bg * dc * rs**3 / mx \

@@ -21,7 +21,6 @@ def sampling_dict(line, sampling):
             sampling[path_label] = ''
         path = os.path.join(sampling[path_label], words[1])
         if words[0] == 'data':
-            print(os.path.join(sampling[path_label], words[1]))
             sampling[words[0]] = \
                 [sorted(glob(os.path.join(sampling[path_label], words[1])))]
         else:
@@ -56,11 +55,16 @@ def add_defaults(sampling):
         sampling['output'] = sampling.pop('sampling_output')
     if 'update_freq' in sampling:
         sampling['update'] = sampling.pop('update_freq')
+
     if 'exclude' not in sampling:
         sampling['exclude'] = None
     # in case a single bin is excluded
     if sampling['exclude'] is not None:
         if not hasattr(sampling['exclude'], '__iter__'):
             sampling['exclude'] = np.array([sampling['exclude']])
+
+    if 'precision' not in sampling:
+        sampling['precision'] = 7
+
     return sampling
 

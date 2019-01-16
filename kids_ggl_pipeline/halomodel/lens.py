@@ -24,6 +24,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from astropy import units as u
 import time
 #from progressbar import *
 import numpy as np
@@ -32,7 +33,7 @@ import scipy
 import multiprocessing as multi
 import sys
 from numpy import exp, log, log10, pi
-from scipy.integrate import quad, romberg, simps, trapz
+from scipy.integrate import cumtrapz, quad, romberg, simps, trapz
 from scipy.interpolate import interp1d, InterpolatedUnivariateSpline, \
                               UnivariateSpline
 import scipy.special as sp
@@ -52,48 +53,48 @@ from . import hankel
 """
 
 def multi_proc(a,b, que, power_func, R):
-	outdict = {}
+    outdict = {}
 
-	r = R[a:b:1]
+    r = R[a:b:1]
 
-	# Call power_to_corr function.
+    # Call power_to_corr function.
 
-	corr = power_to_corr(power_func, r)
+    corr = power_to_corr(power_func, r)
 
-	# Write in dictionary, so the result can be read outside of function.
+    # Write in dictionary, so the result can be read outside of function.
 
-	outdict = np.column_stack((r, corr))
-	que.put(outdict)
+    outdict = np.column_stack((r, corr))
+    que.put(outdict)
 
-	return
+    return
 
 
 def power_to_corr_multi(power_func, R):
 
     #print ('Calculating correlation function.')
 
-	nprocs = multi.cpu_count()#8 # Match the number of cores!
-	q1 = multi.Queue()
-	procs = []
-	chunk = int(np.ceil(len(R)/float(nprocs)))
+    nprocs = multi.cpu_count()#8 # Match the number of cores!
+    q1 = multi.Queue()
+    procs = []
+    chunk = int(np.ceil(len(R)/float(nprocs)))
 
-	for j in range(nprocs):
+    for j in range(nprocs):
 
-		work = multi.Process(target=multi_proc, args=((j*chunk), \
+        work = multi.Process(target=multi_proc, args=((j*chunk), \
                                             ((j+1)*chunk), q1, power_func, R))
-		procs.append(work)
-		work.start()
+        procs.append(work)
+        work.start()
 
-	result = np.array([]).reshape(0, 2)
+    result = np.array([]).reshape(0, 2)
 
-	for j in range(nprocs):
-		result = np.vstack([result, np.array(q1.get())])
+    for j in range(nprocs):
+        result = np.vstack([result, np.array(q1.get())])
 
-	result = result[np.argsort(result[:, 0])]
-	#print np.array(result)[:,1]
+    result = result[np.argsort(result[:, 0])]
+    #print np.array(result)[:,1]
 
     #print ('Done. \n')
-	return result[:,1]
+    return result[:,1]
 
 
 def power_to_corr(power_func, R):
@@ -183,8 +184,6 @@ def d_sigma(sigma, r_i, r_x):
 
     #print ('Calculating excess surface density.')
 
-    import scipy.integrate as intg
-
     s = np.zeros(len(r_x))
     err = np.zeros(len(r_x))
 
@@ -192,16 +191,11 @@ def d_sigma(sigma, r_i, r_x):
     x_int = np.linspace(0.0, 1.0, 1000, endpoint=True)
 
     for i in xrange(len(r_x)):
-
         integ = lambda x: 10.0**(c(np.log10(x*r_x[i])))*x # for int from 0 to 1
-
-        #s[i], err[i] = intg.quad(integ, 0.0, 1.0)
-        s[i] = intg.cumtrapz(np.nan_to_num(integ(x_int)), x_int, initial=None)[-1]
-    
+        s[i] = cumtrapz(np.nan_to_num(integ(x_int)), x_int, initial=None)[-1]
     # Not subtracting sigma because the range is different!
     # Subtracting interpolated function!
-    d_sig = ((2.0)*s - 10.0**(c(np.log10(r_x)))) 
-
+    d_sig = ((2.0)*s - 10.0**(c(np.log10(r_x))))
     return d_sig
 
 
@@ -265,7 +259,15 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
     return w_p
 
 
+def sigma_crit(cosmo, zl, zs):
+    """Critical surface density in Msun/pc^2"""
+    beta = cosmo.angular_diameter_distance_z1z2(zl, zs) \
+        * cosmo.angular_diameter_distance(zl) \
+        / cosmo.angular_diameter_distance(zs)
+    # the first factor is c^2/(4*pi*G) in Msun/Mpc
+    return 1.6629165e18 / beta.to(u.Mpc).value
+
 
 if __name__ == '__main__':
-	main()
+    main()
 

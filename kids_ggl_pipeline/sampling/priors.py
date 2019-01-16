@@ -48,20 +48,21 @@ def calculate_lnprior(lnprior, theta, prior_types, parameters, jfree):
 
 
 def define_limits(prior, args):
+    # just in case
+    args = [float(a) for a in args]
     if prior == 'uniform':
         return args
     # 10-sigma
     if prior == 'normal':
-        return [args[0]-10*(args[0]-args[1]), args[0]+10*(args[0]-args[1])]
+        return [args[0]-10*args[1], args[0]+10*args[1]]
     if prior == 'lognormal':
-        return [log(args[0])-10*(log(args[0])-args[1]),
-                log(args[0])+10*(log(args[0])-args[1])]
+        return [log(args[0])-10*log(args[1]), log(args[0])+10*log(args[1])]
     if prior == 'exp':
         # cumulative probability ~ 2e-9
-        return [0, 10]
+        return [-10, 10]
     if prior == 'student':
         # cumulative probability ~ 3e-7
-        return [0, 1000000]
+        return [-100000, 1000000]
     if prior == 'jeffreys':
         # no choice but to assume this number is of order 0-1
         # (but cannot be exactly zero)

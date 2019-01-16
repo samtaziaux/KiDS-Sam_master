@@ -6,5 +6,5 @@ from __future__ import absolute_import, division, print_function
 
 from numpy import log10
 
-from ..helpers.functions import powerlaw, double_powerlaw
+from ..helpers.functions import *
 

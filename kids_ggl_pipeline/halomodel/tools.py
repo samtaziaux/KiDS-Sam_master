@@ -25,6 +25,7 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import time
+from hmf import MassFunction, fitting_functions as ff
 import numpy as np
 import matplotlib.pyplot as pl
 import scipy
@@ -47,18 +48,18 @@ def Integrate(func_in, x_array, **kwargs):
 
 def Integrate1(func_in, x_array): # Gauss - Legendre quadrature!
 
-	import scipy.integrate as intg
+    import scipy.integrate as intg
 
     #func_in = np.nan_to_num(func_in)
 
-	c = interp1d(np.log(x_array), np.log(func_in), kind='slinear', \
+    c = interp1d(np.log(x_array), np.log(func_in), kind='slinear', \
                  bounds_error=False, fill_value=0.0)
 
-	integ = lambda x: np.exp(c(np.log(x)))
-	result = intg.fixed_quad(integ, x_array[0], x_array[-1])
+    integ = lambda x: np.exp(c(np.log(x)))
+    result = intg.fixed_quad(integ, x_array[0], x_array[-1])
 
-	#print ("Integrating over given function.")
-	return result[0]
+    #print ("Integrating over given function.")
+    return result[0]
 
 
 def extrap1d(x, y, step_size, method):
@@ -155,39 +156,58 @@ def extrap2d(interpolator):
 
 
 #~ def fill_nan(a):
-	#~
-	#~ # Replaces nan with closest value,
+    #~
+    #~ # Replaces nan with closest value,
     #~ so we are not left with 0 or 10^308-something!
-	#~
-	#~ ind = np.where(~np.isnan(a))[0]
-	#~ first, last = ind[0], ind[-1]
-	#~ a[:first] = a[first]
-	#~ a[last + 1:] = a[last]
-	#~
-	#~ return a
+    #~
+    #~ ind = np.where(~np.isnan(a))[0]
+    #~ first, last = ind[0], ind[-1]
+    #~ a[:first] = a[first]
+    #~ a[last + 1:] = a[last]
+    #~
+    #~ return a
+
+
+def f_k(k_x):
+    F = sp.erf(k_x/0.1) #0.05!
+    return F
 
 
 def fill_nan(a):
-
-	not_nan = np.logical_not(np.isnan(a))
-	indices = np.arange(len(a))
-
-	if a[not_nan].size == 0 or indices[not_nan].size == 0:
-		return a
-	else:
-		b = np.interp(indices, indices[not_nan], a[not_nan])
-
-		return b
+    not_nan = np.logical_not(np.isnan(a))
+    indices = np.arange(len(a))
+    if not_nan.sum() == 0:
+        return a
+    else:
+        return np.interp(indices, indices[not_nan], a[not_nan])
 
 
 def gas_concentration(mass, x_1, power):
-	r_c = 0.05 * (mass/(x_1))**(power)
-	return r_c
+    r_c = 0.05 * (mass/(x_1))**(power)
+    return r_c
+
+
+def load_hmf(z, setup, cosmo_model, transfer_params):
+    hmf = []
+    rho_mean = np.zeros(z.shape[0])
+    for i, zi in enumerate(z):
+        hmf.append(MassFunction(
+            Mmin=setup['logM_min'], Mmax=setup['logM_max'],
+            dlog10m=setup['mstep'],
+            hmf_model=ff.Tinker10, delta_h=setup['delta'],
+            delta_wrt=setup['delta_ref'], delta_c=1.686,
+            cosmo_model=cosmo_model, z=zi,
+            transfer_model=setup['transfer'], **transfer_params)
+            )
+        # shouldn't this be the mean density at the lens redshift?
+        rho_mean[i] = hmf[-1].mean_density0
+    return hmf, rho_mean
+
 
 
 def star_concentration(mass, x_1, power):
-	r_t = 0.02 * (mass/(x_1))**(power)
-	return r_t
+    r_t = 0.02 * (mass/(x_1))**(power)
+    return r_t
 
 def virial_mass(r, rho_mean, delta_halo):
     """
@@ -205,7 +225,7 @@ def virial_radius(m, rho_mean, delta_halo):
 
 
 if __name__ == '__main__':
-	main()
+    main()
 
 
 

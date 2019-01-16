@@ -9,36 +9,51 @@ _default_entries = {
     'logM_bins': 'number of (log-spaced) bins in halo mass',
     'logM_max': 'maximum value of logM for halo mass function calculations',
     'logM_min': 'minimum value of logM for halo mass function calculations',
-    'transfer': 'name of the transfer function used by hmf'
+    'transfer': 'name of the transfer function used by hmf',
+    # these three used only for mock production
+    'logR_bins': 'number of (log-spaced) bins in lens-source separation',
+    'logR_max': 'maximum value of logR for mock observations',
+    'logR_min': 'minimum value of logR for mock observations'
     }
 
 _default_values = {
     'lnk_bins': 10000,
-    'lnk_max': 17.,
-    'lnk_min': -13.,
+    'lnk_min': -15.,
+    'lnk_max': 10.,
     'logM_bins': 200,
+    'logM_min': 10.,
     'logM_max': 16.,
-    'logM_min': 5.,
     'transfer':'EH',
+    'logR_bins': 20,
+    'logR_min': -1.3,
+    'logR_max': 1.,
     }
 
 _necessary_entries = {
     'delta': 'overdensity for mass definition (typically 200 or 500)',
     'delta_ref': 'background density reference: {"mean","crit"}',
-    'distances': 'whether to use "proper" or "comoving" distances'
+    'distances': 'whether to use "proper" or "comoving" distances',
+    'return': 'which quantity should the halo model return'
     }
 
 _valid_entries = {
     'delta': float,
     'delta_ref': ('mean', 'crit', 'critical'),
-    'distances': ('comoving', 'proper'),
+    'distances': ('comoving', 'proper', 'angular'),
     'lnk_bins': int,
     'lnk_min': float,
     'lnk_max': float,
     'logM_bins': int,
     'logM_min': float,
     'logM_max': float,
-    'transfer': ('CAMB', 'EH')
+    'logR_bins': int,
+    'logR_min': float,
+    'logR_max': float,
+    'transfer': ('CAMB', 'EH'),
+    #'return': ('esd', 'kappa', 'power', 'sigma', 'xi')
+    # will implement others in the future, require handling different
+    # x-values
+    'return': ('esd', 'kappa', 'sigma')
     }
 
 

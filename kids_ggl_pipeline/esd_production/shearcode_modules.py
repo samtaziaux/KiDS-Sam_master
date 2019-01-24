@@ -22,6 +22,8 @@ from astropy.cosmology import LambdaCDM
 from astropy.io import ascii, fits as pyfits
 from astropy.table import Table
 
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib import gridspec

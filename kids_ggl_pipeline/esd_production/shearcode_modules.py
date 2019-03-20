@@ -489,7 +489,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             path_gamacat, ignore_missing_end=True)[1].data)
     except IOError:
         gamacat = ascii.read(path_gamacat)
-
+    
     # skip the ID column name since if it doesn't exist we create it below
     for colname in colnames[1:]:
         assert colname in gamacat.colnames, \
@@ -497,7 +497,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             'Column {0} not present in catalog {1}. See the full list of' \
             'column names above'.format(
                 colname, path_gamacat, gamacat.colnames)
-
+    
     # IDs of all galaxies
     if colnames[0] not in gamacat.colnames:
         gamacat[colnames[0]] = np.arange(gamacat[colnames[1]].size, dtype=int)
@@ -519,10 +519,9 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galRAlist = gamacat[colnames[1]] # Central RA of the galaxy (in degrees)
         galDEClist = gamacat[colnames[2]] # Central DEC of the galaxy (in degrees)
 
-
     #Defining the lens weights
-    weightname = lens_weights.keys()[0]
-    weightfile = lens_weights.values()[0]
+    weightname = list(lens_weights.keys())[0]
+    weightfile = list(lens_weights.values())[0]
     if 'No' not in weightname:
         if weightfile == 'self':
             galweightlist = gamacat[weightname]

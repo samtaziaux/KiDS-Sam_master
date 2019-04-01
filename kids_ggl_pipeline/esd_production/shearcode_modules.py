@@ -79,7 +79,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     centering = 'None'
     for cen in centers:
         if ('rank{}'.format(cen) in binname) or \
-            ('rank{}'.format(cen) in lens_selection.keys()):
+            ('rank{}'.format(cen) in list(lens_selection.keys())):
             centering = cen
             print('Center definition = {}'.format(centering))
     if centering == 'Cen':
@@ -491,7 +491,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             path_gamacat, ignore_missing_end=True)[1].data)
     except IOError:
         gamacat = ascii.read(path_gamacat)
-
+    
     # skip the ID column name since if it doesn't exist we create it below
     for colname in colnames[1:]:
         assert colname in gamacat.colnames, \
@@ -499,7 +499,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
             'Column {0} not present in catalog {1}. See the full list of' \
             'column names above'.format(
                 colname, path_gamacat, gamacat.colnames)
-
+    
     # IDs of all galaxies
     if colnames[0] not in gamacat.colnames:
         gamacat[colnames[0]] = np.arange(gamacat[colnames[1]].size, dtype=int)
@@ -521,10 +521,9 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galRAlist = gamacat[colnames[1]] # Central RA of the galaxy (in degrees)
         galDEClist = gamacat[colnames[2]] # Central DEC of the galaxy (in degrees)
 
-
     #Defining the lens weights
-    weightname = lens_weights.keys()[0]
-    weightfile = lens_weights.values()[0]
+    weightname = list(lens_weights.keys())[0]
+    weightfile = list(lens_weights.values())[0]
     if 'No' not in weightname:
         if weightfile == 'self':
             galweightlist = gamacat[weightname]
@@ -632,7 +631,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
     totgalIDs = np.array([])
     catmatch = dict()
     # Adding the lenses to the list that are inside each field
-    for kidscat in kidscoord.keys():
+    for kidscat in list(kidscoord.keys()):
     
         # The RA and DEC of the KiDS catalogs
         catRA = kidscoord[kidscat][0]
@@ -668,7 +667,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
     galIDs_infield = totgalIDs
 
     # Adding the lenses outside the fields to the dictionary
-    for kidscat in kidscoord.keys():
+    for kidscat in list(kidscoord.keys()):
         # The RA and DEC of the KiDS catalogs
         catRA = kidscoord[kidscat][0]
         catDEC = kidscoord[kidscat][1]
@@ -855,7 +854,7 @@ def import_kidscat(path_kidscats, kidscatname, kidscolnames, kidscat_end, \
     # srcm != 0 removes all the sources that are not in 0.1 to 0.9 Z_B range
 
     # We apply any other cuts specified by the user
-    for param in src_selection.keys():
+    for param in list(src_selection.keys()):
         srclims = src_selection[param][1]
         if len(srclims) == 1:
             srcmask *= (kidscat[param] == srclims[0])
@@ -906,7 +905,7 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
     e2 = np.transpose(np.array([kidscat['eps_obs2'] for blind in blindcats]))
 
     srcmask = (srcm==0.0)
-    for param in src_selection.keys():
+    for param in list(src_selection.keys()):
         srclims = src_selection[param][1]
         if len(srclims) == 1:
             srcmask *= (kidscat[param] == srclims[0])
@@ -1094,7 +1093,7 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
     #binname = 'No'
     
     # Add the mask for each chosen lens parameter
-    for param in lens_selection.keys():
+    for param in list(lens_selection.keys()):
         binlims = lens_selection[param][1]
         obsfile = lens_selection[param][0]
         # Importing the binning file
@@ -1405,9 +1404,9 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
     #    print
     if os.path.isfile(filename):
         os.remove(filename)
-        print('Overwritting old catalog:', filename)
+        print('Overwriting old catalog:', filename)
     else:
-        print('Writting new catalog:', filename)
+        print('Writing new catalog:', filename)
     print()
     tbhdu.writeto(filename)
 

@@ -259,23 +259,26 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         shearcatname_N2 = shear.define_filename_splits(
                             path_splits, purpose,  filename_N2, kidscats[x],
                             0, filename_addition, blindcat)
-
-                        sheardat_N2 = pyfits.open(shearcatname_N2)[1].data
-                        # Importing the relevant data from each file
-                        Cs_N2 = np.array(sheardat_N2['Cs'])
-                        Ss_N2 = np.array(sheardat_N2['Ss'])
-                        Zs_N2 = np.array(sheardat_N2['Zs'])
-                        if Cs_N1.size == 0:
-                            continue
-                        # The new covariance matrix
-                        for R1 in xrange(nRbins):
-                            for R2 in range(nRbins):
+                        if os.path.isfile(shearcatname_N2):
+                            sheardat_N2 = pyfits.open(shearcatname_N2)[1].data
+                            # Importing the relevant data from each file
+                            Cs_N2 = np.array(sheardat_N2['Cs'])
+                            Ss_N2 = np.array(sheardat_N2['Ss'])
+                            Zs_N2 = np.array(sheardat_N2['Zs'])
+                            if Cs_N1.size == 0:
+                                continue
+                            # The new covariance matrix
+                            for R1 in xrange(nRbins):
+                                for R2 in range(nRbins):
                                 
-                                if 'covariance' in purpose:
-                                    cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2]))
-                                    if cross_cov == False:
-                                        if N1!=N2:
-                                            cov[N1,N2,R1,R2] = 0.0
+                                    if 'covariance' in purpose:
+                                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2]))
+                                        if cross_cov == False:
+                                            if N1!=N2:
+                                                cov[N1,N2,R1,R2] = 0.0
+                        else:
+                            continue
+            
 
                 else:
                     # This message should be a lot more explicit

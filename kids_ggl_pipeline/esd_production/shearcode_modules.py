@@ -466,6 +466,8 @@ def define_Rbins(path_Rbins, Runit):
             Rconst = 1/(60.**2)
         if 'min' in Runit:
             Rconst = 1/60.
+    if 'deg' in Runit:
+        Rconst = 1.
 
     if Rconst == -999:
         print('*** Unit of radial bins not recognized! ***')

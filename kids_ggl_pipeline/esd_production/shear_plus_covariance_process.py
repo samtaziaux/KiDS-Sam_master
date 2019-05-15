@@ -113,7 +113,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
         raise SystemExit()
 
     if cat_version == 3 or cat_version == 0:
-
+        
         for kidscatname in splitkidscats[Nsplit]:
             
             index = np.array(np.where(tile_varlist == catmatch[kidscatname][1]))[0]
@@ -207,10 +207,11 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                 # Calculate the projected distance (srcR) and the shear
                 # (gamma_t and gamma_x) of all lens-source pairs.
                 srcR, incosphi, insinphi = shear.calc_shear(Dal_split, Dcl_split, \
-                                                            galRA_split, \
+                                                            galRA_split,\
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
-                                                            e1, e2, Rmin, Rmax, com)
+                                                            e1, e2, Rmin, Rmax, \
+                                                            com, Runit, galweights_split)
 
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
@@ -262,7 +263,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                             
                             output_onebin = shear.calc_shear_output(incosphilist, insinphilist,\
                                                     e1, e2, Rmask, klist,\
-                                                     wlist, Nsrclist, srcm, Runit, blindcats)
+                                                    wlist, Nsrclist, srcm, Runit, blindcats)
                             
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
@@ -274,18 +275,19 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weighted Cs, Ss and Zs
-                            if 'pc' not in Runit:
-                                output_onebin = [C_tot, S_tot, Z_tot] = \
-                                shear.calc_covariance_output(incosphilist, \
-                                                             insinphilist, \
-                                                             Nsrclist, \
-                                                             galweights_split)
-                            else:
+
+                            if ('pc' in Runit) or ('mps2' in Runit):
                                 output_onebin = [C_tot, S_tot, Z_tot] = \
                                 shear.calc_covariance_output(incosphilist, \
                                                              insinphilist, \
                                                              klist, \
-                                                             galweights_split)
+                                                             galweights_split, Runit)
+                            else:
+                                output_onebin = [C_tot, S_tot, Z_tot] = \
+                                shear.calc_covariance_output(incosphilist, \
+                                                             insinphilist, \
+                                                             Nsrclist, \
+                                                             galweights_split, Runit)
 
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):
@@ -514,7 +516,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     if cat_version == 0:
         print('\nCalculating the lensing efficiency ...')
             
-        srclims = src_selection['z_photometric'][1]
+        srclims = src_selection['z_cgal'][1]
         sigma_selection = {}
         # 10 lens redshifts for calculation of Sigma_crit
         lens_redshifts = np.arange(0.001, srclims[1]-z_epsilon, 0.05)
@@ -527,7 +529,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         k = np.zeros_like(lens_redshifts)
     
         for i in xrange(lens_redshifts.size):
-            sigma_selection['z_photometric'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
+            sigma_selection['z_cgal'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
             srcNZ_k, spec_weight_k = shear.import_spec_cat_mocks(path_kidscats, kidscatname2,\
                                     kidscat_end, specz_file, sigma_selection, \
                                     cat_version)
@@ -536,7 +538,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                             weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon, com)
+                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -616,7 +618,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                  Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                  blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
                  Dcsbins, Dc_epsilon, filename_addition, variance, h,
-                path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection)
+                path_kidscats, kidscatname2, kidscolnames, kidscat_end, src_selection)
 
     if 'covariance' in purpose:
         for i in xrange(Nobsbins):

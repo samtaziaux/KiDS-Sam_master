@@ -73,7 +73,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     
     # Combine the splits according to the purpose
     
-
+    print('The catalogue creation should now start')
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
         combine_splits.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)

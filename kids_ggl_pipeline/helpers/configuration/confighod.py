@@ -18,6 +18,11 @@ def add_default_ingredients(ingredients):
     options = ('centrals', 'pointmass', 'miscentring', 'satellites',
                'twohalo', 'zlens_weights')
     default = {key: False for key in options}
+    for key in ingredients:
+        if key not in options:
+            msg = 'ingredient {0} not a valid entry. Valid entries are' \
+                  ' {1}'.format(key, options)
+            raise ValueError(msg)
     for key, val in default.items():
         if key not in ingredients:
             ingredients[key] = val

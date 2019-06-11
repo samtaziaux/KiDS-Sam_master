@@ -490,7 +490,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
     except IOError:
         gamacat = ascii.read(path_gamacat)
     
-    # skip the ID column name since if it doesn't exist we create it below
+    # Skip the ID column name since if it doesn't exist we create it below
     for colname in colnames[1:]:
         assert colname in gamacat.colnames, \
             'Full list of column names:\n{2}\n\n' \
@@ -501,8 +501,12 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
     # IDs of all galaxies
     if colnames[0] not in gamacat.colnames:
         gamacat[colnames[0]] = np.arange(gamacat[colnames[1]].size, dtype=int)
-    gamacat[colnames[0]] = np.array(gamacat[colnames[0]], dtype=str)
+        print("No ID's found. ID's are defined as a array of integers: 0,1,2,...,N.")
+    else:
+        gamacat[colnames[0]] = np.array(gamacat[colnames[0]], dtype=str)
+        print("ID's given in the catalogue are used.")
     galIDlist = gamacat[colnames[0]]
+    
     if galIDlist.size != np.unique(galIDlist).size:
         print('Dear user, you have confused me with non unique IDs for your lenses.')
         print('I will refrain to keep running (it takes me a lot of energy)')

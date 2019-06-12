@@ -29,7 +29,7 @@ def read_config(config_file):
     z_epsilon = 0.2
     n_boot = 1
     cross_cov = bool(1)
-    com = bool(0)
+    com = ''
     gama_path = 'None'
     filename = 'None'
     colnames = ['ID','RA','DEC','Z']
@@ -101,7 +101,7 @@ def read_config(config_file):
         elif line[0] == 'cross_covariance':
             cross_cov = bool(int(line[1]))
         elif line[0] == 'comoving':
-            com = bool(int(line[1]))
+            com = line[1]
 
         # Lens selection
         elif line[0] == 'lensID_file':

@@ -395,22 +395,27 @@ def import_data(path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_ki
     Rmin, Rmax, Rbins, Rcenters, \
         nRbins, Rconst = define_Rbins(path_Rbins, Runit)
 
-    # Import GAMA catalogue
+    print('Import lens catalogue')
+    # Import lens catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, \
         Dcllist, Dallist = import_gamacat(
             path_gamacat, colnames, centering, purpose, Ncat, O_matter,
             O_lambda, Ok, h, Runit, lens_weights)
-
+    
+    print('Determine the coordinates of the KiDS catalogues')
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats, kidscolnames, cat_version)
-
-    # Match the KiDS field and GAMA galaxy coordinates
+    
+    print('Match the KiDS field and lens galaxy coordinates')
+    # Match the KiDS field and lens galaxy coordinates
     catmatch, kidscats, galIDs_infield = run_catmatch(
         kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, Rmax, purpose,
         filename_addition, cat_version, com)
 
     gc.collect()
-
+    
+    print('End of import_data')
+    
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
         galDEClist, galweightlist, galZlist, Dcllist, Dallist
@@ -531,7 +536,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
                         ignore_missing_end=True)[1].data[weightname]
     else:
         galweightlist = np.ones(len(galIDlist))
-
+    
     # Defining the comoving and angular distance to the galaxy center
     if 'pc' in Runit: # Rbins in a multiple of pc
         assert len(colnames) == 4, \
@@ -543,7 +548,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galZbins = np.sort(np.unique(galZlist)) # Find the unique redshift values
         Dclbins = np.array((cosmo.comoving_distance(galZbins).to('pc')).value) # Calculate the corresponding distances
         Dcllist = Dclbins[np.digitize(galZlist, galZbins)-1] # Assign the appropriate Dcl to all lens redshifts
-
+        
     else: # Rbins in a multiple of degrees
         galZlist = np.zeros(len(galIDlist)) # No redshift
         # Distance in degree on the sky
@@ -551,7 +556,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
 
     # The angular diameter distance to the galaxy center
     Dallist = Dcllist/(1.0+galZlist)
-
+    
     return gamacat, galIDlist, galRAlist, galDEClist, \
         galweightlist, galZlist, Dcllist, Dallist
 
@@ -619,11 +624,12 @@ def run_kidscoord_mocks(path_kidscats, cat_version):
 # Create a dictionary of KiDS fields that contain the corresponding galaxies.
 def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, Rmax, \
                  purpose, filename_addition, cat_version, com):
-
-    if com == False:
-        Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
-    if com == True:
+    
+    if 'com' in com: # Comoving
         Rfield = np.radians(np.sqrt(2.0)/2.0) * Dcllist
+    else: # Physical
+        Rfield = np.radians(np.sqrt(2.0)/2.0) * Dallist
+
     Rmax = Rmax + Rfield
 
     totgalIDs = np.array([])
@@ -673,10 +679,11 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         # Defining the distance R between the lens center
         # and its surrounding background sources
         theta = vincenty_sphere_dist(np.radians(galRAlist), np.radians(galDEClist), np.radians(catRA), np.radians(catDEC))
-        if com == False:
-            catR = Dallist*theta
-        if com == True:
+
+        if 'com' in com: # Comoving
             catR = Dcllist*theta
+        else: # Physical
+            catR = Dallist*theta
         
         coordmask = (catR <= Rmax)
 
@@ -1135,44 +1142,82 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
 def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon, galZlist, com):
     
-    # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
-    Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
-    DlsoDs = (Dcsbins-Dcls)/Dcsbins
+    # If the lens redshift are photometric, implement the photo-z uncertainty sigma
+    if 'sigma' in com:
+        
+        # Lens redshift/distance bins
+        zlbins = np.linspace(0.05, 0.7, 100)
+        Dclbins = (cosmo.comoving_distance(zlbins).to('pc')).value
+        Dalbins = Dclbins/(1+zlbins)
+        
+        # Lens redshift PDFs
+        galSigma = float(com.rsplit('_', 1)[1])
+        if 'z' in com:
+            galSigma = galSigma*(1+galZlist)
+        else:
+            galSigma = np.array([galSigma])
+        
+        galPZ = np.array([calc_gaussian(zlbins, galZlist[z], galSigma[z]) for z in range(len(galZlist))])
+        
+        # Calculate the values of Dls/Ds for all lens/source redshift-bin pair
+        Dclbins, Dcsbins = np.meshgrid(Dclbins, Dcsbins)
+        DlsoDs = (Dcsbins-Dclbins)/Dcsbins
 
-    # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
-    #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
-    #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
-    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+        # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+
+        print('DlsoDs:', np.shape(DlsoDs))
+        print('Source P(zs):', np.shape(srcPZ))
+
+        # Matrix multiplication that sums over P(zs), to calculate <Dls/Ds> for each Zlens-bin
+        DlsoDs = np.dot(srcPZ, DlsoDs)
+        print('Integrated DlsoDs:', np.shape(DlsoDs))
+        print('Dalbins:', np.shape(Dalbins))
+        print('Lens P(zl):', np.shape(galPZ))
+
+        # Matrix multiplication that sums over P(zl), to calculate <Da*Dls/Ds> for each lens
+        if 'com' in com: # Comoving
+            DaDlsoDs = np.dot(galPZ, Dclbins*DlsoDs)
+        else: # Physical
+            DaDlsoDs = np.dot(galPZ, Dalbins*DlsoDs)
+        
+        print('Integrated Da*DlsoDs:', np.shape(DaDlsoDs))
+
+        # Calculate the values of k (=1/Sigmacrit)
+        k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(DaDlsoDs)) # k = 1/Sigmacrit
     
-    DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
-    #else:
-    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    else:
+        # Calculate the values of Dls/Ds for all lens/source-redshift-bin pairs
+        Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
+        DlsoDs = (Dcsbins-Dcls)/Dcsbins
 
-    DlsoDsmask = [] # Empty unused lists
+        # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
 
-    # Matrix multiplication that sums over P(z),
-    # to calculate <Dls/Ds> for each lens-source pair
-    DlsoDs = np.dot(srcPZ, DlsoDs).T
+        # Matrix multiplication that sums over P(z),
+        # to calculate <Dls/Ds> for each lens-source pair
+        DlsoDs = np.dot(srcPZ, DlsoDs).T
 
-    # Calculate the values of k (=1/Sigmacrit)
-    Dals = np.reshape(Dals,[len(Dals),1])
-    # Physical:
-    if com == False:
-        k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
-
-    # Comoving:
-    if com == True:
-        k = 1 / ((c.value**2)/(4*np.pi*G.value * ((1.0+galZlist)**2.0)) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
-
-    DlsoDs = [] # Empty unused lists
-    Dals = []
-
-    Dcls = [] # Empty unused lists
-    Dcsbins = []
+        # Calculate the values of k (=1/Sigmacrit)
+        Dals = np.reshape(Dals,[len(Dals),1])
+        
+        if 'com' in com: # Comoving:
+            k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dcls*DlsoDs)) # k = 1/Sigmacrit
+        else: # Physical:
+            k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
+    
     # Create the mask that removes all sources with k not between 0 and infinity
     kmask = np.logical_not((0. < k) & (k < inf))
-
+        
+    DlsoDs = [] # Empty unused lists
+    Dals = []
+    Dcls = []
+    Dcsbins = []
+  
     gc.collect()
+    
+    print(k)
+    
     return k, kmask
 
 
@@ -1215,12 +1260,10 @@ def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, c
     # center and its surrounding background sources
     
     theta = vincenty_sphere_dist(np.radians(galRA), np.radians(galDEC), np.radians(srcRA), np.radians(srcDEC))
-    # Physical
-    if com == False:
-        srcR = Dals * theta
-    # Comoving
-    if com == True:
+    if 'com' in com: # Comoving
         srcR = Dcls * theta
+    else: # Physical
+        srcR = Dals * theta
     
     # Masking all lens-source pairs that have a
     # relative distance beyond the maximum distance Rmax

@@ -1,0 +1,312 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Customizing the halo model &mdash; KiDS-GGL 2.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="KiDS-GGL Halo Model Sampling" href="../sampler/index.html" />
+    <link rel="prev" title="Halo Model Formalism" href="formalism.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> KiDS-GGL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL Halo Model</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="formalism.html">Halo Model Formalism</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Customizing the halo model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#custom-functions">Custom functions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#decorators">Decorators</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-distributions">Custom distributions</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../sampler/index.html">KiDS-GGL Halo Model Sampling</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KiDS-GGL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">KiDS-GGL Halo Model</a> &raquo;</li>
+        
+      <li>Customizing the halo model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/halomodel/custom.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="customizing-the-halo-model">
+<h1>Customizing the halo model<a class="headerlink" href="#customizing-the-halo-model" title="Permalink to this headline">¶</a></h1>
+<p>Since <code class="docutils literal notranslate"><span class="pre">v2.0</span></code>, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> can interpret any model passed to it, no matter the number of parameters or the ordering of the
+ingredients, provided that the configuration file is consistent with the model structure.</p>
+<p>At the lowest level, the user can modify <code class="docutils literal notranslate"><span class="pre">halomodel/halo.py</span></code> to add or remove ingredients, although this is not generally
+recommended. We have built the default model in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to be flexible enough to acommodate most weak lensing uses (including
+CMB weak lensing). The most notable shortcoming of the model right now is the requirement that distances be in physical or comoving
+units; angular units are not implemented.</p>
+<p>More common might be the desire of the user to modify the halo occupation distribution (HOD), which describes how galaxies populate
+dark matter haloes. For this purpose we have implemented a few generic functions and distributions, which can serve as backbones for
+particular-case functions, or which can be replaced altogether by user-supplied definitions.</p>
+<div class="section" id="custom-functions">
+<h2>Custom functions<a class="headerlink" href="#custom-functions" title="Permalink to this headline">¶</a></h2>
+<p>Several functional <a href="#id1"><span class="problematic" id="id2">forms_</span></a> have been implemented. Let’s take as an example a function that is a power law of both mass and redshift:</p>
+<div class="math notranslate nohighlight">
+\[\log m_\star = A + B\log\left(\frac{M_\mathrm{h}}{M_0}\right) + C\left(\frac{1+z}{1+z_0}\right)\,.\]</div>
+<p>This function is implemented in <code class="docutils literal notranslate"><span class="pre">helpers/functions.py</span></code> as (see below for <a href="#id3"><span class="problematic" id="id4">function-decorators_</span></a>)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@logfunc</span>
+<span class="nd">@zarray</span>
+<span class="k">def</span> <span class="nf">powerlaw_mz</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">logM0</span><span class="p">,</span> <span class="n">z0</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">return_log</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="p">(</span><span class="n">log10</span><span class="p">(</span><span class="n">M</span><span class="p">)</span><span class="o">-</span><span class="n">logM0</span><span class="p">))</span> <span class="o">+</span> <span class="n">c</span><span class="o">*</span><span class="n">log10</span><span class="p">((</span><span class="mi">1</span><span class="o">+</span><span class="n">z</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z0</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>This function, as well as any other custom function, must include the halo mass as the first argument; all other arguments must be
+defined in the configuration file – including the redshift, in this case. This would therefore require the central MOR section in
+the configuration file to look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">centrals</span><span class="o">/</span><span class="n">mor</span><span class="p">]</span>
+<span class="n">name</span>           <span class="n">powerlaw_mz</span>
+<span class="n">z</span>              <span class="n">array</span>          <span class="mf">0.188</span><span class="p">,</span><span class="mf">0.195</span>
+<span class="n">logM0</span>          <span class="n">fixed</span>          <span class="mi">14</span>
+<span class="n">z0</span>             <span class="n">fixed</span>          <span class="mf">0.2</span>
+<span class="n">A</span>              <span class="n">uniform</span>        <span class="mi">10</span>      <span class="mi">16</span>    <span class="mi">12</span>
+<span class="n">B</span>              <span class="n">uniform</span>        <span class="mi">0</span>       <span class="mi">5</span>     <span class="mi">1</span>
+<span class="n">C</span>              <span class="n">uniform</span>        <span class="o">-</span><span class="mi">1</span>      <span class="mi">1</span>     <span class="mi">0</span>
+</pre></div>
+</div>
+<p>The only condition when writing a custom model is that the order of sections <strong>must follow the order defined in the coded
+model</strong>.</p>
+<p>For the time being, additional scaling relations must be included in <code class="docutils literal notranslate"><span class="pre">hod/relations.py</span></code>, and custom distributions for the scatter
+about this relation must be included in the file <code class="docutils literal notranslate"><span class="pre">hod/scatter.py</span></code>. (This has the undesirable effect that this file, common to all
+users, might get clogged with trial-and-error attempts by various users, so please try to only push files with working models [and
+if you have a new working model, please push it!]. We will implement the ability to input user-provided files in the future.)</p>
+<p>The user may also use the generic functions and distributions implemented in <code class="docutils literal notranslate"><span class="pre">helpers/functions.py</span></code> and
+<code class="docutils literal notranslate"><span class="pre">helpers/distributions.py</span></code>. For instance, the Duffy et al. (2008) mass-concentration relation is implemented in
+<code class="docutils literal notranslate"><span class="pre">halomodel/concentration.py</span></code> as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">..helpers.functions</span> <span class="k">import</span> <span class="n">powerlaw_mz</span>
+
+<span class="k">def</span> <span class="nf">duffy08_crit</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">f</span> <span class="o">*</span> <span class="n">powerlaw_mz</span><span class="p">(</span>
+        <span class="n">M</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="mf">12.301</span><span class="o">-</span><span class="n">log10</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">0.8267</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.091</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.44</span><span class="p">,</span> <span class="n">return_log</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In this case, <code class="docutils literal notranslate"><span class="pre">return_log</span></code> has been set to <code class="docutils literal notranslate"><span class="pre">False</span></code> because <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> always works with the concentration, rather than the
+log of the concentration. Furthermore, the <code class="docutils literal notranslate"><span class="pre">return_log</span></code> parameter, which activates the <code class="docutils literal notranslate"><span class="pre">logfunc</span></code> decorator, only checks if <strong>the
+observable</strong> has been defined in log space, and therefore does not work for any other quantity. For convenience, we have set it to
+<code class="docutils literal notranslate"><span class="pre">True</span></code> by default, so the user must always set it to <code class="docutils literal notranslate"><span class="pre">False</span></code> if using these functions for purposes other than mass-observable
+relations.</p>
+<p>See <a href="#id5"><span class="problematic" id="id6">implemented-functions_</span></a> for all available functions.</p>
+<div class="section" id="decorators">
+<span id="hod-decorators"></span><h3>Decorators<a class="headerlink" href="#decorators" title="Permalink to this headline">¶</a></h3>
+<p>All decorators must be applied to all custom functions that do not rely on functions implemented in <code class="docutils literal notranslate"><span class="pre">helpers/functions.py</span></code>:</p>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">logfunc</span></code>: Return the function correctly in linear or log space depending on the <code class="docutils literal notranslate"><span class="pre">observables</span></code> section in the configuration file</li>
+<li><code class="docutils literal notranslate"><span class="pre">zarray</span></code>: Add an extra dimension to redshift in order to allow vectorized operations including mass and redshift. NOT YET IMPLEMENTED</li>
+</ul>
+</div>
+</div>
+<div class="section" id="custom-distributions">
+<h2>Custom distributions<a class="headerlink" href="#custom-distributions" title="Permalink to this headline">¶</a></h2>
+<p>Similar to implemented functions, there are a few <em>distributions</em> implemented in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> by default. Taking the log normal
+distribution as an example:</p>
+<div class="math notranslate nohighlight">
+\[\Phi(m_\star|M_h) = \frac{\exp\left[-\frac{\log_{10}(m_\star/m_0)^2}{2\sigma^2}\right]}{\sqrt{2\pi}\log(10)\,\sigma\,m_0}\]</div>
+<p>where <span class="math notranslate nohighlight">\(m_0\)</span> is the characteristic stellar mass and <span class="math notranslate nohighlight">\(sigma\)</span> is the scatter in stellar mass at fixed halo mass. This is
+implemented in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> as</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@logdist</span>
+<span class="k">def</span> <span class="nf">lognormal</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">Mo</span><span class="p">,</span> <span class="n">Mh</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">obs_is_log</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">log10</span><span class="p">(</span><span class="n">obs</span><span class="o">/</span><span class="n">Mo</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span> \
+        <span class="o">/</span> <span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">obs</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>where distributions now have the <code class="docutils literal notranslate"><span class="pre">obs_is_log</span></code> keyword which activates the <code class="docutils literal notranslate"><span class="pre">logdist</span></code> decorator analogously to the <code class="docutils literal notranslate"><span class="pre">logfunc</span></code>
+decorator introduced above. The distributions implemented by default can be wrapped analogously to the demonstration with the
+mass-concentration relation above.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../sampler/index.html" class="btn btn-neutral float-right" title="KiDS-GGL Halo Model Sampling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="formalism.html" class="btn btn-neutral" title="Halo Model Formalism" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, KiDS-GGL
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

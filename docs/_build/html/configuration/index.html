@@ -1,0 +1,450 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>The Halo Model Configuration File &mdash; KiDS-GGL 2.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Halo Model Formalism" href="../halomodel/halomodel.html" />
+    <link rel="prev" title="Welcome to KiDS-GGL’s documentation!" href="../index.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> KiDS-GGL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The Halo Model Configuration File</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#file-structure">0) File structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model">1) Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-ingredients">2) Model ingredients</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#hod-observables">2.1) HOD observables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selection-function">2.2) Selection function</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#halo-model-ingredients">2.3) Halo model ingredients</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#model-parameters">3) Model parameters</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general-description">3.1) General description</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#joint-parameters">3.1.1) Joint parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#repeat-parameters">3.1.2) Repeat parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#cosmological-parameters">3.2) Cosmological parameters</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#lens-redshift-distribution">Lens redshift distribution</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#source-redshift">Source redshift</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../halomodel/halomodel.html">Halo Model Formalism</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sampler/priors.html">Priors</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KiDS-GGL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>The Halo Model Configuration File</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/configuration/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="the-halo-model-configuration-file">
+<h1>The Halo Model Configuration File<a class="headerlink" href="#the-halo-model-configuration-file" title="Permalink to this headline">¶</a></h1>
+<p>This document explains how to write a <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> halo model configuration file with sections and subsections, allowing the user to
+provide their own functions for e.g., the mass-observable relation and its intrinsic scatter.</p>
+<p><strong>Important Note:</strong>
+A working configuration file as required by <code class="docutils literal notranslate"><span class="pre">halo.model</span></code> can be found in the <code class="docutils literal notranslate"><span class="pre">demo</span></code> folder within the pipeline directory tree.
+Also note that none of this applies to the <code class="docutils literal notranslate"><span class="pre">esd_production</span></code> functionality; the configuration file remains exactly the same as in
+<code class="docutils literal notranslate"><span class="pre">v1.x</span></code> for <code class="docutils literal notranslate"><span class="pre">esd_production</span></code>.</p>
+<div class="section" id="file-structure">
+<h2>0) File structure<a class="headerlink" href="#file-structure" title="Permalink to this headline">¶</a></h2>
+<p>The configuration file in <code class="docutils literal notranslate"><span class="pre">KiDS-GGL</span></code> versions <code class="docutils literal notranslate"><span class="pre">2.0.0</span></code> and newer is defined by a set of <em>sections</em>, each of which specifies a
+particular aspect of the pipeline. Sections are defined with square brackets, and the particular sections are fixed and their names
+cannot be changed. Each section takes a different kind of input depending on its purpose. Throughout the configuration file, lines
+that start with a <code class="docutils literal notranslate"><span class="pre">#</span></code> will be ignored.</p>
+<p>Below we explain every section separately; a full working file can be found in TO BE ADDED.</p>
+</div>
+<div class="section" id="model">
+<h2>1) Model<a class="headerlink" href="#model" title="Permalink to this headline">¶</a></h2>
+<p>The configuration file starts with a single line specifying the model to be used:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">model</span>            <span class="n">halo</span><span class="o">.</span><span class="n">model</span>
+</pre></div>
+</div>
+<p>which is fixed for now.</p>
+</div>
+<div class="section" id="model-ingredients">
+<h2>2) Model ingredients<a class="headerlink" href="#model-ingredients" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="hod-observables">
+<h3>2.1) HOD observables<a class="headerlink" href="#hod-observables" title="Permalink to this headline">¶</a></h3>
+<p>The first section defines the observables:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">observables</span><span class="p">]</span>
+<span class="n">logmstar</span>    <span class="mi">10</span><span class="p">,</span><span class="mi">11</span>   <span class="mi">11</span><span class="p">,</span><span class="mf">12.5</span>     <span class="n">log</span>
+</pre></div>
+</div>
+<p>The first column here is an arbitrary (and dummy) name for the observable in question; the second and third columns are the lower
+and upper bin limits used in the stacking (comma-separated). In this case, we use two bins in the ranges <span class="math notranslate nohighlight">\(10 \leq \log_{10}
+m_\star \leq 11\)</span> and <span class="math notranslate nohighlight">\(11 \leq \log_{10} m_\star \leq 12.5\)</span>; note that the bins need not be adjacent nor exclusive.</p>
+<p>The final column is optional, and its only possible value is <cite>log</cite>. This tells the pipeline that the observable is given in
+log-space. This is necessary information for properly applying the HOD (i.e., mass-observable relation and mass-observable scatter
+function, a.k.a. occupation probability). If the column is not present, it is understood that the observable is given in linear
+space. Any value different than <cite>log</cite> will raise an <cite>AssertionError</cite>.</p>
+<p>Note that the HOD itself does not care what observable it receives so long as everything is passed consistently. It is possible, for
+instance, to define an observable <span class="math notranslate nohighlight">\(m_\star^{12} \equiv m_\star/10^{12}\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mstar12</span>        <span class="mf">0.01</span><span class="p">,</span><span class="mf">0.1</span><span class="p">,</span><span class="mi">1</span>       <span class="mf">0.1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">10</span>
+</pre></div>
+</div>
+<p>Note here that <span class="math notranslate nohighlight">\(m_\star^{12}\)</span> is not in log space and we therefore omit the fourth column.</p>
+</div>
+<div class="section" id="selection-function">
+<h3>2.2) Selection function<a class="headerlink" href="#selection-function" title="Permalink to this headline">¶</a></h3>
+<p>The second section concerns the selection function:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">selection</span><span class="p">]</span>
+<span class="n">selection_file</span><span class="o">.</span><span class="n">txt</span>       <span class="n">z</span><span class="p">,</span><span class="n">logmstar</span><span class="p">,</span><span class="n">completeness</span>      <span class="n">fixed_width</span>
+</pre></div>
+</div>
+<p>Columns here correspond to the file name, the names of the columns to be used, and the <code class="docutils literal notranslate"><span class="pre">astropy.io.ascii</span></code> format to be used when
+reading the file. Using inconsistent formats, or not providing one (which is not allowed by <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code>) would probably result in
+the column names not being interpreted correctly. We recommend always using <code class="docutils literal notranslate"><span class="pre">fixed_width</span></code> with its default settings to avoid any
+confusion. A file generated with <code class="docutils literal notranslate"><span class="pre">ascii.write(*args,</span> <span class="pre">format='fixed_width')</span></code> is also easily human-readable:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">|</span>    <span class="n">z</span> <span class="o">|</span> <span class="n">logmstar</span> <span class="o">|</span> <span class="n">completeness</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.10</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.15</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.20</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.30</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.40</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.50</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.60</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">0.80</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">|</span> <span class="mf">1.00</span> <span class="o">|</span> <span class="mf">2.00e+09</span> <span class="o">|</span>     <span class="mf">3.36e-01</span> <span class="o">|</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>Column names specified in the second column above must be in that order: <code class="docutils literal notranslate"><span class="pre">(redshift,observable,completeness)</span></code>. They will be
+recorded in that order irrespective of the order in which they are present in the file.</p>
+<p>This section is the only section that can be disabled altogether. We’ve chosen to allow this so the user is not required to produce
+a dummy selection file if they do not have/want one. To ignore selection effects – or, equivalently, to assume that the sample is
+100% complete – simply write</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">selection</span><span class="p">]</span>
+<span class="kc">None</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="halo-model-ingredients">
+<h3>2.3) Halo model ingredients<a class="headerlink" href="#halo-model-ingredients" title="Permalink to this headline">¶</a></h3>
+<p>Here we define which ingredients will be included in the halo model:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">ingredients</span><span class="p">]</span>
+<span class="n">centrals</span>        <span class="kc">True</span>
+<span class="n">pointmass</span>       <span class="kc">True</span>
+<span class="n">satellites</span>      <span class="kc">False</span>
+<span class="n">miscentring</span>     <span class="kc">False</span>
+<span class="n">twohalo</span>         <span class="kc">True</span>
+<span class="n">nzlens</span>          <span class="kc">False</span>
+</pre></div>
+</div>
+<p>The names of the ingredients cannot be changed, and any missing ingredients will be set to <code class="docutils literal notranslate"><span class="pre">False</span></code>. If any provided ingredient
+does not match those listed above, a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> will be raised. All of these accept values of <code class="docutils literal notranslate"><span class="pre">True</span></code> or <code class="docutils literal notranslate"><span class="pre">False</span></code>. In the
+example above, we will be calculating a model of central galaxies only, including a point mass component to account for the stellar
+mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass.</p>
+<p>The parameter <code class="docutils literal notranslate"><span class="pre">nzlens</span></code> enables a model in which the final signal is the weighted average of signals calculated following a
+user-provided lens redshift distribution (see below).</p>
+</div>
+</div>
+<div class="section" id="model-parameters">
+<h2>3) Model parameters<a class="headerlink" href="#model-parameters" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="general-description">
+<h3>3.1) General description<a class="headerlink" href="#general-description" title="Permalink to this headline">¶</a></h3>
+<p>Like above, we now define model <em>sections</em>, which refer to each of the components of the halo model. The order of sections must be
+followed for the model to be set up properly, but each component may have a custom number of parameters. This is the defining idea
+behind the new configuration file structure, and allows full flexibility in the model used without having to modify the backbone
+provided by <code class="docutils literal notranslate"><span class="pre">halo.model</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">section1</span><span class="o">/</span><span class="n">subsection1</span><span class="p">]</span>
+<span class="n">name1</span>         <span class="n">prior1</span>     <span class="p">[</span><span class="n">values1</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label1</span><span class="p">]</span>
+<span class="n">name2</span>         <span class="n">prior2</span>     <span class="p">[</span><span class="n">values2</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label2</span><span class="p">]</span>
+<span class="o">...</span>
+<span class="p">[</span><span class="n">section1</span><span class="o">/</span><span class="n">subsection1</span><span class="o">/</span><span class="n">subsubsection1</span><span class="p">]</span>
+<span class="n">name1</span>         <span class="n">prior1</span>     <span class="p">[</span><span class="n">values1</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label1</span><span class="p">]</span>
+<span class="n">name2</span>         <span class="n">prior2</span>     <span class="p">[</span><span class="n">values2</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label2</span><span class="p">]</span>
+<span class="o">...</span>
+<span class="p">[</span><span class="n">section2</span><span class="o">/</span><span class="n">subsection1</span><span class="p">]</span>
+<span class="n">name1</span>         <span class="n">prior1</span>     <span class="p">[</span><span class="n">values1</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label1</span><span class="p">]</span>
+<span class="n">name2</span>         <span class="n">prior2</span>     <span class="p">[</span><span class="n">values2</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label2</span><span class="p">]</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>etc, etc. This will be enough to explain what’s going on (empty lines and lines starting with <code class="docutils literal notranslate"><span class="pre">#</span></code> are ignored). The first column
+is the name that will be used in the MCMC output if the parameter is varied during the chain; the second specifies the prior
+function, and following columns specify parameters passed to the prior function. See <a href="#id1"><span class="problematic" id="id2">priors_</span></a> for details.</p>
+<div class="section" id="joint-parameters">
+<span id="join"></span><h4>3.1.1) Joint parameters<a class="headerlink" href="#joint-parameters" title="Permalink to this headline">¶</a></h4>
+<p>The last column, which is also optional, allows the use of “array variables” by <em>joining</em> individual entries within the model, and a
+<em>join label</em> identifies which entries should be joined. Thus for instance in the default <code class="docutils literal notranslate"><span class="pre">halo.model</span></code> the satellite occupation
+function (see <code class="docutils literal notranslate"><span class="pre">demo/ggl_model_demo.txt</span></code>) takes an array variable <span class="math notranslate nohighlight">\(b=(b_0,b_1,...b_n)\)</span> in Eq. 18 of <a class="reference external" href="https://adsabs.harvard.edu/abs/2016MNRAS.459.3251V">van Uitert
+et al. 2016</a>. The advantage of this is that you may specify any number of
+these
+variables and the model will use them consistently, in the case of van Uitert et al., through the equation</p>
+<div class="math notranslate nohighlight">
+\[\log[\phi_s(M_\mathrm{h})] = \sum_{i=0}^{n-1} b_i\,\left(\log M_\mathrm{13}\right)^i\]</div>
+<p>where <span class="math notranslate nohighlight">\(n=2\)</span> in the paper.</p>
+<dl class="docutils">
+<dt><strong>Notes</strong></dt>
+<dd><ul class="first last simple">
+<li>Joint parameters need not be fixed. You may use any prior for each of the joint parameter separately, even e.g., fixing some but not others.</li>
+<li>Even if you decide to use only one of the joint parameters (e.g., only <span class="math notranslate nohighlight">\(b_0\)</span> above), <strong>you must still give it the join label</strong>. This will allow <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to interpret it as an array rather than a scalar (the <code class="docutils literal notranslate"><span class="pre">array</span></code> prior can only be used if the variable is fixed).</li>
+</ul>
+</dd>
+</dl>
+</div>
+<div class="section" id="repeat-parameters">
+<h4>3.1.2) Repeat parameters<a class="headerlink" href="#repeat-parameters" title="Permalink to this headline">¶</a></h4>
+<p>In addition, the use of repeat parameters is supported:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">section1</span><span class="o">/</span><span class="n">subsection1</span><span class="p">]</span>
+<span class="n">name1</span>         <span class="n">prior1</span>     <span class="p">[</span><span class="n">values1</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label1</span><span class="p">]</span>
+<span class="n">name2</span>         <span class="n">prior2</span>     <span class="p">[</span><span class="n">values2</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label2</span><span class="p">]</span>
+<span class="o">...</span>
+<span class="p">[</span><span class="n">section2</span><span class="o">/</span><span class="n">subsection1</span><span class="p">]</span>
+<span class="n">section1</span><span class="o">.</span><span class="n">subsection1</span><span class="o">.</span><span class="n">name1</span>
+<span class="n">name2</span>         <span class="n">prior2</span>     <span class="p">[</span><span class="n">values2</span> <span class="o">...</span><span class="p">]</span>     <span class="p">[</span><span class="n">join</span><span class="p">:</span><span class="n">label2</span><span class="p">]</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>The above syntax – defining a parameter as a “child” of another section, where the section hierarchy is split by dots – means that
+the first parameter of <code class="docutils literal notranslate"><span class="pre">section2/subsection1</span></code> is always the same as <code class="docutils literal notranslate"><span class="pre">name1</span></code> in <cite>section1/subsection1</cite>. This is useful if there
+are free parameters required in more than one place (for instance, <code class="docutils literal notranslate"><span class="pre">h</span></code> may be used in the cosmology as well as the
+mass-concentration or mass-observable relations, or some of the parameters used for satellite galaxies might be based on those
+obtained for centrals). Although redshift would hardly be a free parameter in any model, it might be useful to define it as a repeat
+parameter as well if it is required in more than one place so that only one instance has to be modified by hand in the configuration
+file.</p>
+</div>
+</div>
+<div class="section" id="cosmological-parameters">
+<h3>3.2) Cosmological parameters<a class="headerlink" href="#cosmological-parameters" title="Permalink to this headline">¶</a></h3>
+<p>The first section including model parameters that may be sampled in the MCMC is <code class="docutils literal notranslate"><span class="pre">cosmo</span></code>, the section listing cosmological
+parameters:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">cosmo</span><span class="p">]</span>
+<span class="n">sigma_8</span>         <span class="n">fixed</span>     <span class="mf">0.8159</span>
+<span class="n">h</span>               <span class="n">fixed</span>     <span class="mf">0.6774</span>
+<span class="n">omegam</span>          <span class="n">fixed</span>     <span class="mf">0.3089</span>
+<span class="n">omegab_h2</span>       <span class="n">fixed</span>     <span class="mf">0.02230</span>
+<span class="n">n</span>               <span class="n">fixed</span>     <span class="mf">0.9667</span>
+<span class="n">w0</span>              <span class="n">fixed</span>     <span class="o">-</span><span class="mf">1.0</span>
+<span class="n">wa</span>              <span class="n">fixed</span>     <span class="mf">0.0</span>
+<span class="n">Neff</span>            <span class="n">fixed</span>     <span class="mf">3.046</span>
+<span class="n">z</span>               <span class="n">array</span>     <span class="mf">0.188</span><span class="p">,</span><span class="mf">0.195</span>
+</pre></div>
+</div>
+<p>Both the list of parameters and their order in <code class="docutils literal notranslate"><span class="pre">cosmo</span></code> are mandatory (and therefore the names are just for the user’s reference).
+The first 8 parameters define the <code class="docutils literal notranslate"><span class="pre">Flatw0waCDM</span></code> cosmology within which the model is evaluated. The default values for <code class="docutils literal notranslate"><span class="pre">w0</span></code>,
+<code class="docutils literal notranslate"><span class="pre">wa</span></code>, and <code class="docutils literal notranslate"><span class="pre">Neff</span></code> make the default model a flat <code class="docutils literal notranslate"><span class="pre">LambdaCDM</span></code> cosmology. They need not all be fixed, but in this example they
+are. The last parameter above is a list of point estimates for the redshifts of each bin.</p>
+<p>In addition to the above list, there are a few optional parameters, depending on the chosen setup:</p>
+<div class="section" id="lens-redshift-distribution">
+<h4>Lens redshift distribution<a class="headerlink" href="#lens-redshift-distribution" title="Permalink to this headline">¶</a></h4>
+<p>If the <code class="docutils literal notranslate"><span class="pre">nzlens</span></code> ingredient is activated, then the parameter <code class="docutils literal notranslate"><span class="pre">z</span></code> must instead be an array, defined with either an <code class="docutils literal notranslate"><span class="pre">array</span></code> or
+<code class="docutils literal notranslate"><span class="pre">read</span></code> prior (see <a href="#id3"><span class="problematic" id="id4">priors_</span></a>), containing the redshift values at which the distribution is calculated (e.g., the central values used
+to construct a histogram); and there should be an additional set of parameters <code class="docutils literal notranslate"><span class="pre">nz</span></code>, one per observable bin:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">z</span>           <span class="n">read</span>    <span class="n">zlens</span><span class="o">.</span><span class="n">txt</span>       <span class="mi">0</span>
+<span class="n">nz</span>          <span class="n">read</span>    <span class="n">zlens</span><span class="o">.</span><span class="n">txt</span>       <span class="mi">1</span>   <span class="n">join</span><span class="p">:</span><span class="n">nz</span>
+<span class="n">nz</span>          <span class="n">read</span>    <span class="n">zlens</span><span class="o">.</span><span class="n">txt</span>       <span class="mi">2</span>   <span class="n">join</span><span class="p">:</span><span class="n">nz</span>
+</pre></div>
+</div>
+<p>where the <a class="reference internal" href="#join">join</a>  flag must be set for all <code class="docutils literal notranslate"><span class="pre">nz</span></code> parameters, even if there is only one such parameter.</p>
+</div>
+<div class="section" id="source-redshift">
+<h4>Source redshift<a class="headerlink" href="#source-redshift" title="Permalink to this headline">¶</a></h4>
+<p>Finally, if the observable returned by the halo model requires a source redshift (e.g., convergence; see <a href="#id5"><span class="problematic" id="id6">setup_</span></a>), then the last
+entry in <code class="docutils literal notranslate"><span class="pre">cosmo</span></code> must be a source redshift, <code class="docutils literal notranslate"><span class="pre">zs</span></code>. Currently <code class="docutils literal notranslate"><span class="pre">zs</span></code> should be a single number rather than a source redshift
+distribution, as it has been implemented to work with CMB lensing measurements, which are usually reported as a convergence, and
+where the source redshift is known to be <span class="math notranslate nohighlight">\(z_s=1100\)</span>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">zs</span>          <span class="n">fixed</span>   <span class="mi">1100</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../halomodel/halomodel.html" class="btn btn-neutral float-right" title="Halo Model Formalism" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral" title="Welcome to KiDS-GGL’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright (&#39;2019, KiDS-GGL&#39;,)
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

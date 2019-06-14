@@ -18,7 +18,7 @@ Contents
    :maxdepth: 3
 
    halomodel/index
-       sampler/index
+
 
 
 Indices and tables

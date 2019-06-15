@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Sampling the Halo Model" href="sampler.html" />
-    <link rel="prev" title="The Halo Model Configuration File" href="configuration.html" /> 
+    <link rel="next" title="The Halo Model Configuration File" href="configuration.html" />
+    <link rel="prev" title="KiDS-GGL Halo Model" href="index.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -84,15 +84,15 @@
             
               <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL Halo Model</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Halo Model Formalism</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#power-spectra">Power spectra</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#lensing-observables">Lensing Observables</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#the-halo-occupation-distribution">The Halo Occupation Distribution</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="sampler.html">Sampling the Halo Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="custom.html">Customizing the halo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="custom.html">Customizing the Halo Model</a></li>
 </ul>
 </li>
 </ul>
@@ -164,9 +164,8 @@
   <div class="section" id="halo-model-formalism">
 <h1>Halo Model Formalism<a class="headerlink" href="#halo-model-formalism" title="Permalink to this headline">¶</a></h1>
 <p>The <em>Halo Model</em> is the formalism resulting from the assumption that all galaxies reside in <em>haloes</em>: collasped, spherical dark
-matter structures characterized by a mass <em>M</em> at redshift <span class="math notranslate nohighlight">\(z\)</span>. The galaxy-matter power spectrum can then be
-separated into <em>within-halo</em> and <em>between-halo</em> contributions, commonly referred to as the <em>1-halo</em> and <em>2-halo</em> terms,
-respectively:</p>
+matter structures characterized by a mass <em>M</em> at redshift <span class="math notranslate nohighlight">\(z\)</span>. The galaxy-matter power spectrum can then be separated into
+<em>within-halo</em> and <em>between-halo</em> contributions, commonly referred to as the <em>1-halo</em> and <em>2-halo</em> terms, respectively:</p>
 <div class="math notranslate nohighlight">
 \[P_\mathrm{gm}(k,z) = P_\mathrm{gm}^\mathrm{1h}(k,z) + P_\mathrm{gm}^\mathrm{2h}(k,z)\]</div>
 <p>where each term is itself a combination of the contribution of <em>central</em> and <em>satellite</em> galaxies within these halos:</p>
@@ -189,13 +188,15 @@ respectively:</p>
 <li><span class="math notranslate nohighlight">\(\langle N_\mathrm{c}|M,z\rangle\)</span> and <span class="math notranslate nohighlight">\(\langle N_\mathrm{s}|M,z\rangle\)</span> are the expected number of central and satellite galaxies in a halo of mass <span class="math notranslate nohighlight">\(M\)</span> and redshift <span class="math notranslate nohighlight">\(z\)</span>; and</li>
 <li><span class="math notranslate nohighlight">\(\tilde{u}_\mathrm{h}(k|M,z)\)</span> and <span class="math notranslate nohighlight">\(\tilde u_\mathrm{s}(k|M,z)\)</span> are the Fourier transforms of the spatial distribution of mass and satellite galaxies. (We add a prescription to account for central galaxy miscentring below.).</li>
 </ul>
-<p>That is, the various <span class="math notranslate nohighlight">\(\mathcal{H}(k|M,z)\)</span> terms correspond to the products of the expected number density and the
-Fourier transform of the spatial distribution of each component, and</p>
+<p>That is, the various <span class="math notranslate nohighlight">\(\mathcal{H}(k|M,z)\)</span> terms correspond to the products of the expected number density and the Fourier
+transform of the spatial distribution of each component, and</p>
 <div class="math notranslate nohighlight">
 \[n_i(z) = \int\mathrm{d}M \,\langle N_i|M,z\rangle n_\mathrm{h}(M,z)\]</div>
-<p>is the number density of galaxies of type <em>i</em> (where <em>i</em> =’c’ for centrals or ‘s’ for satellites) integrated over mass and redshift
-bin, and <span class="math notranslate nohighlight">\(n_\mathrm{h}(M,z)\)</span> is the number density of haloes of mass <span class="math notranslate nohighlight">\(M\)</span> and redshift <span class="math notranslate nohighlight">\(z\)</span>, also known as the
-<em>halo mass function</em>. The total number of galaxies of type <em>i</em> in a given redshift interval is then given by</p>
+<p>is the number density of galaxies of type <span class="math notranslate nohighlight">\(i\)</span> (where <span class="math notranslate nohighlight">\(i=\)</span> ‘<span class="math notranslate nohighlight">\(c\)</span>’ for centrals or ‘<span class="math notranslate nohighlight">\(s\)</span>’ for satellites)
+integrated over mass and redshift bin, and <span class="math notranslate nohighlight">\(n_\mathrm{h}(M,z)\)</span> is the number density of haloes of mass <span class="math notranslate nohighlight">\(M\)</span> and redshift
+<span class="math notranslate nohighlight">\(z\)</span>, also known as the <em>halo mass function</em>. The total number of galaxies of type <span class="math notranslate nohighlight">\(i\)</span> in a given redshift interval is
+then
+given by</p>
 <div class="math notranslate nohighlight">
 \[\bar n_i = \int\mathrm{d}z\,\frac{c\chi^2}{H(z)}\, n_i(z),\]</div>
 <p>where</p>
@@ -211,11 +212,11 @@ effective redshift,</p>
 \[P_{i\mathrm{m}}^\mathrm{1h}(k,z) = \int\mathrm{d}V_\mathrm{C}(z)\int_0^\infty \mathrm{d}M\,n_\mathrm{h}(M,z)\,\mathcal{H}_\mathrm{x}(k,M,z)\,\mathcal{H}_\mathrm{m}(k,M,z)\]</div>
 <div class="math notranslate nohighlight">
 \[ \begin{align}\begin{aligned}P_{i\mathrm{m}}^\mathrm{2h}(k,z) = \int\mathrm{d}V_\mathrm{C}(z)P_\mathrm{m}(k,z) \int_0^\infty\,\mathrm{d}M_1\,n_\mathrm{h}(M_1,z)\,b_\mathrm{h}(M_1,z)\,\mathcal{H}_\mathrm{x}(k,M_1,z)\\\int_0^\infty\,\mathrm{d}M_2\,n_\mathrm{h}(M_2,z)\,b_\mathrm{h}(M_2,z)\,\mathcal{H}_\mathrm{m}(k,M_2,z),\end{aligned}\end{align} \]</div>
-<p>and again <em>i</em> can be either ‘c’ or ‘s’.</p>
+<p>and again <span class="math notranslate nohighlight">\(i\)</span> can be either ‘<span class="math notranslate nohighlight">\(c\)</span>’ or ‘<span class="math notranslate nohighlight">\(s\)</span>’.</p>
 </div>
 <div class="section" id="lensing-observables">
 <h2>Lensing Observables<a class="headerlink" href="#lensing-observables" title="Permalink to this headline">¶</a></h2>
-<p>finally, the power spectrum is related to the galaxy-matter cross-correlation through</p>
+<p>Finally, the power spectrum is related to the galaxy-matter cross-correlation through</p>
 <div class="math notranslate nohighlight">
 \[\xi_\mathrm{gm}(r,z) = \frac1{2\pi^2} \int_0^\infty k^2\mathrm{d}k\,P_\mathrm{gm}(k,z) \frac{\sin(kr)}{kr}\]</div>
 <p>which is related to the surface density at distance <em>R</em> through</p>
@@ -228,8 +229,8 @@ effective redshift,</p>
 <div class="section" id="the-halo-occupation-distribution">
 <h2>The Halo Occupation Distribution<a class="headerlink" href="#the-halo-occupation-distribution" title="Permalink to this headline">¶</a></h2>
 <p>The halo occupation distribution (HOD hereafter) is a commonly used analytical prescription that describes how galaxies populates
-dark matter haloes. The version implemented by default in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> is described below, and is based on the models used in <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract">van
-Uitert et al. 2016</a> and <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. 2017</a>.</p>
+dark matter haloes – the <span class="math notranslate nohighlight">\(\langle N_i|M,z\rangle\)</span> above. For reference we describe the version implemented by default in
+<code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> below, which is based on the models used in <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract">van Uitert et al. 2016</a> and <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. 2017</a>.</p>
 </div>
 </div>
 
@@ -241,10 +242,10 @@ Uitert et al. 2016</a> and <a class="reference external" href="https://ui.adsabs
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="sampler.html" class="btn btn-neutral float-right" title="Sampling the Halo Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="configuration.html" class="btn btn-neutral float-right" title="The Halo Model Configuration File" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="configuration.html" class="btn btn-neutral" title="The Halo Model Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral" title="KiDS-GGL Halo Model" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -253,7 +254,7 @@ Uitert et al. 2016</a> and <a class="reference external" href="https://ui.adsabs
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, KiDS-GGL
+        &copy; Copyright 2019, KiDS-GGL for the KiDS Collaboration
 
     </p>
   </div>

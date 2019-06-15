@@ -20,7 +20,7 @@ import os
 # -- Project information -----------------------------------------------------
 
 project = 'KiDS-GGL'
-copyright = '2019, KiDS-GGL'
+copyright = '2019, KiDS-GGL for the KiDS Collaboration'
 author = 'Cristobal Sifon'
 
 # The short X.Y version

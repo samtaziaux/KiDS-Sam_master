@@ -1,5 +1,5 @@
 =============================
- Customizing the halo model
+ Customizing the Halo Model
 =============================
 
 Since ``v2.0``, ``kids_ggl`` can interpret any model passed to it, no matter the number of parameters or the ordering of the 

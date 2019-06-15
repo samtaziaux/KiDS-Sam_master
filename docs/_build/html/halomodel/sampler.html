@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Customizing the halo model" href="custom.html" />
-    <link rel="prev" title="Halo Model Formalism" href="formalism.html" /> 
+    <link rel="next" title="Customizing the Halo Model" href="custom.html" />
+    <link rel="prev" title="The Halo Model Configuration File" href="configuration.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -84,17 +84,18 @@
             
               <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL Halo Model</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="formalism.html">Halo Model Formalism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Sampling the Halo Model</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#priors">Priors</a><ul>
 <li class="toctree-l4"><a class="reference internal" href="#available-priors">Available priors</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Outputs</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="custom.html">Customizing the halo model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="custom.html">Customizing the Halo Model</a></li>
 </ul>
 </li>
 </ul>
@@ -175,36 +176,12 @@ particular problem.</p>
 <h3>Available priors<a class="headerlink" href="#available-priors" title="Permalink to this headline">¶</a></h3>
 <p>Just as important as the sampler used are the priors used. Since <code class="docutils literal notranslate"><span class="pre">v2.0.0</span></code>, several priors are available in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code>. These are
 all defined in <code class="docutils literal notranslate"><span class="pre">sampling/priors.py</span></code>:</p>
-<ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">exp</span></code>: Exponential prior, <span class="math notranslate nohighlight">\(f=exp(-x)\)</span><ul>
-<li>Note: location and scale as per <code class="docutils literal notranslate"><span class="pre">scipy.stats</span></code> not yet implemented.)</li>
-</ul>
-</li>
-<li><code class="docutils literal notranslate"><span class="pre">jeffreys</span></code>: Jeffreys prior (<a href="#id1"><span class="problematic" id="id2">`https://en.wikipedia.org/wiki/Jeffreys_prior`_</span></a>), <span class="math notranslate nohighlight">\(f=1/x\)</span><ul>
-<li>Typically used for scatter (more generally, for <em>scale estimators</em>).</li>
-</ul>
-</li>
-<li><code class="docutils literal notranslate"><span class="pre">lognormal</span></code>: Lognormal distribution, <span class="math notranslate nohighlight">\(f = (1/x)(2\pi\sigma^2)^{0.5}\exp\left[-(\log(x)-x_0)^2/(2\sigma^2)\right]\)</span></li>
-<li><code class="docutils literal notranslate"><span class="pre">normal</span></code>: Normal (Gaussian) distribution, <span class="math notranslate nohighlight">\(f = (2\pi\sigma^2)^{0.5}\exp\left[-(x-x_0)^2/(2\sigma^2)\right]\)</span></li>
-<li><code class="docutils literal notranslate"><span class="pre">student</span></code>: Student’s t distribution (<a href="#id3"><span class="problematic" id="id4">`https://en.wikipedia.org/wiki/Student%27s_t-distribution`_</span></a>)<ul>
-<li>Appropriate for slopes (when used with 1 degree of freedom). Exercise: see why this works and a uniform prior does not!</li>
-</ul>
-</li>
-<li><code class="docutils literal notranslate"><span class="pre">uniform</span></code>: Uniform distribution.</li>
-</ul>
-<p>Three additional “priors” for fixed parameters (i.e., that are not allowed to vary in the MCMC) are available:</p>
-<ul class="simple">
-<li><code class="docutils literal notranslate"><span class="pre">fixed</span></code>: Fixed scalar</li>
-<li><code class="docutils literal notranslate"><span class="pre">array</span></code>: Array of fixed scalars</li>
-<li><code class="docutils literal notranslate"><span class="pre">read</span></code>: Array of fixed scalars, read from a file</li>
-</ul>
-<p>And finally, there is a “prior” that signals that a parameter has already been defined in the configuration file: <code class="docutils literal notranslate"><span class="pre">repeat</span></code>.</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="5%" />
-<col width="15%" />
-<col width="54%" />
-<col width="26%" />
+<col width="4%" />
+<col width="11%" />
+<col width="41%" />
+<col width="43%" />
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td>Prior</td>
@@ -220,7 +197,7 @@ all defined in <code class="docutils literal notranslate"><span class="pre">samp
 <tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">jeffreys</span></code></td>
 <td>Jeffreys prior</td>
 <td><span class="math notranslate nohighlight">\(\frac1{x}\)</span></td>
-<td>ADD LINK</td>
+<td>See <a class="reference external" href="https://en.wikipedia.org/wiki/Jeffreys_prior">Wikipedia</a></td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">lognormal</span></code></td>
 <td>Lognormal distribution</td>
@@ -234,8 +211,8 @@ all defined in <code class="docutils literal notranslate"><span class="pre">samp
 </tr>
 <tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">student</span></code></td>
 <td>Student’s <em>t</em> distribution</td>
-<td><span class="math notranslate nohighlight">\(\frac{\Gamma(\frac{\nu+1}{2})} {\sqrt{\nu\pi}\,\Gamma(\frac{\nu}{2})} \left(1+\frac{t^2}{\nu} \right)^{\!-\frac{\nu+1}{2}}\)</span></td>
-<td>Appropriate for slopes (when used with 1 degree of freedom).
+<td><span class="math notranslate nohighlight">\(\frac{\Gamma(\frac{\nu+1}{2})}{\sqrt{\nu\pi}\,\Gamma(\frac{\nu}{2})}\left(1+\frac{x^2}{\nu}\right)^{\!-\frac{\nu+1}{2}}\)</span></td>
+<td>Appropriate for slopes (when used with 1 degree of freedom). See <a class="reference external" href="https://en.wikipedia.org/wiki/Student%27s_t-distribution">Wikipedia</a>,
 <strong>Exercise:</strong> see why this works and a uniform prior does not!</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">uniform</span></code></td>
@@ -269,69 +246,63 @@ all defined in <code class="docutils literal notranslate"><span class="pre">samp
 <div class="section" id="usage">
 <h3>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h3>
 <p>All priors are defined in the configuration file as:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">param_name</span>    <span class="n">prior</span>    <span class="p">[</span><span class="n">arg1</span>    <span class="p">[</span><span class="n">arg2</span><span class="p">]]</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">name</span>    <span class="n">prior</span>    <span class="p">[</span><span class="n">arg1</span>    <span class="p">[</span><span class="n">arg2</span><span class="p">]]</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>but they all take different kinds of arguments. The notation here follows the <code class="docutils literal notranslate"><span class="pre">unix</span></code> convention that values in brackets are
 optional; if a set of brackets includes more than one value then if they are specified they must all be specified. The values taken
 by each of the available priors are:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">param_name</span>            <span class="n">exp</span>          <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
-<span class="n">param_name</span>            <span class="n">jeffreys</span>     <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
-<span class="n">param_name</span>            <span class="n">lognormal</span>    <span class="n">centre</span>     <span class="n">scale</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>     <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
-<span class="n">param_name</span>            <span class="n">normal</span>       <span class="n">centre</span>     <span class="n">scale</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>     <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
-<span class="n">param_name</span>            <span class="n">student</span>      <span class="n">dof</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>     <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
-<span class="n">param_name</span>            <span class="n">uniform</span>      <span class="n">lower</span>    <span class="n">upper</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
-<span class="n">param_name</span>            <span class="n">fixed</span>        <span class="n">value</span>
-<span class="n">param_name</span>            <span class="n">array</span>        <span class="n">value1</span><span class="p">,</span><span class="n">value2</span><span class="p">,</span><span class="n">value3</span><span class="p">,</span><span class="o">...</span>
-<span class="n">param_name</span>            <span class="n">read</span>         <span class="n">file</span>    <span class="n">comma_separated_columns</span>
-<span class="n">section</span><span class="o">.</span><span class="n">param_name</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">name</span>            <span class="n">exp</span>          <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
+<span class="n">name</span>            <span class="n">jeffreys</span>     <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
+<span class="n">name</span>            <span class="n">lognormal</span>    <span class="n">centre</span>     <span class="n">scale</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>     <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
+<span class="n">name</span>            <span class="n">normal</span>       <span class="n">centre</span>     <span class="n">scale</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>     <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
+<span class="n">name</span>            <span class="n">student</span>      <span class="n">dof</span>    <span class="p">[</span><span class="n">lower</span>    <span class="n">upper</span><span class="p">]</span>     <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
+<span class="n">name</span>            <span class="n">uniform</span>      <span class="n">lower</span>    <span class="n">upper</span>    <span class="p">[</span><span class="n">starting</span><span class="p">]</span>
+<span class="n">name</span>            <span class="n">fixed</span>        <span class="n">value</span>
+<span class="n">name</span>            <span class="n">array</span>        <span class="n">value1</span><span class="p">,</span><span class="n">value2</span><span class="p">,</span><span class="n">value3</span><span class="p">,</span><span class="o">...</span>
+<span class="n">name</span>            <span class="n">read</span>         <span class="n">file</span>    <span class="n">comma_separated_columns</span>
+<span class="n">section</span><span class="o">.</span><span class="n">name</span>
 </pre></div>
 </div>
-<p>The last line is a <code class="docutils literal notranslate"><span class="pre">repeat</span></code> “prior”. It is recognized simply by having a period in its name and takes no additional information
-(i.e., don’t give any other parameters names with periods!). Above, <code class="docutils literal notranslate"><span class="pre">lower</span></code> and <code class="docutils literal notranslate"><span class="pre">uper</span></code> are lower and upper bounds of the allowed
-range for the prior. For instance, a mass might have a normal prior <span class="math notranslate nohighlight">\(2\pm1\)</span>, but it cannot physically go below zero. In this
-case, you’d want <code class="docutils literal notranslate"><span class="pre">lower=0</span></code>. If not provided, the default limits are as follows:</p>
+<p>The last line is a <code class="docutils literal notranslate"><span class="pre">repeat</span></code> “prior”; it is recognized simply by having a period in its name and takes no additional information
+(i.e., don’t give any other parameters names with periods!). Above, <code class="docutils literal notranslate"><span class="pre">name</span></code> is a user-defined name for each parameter, and
+corresponds to the name that the parameter will have in the output MCMC chain (see <a class="reference external" href="outputs">outputs</a>), while <code class="docutils literal notranslate"><span class="pre">lower</span></code> and <code class="docutils literal notranslate"><span class="pre">uper</span></code> are
+lower and upper bounds of the allowed range for the prior. For instance, a mass might have a normal prior <span class="math notranslate nohighlight">\(2\pm1\)</span>, but it
+cannot physically go below zero. In this case, you’d want <code class="docutils literal notranslate"><span class="pre">lower=0</span></code>. If not provided, the default limits are as follows:</p>
 <table border="1" class="docutils">
 <colgroup>
-<col width="22%" />
-<col width="24%" />
-<col width="26%" />
-<col width="28%" />
+<col width="30%" />
+<col width="34%" />
+<col width="36%" />
 </colgroup>
 <tbody valign="top">
 <tr class="row-odd"><td>Prior</td>
 <td>Lower bound</td>
 <td>Upper bound</td>
-<td>Cum. prob. outside</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">exp</span></code></td>
 <td><span class="math notranslate nohighlight">\(-10\)</span></td>
 <td><span class="math notranslate nohighlight">\(10\)</span></td>
-<td><span class="math notranslate nohighlight">\(2\cdot10^{-9}\)</span></td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">jeffreys</span></code></td>
 <td><span class="math notranslate nohighlight">\(10^{-10}\)</span></td>
 <td><span class="math notranslate nohighlight">\(100\)</span></td>
-<td>&#160;</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">lognormal</span></code></td>
 <td><span class="math notranslate nohighlight">\(-10\sigma\)</span></td>
 <td><span class="math notranslate nohighlight">\(10\sigma\)</span></td>
-<td>&#160;</td>
 </tr>
 <tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">normal</span></code></td>
 <td><span class="math notranslate nohighlight">\(-10\sigma\)</span></td>
 <td><span class="math notranslate nohighlight">\(10\sigma\)</span></td>
-<td>&#160;</td>
 </tr>
 <tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">student</span></code></td>
 <td><span class="math notranslate nohighlight">\(-10^6\)</span></td>
 <td><span class="math notranslate nohighlight">\(10^6\)</span></td>
-<td><span class="math notranslate nohighlight">\(3\cdot10^{-7}\)</span></td>
 </tr>
 </tbody>
 </table>
-<p>The last column shows what is the probability of a data point falling outside the default range under each distribution. The default
+<p>The total probability for points outside these ranges is <span class="math notranslate nohighlight">\(&lt;10^{-7}\)</span> in all cases. The default
 ranges for <code class="docutils literal notranslate"><span class="pre">normal</span></code> and <code class="docutils literal notranslate"><span class="pre">lognormal</span></code> depend on the chosen width of the distribution, but for all others the default range is
 defined by absolute values. In general it is a good idea for all free parameters to be of order 1; the user should use appropriate
 normalizations to this end.</p>
@@ -344,6 +315,9 @@ normalizations to this end.</p>
 </div>
 </div>
 </div>
+<div class="section" id="id2">
+<h2>Outputs<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+</div>
 </div>
 
 
@@ -354,10 +328,10 @@ normalizations to this end.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="custom.html" class="btn btn-neutral float-right" title="Customizing the halo model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="custom.html" class="btn btn-neutral float-right" title="Customizing the Halo Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="formalism.html" class="btn btn-neutral" title="Halo Model Formalism" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="configuration.html" class="btn btn-neutral" title="The Halo Model Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -366,7 +340,7 @@ normalizations to this end.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2019, KiDS-GGL
+        &copy; Copyright 2019, KiDS-GGL for the KiDS Collaboration
 
     </p>
   </div>

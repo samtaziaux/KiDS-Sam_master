@@ -6,7 +6,7 @@
 .. toctree::
    :maxdepth: 2
 
-   configuration
    formalism
+   configuration
    sampler
    custom

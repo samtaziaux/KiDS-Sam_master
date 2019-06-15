@@ -3,9 +3,8 @@
 ======================
 
 The *Halo Model* is the formalism resulting from the assumption that all galaxies reside in *haloes*: collasped, spherical dark 
-matter structures characterized by a mass *M* at redshift :math:`z`. The galaxy-matter power spectrum can then be 
-separated into *within-halo* and *between-halo* contributions, commonly referred to as the *1-halo* and *2-halo* terms, 
-respectively:
+matter structures characterized by a mass *M* at redshift :math:`z`. The galaxy-matter power spectrum can then be separated into 
+*within-halo* and *between-halo* contributions, commonly referred to as the *1-halo* and *2-halo* terms, respectively:
 
 .. math::
     P_\mathrm{gm}(k,z) = P_\mathrm{gm}^\mathrm{1h}(k,z) + P_\mathrm{gm}^\mathrm{2h}(k,z)
@@ -44,15 +43,17 @@ where
 * :math:`\langle N_\mathrm{c}|M,z\rangle` and :math:`\langle N_\mathrm{s}|M,z\rangle` are the expected number of central and satellite galaxies in a halo of mass :math:`M` and redshift :math:`z`; and
 * :math:`\tilde{u}_\mathrm{h}(k|M,z)` and :math:`\tilde u_\mathrm{s}(k|M,z)` are the Fourier transforms of the spatial distribution of mass and satellite galaxies. (We add a prescription to account for central galaxy miscentring below.).
 
-That is, the various :math:`\mathcal{H}(k|M,z)` terms correspond to the products of the expected number density and the 
-Fourier transform of the spatial distribution of each component, and
+That is, the various :math:`\mathcal{H}(k|M,z)` terms correspond to the products of the expected number density and the Fourier 
+transform of the spatial distribution of each component, and
 
 .. math::
     n_i(z) = \int\mathrm{d}M \,\langle N_i|M,z\rangle n_\mathrm{h}(M,z)
 
-is the number density of galaxies of type *i* (where *i* ='c' for centrals or 's' for satellites) integrated over mass and redshift 
-bin, and :math:`n_\mathrm{h}(M,z)` is the number density of haloes of mass :math:`M` and redshift :math:`z`, also known as the 
-*halo mass function*. The total number of galaxies of type *i* in a given redshift interval is then given by
+is the number density of galaxies of type :math:`i` (where :math:`i=` ':math:`c`' for centrals or ':math:`s`' for satellites) 
+integrated over mass and redshift bin, and :math:`n_\mathrm{h}(M,z)` is the number density of haloes of mass :math:`M` and redshift 
+:math:`z`, also known as the *halo mass function*. The total number of galaxies of type :math:`i` in a given redshift interval is 
+then 
+given by
 
 .. math::
     \bar n_i = \int\mathrm{d}z\,\frac{c\chi^2}{H(z)}\, n_i(z),
@@ -81,13 +82,13 @@ Then, the power spectra can be expressed as:
     \int_0^\infty\,\mathrm{d}M_2\,n_\mathrm{h}(M_2,z)\,b_\mathrm{h}(M_2,z)\,\mathcal{H}_\mathrm{m}(k,M_2,z),
 
 
-and again *i* can be either 'c' or 's'.
+and again :math:`i` can be either ':math:`c`' or ':math:`s`'.
 
 
 Lensing Observables
 *******************
 
-finally, the power spectrum is related to the galaxy-matter cross-correlation through
+Finally, the power spectrum is related to the galaxy-matter cross-correlation through
 
 .. math::
     \xi_\mathrm{gm}(r,z) = \frac1{2\pi^2} \int_0^\infty k^2\mathrm{d}k\,P_\mathrm{gm}(k,z) \frac{\sin(kr)}{kr}
@@ -107,7 +108,8 @@ The Halo Occupation Distribution
 ********************************
 
 The halo occupation distribution (HOD hereafter) is a commonly used analytical prescription that describes how galaxies populates 
-dark matter haloes. The version implemented by default in ``kids_ggl`` is described below, and is based on the models used in `van 
-Uitert et al. 2016 <https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract>`_ and `Dvornik et al. 2017 
+dark matter haloes -- the :math:`\langle N_i|M,z\rangle` above. For reference we describe the version implemented by default in 
+``kids_ggl`` below, which is based on the models used in `van Uitert et al. 2016 
+<https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract>`_ and `Dvornik et al. 2017 
 <https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract>`_.
 

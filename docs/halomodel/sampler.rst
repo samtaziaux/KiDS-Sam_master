@@ -90,3 +90,6 @@ Notes
 
 Outputs
 *******
+
+A successful run of the ``kids_ggl`` sampler will output a ``FITS`` file containing all sampled parameters as well as the outputs of 
+the halo model

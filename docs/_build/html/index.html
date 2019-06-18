@@ -149,7 +149,112 @@
             
   <div class="section" id="welcome-to-kids-ggl-s-documentation">
 <h1>Welcome to KiDS-GGL’s documentation!<a class="headerlink" href="#welcome-to-kids-ggl-s-documentation" title="Permalink to this headline">¶</a></h1>
-<p>Everything you need to know!</p>
+<p>The KiDS Galaxy-Galaxy Lensing Pipeline, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code>, is meant to be the one tool to get you going with your galaxy-galaxy lensing
+measurements and interpretation using KiDS data. (Actually, the halo model can be used for any dataset, provided that the data are
+formatted in a compliant way.)</p>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>To get started, clone or fork <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> from the github repository:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">KiDS</span><span class="o">-</span><span class="n">WL</span><span class="o">/</span><span class="n">KiDS</span><span class="o">-</span><span class="n">GGL</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>or download <a class="reference external" href="https://github.com/KiDS-WL/KiDS-GGL/releases/latest">the latest stable version</a> and unpack,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">tar</span> <span class="n">xvf</span> <span class="n">KiDS</span><span class="o">-</span><span class="n">GGL</span><span class="o">-&lt;</span><span class="n">version</span><span class="o">&gt;.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+<p>or</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">unzip</span> <span class="n">KiDS</span><span class="o">-</span><span class="n">GGL</span><span class="o">-&lt;</span><span class="n">version</span><span class="o">&gt;.</span><span class="n">zip</span>
+</pre></div>
+</div>
+<p>where, for instance, <code class="docutils literal notranslate"><span class="pre">&lt;version&gt;=2.0.0</span></code>.</p>
+<p>Enter the folder where the pipeline is located and run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<p>If you are not using Anaconda, you may have to add a <code class="docutils literal notranslate"><span class="pre">--user</span></code> flag to the above if you do not have root privileges (though we
+absolutely recommend using Anaconda).</p>
+<p>The commands above will also install some additional packages required by the pipeline: <code class="docutils literal notranslate"><span class="pre">astropy&gt;=1.2.0</span></code> for astronomical
+utilities (e.g., constants and units), <code class="docutils literal notranslate"><span class="pre">emcee&gt;=2.1.0</span></code> for MCMC, <code class="docutils literal notranslate"><span class="pre">hmf&gt;=3.0.1</span></code> for halo mass function utilities, <code class="docutils literal notranslate"><span class="pre">mpmath&gt;=0.19</span></code>
+for mathematical utilities, and <code class="docutils literal notranslate"><span class="pre">numpy&gt;=1.5.0</span></code>. Optionally, if you want to use the CAMB transfer functions in your halo models
+(preferred method), you should also install CAMB using the following command:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">egg</span> <span class="n">camb</span>
+</pre></div>
+</div>
+<p>After the setup script has finished, you should have a copy of the <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> executable somewhere in your <code class="docutils literal notranslate"><span class="pre">PATH</span></code>, which means
+you can run it out-of-the-box from anywhere in your computer. To make sure, type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">which</span> <span class="n">kids_ggl</span>
+</pre></div>
+</div>
+<p>If you do not see any message it means the place where the executable is is not part of your <code class="docutils literal notranslate"><span class="pre">PATH</span></code>. To fix this, look through the
+installation messages where the file was placed and add the following statement to your <code class="docutils literal notranslate"><span class="pre">~/.bashrc</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.bash_profile</span></code> if
+your terminal shell is <code class="docutils literal notranslate"><span class="pre">bash</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export PATH=${PATH}:&lt;path_to_kids_ggl_folder&gt;
+</pre></div>
+</div>
+<p>or the following in your <code class="docutils literal notranslate"><span class="pre">~/.cshrc</span></code> or <code class="docutils literal notranslate"><span class="pre">~/.tcshrc</span></code> if your shell is set to <code class="docutils literal notranslate"><span class="pre">csh</span></code> or <code class="docutils literal notranslate"><span class="pre">tcsh</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>setenv PATH ${PATH}:&lt;path_to_kids_ggl_folder&gt;
+</pre></div>
+</div>
+<p>You can run a quick example by typing</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="n">demo</span><span class="o">/</span><span class="n">ggl_demo_nfw_stack</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">--</span><span class="n">demo</span>
+</pre></div>
+</div>
+<p>This should show three panels with data points and lines resembling the Early Science satellite galaxy-galaxy lensing results of
+Sifon et al. (2015) and, after closing it, show the 3x3x14 covariance matrix.</p>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> requires a configuration file to run, and there are two kinds of configuration files required, depending on the task
+you ask from it: one for the production of a lensing signal (<a href="#id1"><span class="problematic" id="id2">`see here`_</span></a>) and one if you want to calculate and sample halo model
+predictions (<a href="#id3"><span class="problematic" id="id4">`see here`_</span></a>).</p>
+<div class="section" id="measure-the-lensing-signal">
+<h3>Measure the lensing signal<a class="headerlink" href="#measure-the-lensing-signal" title="Permalink to this headline">¶</a></h3>
+<p>You can use <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to measure the lensing signal from the KiDS data simply by typing</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">esd_config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">esd</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="fit-the-data-with-a-halo-model">
+<h3>Fit the data with a halo model<a class="headerlink" href="#fit-the-data-with-a-halo-model" title="Permalink to this headline">¶</a></h3>
+<p>You can also use <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to generate halo model predictions for the lensing signal and to fit lensing data with a halo model.
+This functionality is activated with the <code class="docutils literal notranslate"><span class="pre">--sampler</span></code> flag. In order to fit a halo model to data, type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">model_config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span>
+</pre></div>
+</div>
+<p>while if you simply want to generate halo model predictions for a single set of halo model parameters (those provided in the
+configuration file), type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">model_config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">--</span><span class="n">demo</span>
+</pre></div>
+</div>
+<p>The line above will generate the ESD(s) for your chosen set of initial parameters, print the reduced
+<span class="math notranslate nohighlight">\(\chi^2\)</span>, <span class="math notranslate nohighlight">\(\chi^2/\nu\)</span> on screen, overplot the model to the data points and, once you close this plot, will display the
+full covariance matrix.</p>
+<p>Sometimes, after running the demo a couple times, you don’t really need to see the covariance every time you run the demo. You can
+run the demo without plotting the covariance with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">--</span><span class="n">demo</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">cov</span>
+</pre></div>
+</div>
+<p>the <code class="docutils literal notranslate"><span class="pre">--no-cov</span></code> option is ignored if <code class="docutils literal notranslate"><span class="pre">--demo</span></code> is not present.</p>
+<p>By default, if the MCMC output file exists <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> will as the user whether they want to overwrite the output. Since version
+<code class="docutils literal notranslate"><span class="pre">2.0.0</span></code>, you can force overwrite by writing</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">-</span><span class="n">f</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="python-modules">
+<h2>Python modules<a class="headerlink" href="#python-modules" title="Permalink to this headline">¶</a></h2>
+<p>After following the installation steps above you will also be able to import any component of the KiDS-GGL pipeline as <code class="docutils literal notranslate"><span class="pre">python</span></code>
+modules for use within your own code. For instance, to access the different density profiles (currently all based on modifications
+of the NFW profile) and their associated quantities (such as mass, lensing signal, etc), you may type</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">kids_ggl_pipeline.halomodel</span> <span class="k">import</span> <span class="n">nfw</span>
+</pre></div>
+</div>
+<p>Most functionality should have a working help page, accessed by typing in a <code class="docutils literal notranslate"><span class="pre">python</span></code> shell (or Jupyter notebook, etc):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">help</span><span class="p">(</span><span class="n">nfw</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="contents">
 <h2>Contents<a class="headerlink" href="#contents" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
@@ -157,7 +262,6 @@
 <li class="toctree-l1"><a class="reference internal" href="halomodel/index.html">KiDS-GGL Halo Model</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="halomodel/formalism.html">Halo Model Formalism</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="halomodel/formalism.html#power-spectra">Power spectra</a></li>
-<li class="toctree-l3"><a class="reference internal" href="halomodel/formalism.html#lensing-observables">Lensing Observables</a></li>
 <li class="toctree-l3"><a class="reference internal" href="halomodel/formalism.html#the-halo-occupation-distribution">The Halo Occupation Distribution</a></li>
 </ul>
 </li>

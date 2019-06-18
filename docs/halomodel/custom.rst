@@ -7,7 +7,8 @@ ingredients, provided that the configuration file is consistent with the model s
 
 At the lowest level, the user can modify ``halomodel/halo.py`` to add or remove ingredients, although this is not generally 
 recommended. We have built the default model in ``kids_ggl`` to be flexible enough to acommodate most weak lensing uses (including 
-CMB weak lensing). The most notable shortcoming of the model right now is the requirement that distances be in physical or comoving 
+CMB weak lensing), and if there are specific aspects that a user would like implemented or allowed, it is best to raise an issue in 
+Github. Perhaps the most notable shortcoming of the model right now is the requirement that distances be in physical or comoving 
 units; angular units are not implemented.
 
 More common might be the desire of the user to modify the halo occupation distribution (HOD), which describes how galaxies populate 
@@ -82,21 +83,36 @@ All decorators must be applied to all custom functions that do not rely on funct
 Custom distributions
 ********************
 
-Similar to implemented functions, there are a few *distributions* implemented in ``kids_ggl`` by default. Taking the log normal 
-distribution as an example:
+Similar to implemented functions, there are a few *distributions* implemented in ``kids_ggl`` by default. For instance, let's say we 
+would like to implement a lognormal distribution in mass, modulated by a power law in redshift, :math:`z`, for the scatter in 
+stellar mass for fixed halo mass for central galaxies:
 
 .. math::
-    \Phi(m_\star|M_h) = \frac{\exp\left[-\frac{\log_{10}(m_\star/m_0)^2}{2\sigma^2}\right]}{\sqrt{2\pi}\log(10)\,\sigma\,m_0}
+    \Phi_c(m_\star|M_h,z) = \frac1{\sqrt{2\pi}\log(10)\,\sigma\,m_\star}\exp\left[-\frac{\log_{10}[m_\star/m_\star^c(M_h)]^2}{2\sigma^2}\right] \left(1+z\right)^{a_z}
 
-where :math:`m_0` is the characteristic stellar mass and :math:`sigma` is the scatter in stellar mass at fixed halo mass. This is 
-implemented in ``kids_ggl`` as ::
+where :math:`m_\star^c(M_h)` is the stellar mass predicted by the mass-observable relation, :math:`\sigma` the scatter about 
+:math:`M_0`, and :math:`a_z` is the exponent of the power-law dependence in redshift. This distribution should be implemented in 
+:``hod/scatter.py`` as: ::
 
     @logdist
-    def lognormal(obs, Mo, Mh, sigma, obs_is_log=False):
-        return exp(-((log10(obs/Mo)**2) / (2*sigma**2))) \
-            / ((2*pi)**0.5 * sigma * obs * log(10))
+    def lognormal_mz(obs, Mo, Mh, z, sigma, az, obs_is_log=False):
+        return (1 / ((2*pi)**0.5*log(10)*sigma*Mo) \
+            * exp(-log10(Mh/Mo)**2/(2*sigma**2)) * (1+z)**az
 
-where distributions now have the ``obs_is_log`` keyword which activates the ``logdist`` decorator analogously to the ``logfunc`` 
-decorator introduced above. The distributions implemented by default can be wrapped analogously to the demonstration with the 
-mass-concentration relation above.
+Analogously to ``logfunc``, distributions must be decorated with ``logdist``, and the argument controlling the decoration is now 
+called ``obs_is_log``, which should be set to ``False`` by default. All distribution definitions take three mandatory parameters: 
+``obs``, the observable (e.g., stellar mass), ``Mo``, the observable predicted by the mass-observable relation 
+(:math:`m_\star^c(M_h)` in the equation above), and ``Mh``, the halo mass. These arguments are passed internally within 
+``kids_ggl``. All otherarguments are arbitrary so long as they are reflected in the corresponding entry in the configuration file: 
+::
+
+    [hod/centrals/scatter]
+    cosmo.z
+    sigma       jeffreys    0.01    1.0
+    az          student     1
+
+Here, we've assigned redshift as a repeat parameter that was already defined in the ``cosmo`` section. We also sample ``sigma`` with 
+a Jeffreys prior, and ``az``, being a slope (in log space), with a Student's :math:`t` prior with one degree of freedom. The two 
+values passed to ``sigma`` are the lower and upper bounds (it cannot be less than zero, but we assign it to a small non-zero number 
+to avoid infinities). 
 

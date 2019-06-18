@@ -168,7 +168,8 @@
 ingredients, provided that the configuration file is consistent with the model structure.</p>
 <p>At the lowest level, the user can modify <code class="docutils literal notranslate"><span class="pre">halomodel/halo.py</span></code> to add or remove ingredients, although this is not generally
 recommended. We have built the default model in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to be flexible enough to acommodate most weak lensing uses (including
-CMB weak lensing). The most notable shortcoming of the model right now is the requirement that distances be in physical or comoving
+CMB weak lensing), and if there are specific aspects that a user would like implemented or allowed, it is best to raise an issue in
+Github. Perhaps the most notable shortcoming of the model right now is the requirement that distances be in physical or comoving
 units; angular units are not implemented.</p>
 <p>More common might be the desire of the user to modify the halo occupation distribution (HOD), which describes how galaxies populate
 dark matter haloes. For this purpose we have implemented a few generic functions and distributions, which can serve as backbones for
@@ -231,21 +232,35 @@ relations.</p>
 </div>
 <div class="section" id="custom-distributions">
 <h2>Custom distributions<a class="headerlink" href="#custom-distributions" title="Permalink to this headline">¶</a></h2>
-<p>Similar to implemented functions, there are a few <em>distributions</em> implemented in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> by default. Taking the log normal
-distribution as an example:</p>
+<p>Similar to implemented functions, there are a few <em>distributions</em> implemented in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> by default. For instance, let’s say we
+would like to implement a lognormal distribution in mass, modulated by a power law in redshift, <span class="math notranslate nohighlight">\(z\)</span>, for the scatter in
+stellar mass for fixed halo mass for central galaxies:</p>
 <div class="math notranslate nohighlight">
-\[\Phi(m_\star|M_h) = \frac{\exp\left[-\frac{\log_{10}(m_\star/m_0)^2}{2\sigma^2}\right]}{\sqrt{2\pi}\log(10)\,\sigma\,m_0}\]</div>
-<p>where <span class="math notranslate nohighlight">\(m_0\)</span> is the characteristic stellar mass and <span class="math notranslate nohighlight">\(sigma\)</span> is the scatter in stellar mass at fixed halo mass. This is
-implemented in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> as</p>
+\[\Phi_c(m_\star|M_h,z) = \frac1{\sqrt{2\pi}\log(10)\,\sigma\,m_\star}\exp\left[-\frac{\log_{10}[m_\star/m_\star^c(M_h)]^2}{2\sigma^2}\right] \left(1+z\right)^{a_z}\]</div>
+<p>where <span class="math notranslate nohighlight">\(m_\star^c(M_h)\)</span> is the stellar mass predicted by the mass-observable relation, <span class="math notranslate nohighlight">\(\sigma\)</span> the scatter about
+<span class="math notranslate nohighlight">\(M_0\)</span>, and <span class="math notranslate nohighlight">\(a_z\)</span> is the exponent of the power-law dependence in redshift. This distribution should be implemented in
+:<code class="docutils literal notranslate"><span class="pre">hod/scatter.py</span></code> as:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@logdist</span>
-<span class="k">def</span> <span class="nf">lognormal</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">Mo</span><span class="p">,</span> <span class="n">Mh</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">obs_is_log</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">log10</span><span class="p">(</span><span class="n">obs</span><span class="o">/</span><span class="n">Mo</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">)))</span> \
-        <span class="o">/</span> <span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">*</span> <span class="n">obs</span> <span class="o">*</span> <span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="k">def</span> <span class="nf">lognormal_mz</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">Mo</span><span class="p">,</span> <span class="n">Mh</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">az</span><span class="p">,</span> <span class="n">obs_is_log</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">((</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span><span class="o">*</span><span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span><span class="o">*</span><span class="n">sigma</span><span class="o">*</span><span class="n">Mo</span><span class="p">)</span> \
+        <span class="o">*</span> <span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">log10</span><span class="p">(</span><span class="n">Mh</span><span class="o">/</span><span class="n">Mo</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sigma</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">z</span><span class="p">)</span><span class="o">**</span><span class="n">az</span>
 </pre></div>
 </div>
-<p>where distributions now have the <code class="docutils literal notranslate"><span class="pre">obs_is_log</span></code> keyword which activates the <code class="docutils literal notranslate"><span class="pre">logdist</span></code> decorator analogously to the <code class="docutils literal notranslate"><span class="pre">logfunc</span></code>
-decorator introduced above. The distributions implemented by default can be wrapped analogously to the demonstration with the
-mass-concentration relation above.</p>
+<p>Analogously to <code class="docutils literal notranslate"><span class="pre">logfunc</span></code>, distributions must be decorated with <code class="docutils literal notranslate"><span class="pre">logdist</span></code>, and the argument controlling the decoration is now
+called <code class="docutils literal notranslate"><span class="pre">obs_is_log</span></code>, which should be set to <code class="docutils literal notranslate"><span class="pre">False</span></code> by default. All distribution definitions take three mandatory parameters:
+<code class="docutils literal notranslate"><span class="pre">obs</span></code>, the observable (e.g., stellar mass), <code class="docutils literal notranslate"><span class="pre">Mo</span></code>, the observable predicted by the mass-observable relation
+(<span class="math notranslate nohighlight">\(m_\star^c(M_h)\)</span> in the equation above), and <code class="docutils literal notranslate"><span class="pre">Mh</span></code>, the halo mass. These arguments are passed internally within
+<code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code>. All otherarguments are arbitrary so long as they are reflected in the corresponding entry in the configuration file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">centrals</span><span class="o">/</span><span class="n">scatter</span><span class="p">]</span>
+<span class="n">cosmo</span><span class="o">.</span><span class="n">z</span>
+<span class="n">sigma</span>       <span class="n">jeffreys</span>    <span class="mf">0.01</span>    <span class="mf">1.0</span>
+<span class="n">az</span>          <span class="n">student</span>     <span class="mi">1</span>
+</pre></div>
+</div>
+<p>Here, we’ve assigned redshift as a repeat parameter that was already defined in the <code class="docutils literal notranslate"><span class="pre">cosmo</span></code> section. We also sample <code class="docutils literal notranslate"><span class="pre">sigma</span></code> with
+a Jeffreys prior, and <code class="docutils literal notranslate"><span class="pre">az</span></code>, being a slope (in log space), with a Student’s <span class="math notranslate nohighlight">\(t\)</span> prior with one degree of freedom. The two
+values passed to <code class="docutils literal notranslate"><span class="pre">sigma</span></code> are the lower and upper bounds (it cannot be less than zero, but we assign it to a small non-zero number
+to avoid infinities).</p>
 </div>
 </div>
 

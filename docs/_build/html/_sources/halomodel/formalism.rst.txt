@@ -3,7 +3,14 @@
 ======================
 
 The *Halo Model* is the formalism resulting from the assumption that all galaxies reside in *haloes*: collasped, spherical dark 
-matter structures characterized by a mass *M* at redshift :math:`z`. The galaxy-matter power spectrum can then be separated into 
+matter structures characterized by a mass *M* at redshift :math:`z`. It is usually calculated in Fourier space for convenience, so 
+that observables are calculated in terms of their power spectra. Here we describe the essential elements of the halo model formalism 
+implemented in ``kids_ggl``. For more details please refer to `van Uitert et al. 2016 
+<https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract>`_ and `Dvornik et al. 2017 
+<https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract>`_. As much as possile, the notation in this page is consistent with 
+that used in the default configuration file, which may create some inconsistencies with the notation in those references.
+
+The galaxy-matter power spectrum can then be separated into 
 *within-halo* and *between-halo* contributions, commonly referred to as the *1-halo* and *2-halo* terms, respectively:
 
 .. math::
@@ -85,24 +92,6 @@ Then, the power spectra can be expressed as:
 and again :math:`i` can be either ':math:`c`' or ':math:`s`'.
 
 
-Lensing Observables
-*******************
-
-Finally, the power spectrum is related to the galaxy-matter cross-correlation through
-
-.. math::
-    \xi_\mathrm{gm}(r,z) = \frac1{2\pi^2} \int_0^\infty k^2\mathrm{d}k\,P_\mathrm{gm}(k,z) \frac{\sin(kr)}{kr}
-
-which is related to the surface density at distance *R* through
-
-.. math::
-    \Sigma(R) = \frac2{\bar n_\mathrm{g}} \int\mathrm{d}V_\mathrm{C}(z) \, n_\mathrm{g}(z)\bar\rho_\mathrm{m}(z) \int_R^\infty \frac{r\mathrm{d}r}{\sqrt{r^2-R^2}}\xi_\mathrm{gm}(r,z)
-
-Which can then be integrated to obtain the average surface density within *R*,
-
-.. math::
-    \bar\Sigma(<R) = \frac2{R^2}\int_0^R\mathrm{d}r\,r\Sigma(r)
-
 
 The Halo Occupation Distribution
 ********************************
@@ -112,4 +101,11 @@ dark matter haloes -- the :math:`\langle N_i|M,z\rangle` above. For reference we
 ``kids_ggl`` below, which is based on the models used in `van Uitert et al. 2016 
 <https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract>`_ and `Dvornik et al. 2017 
 <https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract>`_.
+
+Central galaxies populate haloes following a lognormal distribution in halo mass, independent of redshift:
+
+.. math::
+    \langle N_c|M,z \rangle = \frac1{\sqrt{2\pi}\log(10)\,\sigma\,m_0}\exp\left[-\frac{\log_{10}(m_\star/m_0)^2}{2\sigma^2}\right]
+
+
 

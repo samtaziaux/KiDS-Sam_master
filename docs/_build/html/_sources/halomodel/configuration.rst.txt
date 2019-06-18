@@ -351,7 +351,7 @@ column above, i.e., changing the name in ``output`` does not change which parame
 The first column corresponds to the names given to the columns in the output FITS file. When there is more than one "dimension" 
 (there are 2 in this case), columns are labelled e.g., ``esd1,esd2,...``.
 
-There is one alternative to the example above:
+There is one alternative to the example above: ::
 
     [output]
     esd       2,8E

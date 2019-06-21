@@ -39,7 +39,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
                binname, binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                Runit, nRbins, Rconst, com, filename_var,
                filename, cat_version, blindcat, blindcats, srclists, path_splits,
-               splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
+               splitkidscats, catmatch, Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition,
                variance, h, path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection):
     
     q1 = mp.Queue()
@@ -54,7 +54,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
             centering, gallists, lens_selection, lens_binning, binname,
             binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit,
             nRbins, Rconst, com, filename_var, filename, cat_version, blindcat, blindcats,
-            srclists, path_splits, splitkidscats, catmatch, Dcsbins,
+            srclists, path_splits, splitkidscats, catmatch, Dcsbins, zlensbins, Dclbins,
             Dc_epsilon, filename_addition, variance, h, path_kidscats,
              kidscatname, kidscolnames, kidscat_end, src_selection, q1))
         procs.append(work)
@@ -81,7 +81,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
          binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst, com,
          filename_var,
          filename, cat_version, blindcat, blindcats, srclists, path_splits,
-         splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
+         splitkidscats, catmatch, Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition,
          variance, h, path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection, q1):
 
     # galaxy information
@@ -141,7 +141,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
             [gallist[galIDmask] for gallist in [galIDlist, galRAlist, \
                                                 galDEClist, galweightlist, \
                                                 galZlist, Dcllist, Dallist]]
-                                                
+            
             if len(galIDs)==0:
                 print('NOT analysing part {0}/{1}, process {2}: {3} (contains {4} objects)'\
                       .format(kidscatN, len(splitkidscats[Nsplit]), \
@@ -469,18 +469,23 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                              Dcllist, galZlist)
 
 
-    # We translate the range in source redshifts
-    # to a range in source distances Ds (in pc/h)
-    zsrcbins = np.arange(0.025,3.5,0.05)
+    # We translate the range in source and lens redshifts
+    # to ranges in distances Ds (in pc/h)
+    zsrcbins = np.arange(0.025,3.5,0.05) # Source redshift bins
+    zlensbins =  np.linspace(0.025, 0.7, 100) # Lens redshift bins
+        
     #Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
     #                    for y in zsrcbins])
     #Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
 
     # New method
     cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
-    Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
-    Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
 
+    Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    Dclbins = np.array((cosmo.comoving_distance(zlensbins).to('pc')).value)
+    
+    Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
+    
     if cat_version == 3:
         print('\nCalculating the lensing efficiency ...')
 
@@ -506,7 +511,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                 weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
+                            Dcsbins, zlensbins, Dclbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -536,7 +541,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                             weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon, com)
+                                                        Dcsbins, zlensbins, Dclbins, srcPZ_k, cat_version, Dc_epsilon, com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -574,7 +579,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
             dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
-                                Dcsbins, srcPZ_m, cat_version, Dc_epsilon))
+                                Dcsbins, zlensbins, Dclbins, srcPZ_m, cat_version, Dc_epsilon, galZlist, com))
             m_selection = {}
 
         srcm_varlist = np.average(m_corr[:,2], weights=dlsods)
@@ -615,7 +620,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                  Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                  blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
-                 Dcsbins, Dc_epsilon, filename_addition, variance, h,
+                 Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition, variance, h,
                 path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection)
 
     if 'covariance' in purpose:
@@ -635,7 +640,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                              binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                              Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                              blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
-                             Dcsbins, Dc_epsilon, filename_addition, variance, h,
+                             Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition, variance, h,
                              path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection)
 
     if out == 0:

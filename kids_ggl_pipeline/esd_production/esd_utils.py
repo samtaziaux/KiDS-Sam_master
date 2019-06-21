@@ -100,7 +100,7 @@ def read_config(config_file):
             n_boot = int(line[1])
         elif line[0] == 'cross_covariance':
             cross_cov = bool(int(line[1]))
-        elif line[0] == 'comoving':
+        elif 'com' in line[0]:
             com = line[1]
 
         # Lens selection
@@ -161,7 +161,8 @@ def read_config(config_file):
             print('Lens catalog:', lens_catalog)
     except:
         pass
-
+    
+    print(com)
     out = (kids_path, gama_path, colnames, kidscolnames, specz_file, m_corr_file,
             Om, Ol, Ok, h, z_epsilon,
             folder, filename, purpose, Rbins, Runit, ncores,

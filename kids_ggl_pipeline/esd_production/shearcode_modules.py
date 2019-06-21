@@ -395,7 +395,7 @@ def import_data(path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_ki
     Rmin, Rmax, Rbins, Rcenters, \
         nRbins, Rconst = define_Rbins(path_Rbins, Runit)
 
-    print('Import lens catalogue')
+    print('Importinging lens catalogue')
     # Import lens catalogue
     gamacat, galIDlist, galRAlist, galDEClist, galweightlist, galZlist, \
         Dcllist, Dallist = import_gamacat(
@@ -406,15 +406,13 @@ def import_data(path_Rbins, Runit, path_gamacat, colnames, kidscolnames, path_ki
     # Determine the coordinates of the KiDS catalogues
     kidscoord, kidscat_end = run_kidscoord(path_kidscats, kidscolnames, cat_version)
     
-    print('Match the KiDS field and lens galaxy coordinates')
+    print('Matching the KiDS field and lens galaxy coordinates')
     # Match the KiDS field and lens galaxy coordinates
     catmatch, kidscats, galIDs_infield = run_catmatch(
         kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, Rmax, purpose,
         filename_addition, cat_version, com)
 
     gc.collect()
-    
-    print('End of import_data')
     
     return catmatch, kidscats, galIDs_infield, kidscat_end, Rmin, Rmax, Rbins, \
         Rcenters, nRbins, Rconst, gamacat, galIDlist, galRAlist, \
@@ -1139,16 +1137,24 @@ def define_lenssel(gamacat, colnames, centering, lens_selection, lens_binning,
     return lenssel
 
 
+# Creating a normalized gaussian distribution
+def calc_gaussian(x, mu, sigma):
+    a = 1/(sigma * np.sqrt(2*np.pi))
+    gaussian = a * np.exp(-0.5*((x-mu)/sigma)**2.)
+    return gaussian
+
+
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
-def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon, galZlist, com):
+def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_version, Dc_epsilon, galZlist, com):
+    
+    #print('galZlist:', galZlist)
     
     # If the lens redshift are photometric, implement the photo-z uncertainty sigma
     if 'sigma' in com:
         
-        # Lens redshift/distance bins
-        zlbins = np.linspace(0.05, 0.7, 100)
-        Dclbins = (cosmo.comoving_distance(zlbins).to('pc')).value
-        Dalbins = Dclbins/(1+zlbins)
+        # Calculate the lens angular distance bins
+        Dalbins = Dclbins/(1+zlensbins)
+        dZl = np.diff(zlensbins)[0]
         
         # Lens redshift PDFs
         galSigma = float(com.rsplit('_', 1)[1])
@@ -1156,33 +1162,33 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon, galZlist
             galSigma = galSigma*(1+galZlist)
         else:
             galSigma = np.array([galSigma])
-        
-        galPZ = np.array([calc_gaussian(zlbins, galZlist[z], galSigma[z]) for z in range(len(galZlist))])
+    
+        galPZ = np.array([calc_gaussian(zlensbins, galZlist[z], galSigma[z]) for z in range(len(galZlist))])
         
         # Calculate the values of Dls/Ds for all lens/source redshift-bin pair
         Dclbins, Dcsbins = np.meshgrid(Dclbins, Dcsbins)
         DlsoDs = (Dcsbins-Dclbins)/Dcsbins
-
+        
         # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
         DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
 
-        print('DlsoDs:', np.shape(DlsoDs))
-        print('Source P(zs):', np.shape(srcPZ))
+        #print('DlsoDs:', np.shape(DlsoDs))
+        #print('Source P(zs):', np.shape(srcPZ))
 
         # Matrix multiplication that sums over P(zs), to calculate <Dls/Ds> for each Zlens-bin
         DlsoDs = np.dot(srcPZ, DlsoDs)
-        print('Integrated DlsoDs:', np.shape(DlsoDs))
-        print('Dalbins:', np.shape(Dalbins))
-        print('Lens P(zl):', np.shape(galPZ))
+        #print('Integrated DlsoDs:', np.shape(DlsoDs))
+        #print('Dalbins:', np.shape(Dalbins))
+        #print('Lens P(zl):', np.shape(galPZ))
 
         # Matrix multiplication that sums over P(zl), to calculate <Da*Dls/Ds> for each lens
         if 'com' in com: # Comoving
-            DaDlsoDs = np.dot(galPZ, Dclbins*DlsoDs)
+            DaDlsoDs = np.dot(galPZ*dZl, Dclbins*DlsoDs)
         else: # Physical
-            DaDlsoDs = np.dot(galPZ, Dalbins*DlsoDs)
+            DaDlsoDs = np.dot(galPZ*dZl, Dalbins*DlsoDs)
         
-        print('Integrated Da*DlsoDs:', np.shape(DaDlsoDs))
-
+        #print('Integrated Da*DlsoDs:', np.shape(DaDlsoDs))
+        
         # Calculate the values of k (=1/Sigmacrit)
         k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(DaDlsoDs)) # k = 1/Sigmacrit
     
@@ -1216,35 +1222,57 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon, galZlist
   
     gc.collect()
     
-    print(k)
-    
     return k, kmask
 
 
 # Weigth for average m correction in KiDS-450
-def calc_mcorr_weight(Dcls, Dals, Dcsbins, srcPZ, cat_version, Dc_epsilon):
+def calc_mcorr_weight(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_version, Dc_epsilon, galZlist, com):
     
-    # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
-    Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
-    DlsoDs = (Dcsbins-Dcls)/Dcsbins
-    
-    # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
-    #DlsoDsmask = np.logical_not((0.<DlsoDs) & (DlsoDs<1.))
-    #DlsoDs = np.ma.filled(np.ma.array(DlsoDs, mask=DlsoDsmask, fill_value=0))
-    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
-    
-    
-    DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
-    #else:
-    #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+    # If the lens redshift are photometric, implement the photo-z uncertainty sigma
+    if 'sigma' in com:
+        
+        # Calculate the lens angular distance bins
+        Dalbins = Dclbins/(1+zlensbins)
+        
+        # Lens redshift PDFs
+        galSigma = float(com.rsplit('_', 1)[1])
+        if 'z' in com:
+            galSigma = galSigma*(1+galZlist)
+        else:
+            galSigma = np.array([galSigma])
+            
+        galPZ = np.array([calc_gaussian(zlensbins, galZlist[z], galSigma[z]) for z in range(len(galZlist))])
+        
+        # Calculate the values of Dls/Ds for all lens/source redshift-bin pair
+        Dclbins, Dcsbins = np.meshgrid(Dclbins, Dcsbins)
+        DlsoDs = (Dcsbins-Dclbins)/Dcsbins
+        
+        # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
 
+        #print('DlsoDs:', np.shape(DlsoDs))
+        #print('Source P(zs):', np.shape(srcPZ))
+
+        # Matrix multiplication that sums over P(zs), to calculate <Dls/Ds> for each Zlens-bin
+        DlsoDs = np.dot(srcPZ, DlsoDs)
+        
+    else:
+        # Calculate the values of Dls/Ds for all lens/source-redshift-bin pair
+        Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
+        DlsoDs = (Dcsbins-Dcls)/Dcsbins
+            
+        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+        #else:
+        #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
+
+        # Matrix multiplication that sums over P(z),
+        # to calculate <Dls/Ds> for each lens-source pair
+        DlsoDs = np.dot(srcPZ, DlsoDs).T
+    
     DlsoDsmask = [] # Empty unused lists
     Dcls = [] # Empty unused lists
     Dcsbins = []
-    # Matrix multiplication that sums over P(z),
-    # to calculate <Dls/Ds> for each lens-source pair
-    DlsoDs = np.dot(srcPZ, DlsoDs).T
-    
+        
     gc.collect()
     return DlsoDs
 

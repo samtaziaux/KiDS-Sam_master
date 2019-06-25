@@ -83,6 +83,8 @@
             
             
               <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../esd_production/index.html">ESD Production with KiDS-GGL</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL Halo Model</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="formalism.html">Halo Model Formalism</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">The Halo Model Configuration File</a><ul>
@@ -299,9 +301,9 @@ provided by <code class="docutils literal notranslate"><span class="pre">halo.mo
 <span class="o">...</span>
 </pre></div>
 </div>
-<p>etc, etc. This will be enough to explain what’s going on (empty lines and lines starting with <code class="docutils literal notranslate"><span class="pre">#</span></code> are ignored). The first column
-is the name that will be used in the MCMC output if the parameter is varied during the chain; the second specifies the prior
-function, and following columns specify parameters passed to the prior function. See <a href="#id1"><span class="problematic" id="id2">priors_</span></a> for details.</p>
+<p>etc, etc. This will be enough to explain what’s going on. The first column is the name that will be used in the MCMC output if the
+parameter is varied during the chain; the second specifies the prior function, and following columns specify parameters passed to
+the prior function. See <a href="#id1"><span class="problematic" id="id2">priors_</span></a> for details.</p>
 <div class="section" id="joint-parameters">
 <span id="join"></span><h4>Joint parameters<a class="headerlink" href="#joint-parameters" title="Permalink to this headline">¶</a></h4>
 <p>The last column, which is also optional, allows the use of “array variables” by <em>joining</em> individual entries within the model, and a

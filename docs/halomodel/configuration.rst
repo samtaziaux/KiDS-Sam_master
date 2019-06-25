@@ -146,9 +146,9 @@ provided by ``halo.model``: ::
     name2         prior2     [values2 ...]     [join:label2]
     ...
 
-etc, etc. This will be enough to explain what's going on (empty lines and lines starting with ``#`` are ignored). The first column 
-is the name that will be used in the MCMC output if the parameter is varied during the chain; the second specifies the prior 
-function, and following columns specify parameters passed to the prior function. See priors_ for details.
+etc, etc. This will be enough to explain what's going on. The first column is the name that will be used in the MCMC output if the 
+parameter is varied during the chain; the second specifies the prior function, and following columns specify parameters passed to 
+the prior function. See priors_ for details.
 
 .. _join:
 

@@ -1,0 +1,367 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>The ESD Production Configuration File &mdash; KiDS-GGL 2.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="KiDS-GGL Halo Model" href="../halomodel/index.html" />
+    <link rel="prev" title="ESD Production with KiDS-GGL" href="index.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> KiDS-GGL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">ESD Production with KiDS-GGL</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">The ESD Production Configuration File</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#general-instructions">General instructions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#general-settings">General settings</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#sources-and-lens-catalogues">Sources and lens catalogues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#cosmology">Cosmology</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#esd-production">ESD production</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../halomodel/index.html">KiDS-GGL Halo Model</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KiDS-GGL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">ESD Production with KiDS-GGL</a> &raquo;</li>
+        
+      <li>The ESD Production Configuration File</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/esd_production/configuration.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="the-esd-production-configuration-file">
+<h1>The ESD Production Configuration File<a class="headerlink" href="#the-esd-production-configuration-file" title="Permalink to this headline">¶</a></h1>
+<p><em>THIS DOCUMENT IS INCOMPLETE. SEE</em> <code class="docutils literal notranslate"><span class="pre">demo/ggl_esd_production.config</span></code> <em>for now</em>.</p>
+<p>This document explains how to write a <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> ESD production configuration file, which defines the data used to compute the ESD
+from KiDS data.</p>
+<p>The ESD production module has not been tested with any dataset other than KiDS-WL releases, and is updated with every release to
+match new conventions, if necessary. We therefore only provide support for the ESD production module of <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> when analyizing
+KiDS data. In principle, though, if other data sets are made compliant with KiDS-WL formats, this module might be used with other
+datasets perhaps with minor modifications. (Whether this would be worth the effort is left for the user to decide.)</p>
+<p>Some additional examples can be found in the <a href="#id1"><span class="problematic" id="id2">`demo configuration file`_</span></a></p>
+<div class="section" id="general-instructions">
+<h2>General instructions<a class="headerlink" href="#general-instructions" title="Permalink to this headline">¶</a></h2>
+<ul>
+<li><p class="first">All parameters must be present in the file</p>
+</li>
+<li><p class="first">The structure for most parameters is, unless otherwise specified:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">name</span>        <span class="n">value</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Any optional parameter that will not be used must be assigned a <code class="docutils literal notranslate"><span class="pre">None</span></code> value in the second column</p>
+</li>
+</ul>
+</div>
+<div class="section" id="general-settings">
+<h2>General settings<a class="headerlink" href="#general-settings" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="sources-and-lens-catalogues">
+<h3>Sources and lens catalogues<a class="headerlink" href="#sources-and-lens-catalogues" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="kids-catalogues">
+<h4>KiDS catalogues<a class="headerlink" href="#kids-catalogues" title="Permalink to this headline">¶</a></h4>
+<p>The first parameters define the full path to the folder containing the KiDS catalogues to be used, as well as the KiDS-WL data
+release. The paths below works if running the pipeline in one of the Leiden machines:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">KiDS_path</span>       <span class="o">/</span><span class="n">disks</span><span class="o">/</span><span class="n">shear10</span><span class="o">/</span><span class="n">dvornik</span><span class="o">/</span><span class="n">KidsCatalogues</span><span class="o">/</span><span class="n">DR3</span><span class="o">/</span>
+<span class="n">KiDS_version</span>    <span class="mi">3</span>                                               <span class="c1"># Options: 0=mocks, 3=KiDS-450</span>
+</pre></div>
+</div>
+<p>If using version <code class="docutils literal notranslate"><span class="pre">3</span></code> (i.e., KiDS-450), you must also specify the path to the spec-z catalogue with</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">specz_file</span>      <span class="o">/</span><span class="n">disks</span><span class="o">/</span><span class="n">shear10</span><span class="o">/</span><span class="n">KiDS</span><span class="o">/</span><span class="n">KiDS</span><span class="o">-</span><span class="mi">450</span><span class="o">/</span><span class="n">SPECZ</span><span class="o">/</span><span class="n">IMSIM_Gall30th_2016</span><span class="o">-</span><span class="mi">01</span><span class="o">-</span><span class="mi">14</span><span class="n">_deepspecz_photoz_1000_4_specweight</span><span class="o">.</span><span class="n">cat</span>
+</pre></div>
+</div>
+<p>And finally you must specify the path to the multiplicative bias correction table in thin redshift slices:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">m_corr_file</span>     <span class="n">m_corr_kids_450</span><span class="o">.</span><span class="n">txt</span>
+</pre></div>
+</div>
+<p><em>New in v1.7lite</em>: column names for all the required KiDS column <strong>must</strong> be given, comma-separated, in the following entry. For
+KiDS use the correct column names for the colums are given below (example for KiDS-450). <strong>There is no need</strong> to specify the
+blinding with weight_A, e_A, etc.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_columns</span>    <span class="n">SeqNr</span><span class="p">,</span><span class="n">ALPHA_J2000</span><span class="p">,</span><span class="n">DELTA_J2000</span><span class="p">,</span><span class="n">Z_B</span><span class="p">,</span><span class="n">model_SNratio</span><span class="p">,</span><span class="n">MASK</span><span class="p">,</span><span class="n">THELI_NAME</span><span class="p">,</span><span class="n">weight</span><span class="p">,</span><span class="n">m_cor</span><span class="p">,</span><span class="n">e1</span><span class="p">,</span><span class="n">e2</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="lens-catalogues">
+<h4>Lens catalogues<a class="headerlink" href="#lens-catalogues" title="Permalink to this headline">¶</a></h4>
+<p>First, specify the full path to the lens catalogue. This catalog should contain at least a right ascension and a declination
+columns. If no ID column is present, IDs are automatically generated which corresponds to the index of each object in the catalogue
+(counting from zero). If you wish to calculate the lensing signal as a function of physical projected distance (as opposed to
+angular separations), then the catalogue must also contain a redshift column. (This entry is called <code class="docutils literal notranslate"><span class="pre">GAMA_path</span></code> for historical
+reasons and, again, the path below will work from one of the Leiden machines.)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">GAMA_path</span>       <span class="o">/</span><span class="n">disks</span><span class="o">/</span><span class="n">shear10</span><span class="o">/</span><span class="n">brouwer_veersemeer</span><span class="o">/</span><span class="n">MergedCatalogues</span><span class="o">/</span><span class="n">GAMACatalogue_1</span><span class="o">.</span><span class="mf">0.</span><span class="n">fits</span>
+</pre></div>
+</div>
+<p>Next, column names for the four required column can be given comma-separated in the following entry. For GAMA use ID,RA,DEC,Z (or
+comment out). It is not necessary to specify a redshift column name if redshifts are not going to be used:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lens_columns</span>    <span class="n">ID</span><span class="p">,</span><span class="n">RA</span><span class="p">,</span><span class="n">DEC</span><span class="p">,</span><span class="n">Z</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="cosmology">
+<h3>Cosmology<a class="headerlink" href="#cosmology" title="Permalink to this headline">¶</a></h3>
+<p>Here we specify four parameters that define a <code class="docutils literal notranslate"><span class="pre">LambdaCDM</span></code> cosmology:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Om</span>              <span class="mf">0.315</span>   <span class="c1"># Matter energy density at z=0. 0 &lt;= Om &lt;= 1</span>
+<span class="n">Ol</span>              <span class="mf">0.685</span>   <span class="c1"># Dark energy density at z=0. Must be Ol = 1-Om</span>
+<span class="n">Ok</span>              <span class="mi">0</span>       <span class="c1"># Curvature energy density at z=0. Must be zero for now</span>
+<span class="n">h</span>               <span class="mf">1.0</span>     <span class="c1"># h = H_0 / (100 km/s/Mpc)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="esd-production">
+<h3>ESD production<a class="headerlink" href="#esd-production" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="algorithm">
+<h4>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this headline">¶</a></h4>
+<p><strong>Output folder</strong> and an optional suffix for all the output files (see <a href="#id3"><span class="problematic" id="id4">`output file structure`_</span></a>):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ESD_output_folder</span>       <span class="n">my_esd_folder</span>
+<span class="n">ESD_output_filename</span>     <span class="kc">None</span>            <span class="c1"># to ignore, write None</span>
+</pre></div>
+</div>
+<p><strong>Purpose.</strong> There are three options:</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">shearcatalog</span></code>: calculate the ESD by looping through lenses.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">shearcovariance</span></code>: calculate the ESD covariance from the data (see section 3.4 of Viola et al. 2015, MNRAS, 452, 3529). The ESD comes out for free as well.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">shearootstrap</span></code>: calculate the ESD covariance by bootstrapping KiDS fields.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ESD_purpose</span>         <span class="n">shearcatalog</span>
+</pre></div>
+</div>
+</li>
+</ul>
+<p><strong>Radial binning scheme</strong> and units. Options for the former are:</p>
+<ol class="loweralpha simple">
+<li>Comma-separated list with <code class="docutils literal notranslate"><span class="pre">(Nbins,Rmin,Rmax)</span></code>. This will generate <code class="docutils literal notranslate"><span class="pre">Nbins</span></code> logarithmic bins between <code class="docutils literal notranslate"><span class="pre">Rmin</span></code> and <code class="docutils literal notranslate"><span class="pre">Rmax</span></code>.</li>
+<li>Path to the txt file containing the bin edges and center. The txt file should contain three columns, separated by spaces, with
+<code class="docutils literal notranslate"><span class="pre">Rmin</span></code>, <code class="docutils literal notranslate"><span class="pre">Rcenter</span></code> and <code class="docutils literal notranslate"><span class="pre">Rmax</span></code>. The file should include all bin edges, such that <code class="docutils literal notranslate"><span class="pre">Nedges</span> <span class="pre">=</span> <span class="pre">Nbins+1</span></code>. See
+<code class="docutils literal notranslate"><span class="pre">Rbins_demo.txt</span></code> in the ‘help’ folder for an example.</li>
+</ol>
+<p>Units can be physical (one of <code class="docutils literal notranslate"><span class="pre">{pc,</span> <span class="pre">kpc,</span> <span class="pre">Mpc}</span></code>) or angular (one of <code class="docutils literal notranslate"><span class="pre">{arcsec,</span> <span class="pre">arcmin,</span> <span class="pre">deg}</span></code>).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Rbins</span>           <span class="mi">10</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">2000</span>
+<span class="n">Runit</span>           <span class="n">kpc</span>
+</pre></div>
+</div>
+<p>If using physical units, set the following to <code class="docutils literal notranslate"><span class="pre">1</span></code> to use comoving units or to <code class="docutils literal notranslate"><span class="pre">0</span></code> to use physical units</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">comoving</span>        <span class="mi">1</span>
+</pre></div>
+</div>
+<p>Set how many cores should be used to run the ESD production pipeline</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ncores</span>          <span class="mi">4</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="lens-selection">
+<h4>Lens selection<a class="headerlink" href="#lens-selection" title="Permalink to this headline">¶</a></h4>
+<p>If desired, specify the name of file containing lens IDs to be used in the analysis</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lensID_file</span>     <span class="kc">None</span>
+</pre></div>
+</div>
+<p><strong>Lens weighting scheme</strong>. This is optionally specified with the format <code class="docutils literal notranslate"><span class="pre">lens_weights</span>&#160; <span class="pre">&lt;weight_name&gt;</span>&#160; <span class="pre">&lt;weight_catalogue&gt;</span></code>, where</p>
+<ul>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">weight_name</span></code> is the name of the weight column in the fits file. The contribution to the ESD profile of each lens will be weighted by the assigned weight value.</p>
+</li>
+<li><p class="first"><code class="docutils literal notranslate"><span class="pre">weight_catalogue</span></code> is the path to the fits file containing the weights. The weight values in the input fits file should have exactly the same order as the lenses in the used catalogue.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">lens_weights</span>    <span class="kc">None</span>
+</pre></div>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../halomodel/index.html" class="btn btn-neutral float-right" title="KiDS-GGL Halo Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="ESD Production with KiDS-GGL" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, KiDS-GGL for the KiDS Collaboration
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

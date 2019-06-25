@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>KiDS-GGL Halo Model &mdash; KiDS-GGL 2.0.0 documentation</title>
+  <title>KiDS-GGL ESD Production &mdash; KiDS-GGL 2.0.0 documentation</title>
   
 
   
@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Halo Model Formalism" href="formalism.html" />
-    <link rel="prev" title="The ESD Production Configuration File" href="../esd_production/configuration.html" /> 
+    <link rel="next" title="The ESD Production Configuration File" href="configuration.html" />
+    <link rel="prev" title="Getting Started" href="../getting-started.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -83,15 +83,14 @@
             
             
               <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../esd_production/index.html">ESD Production with KiDS-GGL</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">KiDS-GGL Halo Model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="formalism.html">Halo Model Formalism</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a></li>
-<li class="toctree-l2"><a class="reference internal" href="sampler.html">Sampling the Halo Model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="custom.html">Customizing the Halo Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">KiDS-GGL ESD Production</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">The ESD Production Configuration File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html">Output data file structure</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../halomodel/index.html">KiDS-GGL Halo Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">KiDS-GGL References</a></li>
 </ul>
 
             
@@ -137,13 +136,13 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-      <li>KiDS-GGL Halo Model</li>
+      <li>KiDS-GGL ESD Production</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/halomodel/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/esd_production/index.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -156,36 +155,18 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="kids-ggl-halo-model">
-<h1>KiDS-GGL Halo Model<a class="headerlink" href="#kids-ggl-halo-model" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="kids-ggl-esd-production">
+<h1>KiDS-GGL ESD Production<a class="headerlink" href="#kids-ggl-esd-production" title="Permalink to this headline">¶</a></h1>
+<p>The first module of <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> allows the user to easily produce galaxy-galaxy lensing measurements around a pre-defined set of
+lens galaxies. Summaries of the process of calculating the galaxy-galaxy lensing signal can be found in</p>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="formalism.html">Halo Model Formalism</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="formalism.html#power-spectra">Power spectra</a></li>
-<li class="toctree-l2"><a class="reference internal" href="formalism.html#the-halo-occupation-distribution">The Halo Occupation Distribution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">The ESD Production Configuration File</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#general-instructions">General instructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html#general-settings">General settings</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#file-structure">File structure</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#model-definition">Model definition</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#model-ingredients">Model ingredients</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#model-parameters">Model parameters</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#general-setup">General setup</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#model-output">Model output</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#sampler-configuration">Sampler configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="configuration.html#future-improvements">Future improvements</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="sampler.html">Sampling the Halo Model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="sampler.html#priors">Priors</a></li>
-<li class="toctree-l2"><a class="reference internal" href="sampler.html#id2">Outputs</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="custom.html">Customizing the Halo Model</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="custom.html#custom-functions">Custom functions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="custom.html#custom-distributions">Custom distributions</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="output.html">Output data file structure</a></li>
 </ul>
 </div>
 </div>
@@ -198,10 +179,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="formalism.html" class="btn btn-neutral float-right" title="Halo Model Formalism" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="configuration.html" class="btn btn-neutral float-right" title="The ESD Production Configuration File" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../esd_production/configuration.html" class="btn btn-neutral" title="The ESD Production Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../getting-started.html" class="btn btn-neutral" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

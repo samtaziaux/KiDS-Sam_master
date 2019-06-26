@@ -468,18 +468,49 @@ def rho_sharp(x, tau, delta_c, rho_bg):
 #-----------------------------------#
 
 
-def uk(kx, mx, rx, c, rho_bg, overdensity=200):
+def uk(kx, Mh, rvir, c, rho_bg, overdensity=200):
     """Fourier transform of the NFW profile
 
     This function takes a different set of parameters from other
     functions for convenience. Will try to change this later
+
+    Parameters
+    ----------
+    kx : float array, shape (K,)
+        wavenumbers in 1/Mpc
+    Mh : float array, shape (P,)
+        halo mass
+    rvir : float array, shape (nbins,P)
+        virial radius
+    c : float array, shape (nbins,P)
+        halo concentration
+    rho_bg : float array, shape (nbins[,1])
+        background density
+    overdensity : float, optional
+        reference overdensity with respect to `rho_bg`
+
+    Returns
+    -------
+    uk : float array, shape (nbins,P,K)
+        Fourier transform of the NFW profile
+
+    Notes
+    -----
+        -There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
+        -`rho_bg` has an extra dimension in `halo.model`. We account
+        for that here when applicable
     """
-    rs = rx / c
+    c = expand_dims(c, -1)
+    rs = expand_dims(rvir, -1) / c
     dc = delta(c, overdensity)
     k = rs * kx
     bs, bc = sici(k)
     asi, ac = sici((1+c)*k)
-    return  4*pi * rho_bg * dc * rs**3 / mx \
+    while len(rho_bg.shape) < len(c.shape):
+        rho_bg = expand_dims(rho_bg, -1)
+    return  4*pi * rho_bg * dc * rs**3 / expand_dims(Mh, -1) \
         * (sin(k)*(asi-bs) - sin(c*k)/((1+c)*k) + cos(k)*(ac-bc))
 
 

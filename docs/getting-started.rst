@@ -106,6 +106,19 @@ By default, if the MCMC output file exists ``kids_ggl`` will as the user whether
 
     kids_ggl -c <config_file> --sampler -f
 
+Generate mock data
+------------------
+
+Finally, you can also use ``kids_ggl`` to generate mock data, based on the parameters entered in the configuration file, by typing 
+::
+
+    kids_ggl -c <config_file> --mock
+
+For now, doing this will save the output into a ``mock/`` folder, with the file names containing some information about the 
+quantities calculated. These files are ready to be fed into ``kids_ggl`` for halo model fitting, for instance.
+
+*IMPORTANT*: mock covariance calculation has not yet been implemented. The ``kids_ggl`` MCMC sampler requires a covariance 
+matrix to work.
 
 
 Python modules

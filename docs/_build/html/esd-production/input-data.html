@@ -87,6 +87,9 @@
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL ESD Production</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Input data</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#working-from-one-of-the-standard-kids-servers">Working from one of the standard KiDS servers</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#bochum">Bochum</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#bonn">Bonn</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#edinburgh">Edinburgh</a></li>
 <li class="toctree-l4"><a class="reference internal" href="#leiden">Leiden</a></li>
 </ul>
 </li>
@@ -167,8 +170,9 @@
   <div class="section" id="input-data">
 <h1>Input data<a class="headerlink" href="#input-data" title="Permalink to this headline">¶</a></h1>
 <p>In order to work, the ESD production module in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> requires a number of files beyond the configuration file. These files
-can be found in the servers in Leiden, Bonn, and Edinurgh – see <a class="reference internal" href="#servers"><span class="std std-ref">Working from one of the standard KiDS servers</span></a>.</p>
-<p>If you prefer to work from a computer that is not connected to any of these, then you need the following files:</p>
+can be found in a few of the servers that are commonly used for KiDS lensing analyses – see <a class="reference internal" href="#servers"><span class="std std-ref">Working from one of the standard KiDS servers</span></a>.</p>
+<p>If you prefer to work from a computer that is not connected to any of these, then you need the following files (<em>to be added
+somewhere for download - will ping Andrej</em>):</p>
 <ul class="simple">
 <li>Source catalogues: <a href="#id1"><span class="problematic" id="id2">`KiDS-1000`_</span></a> <em>or</em> <a href="#id3"><span class="problematic" id="id4">`KiDS-450`_</span></a>.</li>
 <li><a href="#id5"><span class="problematic" id="id6">`Spectroscopic training data`_</span></a></li>
@@ -176,10 +180,19 @@ can be found in the servers in Leiden, Bonn, and Edinurgh – see <a class="refe
 </ul>
 <div class="section" id="working-from-one-of-the-standard-kids-servers">
 <span id="servers"></span><h2>Working from one of the standard KiDS servers<a class="headerlink" href="#working-from-one-of-the-standard-kids-servers" title="Permalink to this headline">¶</a></h2>
+<p>Below we show how the KiDS data portion of your ESD production configuration file should look like, depending on where you are
+performing the analysis.</p>
+<div class="section" id="bochum">
+<h3>Bochum<a class="headerlink" href="#bochum" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="bonn">
+<h3>Bonn<a class="headerlink" href="#bonn" title="Permalink to this headline">¶</a></h3>
+</div>
+<div class="section" id="edinburgh">
+<h3>Edinburgh<a class="headerlink" href="#edinburgh" title="Permalink to this headline">¶</a></h3>
+</div>
 <div class="section" id="leiden">
 <h3>Leiden<a class="headerlink" href="#leiden" title="Permalink to this headline">¶</a></h3>
-<p>If you are working from any of the Leiden server machines, this is how the data section of your configuration file should look as
-follows, if you intend to use KiDS-1000:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>KiDS_path       /disks/shear13/dvornik/KidsCatalogues/K1000/
 KiDS_version    3
 specz_file      /disks/shear13/dvornik/KidsCatalogues/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat

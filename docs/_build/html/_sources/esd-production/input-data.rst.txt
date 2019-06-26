@@ -3,9 +3,10 @@
 ============
 
 In order to work, the ESD production module in ``kids_ggl`` requires a number of files beyond the configuration file. These files 
-can be found in the servers in Leiden, Bonn, and Edinurgh -- see :ref:`servers`.
+can be found in a few of the servers that are commonly used for KiDS lensing analyses -- see :ref:`servers`.
 
-If you prefer to work from a computer that is not connected to any of these, then you need the following files:
+If you prefer to work from a computer that is not connected to any of these, then you need the following files (*to be added 
+somewhere for download - will ping Andrej*):
 
 * Source catalogues: `KiDS-1000`_ *or* `KiDS-450`_.
 
@@ -19,12 +20,25 @@ If you prefer to work from a computer that is not connected to any of these, the
 Working from one of the standard KiDS servers
 *********************************************
 
+Below we show how the KiDS data portion of your ESD production configuration file should look like, depending on where you are 
+performing the analysis.
+
+Bochum
+------
+
+
+Bonn
+----
+
+
+Edinburgh
+---------
+
 
 Leiden
 ------
 
-If you are working from any of the Leiden server machines, this is how the data section of your configuration file should look as 
-follows, if you intend to use KiDS-1000: ::
+::
 
     KiDS_path       /disks/shear13/dvornik/KidsCatalogues/K1000/
     KiDS_version    3

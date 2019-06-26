@@ -119,7 +119,7 @@ example above, we will be calculating a model of central galaxies only, includin
 mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass.
 
 The parameter ``nzlens`` enables a model in which the final signal is the weighted average of signals calculated following a 
-user-provided lens redshift distribution (see below).
+user-provided lens redshift distribution (see below). *WARNING*: enabling this significantly slows down the halo model computation.
 
 
 Model parameters

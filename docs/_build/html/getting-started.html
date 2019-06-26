@@ -88,6 +88,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#measure-the-lensing-signal">Measure the lensing signal</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#fit-the-data-with-a-halo-model">Fit the data with a halo model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#generate-mock-data">Generate mock data</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#python-modules">Python modules</a></li>
 </ul>
 </li>
@@ -252,6 +253,17 @@ run the demo without plotting the covariance with</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">-</span><span class="n">f</span>
 </pre></div>
 </div>
+</div>
+<div class="section" id="generate-mock-data">
+<h3>Generate mock data<a class="headerlink" href="#generate-mock-data" title="Permalink to this headline">¶</a></h3>
+<p>Finally, you can also use <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to generate mock data, based on the parameters entered in the configuration file, by typing</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">mock</span>
+</pre></div>
+</div>
+<p>For now, doing this will save the output into a <code class="docutils literal notranslate"><span class="pre">mock/</span></code> folder, with the file names containing some information about the
+quantities calculated. These files are ready to be fed into <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> for halo model fitting, for instance.</p>
+<p><em>IMPORTANT</em>: mock covariance calculation has not yet been implemented. The <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> MCMC sampler requires a covariance
+matrix to work.</p>
 </div>
 <div class="section" id="python-modules">
 <h3>Python modules<a class="headerlink" href="#python-modules" title="Permalink to this headline">¶</a></h3>

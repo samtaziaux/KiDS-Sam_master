@@ -61,7 +61,7 @@ by each of the available priors are: ::
 
 The last line is a ``repeat`` "prior"; it is recognized simply by having a period in its name and takes no additional information 
 (i.e., don't give any other parameters names with periods!). Above, ``name`` is a user-defined name for each parameter, and 
-corresponds to the name that the parameter will have in the output MCMC chain (see `<outputs>`_), while ``lower`` and ``uper`` are 
+corresponds to the name that the parameter will have in the output MCMC chain (see `outputs`_), while ``lower`` and ``uper`` are 
 lower and upper bounds of the allowed range for the prior. For instance, a mass might have a normal prior :math:`2\pm1`, but it 
 cannot physically go below zero. In this case, you'd want ``lower=0``. If not provided, the default limits are as follows:
 
@@ -84,12 +84,13 @@ Notes
 -----
 
 * The ``exp`` and ``jeffreys`` priors take no free parameters. Make sure the parameters are of order unity or the results might not be sensible.
-* As mentioned before, we recommend using the ``student`` with ``dof=1`` as the prior for any slope parameter.
+* As mentioned before, we recommend using the ``student`` distribution with ``dof=1`` as the prior for any slope parameter.
 
 
+.. _outputs:
 
 Outputs
 *******
 
 A successful run of the ``kids_ggl`` sampler will output a ``FITS`` file containing all sampled parameters as well as the outputs of 
-the halo model
+the halo model ...

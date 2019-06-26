@@ -98,7 +98,10 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     """
     if not hasattr(covcols, '__iter__'):
         covcols = [covcols]
-    cov = np.loadtxt(covfile, usecols=[covcols[0]])
+    try:
+        cov = np.loadtxt(covfile, usecols=[covcols[0]])
+    except IndexError:
+        raise ValueError('provided covariance column number does not exist')
     if len(covcols) == 2:
         cov /= np.loadtxt(covfile, usecols=[covcols[1]])
     if exclude is None:

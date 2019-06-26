@@ -31,7 +31,7 @@ def covariance(R, cov, output=None):
         axes = [[axes]]
     for m, axm in enumerate(axes):
         for n, axmn in enumerate(axm):
-            axmn.imshow(cov[m][-n-1][::-1], interpolation='nearest',
+            axmn.imshow(cov[m][-n-1], origin='lower', interpolation='nearest',
                         vmin=vmin, vmax=vmax)
     fig.tight_layout(pad=0.4)
     if output:

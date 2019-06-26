@@ -521,8 +521,8 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
 
 
     #Defining the lens weights
-    weightname = lens_weights.keys()[0]
-    weightfile = lens_weights.values()[0]
+    weightname = list(lens_weights.keys())[0]
+    weightfile = list(lens_weights.values())[0]
     if 'No' not in weightname:
         if weightfile == 'self':
             galweightlist = gamacat[weightname]

@@ -16,7 +16,7 @@ from ...sampling.priors import (
 
 def add_default_ingredients(ingredients):
     options = ('centrals', 'pointmass', 'miscentring', 'satellites',
-               'twohalo', 'zlens_weights')
+               'twohalo', 'nzlens')
     default = {key: False for key in options}
     for key in ingredients:
         if key not in options:

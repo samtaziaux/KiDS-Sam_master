@@ -58,12 +58,11 @@ transform of the spatial distribution of each component, and
 
 is the number density of galaxies of type :math:`i` (where :math:`i=` ':math:`c`' for centrals or ':math:`s`' for satellites) 
 integrated over mass and redshift bin, and :math:`n_\mathrm{h}(M,z)` is the number density of haloes of mass :math:`M` and redshift 
-:math:`z`, also known as the *halo mass function*. The total number of galaxies of type :math:`i` in a given redshift interval is 
-then 
-given by
+:math:`z`, also known as the *halo mass function*. Theoretically, the total number of galaxies of type :math:`i` in a given redshift 
+interval :math:`[z_1,z_2]` is then given by
 
 .. math::
-    \bar n_i = \int\mathrm{d}z\,\frac{c\chi^2}{H(z)}\, n_i(z),
+    \bar n_i = \int_{z_1}^{z_2}\mathrm{d}z\,\frac{c\chi^2}{H(z)}\, n_i(z),
 
 where
 
@@ -75,8 +74,6 @@ effective redshift,
 
 .. math::
     \bar n_i \equiv n_i(z=z_\mathrm{eff}).
-
-In :code:`KiDS-GGL`, integrating over (lens) galaxy redshifts as above can be activated through the parameter :code:`nzlens`.
 
 Then, the power spectra can be expressed as:
 
@@ -90,6 +87,18 @@ Then, the power spectra can be expressed as:
 
 
 and again :math:`i` can be either ':math:`c`' or ':math:`s`'.
+
+In :code:`KiDS-GGL`, integrating over (lens) galaxy redshifts as above can be activated through the parameter :code:`nzlens`, which 
+requires the user to provide empirical values for :math:`n(z)` for the lens galaxies, and these empirical values will be used in 
+place of the comoving volume integral above. The power spectra are then calculated as
+
+.. math::
+    P_{i\mathrm{m}}^\mathrm{1h}(k,z) = \int\mathrm{d}n_\mathrm{lens}(z)\int_0^\infty \mathrm{d}M\,n_\mathrm{h}(M,z)\,\mathcal{H}_\mathrm{x}(k,M,z)\,\mathcal{H}_\mathrm{m}(k,M,z)
+
+.. math::
+    P_{i\mathrm{m}}^\mathrm{2h}(k,z) = \int\mathrm{d}n_\mathrm{lens}(z)P_\mathrm{m}(k,z) \int_0^\infty\,\mathrm{d}M_1\,n_\mathrm{h}(M_1,z)\,b_\mathrm{h}(M_1,z)\,\mathcal{H}_\mathrm{x}(k,M_1,z)
+
+    \int_0^\infty\,\mathrm{d}M_2\,n_\mathrm{h}(M_2,z)\,b_\mathrm{h}(M_2,z)\,\mathcal{H}_\mathrm{m}(k,M_2,z),
 
 
 

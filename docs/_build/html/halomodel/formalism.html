@@ -83,6 +83,8 @@
             
             
               <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../esd-production/index.html">KiDS-GGL ESD Production</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL Halo Model</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Halo Model Formalism</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#power-spectra">Power spectra</a></li>
@@ -94,6 +96,7 @@
 <li class="toctree-l2"><a class="reference internal" href="custom.html">Customizing the Halo Model</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">KiDS-GGL References</a></li>
 </ul>
 
             
@@ -197,11 +200,10 @@ transform of the spatial distribution of each component, and</p>
 \[n_i(z) = \int\mathrm{d}M \,\langle N_i|M,z\rangle n_\mathrm{h}(M,z)\]</div>
 <p>is the number density of galaxies of type <span class="math notranslate nohighlight">\(i\)</span> (where <span class="math notranslate nohighlight">\(i=\)</span> ‘<span class="math notranslate nohighlight">\(c\)</span>’ for centrals or ‘<span class="math notranslate nohighlight">\(s\)</span>’ for satellites)
 integrated over mass and redshift bin, and <span class="math notranslate nohighlight">\(n_\mathrm{h}(M,z)\)</span> is the number density of haloes of mass <span class="math notranslate nohighlight">\(M\)</span> and redshift
-<span class="math notranslate nohighlight">\(z\)</span>, also known as the <em>halo mass function</em>. The total number of galaxies of type <span class="math notranslate nohighlight">\(i\)</span> in a given redshift interval is
-then
-given by</p>
+<span class="math notranslate nohighlight">\(z\)</span>, also known as the <em>halo mass function</em>. Theoretically, the total number of galaxies of type <span class="math notranslate nohighlight">\(i\)</span> in a given redshift
+interval <span class="math notranslate nohighlight">\([z_1,z_2]\)</span> is then given by</p>
 <div class="math notranslate nohighlight">
-\[\bar n_i = \int\mathrm{d}z\,\frac{c\chi^2}{H(z)}\, n_i(z),\]</div>
+\[\bar n_i = \int_{z_1}^{z_2}\mathrm{d}z\,\frac{c\chi^2}{H(z)}\, n_i(z),\]</div>
 <p>where</p>
 <div class="math notranslate nohighlight">
 \[\mathrm{d}V_\mathrm{C}(z)\equiv\mathrm{d}z\,\frac{c\chi^2}{H(z)}\]</div>
@@ -209,13 +211,19 @@ given by</p>
 effective redshift,</p>
 <div class="math notranslate nohighlight">
 \[\bar n_i \equiv n_i(z=z_\mathrm{eff}).\]</div>
-<p>In <code class="code docutils literal notranslate"><span class="pre">KiDS-GGL</span></code>, integrating over (lens) galaxy redshifts as above can be activated through the parameter <code class="code docutils literal notranslate"><span class="pre">nzlens</span></code>.</p>
 <p>Then, the power spectra can be expressed as:</p>
 <div class="math notranslate nohighlight">
 \[P_{i\mathrm{m}}^\mathrm{1h}(k,z) = \int\mathrm{d}V_\mathrm{C}(z)\int_0^\infty \mathrm{d}M\,n_\mathrm{h}(M,z)\,\mathcal{H}_\mathrm{x}(k,M,z)\,\mathcal{H}_\mathrm{m}(k,M,z)\]</div>
 <div class="math notranslate nohighlight">
 \[ \begin{align}\begin{aligned}P_{i\mathrm{m}}^\mathrm{2h}(k,z) = \int\mathrm{d}V_\mathrm{C}(z)P_\mathrm{m}(k,z) \int_0^\infty\,\mathrm{d}M_1\,n_\mathrm{h}(M_1,z)\,b_\mathrm{h}(M_1,z)\,\mathcal{H}_\mathrm{x}(k,M_1,z)\\\int_0^\infty\,\mathrm{d}M_2\,n_\mathrm{h}(M_2,z)\,b_\mathrm{h}(M_2,z)\,\mathcal{H}_\mathrm{m}(k,M_2,z),\end{aligned}\end{align} \]</div>
 <p>and again <span class="math notranslate nohighlight">\(i\)</span> can be either ‘<span class="math notranslate nohighlight">\(c\)</span>’ or ‘<span class="math notranslate nohighlight">\(s\)</span>’.</p>
+<p>In <code class="code docutils literal notranslate"><span class="pre">KiDS-GGL</span></code>, integrating over (lens) galaxy redshifts as above can be activated through the parameter <code class="code docutils literal notranslate"><span class="pre">nzlens</span></code>, which
+requires the user to provide empirical values for <span class="math notranslate nohighlight">\(n(z)\)</span> for the lens galaxies, and these empirical values will be used in
+place of the comoving volume integral above. The power spectra are then calculated as</p>
+<div class="math notranslate nohighlight">
+\[P_{i\mathrm{m}}^\mathrm{1h}(k,z) = \int\mathrm{d}n_\mathrm{lens}(z)\int_0^\infty \mathrm{d}M\,n_\mathrm{h}(M,z)\,\mathcal{H}_\mathrm{x}(k,M,z)\,\mathcal{H}_\mathrm{m}(k,M,z)\]</div>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}P_{i\mathrm{m}}^\mathrm{2h}(k,z) = \int\mathrm{d}n_\mathrm{lens}(z)P_\mathrm{m}(k,z) \int_0^\infty\,\mathrm{d}M_1\,n_\mathrm{h}(M_1,z)\,b_\mathrm{h}(M_1,z)\,\mathcal{H}_\mathrm{x}(k,M_1,z)\\\int_0^\infty\,\mathrm{d}M_2\,n_\mathrm{h}(M_2,z)\,b_\mathrm{h}(M_2,z)\,\mathcal{H}_\mathrm{m}(k,M_2,z),\end{aligned}\end{align} \]</div>
 </div>
 <div class="section" id="the-halo-occupation-distribution">
 <h2>The Halo Occupation Distribution<a class="headerlink" href="#the-halo-occupation-distribution" title="Permalink to this headline">¶</a></h2>

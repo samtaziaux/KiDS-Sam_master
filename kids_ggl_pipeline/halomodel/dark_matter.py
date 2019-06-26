@@ -28,7 +28,7 @@ import time
 import matplotlib.pyplot as pl
 import numpy as np
 import sys
-from numpy import cos, pi, sin
+from numpy import cos, expand_dims, pi, sin
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
@@ -234,9 +234,26 @@ def TwoHalo(hmf, ngal, population, r_x, m_x, **kwargs):
     Note that I removed the argument k_x which was required but not
     used
     """
+    #print('in twohalo:')
+    #print('dndlnm =', hmf.dndlnm.shape)
+    #if np.iterable(ngal):
+        #print('ngal =', ngal.shape)
+    #else:
+        #print('ngal =', ngal)
+    #print('population =', population.shape)
+    #print('r_x =', r_x.shape)
+    #print('m_x =', m_x.shape)
+    #print('integrand =', (hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x).shape)
     b_g = trapz(
         hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x,
         m_x, **kwargs) / ngal
+    #print('b_g =', b_g.shape)#, b_g[:,None].shape)
+    #try:
+        #print('output =', (hmf.power*b_g[:,None]).shape)
+    #except ValueError:
+        #print('output =', (hmf.power*b_g).shape)
+    #print()
+    #return (hmf.power * np.expand_dims(b_g, -1)), b_g
     return (hmf.power * b_g), b_g
 
 
@@ -250,13 +267,82 @@ def MM_analy(mass_func, uk, rho_dm, m_x):
              m_x, axis=1) / (rho_dm**2.0)
 
 
-def GM_cen_analy(dndlnm, uk, rho_dm, population, ngal, m_x):
-    return trapz(dndlnm * population * uk, m_x, axis=-2) / (rho_dm*ngal)
+def GM_cen_analy(dndm, uk, rho_dm, population, ngal, Mh):
+    """Analytical calculation of the galaxy-matter power spectrum
 
+    Uses the trapezoidal rule to integrate using halo mass samples
 
-def GM_sat_analy(dndlnm, uk_m, uk_s, rho_dm, population, ngal, m_x):
-    return trapz(dndlnm * population * uk_m * uk_s, m_x, axis=-2) \
-        / (rho_dm*ngal)
+    Parameters
+    ----------
+    dndm : float array, shape (P,)
+        differential mass function
+    uk : float array, shape (P,K)
+        Fourier transform of the matter density profile
+    rho_dm : float or float array, shape (nbins,)
+        average background density
+    population : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    ngal : float or float array, shape (nbins,)
+        number of galaxies in each observable bin
+    Mh : float array, shape (P,)
+        halo mass samples over which to integrate
+
+    Returns
+    -------
+    Pk : float array, shape (nbins,K)
+        Central galaxy-matter power spectrum
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
+    """
+    norm = rho_dm * ngal
+    if np.iterable(norm):
+        norm = expand_dims(norm, -1)
+    dndlnm = dndm * Mh
+    if len(population.shape) >= 3:
+        dndlnm = expand_dims(dndlnm, -2)
+        uk = expand_dims(uk, -3)
+    #return trapz(expand_dims(dndlnm*population, -1) * expand_dims(uk, -3),
+    return trapz(expand_dims(dndlnm*population, -1) * uk,
+                 Mh, axis=-2) / norm
+
+def GM_sat_analy(dndm, uk_m, uk_s, rho_dm, population, ngal, Mh):
+    """Analytical calculation of the galaxy-matter power spectrum
+
+    Uses the trapezoidal rule to integrate using halo mass samples
+
+    Parameters
+    ----------
+    dndm : float array, shape (P,)
+        differential mass function
+    uk_m : float array, shape (P,K)
+        Fourier transform of the matter density profile
+    uk_s : float array, shape (P,K)
+        Fourier transform of the satellite galaxy density profile
+    rho_dm : float or float array, shape (nbins,)
+        average background density
+    population : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    ngal : float or float array, shape (nbins,)
+        number of galaxies in each observable bin
+    Mh : float array, shape (P,)
+        halo mass samples over which to integrate
+
+    Returns
+    -------
+    Pk : float array, shape (nbins,K)
+        Central galaxy-matter power spectrum
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
+    """
+    return GM_cen_analy(dndm, uk_m*uk_s, rho_dm, population, ngal, Mh)
 
 
 def GG_cen_analy(mass_func, ncen, ngal, m_x):

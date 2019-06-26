@@ -10,7 +10,7 @@ other way around.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import log10
+from numpy import expand_dims, iterable, log10
 
 from .decorators import logfunc
 
@@ -28,6 +28,13 @@ def powerlaw(M, logM0, a, b, return_log=True):
 
 @logfunc
 def powerlaw_mz(M, z, logM0, z0, a, b, c, return_log=True):
-    return a + b*(log10(M)-logM0) + c*log10((1+z)/(1+z0))
+    """
+    M must be a vector of shape (N,)
+    z can be a vector of arbitrary shape, and all other
+    quantities are assumed scalar
+    """
+    if iterable(z):
+        z = expand_dims(z, -1)
+    return (a + b*(log10(M)-logM0)) + c*log10((1+z)/(1+z0))
 
 

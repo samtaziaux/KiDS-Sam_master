@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>KiDS-GGL ESD Production &mdash; KiDS-GGL 2.0.0 documentation</title>
+  <title>Procedure &mdash; KiDS-GGL 2.0.0 documentation</title>
   
 
   
@@ -28,8 +28,8 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Procedure" href="procedure.html" />
-    <link rel="prev" title="Getting Started" href="../getting-started.html" /> 
+    <link rel="next" title="Input data" href="input-data.html" />
+    <link rel="prev" title="KiDS-GGL ESD Production" href="index.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
@@ -84,8 +84,8 @@
             
               <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">KiDS-GGL ESD Production</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="procedure.html">Procedure</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL ESD Production</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Procedure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="input-data.html">Input data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="configuration.html">The ESD Production Configuration File</a></li>
 <li class="toctree-l2"><a class="reference internal" href="output.html">Output data file structure</a></li>
@@ -138,13 +138,15 @@
     
       <li><a href="../index.html">Docs</a> &raquo;</li>
         
-      <li>KiDS-GGL ESD Production</li>
+          <li><a href="index.html">KiDS-GGL ESD Production</a> &raquo;</li>
+        
+      <li>Procedure</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/esd-production/index.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/esd-production/procedure.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -157,21 +159,27 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="kids-ggl-esd-production">
-<h1>KiDS-GGL ESD Production<a class="headerlink" href="#kids-ggl-esd-production" title="Permalink to this headline">¶</a></h1>
-<p>The first module of <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> allows the user to easily produce galaxy-galaxy lensing measurements around a pre-defined set of
-lens galaxies. Summaries of the process of calculating the galaxy-galaxy lensing signal can be found in</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="procedure.html">Procedure</a></li>
-<li class="toctree-l1"><a class="reference internal" href="input-data.html">Input data</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="input-data.html#working-from-one-of-the-standard-kids-servers">Working from one of the standard KiDS servers</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="configuration.html">The ESD Production Configuration File</a></li>
-<li class="toctree-l1"><a class="reference internal" href="output.html">Output data file structure</a></li>
-</ul>
-</div>
+  <div class="section" id="procedure">
+<h1>Procedure<a class="headerlink" href="#procedure" title="Permalink to this headline">¶</a></h1>
+<p>In a (small) nutshell, ESD calculation in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> proceeds as follows. The text below is mostly extracted (and somewhat
+updated) from <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. (2017)</a>.</p>
+<p>Since KiDS-450, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> uses a single photometric redshift distribution, which in KiDS is calculated by re-weighting the
+combination of a large number of overlapping redshift surveys so it matches the lensing-weighted magnitude distribution of the
+lensed source sample; we refer to this approach as DIR photo-<cite>z</cite>, and the resulting probability disstribution is labelled
+<span class="math notranslate nohighlight">\(n(z_s)\)</span>. With this, we calculate the critical surface density, <span class="math notranslate nohighlight">\(\Sigma_\mathrm{c}\)</span>, for every lens-source pair, as</p>
+<div class="math notranslate nohighlight">
+\[\Sigma_\mathrm{c,ls}^{-1} = \frac{4\pi G}{c^2} \int_0^\infty \mathrm{d}z_l\,p(z_l)\,D(z_l)
+\int_{z_l+\delta_z}^\infty \mathrm{d}z_s\,n(z_s)\,\frac{D(z_l,z_s)}{D(z_s)}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\delta_z\)</span> (referred to as <code class="docutils literal notranslate"><span class="pre">z_epsilon</span></code> in the configuration file) is necessary to remove unlensed objects with
+<span class="math notranslate nohighlight">\(z_s&gt;z_l\)</span>, which exist due to photo-z errors, and is set by default at 0.2 (see <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. (2017)</a>); and <span class="math notranslate nohighlight">\(p(z_l)\)</span> is the
+probability distribution for each lens, modelled as a Gaussian with a (optionally redshift-dependent) width that is adjustable
+through the <code class="docutils literal notranslate"><span class="pre">lens_pz_sigma</span></code> parameter in the configuration file. The lensing signal is then calculated as</p>
+<div class="math notranslate nohighlight">
+\[\Delta\Sigma(R) = \left[\frac{\sum_\mathrm{ls}w_\mathrm{ls}\epsilon_\mathrm{t}(1/\Sigma_\mathrm{c,ls}^{-1})}
+{\sum_\mathrm{ls}w_\mathrm{ls}}\right]
+\,\frac1{1+\mu}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mu\)</span> is the weighted average multiplicative bias correction, calibrated with tailored image simulations, that take into
+account all aspects of the selection of lensed sources in the KiDS analysis.</p>
 </div>
 
 
@@ -182,10 +190,10 @@ lens galaxies. Summaries of the process of calculating the galaxy-galaxy lensing
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="procedure.html" class="btn btn-neutral float-right" title="Procedure" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="input-data.html" class="btn btn-neutral float-right" title="Input data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../getting-started.html" class="btn btn-neutral" title="Getting Started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="index.html" class="btn btn-neutral" title="KiDS-GGL ESD Production" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

@@ -10,6 +10,7 @@ lens galaxies. Summaries of the process of calculating the galaxy-galaxy lensing
 .. toctree::
    :maxdepth: 2
 
+   procedure
    input-data
    configuration
    output

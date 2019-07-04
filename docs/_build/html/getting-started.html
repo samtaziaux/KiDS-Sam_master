@@ -239,11 +239,10 @@ configuration file), type</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">model_config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">--</span><span class="n">demo</span>
 </pre></div>
 </div>
-<p>The line above will generate the ESD(s) for your chosen set of initial parameters, print the reduced
-<span class="math notranslate nohighlight">\(\chi^2\)</span>, <span class="math notranslate nohighlight">\(\chi^2/\nu\)</span> on screen, overplot the model to the data points and, once you close this plot, will display the
-full covariance matrix.</p>
-<p>Sometimes, after running the demo a couple times, you don’t really need to see the covariance every time you run the demo. You can
-run the demo without plotting the covariance with</p>
+<p>The line above will generate the ESD(s) for your chosen set of initial parameters, print <span class="math notranslate nohighlight">\(\chi^2/\mathrm{dof}\)</span> on screen,
+overplot the model to the data points and, once you close this plot, will display the full covariance matrix.</p>
+<p>Sometimes, after running the demo a couple times, you don’t really need to see the covariance matrix every time you run the demo.
+You can run the demo without plotting the covariance with</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">--</span><span class="n">demo</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">cov</span>
 </pre></div>
 </div>

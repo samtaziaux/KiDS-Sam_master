@@ -90,12 +90,11 @@ configuration file), type ::
 
     kids_ggl -c <model_config_file> --sampler --demo
 
-The line above will generate the ESD(s) for your chosen set of initial parameters, print the reduced 
-:math:`\chi^2`, :math:`\chi^2/\nu` on screen, overplot the model to the data points and, once you close this plot, will display the 
-full covariance matrix.
+The line above will generate the ESD(s) for your chosen set of initial parameters, print :math:`\chi^2/\mathrm{dof}` on screen, 
+overplot the model to the data points and, once you close this plot, will display the full covariance matrix.
 
-Sometimes, after running the demo a couple times, you don't really need to see the covariance every time you run the demo. You can 
-run the demo without plotting the covariance with ::
+Sometimes, after running the demo a couple times, you don't really need to see the covariance matrix every time you run the demo. 
+You can run the demo without plotting the covariance with ::
 
     kids_ggl -c <config_file> --sampler --demo --no-cov
 

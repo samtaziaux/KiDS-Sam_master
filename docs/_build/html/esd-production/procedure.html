@@ -1,0 +1,246 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Procedure &mdash; KiDS-GGL 2.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Input data" href="input-data.html" />
+    <link rel="prev" title="KiDS-GGL ESD Production" href="index.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> KiDS-GGL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL ESD Production</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Procedure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-data.html">Input data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">The ESD Production Configuration File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output.html">Output data file structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../halomodel/index.html">KiDS-GGL Halo Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">KiDS-GGL References</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KiDS-GGL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">KiDS-GGL ESD Production</a> &raquo;</li>
+        
+      <li>Procedure</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/esd-production/procedure.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="procedure">
+<h1>Procedure<a class="headerlink" href="#procedure" title="Permalink to this headline">¶</a></h1>
+<p>In a (small) nutshell, ESD calculation in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> proceeds as follows. The text below is mostly extracted (and somewhat
+updated) from <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. (2017)</a>.</p>
+<p>Since KiDS-450, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> uses a single photometric redshift distribution, which in KiDS is calculated by re-weighting the
+combination of a large number of overlapping redshift surveys so it matches the lensing-weighted magnitude distribution of the
+lensed source sample; we refer to this approach as DIR photo-<cite>z</cite>, and the resulting probability disstribution is labelled
+<span class="math notranslate nohighlight">\(n(z_s)\)</span>. The KiDS implementation of this approach is described in <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.465.1454H/abstract">Hildebrandt et al. (2017)</a>. Given <span class="math notranslate nohighlight">\(n(z_s)\)</span>, we calculate
+the critical surface density, <span class="math notranslate nohighlight">\(\Sigma_\mathrm{c}\)</span>, for every lens-source pair, as</p>
+<div class="math notranslate nohighlight">
+\[\Sigma_\mathrm{c,ls}^{-1} = \frac{4\pi G}{c^2} \int_0^\infty \mathrm{d}z_l\,p(z_l)\,D(z_l)
+\int_{z_l+\delta_z}^\infty \mathrm{d}z_s\,n(z_s)\,\frac{D(z_l,z_s)}{D(z_s)}\]</div>
+<p>where <span class="math notranslate nohighlight">\(D(z_l)\)</span>, <span class="math notranslate nohighlight">\(D(z_s)\)</span>, and <span class="math notranslate nohighlight">\(D(z_l,z_s)\)</span> are the angular diameter distances to the lens, to the source, and
+between lens and source; and <span class="math notranslate nohighlight">\(\delta_z\)</span> (referred to as <code class="docutils literal notranslate"><span class="pre">z_epsilon</span></code> in the configuration file) is necessary to remove
+unlensed objects with <span class="math notranslate nohighlight">\(z_s&gt;z_l\)</span>, which exist due to photo-z errors, and is set by default at 0.2 (see <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. (2017)</a>); and
+<span class="math notranslate nohighlight">\(p(z_l)\)</span> is the probability distribution for each lens, modelled as a Gaussian with a (optionally redshift-dependent) width
+that is adjustable through the <code class="docutils literal notranslate"><span class="pre">lens_pz_sigma</span></code> parameter in the configuration file. The lensing signal is then calculated as</p>
+<div class="math notranslate nohighlight">
+\[\Delta\Sigma(R) = \left[\frac{\sum_\mathrm{ls}w_\mathrm{ls}\epsilon_\mathrm{t}(1/\Sigma_\mathrm{c,ls}^{-1})}
+{\sum_\mathrm{ls}w_\mathrm{ls}}\right]
+\,\frac1{1+\mu}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mu\)</span> is the weighted average multiplicative bias correction, calibrated with tailored image simulations, that take into
+account all aspects of the selection of lensed sources in the KiDS analysis.</p>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="input-data.html" class="btn btn-neutral float-right" title="Input data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="KiDS-GGL ESD Production" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, KiDS-GGL for the KiDS Collaboration
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

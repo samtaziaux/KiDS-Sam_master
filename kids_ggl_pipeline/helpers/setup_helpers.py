@@ -16,14 +16,25 @@ def data_files_recursively(path):
     Not fully tested
     """
     try:
-        return sorted(glob(os.path.join(path, '**'), recursive=True))
+        flist = sorted(glob(os.path.join(path, '**'), recursive=True))
+        #print('flist:', flist)
+        #print()
+        dirs = [f for f in flist if os.path.isdir(f)]
+        files = [f for f in flist if os.path.isfile(f)]
+        #print('dirs:', dirs)
+        #print()
+        #print('files:', files)
+        #print()
+        pairs = [(d, [f for f in files if os.path.split(f)[0] == d]) for d in dirs]
+        #print('pairs:', pairs)
+        #print()
     except TypeError:
         pairs = []
         for root, dirnames, filenames in os.walk(path):
             files = [os.path.join(root, f) for f in filenames]
             pairs.append([root, files])
-            print(pairs[-1])
-            print()
+            #print(pairs[-1])
+            #print()
     return pairs
 
 

@@ -1,0 +1,288 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Halo Model Formalism &mdash; KiDS-GGL 2.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Customizing the halo model" href="custom.html" />
+    <link rel="prev" title="The Halo Model Configuration File" href="configuration.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> KiDS-GGL
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">KiDS-GGL Halo Model</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="configuration.html">The Halo Model Configuration File</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Halo Model Formalism</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#power-spectra">Power spectra</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lensing-observables">Lensing Observables</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="custom.html">Customizing the halo model</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../sampler/index.html">KiDS-GGL Halo Model Sampling</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">KiDS-GGL</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">KiDS-GGL Halo Model</a> &raquo;</li>
+        
+      <li>Halo Model Formalism</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/halomodel/halomodel.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="halo-model-formalism">
+<h1>Halo Model Formalism<a class="headerlink" href="#halo-model-formalism" title="Permalink to this headline">¶</a></h1>
+<p>The <em>Halo Model</em> is the formalism resulting from the assumption that all galaxies reside in <em>haloes</em>: collasped, spherical dark
+matter structures characterized by a mass <em>M</em> at redshift <span class="math notranslate nohighlight">\(z\)</span>. The galaxy-matter power spectrum can then be
+separated into <em>within-halo</em> and <em>between-halo</em> contributions, commonly referred to as the <em>1-halo</em> and <em>2-halo</em> terms,
+respectively:</p>
+<div class="math notranslate nohighlight">
+\[P_\mathrm{gm}(k,z) = P_\mathrm{gm}^\mathrm{1h}(k,z) + P_\mathrm{gm}^\mathrm{2h}(k,z)\]</div>
+<p>where each term is itself a combination of the contribution of <em>central</em> and <em>satellite</em> galaxies within these halos:</p>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}P_\mathrm{gm}^\mathrm{1h}(k,z) = f_\mathrm{c}\cdot P_\mathrm{cm}^\mathrm{1h}(k,z) + (1-f_\mathrm{c})\cdot P_\mathrm{sm}^\mathrm{1h}(k,z)\\P_\mathrm{gm}^\mathrm{2h}(k,z) = f_\mathrm{c}\cdot P_\mathrm{cm}^\mathrm{2h}(k,z) + (1-f_\mathrm{c})\cdot P_\mathrm{sm}^\mathrm{2h}(k,z)\end{aligned}\end{align} \]</div>
+<p>where <span class="math notranslate nohighlight">\(f_\mathrm{c}\equiv \bar n_\mathrm{c}/\bar n_\mathrm{g}\)</span> is the fraction of central galaxies in the sample being used.</p>
+<div class="section" id="power-spectra">
+<h2>Power spectra<a class="headerlink" href="#power-spectra" title="Permalink to this headline">¶</a></h2>
+<p>Let us define</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{H}_\mathrm{m}(k|M,z) = \frac{M}{\bar\rho_\mathrm{m}}\, \tilde{u}_\mathrm{h}(k|M,z)\]</div>
+<div class="math notranslate nohighlight">
+\[\mathcal{H}_\mathrm{c}(k|M,z) = \frac{\langle N_\mathrm{c}|M,z\rangle}{\bar n_\mathrm{c}}\]</div>
+<div class="math notranslate nohighlight">
+\[\mathcal{H}_\mathrm{s}(k|M,z) = \frac{\langle N_\mathrm{s}|M,z\rangle}{\bar n_\mathrm{s}}\, \tilde u_\mathrm{s}(k|M,z),\]</div>
+<p>where</p>
+<ul class="simple">
+<li><span class="math notranslate nohighlight">\(M\)</span> is the halo mass;</li>
+<li><span class="math notranslate nohighlight">\(\bar\rho_\mathrm{m}\)</span> is the mean matter density;</li>
+<li><span class="math notranslate nohighlight">\(\langle N_\mathrm{c}|M,z\rangle\)</span> and <span class="math notranslate nohighlight">\(\langle N_\mathrm{s}|M,z\rangle\)</span> are the expected number of central and satellite galaxies in a halo of mass <span class="math notranslate nohighlight">\(M\)</span> and redshift <span class="math notranslate nohighlight">\(z\)</span>; and</li>
+<li><span class="math notranslate nohighlight">\(\tilde{u}_\mathrm{h}(k|M,z)\)</span> and <span class="math notranslate nohighlight">\(\tilde u_\mathrm{s}(k|M,z)\)</span> are the Fourier transforms of the spatial distribution of mass and satellite galaxies. (We add a prescription to account for central galaxy miscentring below.).</li>
+</ul>
+<p>That is, the various <span class="math notranslate nohighlight">\(\mathcal{H}(k|M,z)\)</span> terms correspond to the products of the expected number density and the
+Fourier transform of the spatial distribution of each component, and</p>
+<div class="math notranslate nohighlight">
+\[n_i(z) = \int\mathrm{d}M \,\langle N_i|M,z\rangle n_\mathrm{h}(M,z)\]</div>
+<p>is the number density of galaxies of type <em>i</em> (where <em>i</em> =’c’ for centrals or ‘s’ for satellites) integrated over mass and redshift
+bin, and <span class="math notranslate nohighlight">\(n_\mathrm{h}(M,z)\)</span> is the number density of haloes of mass <span class="math notranslate nohighlight">\(M\)</span> and redshift <span class="math notranslate nohighlight">\(z\)</span>, also known as the
+<em>halo mass function</em>. The total number of galaxies of type <em>i</em> in a given redshift interval is then given by</p>
+<div class="math notranslate nohighlight">
+\[\bar n_i = \int\mathrm{d}z\,\frac{c\chi^2}{H(z)}\, n_i(z),\]</div>
+<p>where</p>
+<div class="math notranslate nohighlight">
+\[\mathrm{d}V_\mathrm{C}(z)\equiv\mathrm{d}z\,\frac{c\chi^2}{H(z)}\]</div>
+<p>is the comoving volume element per unit redshift per unit steradian. It is common practice, though, to simply use a single
+effective redshift,</p>
+<div class="math notranslate nohighlight">
+\[\bar n_i \equiv n_i(z=z_\mathrm{eff}).\]</div>
+<p>In <code class="code docutils literal notranslate"><span class="pre">KiDS-GGL</span></code>, integrating over (lens) galaxy redshifts as above can be activated through the parameter <code class="code docutils literal notranslate"><span class="pre">nzlens</span></code>.</p>
+<p>Then, the power spectra can be expressed as:</p>
+<div class="math notranslate nohighlight">
+\[P_{i\mathrm{m}}^\mathrm{1h}(k,z) = \int\mathrm{d}V_\mathrm{C}(z)\int_0^\infty \mathrm{d}M\,n_\mathrm{h}(M,z)\,\mathcal{H}_\mathrm{x}(k,M,z)\,\mathcal{H}_\mathrm{m}(k,M,z)\]</div>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}P_{i\mathrm{m}}^\mathrm{2h}(k,z) = \int\mathrm{d}V_\mathrm{C}(z)P_\mathrm{m}(k,z) \int_0^\infty\,\mathrm{d}M_1\,n_\mathrm{h}(M_1,z)\,b_\mathrm{h}(M_1,z)\,\mathcal{H}_\mathrm{x}(k,M_1,z)\\\int_0^\infty\,\mathrm{d}M_2\,n_\mathrm{h}(M_2,z)\,b_\mathrm{h}(M_2,z)\,\mathcal{H}_\mathrm{m}(k,M_2,z),\end{aligned}\end{align} \]</div>
+<p>and again <em>i</em> can be either ‘c’ or ‘s’.</p>
+</div>
+<div class="section" id="lensing-observables">
+<h2>Lensing Observables<a class="headerlink" href="#lensing-observables" title="Permalink to this headline">¶</a></h2>
+<p>finally, the power spectrum is related to the galaxy-matter cross-correlation through</p>
+<div class="math notranslate nohighlight">
+\[\xi_\mathrm{gm}(r,z) = \frac1{2\pi^2} \int_0^\infty k^2\mathrm{d}k\,P_\mathrm{gm}(k,z) \frac{\sin(kr)}{kr}\]</div>
+<p>which is related to the surface density at distance <em>R</em> through</p>
+<div class="math notranslate nohighlight">
+\[\Sigma(R) = \frac2{\bar n_\mathrm{g}} \int\mathrm{d}V_\mathrm{C}(z) \, n_\mathrm{g}(z)\bar\rho_\mathrm{m}(z) \int_R^\infty \frac{r\mathrm{d}r}{\sqrt{r^2-R^2}}\xi_\mathrm{gm}(r,z)\]</div>
+<p>Which can then be integrated to obtain the average surface density within <em>R</em>,</p>
+<div class="math notranslate nohighlight">
+\[\bar\Sigma(&lt;R) = \frac2{R^2}\int_0^R\mathrm{d}r\,r\Sigma(r)\]</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="custom.html" class="btn btn-neutral float-right" title="Customizing the halo model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="configuration.html" class="btn btn-neutral" title="The Halo Model Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, KiDS-GGL
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+
+  
+
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

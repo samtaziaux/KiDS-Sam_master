@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = KiDS-GGLPipeline
+SPHINXPROJ    = kids_ggl
 SOURCEDIR     = .
 BUILDDIR      = _build
 

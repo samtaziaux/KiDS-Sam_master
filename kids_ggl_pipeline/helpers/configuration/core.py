@@ -1,11 +1,15 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from itertools import count
 import numpy as np
 from six import string_types
+import sys
 
-from . import confighod, configsampler
+from . import confighod, configsampler, configsetup
 from ...halomodel import nfw, nfw_stack, halo, halo_2, halo_2_mc
+from ...halomodel.observables import Observable
+from ...halomodel.selection import Selection
 
 # local, if present
 try:
@@ -18,11 +22,14 @@ class ConfigLine(str):
 
     def __init__(self, line):
         self.line = line
+        self._remove_comments()
         self._join_label = None
         self._section = None
         self._words = None
-        super().__init__()
+        super(ConfigLine, self).__init__()
         return
+
+    ### attributes ###
 
     @property
     def join_label(self):
@@ -47,6 +54,14 @@ class ConfigLine(str):
                 self._words = self._words[:-1]
         return self._words
 
+    ### hidden methods ###
+
+    def _remove_comments(self):
+        if '#' in self.line:
+            self.line = self.line[:self.line.index('#')]
+
+    ### methods ###
+
     def is_comment(self):
         if self.is_empty():
             return False
@@ -58,11 +73,6 @@ class ConfigLine(str):
     def is_section(self):
         return self.line[0] == '['
 
-    def remove_comments(self):
-        if '#' in self.line:
-            return self.line[:self.line.index('#')]
-        return self.line
-
     def split_words(self):
         _line = '{0}'.format(self.line)
         if isinstance(_line, string_types):
@@ -70,12 +80,12 @@ class ConfigLine(str):
         return _line
 
 
-class configsection(str):
+class ConfigSection(str):
 
     def __init__(self, name=''):
         self.name = name
         self._parent = None
-        super().__init__()
+        super(ConfigSection, self).__init__()
         return
 
     @property
@@ -88,53 +98,62 @@ class configsection(str):
         """
         `line` should be a `ConfigLine` object
         """
-        output[0].append(line.words[0])
-        output[1].append(line.words[1])
+        fmt = line.words[1].split(',')
+        n = int(fmt[0]) if len(fmt) == 2 else 0
+        fmt = fmt[-1]
+        # a scalar or 1d array
+        if n == 0:
+            output[0].append(line.words[0])
+            output[1].append(line.words[1])
+        # a nd array
+        else:
+            for i in range(1, n+1):
+                output[0].append('{0}{1}'.format(line.words[0], i))
+                output[1].append(fmt)
         return output
 
-    def append_entry_setup(self, line, setup):
+    def append_parameters(
+            self, names, parameters, priors, repeat, section_names,
+            these_names, these_params, these_priors):
+        """Append parameters to the section once we're done reading it
+
+        Repeat parameters are processed here
         """
-        `line` should be a `ConfigLine` object
-        """
-        #setup[0].append(line.words[0])
-        for dtype in (int, float, str):
-            try:
-                #setup[1].append(dtype(line.words[1]))
-                setup[line.words[0]] = dtype(line.words[1])
-                break
-            except ValueError:
-                pass
-        return setup
-
-    def append_subsection_names(self, names, these_names):
-        for n in these_names:
-            names.append(n)
-        return names
-
-    def append_subsection_priors(self, priors, these_priors):
-        if self.name is None \
-                or self.name in ('ingredients', 'observables'):
-            return priors
-        #priors.append(np.array([these_priors]))
-        for p in these_priors:
-            priors.append(p)
-        return priors
-
-    def append_subsection_parameters(self, parameters, these_params):
+        names.append(these_names)
         if self.name is None:
-            return parameters
-        # initialize
+            return names, parameters, priors
+        # not sure I need this - will check later
         if len(parameters) == 0:
             parameters = [[] for i in these_params]
-        for i, p in enumerate(these_params):
-            parameters[i].append(p)
-        return parameters
+        if self.name not in ('ingredients', 'observables'):
+            for i, p in enumerate(these_params):
+                parameters[i].append(p)
+            for i, n, pr in zip(count(), these_names, these_priors):
+                # then the parameter is repeated from a previous section
+                if '.' in n:
+                    n = n.split('.')
+                    paramsection = '/'.join(n[:-1])
+                    # the 3 here is to ignore observables, selection and
+                    # ingredients but I need to find a better way to do it
+                    j = section_names.index(paramsection) - 3
+                    assert n[-1] in names[j], \
+                        'parameter {0} not found in section {1}'.format(
+                            n[-1], paramsection)
+                    jj = names[j].index(n[-1])
+                    repeat.append([j,jj])
+                    priors.append('repeat')
+                    for ip in range(len(parameters)):
+                        parameters[ip][-1][i] = parameters[ip][j][jj]
+                else:
+                    priors.append(pr)
+                    repeat.append(-1)
+        return names, parameters, priors
 
     def is_parent(self):
         return self.name == self.parent
 
 
-class ConfigFile:
+class ConfigFile(object):
 
     def __init__(self, filename):
         """Initialize configuration file"""
@@ -152,9 +171,7 @@ class ConfigFile:
                 line = ConfigLine(line)
                 if line.is_empty() or line.is_comment():
                     continue
-                if '#' in line:
-                    line = line.remove_comments()
-                _data.append(line)
+                _data.append(line.line)
             self._data = _data
         return self._data
 
@@ -175,23 +192,26 @@ class ConfigFile:
         return []
 
     def initialize_parameters(self):
+        # the four elements correspond to [mean, std, lower, upper]
         return [[] for i in range(4)]
 
     def initialize_priors(self):
         return []
 
     def read(self):
-        """
-        Need to reshape parameters to return val1, val2, val3, val4
-        instead of cosmo, hod separately.
-        """
-        section = configsection()
+        """Read the configuration file"""
+        section = ConfigSection()
+        section_names = []
+        observables = []
         names = []
         parameters = []
         priors = []
+        repeat = []
+        join = []
         # starting values for free parameters
         starting = []
         ingredients = {}
+        covar = {}
         setup = {}
         # dictionaries don't preserve order
         output = [[], []]
@@ -204,39 +224,54 @@ class ConfigFile:
                 continue
             if line.is_section():
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
-                    parameters = section.append_subsection_parameters(
-                        parameters, these_params)
-                    priors = section.append_subsection_priors(
-                        priors, these_priors)
-                    names = section.append_subsection_names(
-                        names, these_names)
+                    names, parameters, priors = section.append_parameters(
+                        names, parameters, priors, repeat, section_names,
+                        these_names, these_params, these_priors)
                 # initialize new section
-                section = configsection(line.section)
+                section = ConfigSection(line.section)
+                section_names.append(section.name)
                 these_names = self.initialize_names()
                 these_params = self.initialize_parameters()
                 these_priors = self.initialize_priors()
                 continue
             if section == 'observables':
-                observables = confighod.observables(line.words)
+                observables.append(Observable(*line.words))
+            elif section == 'selection':
+                selection = Selection(*line.words)
             elif section == 'ingredients':
                 ingredients = confighod.ingredients(
                     ingredients, line.words)
             elif section.parent in ('cosmo', 'hod'):
                 new = confighod.hod_entries(
                     line, section, these_names, these_params, these_priors,
-                    starting)
-                these_names, these_params, these_priors, starting = new
-            elif section == 'setup':
-                setup = section.append_entry_setup(line, setup)
+                    starting, join)
+                these_names, these_params, these_priors, starting, join = new
+            elif section == 'covariance':
+                # using configsampler just because it provides the
+                # required functionality
+                #covar = section.append_entry_output(line, covar)
+                covar = configsampler.sampling_dict(line, covar)
             elif section == 'output':
                 output = section.append_entry_output(line, output)
+            elif section == 'setup':
+                setup = configsetup.append_entry(line, setup)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
-        parameters, nparams = confighod.flatten_parameters(parameters)
+        join = confighod.format_join(join)
+        parameters, names, repeat, nparams = \
+            confighod.flatten_parameters(parameters, names, repeat, join)
         sampling = configsampler.add_defaults(sampling)
-        hod_params = [observables, ingredients, parameters, setup]
+        # add defaults and check types
+        ingredients = confighod.add_default_ingredients(ingredients)
+        setup = configsetup.check_setup(setup)
+        hod_param_names = ['observables', 'selection', 'ingredients',
+                           'parameters', 'setup', 'covariance']
+        hod_params = [
+            hod_param_names,
+            [observables, selection, ingredients, parameters, setup, covar]]
         hm_params = [model, hod_params, np.array(names), np.array(priors),
-                     np.array(nparams), np.array(starting), np.array(output)]
+                     np.array(nparams), np.array(repeat), join,
+                     np.array(starting), output]
         return hm_params, sampling
 
     def read_function(self, path):

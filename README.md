@@ -85,6 +85,12 @@ The sampler module has a demo option which you should always try before running 
 
 This option will generate the ESD(s) for your chosen set of initial parameters, print the chi2/dof on screen, overplot the model to the data points and, once you close this plot, will display the full covariance matrix.
 
+Sometimes, after doing the above a couple times, you don't really need to see the covariance all the time. You can run the demo without plotting the covariance with
+
+        kids_ggl -c <config_file> --sampler --demo --no-cov
+
+the `--no-cov` option is ignored if `--demo` is not present.
+
 *New in `v2`:* By default, if the output file exists the pipeline will ask the user whether they want to overwrite it. This can be skipped by setting the `-f` flag in the command line:
 
         kids_ggl -c <config_file> --sampler -f

@@ -35,10 +35,10 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     # Input parameters
     Nsplit, Nsplits, centering, lensid_file, lens_binning, binnum, \
         lens_selection, lens_weights, binname, Nobsbins, src_selection, \
-        cat_version, wizz, path_Rbins, name_Rbins, Runit, path_output, \
+        cat_version, path_Rbins, name_Rbins, Runit, path_output, \
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
-        blindcatnum, path_kidscats, path_gamacat, colnames, specz_file, \
+        blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file, \
         z_epsilon, n_boot, cross_cov, com = \
             shear.input_variables(
                 Nsplit, Nsplits, binnum, blindcat, config_file)
@@ -80,21 +80,6 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
                                              O_matter, O_lambda, Ok, h)
 
     splitslist = np.array([])
-    # Find all created random splits
-    if ('random' in purpose):
-        for x in xrange(Ncat):
-            splitname = '%s/%s_%i_%s%s_split*.fits'%\
-                        (path_splits.replace('bootstrap', 'catalog'), \
-                        purpose.replace('bootstrap', 'catalog'), \
-                        x+1, filename_var, filename_addition)
-                                    
-            splitfiles = glob.glob(splitname)
-            splitslist = np.append(splitslist, splitfiles)
-        splitslist = np.sort(splitslist)
-
-        filename_var = '%i_%s'%(Ncat, filename_var)
-        # Ncat is the number of existing catalogs
-        print('Number of new catalog:', Ncat)
 
     # Paths to the resulting files
     outname = shear.define_filename_results(path_results, purpose, \
@@ -109,10 +94,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
         return
 
     # Load the first split 
-    if ('random' in purpose):
-        shearcatname = splitslist[0]
-    else:
-        shearcatname = shear.define_filename_splits(path_splits, purpose, \
+    shearcatname = shear.define_filename_splits(path_splits, purpose, \
                                                     filename_var, 1, Nsplits, \
                                                     filename_addition, blindcat)
     shearcat = pyfits.open(shearcatname)
@@ -145,7 +127,7 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     for r in centers:
         combcol.append(pyfits.Column(name=r, format='%iD'%Rbins, \
-                                     array=sheardat[r], unit='kpc/h%g'%h*100))
+                    array=sheardat[r], unit='{0}/h{1:g}'.format(Runit, h*100)))
                                      
         print('Combining:', r)
 
@@ -154,36 +136,20 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
     for col in xrange(len(columns)):
         sumcol = 0
         print('Combining:', columns[col])
-
-        if ('random' in purpose):
-            for shearcatname in splitslist:
-                # Reading the shear catalogue			
-                
-                print('	', shearcatname)
-                shearcat = pyfits.open(shearcatname)
-                sheardat = shearcat[1].data
-                
-                sumcol = sumcol+np.array(sheardat[columns[col]])
-            combcol.append(pyfits.Column(name=columns[col], \
-                                         format='%iD'%Rbins, array=sumcol))
-            
-        else:
-            for i in xrange(Nsplits):
-
-                # Reading the shear catalogue			
-                shearcatname = shear.define_filename_splits(path_splits, \
+        for i in xrange(Nsplits):
+            # Reading the shear catalogue
+            shearcatname = shear.define_filename_splits(path_splits, \
                                                             purpose, \
                                                             filename_var, i+1, \
                                                             Nsplits, \
                                                             filename_addition, \
                                                             blindcat)
+            print('    ', shearcatname)
+            shearcat = pyfits.open(shearcatname)
+            sheardat = shearcat[1].data
                 
-                print('	', shearcatname)
-                shearcat = pyfits.open(shearcatname)
-                sheardat = shearcat[1].data
-                
-                sumcol = sumcol+np.array(sheardat[columns[col]])
-            combcol.append(pyfits.Column(name=columns[col], \
+            sumcol = sumcol+np.array(sheardat[columns[col]])
+        combcol.append(pyfits.Column(name=columns[col], \
                                          format='%iD'%Rbins, array=sumcol))
 
     # Adding the values of the variances
@@ -198,9 +164,9 @@ def main(Nsplit, Nsplits, binnum, blindcat, config_file, fn):
 
     if os.path.isfile(outname):
         os.remove(outname)
-        print('Old file "%s" overwritten.'%outname)
+        print('Old file "{}" overwritten.'.format(outname))
     else:
-        print('New file "%s" written.'%outname)
+        print('New file "{}" written.'.format(outname))
 
     tbhdu.writeto(outname)
 

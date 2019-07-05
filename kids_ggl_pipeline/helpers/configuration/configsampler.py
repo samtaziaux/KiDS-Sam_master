@@ -13,12 +13,14 @@ def sampling_dict(line, sampling):
     assert len(words) >= 2, \
         'Value for quantity {0} not provided'.format(words[0])
     if words[0] in ('data', 'covariance'):
+        assert len(words) >= 3, \
+            'line {0} must have at least three entries ({1} instead)'.format(
+                line.line, len(line.line))
         path_label = 'path_{0}'.format(words[0])
         if path_label not in sampling:
             sampling[path_label] = ''
         path = os.path.join(sampling[path_label], words[1])
         if words[0] == 'data':
-            print(os.path.join(sampling[path_label], words[1]))
             sampling[words[0]] = \
                 [sorted(glob(os.path.join(sampling[path_label], words[1])))]
         else:
@@ -33,6 +35,9 @@ def sampling_dict(line, sampling):
             except ValueError:
                 pass
     else:
+        assert len(words) >= 2, \
+            'line {0} must have at least two entries ({1} instead)'.format(
+                line.line, len(line.line))
         for dtype in (int, float, str):
             try:
                 sampling[words[0]] = dtype(words[1])
@@ -43,17 +48,23 @@ def sampling_dict(line, sampling):
 
 
 def add_defaults(sampling):
+    # replace old names for backward compatibility
     if 'exclude_bins' in sampling:
         sampling['exclude'] = sampling.pop('exclude_bins')
     if 'sampler_output' in sampling:
         sampling['output'] = sampling.pop('sampling_output')
     if 'update_freq' in sampling:
         sampling['update'] = sampling.pop('update_freq')
+
     if 'exclude' not in sampling:
         sampling['exclude'] = None
     # in case a single bin is excluded
     if sampling['exclude'] is not None:
         if not hasattr(sampling['exclude'], '__iter__'):
             sampling['exclude'] = np.array([sampling['exclude']])
+
+    if 'precision' not in sampling:
+        sampling['precision'] = 7
+
     return sampling
 

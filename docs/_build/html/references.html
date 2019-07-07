@@ -86,8 +86,19 @@
 <li class="toctree-l1"><a class="reference internal" href="esd-production/index.html">KiDS-GGL ESD Production</a></li>
 <li class="toctree-l1"><a class="reference internal" href="halomodel/index.html">KiDS-GGL Halo Model</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">KiDS-GGL References</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#kids-papers">KiDS papers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#other-papers">Other papers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#acknowledegements">Acknowledegements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#external-resources">External resources</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#standard-python-packages">Standard Python packages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#other-packages">Other packages</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kids-ggl-users">kids_ggl Users</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kids-papers">KiDS papers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#other-papers">Other papers</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -156,9 +167,40 @@
             
   <div class="section" id="kids-ggl-references">
 <h1>KiDS-GGL References<a class="headerlink" href="#kids-ggl-references" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="acknowledegements">
+<h2>Acknowledegements<a class="headerlink" href="#acknowledegements" title="Permalink to this headline">¶</a></h2>
+<p>If you use <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> in your research, please cite <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. (2017)</a>. You may optionally also cite <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2016MNRAS.462.4451B/abstract">Brouwer et al. (2016)</a> and
+<a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2015MNRAS.454.3938S/abstract">Sifon et al. (2015)</a>, for which early versions of <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> were developed.</p>
+<div class="section" id="external-resources">
+<h3>External resources<a class="headerlink" href="#external-resources" title="Permalink to this headline">¶</a></h3>
+<p>The development of <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> has at many stages taken advantage of software developed as part of the <a class="reference external" href="https://jupyter.org/">Jupyter project</a>.</p>
+<p>In addition, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> uses the following Python packages, which should also be cited at appropriate places:</p>
+<div class="section" id="standard-python-packages">
+<h4>Standard Python packages<a class="headerlink" href="#standard-python-packages" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">IPython</span></code> (<a class="reference external" href="https://ipython.org/">https://ipython.org/</a>)</li>
+<li><code class="docutils literal notranslate"><span class="pre">matplotlib</span></code> (<a class="reference external" href="https://matplotlib.org/">https://matplotlib.org/</a>; <a class="reference external" href="https://ieeexplore.ieee.org/document/4160265">Hunter 2007</a>)</li>
+<li><code class="docutils literal notranslate"><span class="pre">numpy</span></code> (<a class="reference external" href="https://www.numpy.org/">https://www.numpy.org/</a>)</li>
+<li><code class="docutils literal notranslate"><span class="pre">scipy</span></code> (<a class="reference external" href="https://www.scipy.org/">https://www.scipy.org/</a>)</li>
+</ul>
+</div>
+<div class="section" id="other-packages">
+<h4>Other packages<a class="headerlink" href="#other-packages" title="Permalink to this headline">¶</a></h4>
+<ul class="simple">
+<li><code class="docutils literal notranslate"><span class="pre">astropy</span></code>: Astronomical utility package (<a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2013A&amp;A...558A..33A/abstract">Astropy Collaboration 2013</a>, <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2018AJ....156..123A/abstract">2018</a>/<a class="reference external" href="https://www.astropy.org/index.html">website</a>)</li>
+<li><code class="docutils literal notranslate"><span class="pre">CAMB</span></code>: Transfer function solver (<a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2000ApJ...538..473L/abstract">Lewis et al. 2000</a>/<a class="reference external" href="https://camb.info/readme.html">website</a>)</li>
+<li><code class="docutils literal notranslate"><span class="pre">emcee</span></code>: Halo model MCMC sampling (<a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2013PASP..125..306F/abstract">Foreman-Mackey et al. 2013</a>/<a class="reference external" href="https://emcee.readthedocs.io/en/latest/">website</a>), which
+implements the Affine invariant Ensemble sampler of   <a class="reference external" href="https://msp.org/camcos/2010/5-1/p04.xhtml">Goodman &amp; Weare (2010)</a>.</li>
+<li><code class="docutils literal notranslate"><span class="pre">hmf</span></code>: Halo mass function (<a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2013A%26C.....3...23M/abstract">Murray et al. 2013</a>/<a class="reference external" href="https://hmf.readthedocs.io/en/latest/">website</a>)</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="section" id="kids-ggl-users">
+<h2>kids_ggl Users<a class="headerlink" href="#kids-ggl-users" title="Permalink to this headline">¶</a></h2>
 <p>This is a list of papers that have used parts or all of <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> in their analysis, in chronological order.</p>
 <div class="section" id="kids-papers">
-<h2>KiDS papers<a class="headerlink" href="#kids-papers" title="Permalink to this headline">¶</a></h2>
+<h3>KiDS papers<a class="headerlink" href="#kids-papers" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li><a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2018MNRAS.481.5189B/abstract">Brouwer et al. (2018)</a></li>
 <li><a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2018MNRAS.479.1240D/abstract">Dvornik et al. (2018)</a></li>
@@ -172,11 +214,12 @@
 </ul>
 </div>
 <div class="section" id="other-papers">
-<h2>Other papers<a class="headerlink" href="#other-papers" title="Permalink to this headline">¶</a></h2>
+<h3>Other papers<a class="headerlink" href="#other-papers" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
 <li><a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2018MNRAS.473.3747S/abstract">Sifon et al. (2018a)</a></li>
 <li><a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2018MNRAS.478.1244S/abstract">Sifon et al. (2018b)</a></li>
 </ul>
+</div>
 </div>
 </div>
 

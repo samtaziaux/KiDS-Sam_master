@@ -455,7 +455,7 @@ def define_Rbins(path_Rbins, Runit):
 
     # Translating from k/Mpc to pc, or from arcmin/sec to deg
     Rconst = -999
-    if 'pc' in Runit:
+    if ('pc' in Runit) or ('mps2' in Runit):
         Rconst = 1.
         if 'k' in Runit:
             Rconst = 1e3
@@ -536,7 +536,7 @@ def import_gamacat(path_gamacat, colnames, centering, purpose, Ncat,
         galweightlist = np.ones(len(galIDlist))
     
     # Defining the comoving and angular distance to the galaxy center
-    if 'pc' in Runit: # Rbins in a multiple of pc
+    if ('pc' in Runit) or ('mps2' in Runit): # Rbins in a multiple of pc
         assert len(colnames) == 4, \
             'Please provide the name of the redshift column if you want' \
             ' to use physical projected distances'
@@ -1279,7 +1279,7 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_versio
 
 # Calculate the projected distance (srcR) and the
 # shear (gamma_t and gamma_x) of every lens-source pair
-def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, com):
+def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, com, Runit, galweights_split):
 
     galRA, srcRA = np.meshgrid(galRAs, srcRA)
     galDEC, srcDEC = np.meshgrid(galDECs, srcDEC)
@@ -1292,6 +1292,13 @@ def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, c
         srcR = Dcls * theta
     else: # Physical
         srcR = Dals * theta
+    
+    #print('srcR (before):', srcR)
+    if Runit == 'mps2':
+        # Change distance R into baryonic acceleration a_bar (in m/s^2)
+        logMb = galweights_split
+        srcR = (G.value * 10.**logMb)/(srcR)**2 * 3.08567758e16 # in m/s^2
+    #print('srcR (after):', srcR)
     
     # Masking all lens-source pairs that have a
     # relative distance beyond the maximum distance Rmax
@@ -1327,10 +1334,10 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     klist_t = np.array([klist for b in range(len(blindcats))]).T
     
     # Calculating the needed errors
-    if 'pc' not in Runit:
-        wk2list = wlist
-    else:
+    if ('pc' in Runit) or ('mps2' in Runit):
         wk2list = wlist*klist_t**2
+    else:
+        wk2list = wlist
 
     w_tot = np.sum(wlist, 0)
     w2_tot = np.sum(wlist**2, 0)
@@ -1340,10 +1347,11 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     wk2_tot = np.sum(wk2list, 0)
     w2k4_tot = np.sum(wk2list**2, 0)
-    if 'pc' not in Runit:
-        w2k2_tot = np.sum(wlist**2, 0)
-    else:
+    
+    if ('pc' in Runit) or ('mps2' in Runit):
         w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
+    else:
+        w2k2_tot = np.sum(wlist**2, 0)
 
     wlist = []
 
@@ -1365,14 +1373,8 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
     klist = np.ma.filled(np.ma.array(klist, mask = Rmask, fill_value = inf))
     klist = np.array([klist for b in range(len(blindcats))]).T
-    if 'pc' not in Runit:
-        for g in range(len(blindcats)):
-            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
-                                   insinphilist) * wk2list[:,:,g].T)
-            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
-                                   incosphilist) * wk2list[:,:,g].T)
-
-    else:
+    
+    if ('pc' in Runit) or ('mps2' in Runit):
         for g in range(len(blindcats)):
             gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
                                     insinphilist) * wk2list[:,:,g].T / \
@@ -1380,8 +1382,12 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
             gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
                                     incosphilist) * wk2list[:,:,g].T / \
                                     klist[:,:,g].T)
-
-
+    else:
+        for g in range(len(blindcats)):
+            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
+                                   insinphilist) * wk2list[:,:,g].T)
+            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
+                                   incosphilist) * wk2list[:,:,g].T)
 
     gammat_tot = np.array([np.sum(gammatlists[g], 1) for g in range(len(blindcats))])
     gammax_tot = np.array([np.sum(gammaxlists[g], 1) for g in range(len(blindcats))])
@@ -1396,10 +1402,13 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
 
 
 # For each radial bin of each lens we calculate the output shears and weights
-def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
+def calc_covariance_output(incosphilist, insinphilist, klist, galweights, Runit):
     
-    galweights = np.reshape(galweights, [len(galweights), 1])
-
+    if 'mps2' not in Runit:
+        galweights = np.reshape(galweights, [len(galweights), 1])
+    else:
+        galweights = np.ones([len(galweights), 1])
+    
     # For each radial bin of each lens we calculate
     # the weighted sum of the tangential and cross shear
     Cs_tot = np.sum(-incosphilist*klist*galweights, axis=0)
@@ -1506,7 +1515,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
 
-    if 'pc' in Runit:
+    if ('pc' in Runit) or ('mps2' in Runit):
         filehead = '# Radius({0})    ESD_t(h{1:g}*M_sun/pc^2)' \
                    '   ESD_x(h{1:g}*M_sun/pc^2)' \
                    '    error(h{1:g}*M_sun/pc^2)^2    bias(1+K)' \
@@ -1615,9 +1624,12 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
         plt.title(plottitle,fontsize=title_size)
 
     # Define the labels for the plot
-    if 'pc' in Runit:
-        xlabel = r'Radial distance R (%s/h$_{%g}$)'%(Runit, h*100)
+    if ('pc' in Runit) or ('mps2' in Runit):
         ylabel = r'ESD $\langle\Delta\Sigma\rangle$ [h$_{%g}$ M$_{\odot}$/pc$^2$]'%(h*100)
+        if 'pc' in Runit:
+            xlabel = r'Radial distance R (%s/h$_{%g}$)'%(Runit, h*100)
+        elif 'mps2' in Runit:
+            xlabel = r'Expected baryonic acceleration M$_{\rm bar}$ (h$_{%g}$ m/s$^2$)'%(h*100)
     else:
         xlabel = r'Radial distance $\theta$ (%s)'%Runit
         ylabel = r'Shear $\gamma$'

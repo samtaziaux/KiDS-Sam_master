@@ -210,7 +210,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                             galRA_split, \
                                                             galDEC_split, \
                                                             srcRA, srcDEC, \
-                                                            e1, e2, Rmin, Rmax, com)
+                                                            e1, e2, Rmin, Rmax, com, \
+                                                            Runit, galweights_split)
 
                 # Calculate k (=1/Sigma_crit) and the weight-mask
                 # of every lens-source pair
@@ -274,18 +275,20 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                         if 'covariance' in purpose:
                             # For each radial bin of each lens we calculate
                             # the weighted Cs, Ss and Zs
-                            if 'pc' not in Runit:
-                                output_onebin = [C_tot, S_tot, Z_tot] = \
-                                shear.calc_covariance_output(incosphilist, \
-                                                             insinphilist, \
-                                                             Nsrclist, \
-                                                             galweights_split)
-                            else:
+                            if ('pc' in Runit) or ('mps2' in Runit):
                                 output_onebin = [C_tot, S_tot, Z_tot] = \
                                 shear.calc_covariance_output(incosphilist, \
                                                              insinphilist, \
                                                              klist, \
-                                                             galweights_split)
+                                                             galweights_split, \
+                                                             Runit)
+                            else:
+                                output_onebin = [C_tot, S_tot, Z_tot] = \
+                                shear.calc_covariance_output(incosphilist, \
+                                                        insinphilist, \
+                                                        Nsrclist, \
+                                                        galweights_split, \
+                                                        Runit)
 
                             # Writing the complete output to the output lists
                             for o in xrange(len(output)):

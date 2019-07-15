@@ -1244,13 +1244,13 @@ def calc_shear(Dals, Dcls, galRAs, galDECs, srcRA, srcDEC, e1, e2, Rmin, Rmax, c
 
     incosphi = incosphi.T
     insinphi = insinphi.T
-
+    
     return srcR, incosphi, insinphi
 
 
 # For each radial bin of each lens we calculate the output shears and weights
 def calc_shear_output(incosphilist, insinphilist, e1, e2, \
-                      Rmask, klist, wlist, Nsrclist, srcm, Runit, blindcats):
+                      Rmask, klist, wlist, Nsrclist, Rsrclist, srcm, Runit, blindcats):
     
     wlist = wlist.T
     klist_t = np.array([klist for b in range(len(blindcats))]).T
@@ -1273,18 +1273,35 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
         w2k2_tot = np.sum(wlist**2, 0)
     else:
         w2k2_tot = np.sum(wlist**2 * klist_t**2, 0)
-
-    wlist = []
-
-    Nsrc_tot = np.sum(Nsrclist, 1)
+    wlist = [] # Empty unused lists
+    gc.collect()
     
+    #print('wk2list:', np.shape(wk2list))
+    
+    # the weighted sum of the bias m
+    #print('srcm (before):', np.shape(srcm))
     srcm, foo = np.meshgrid(srcm,np.zeros(klist_t.shape[1]))
     srcm = np.array([srcm for b in range(len(blindcats))]).T
+    srcm_tot = np.sum(srcm*wk2list, 0)
+    #print('srcm:', np.shape(srcm), np.shape(srcm_tot))
     foo = [] # Empty unused lists
-    srcm_tot = np.sum(srcm*wk2list, 0) # the weighted sum of the bias m
     srcm = []
+    gc.collect()    
+    
+    # The weighted distance R of the sources
+    #print('Rsrclist:', np.shape(Rsrclist))
+    Rsrc = np.array([Rsrclist for b in range(len(blindcats))]).T
+    #print('Rsrc:', np.shape(Rsrc))
+    Rsrc_tot = np.sum(Rsrc*wk2list, 0)
+    Rsrc = [] # Empty unused lists
+    Rsrclist = []
     klist_t = []
+    gc.collect()
 
+    # The number and weighted distance of the sources
+    Nsrc_tot = np.sum(Nsrclist, 1)
+    #print('Nsrc:', np.shape(Nsrclist), np.shape(Nsrc_tot))
+    Nsrclist = [] # Empty unused lists
     gc.collect()
 
     # Calculating the weighted tangential and
@@ -1318,34 +1335,38 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     wk2 = np.array([wk2_tot.T[b] for b in range(len(blindcats))])
     w2k2 = np.array([w2k2_tot.T[b] for b in range(len(blindcats))])
     srcm = np.array([srcm_tot.T[b] for b in range(len(blindcats))])
-
+    Rsrc =  np.array([Rsrc_tot.T[b] for b in range(len(blindcats))])
+    
     gc.collect()
     
-    return np.vstack([gammat_tot, gammax_tot, k_tot, k2_tot, wk2, w2k2, Nsrc_tot, srcm]).T
+    return np.vstack([gammat_tot, gammax_tot, k_tot, k2_tot, wk2, w2k2, Nsrc_tot, Rsrc, srcm]).T
 
 
 # For each radial bin of each lens we calculate the output shears and weights
-def calc_covariance_output(incosphilist, insinphilist, klist, galweights):
+def calc_covariance_output(incosphilist, insinphilist, klist, Rsrc, galweights):
     
     galweights = np.reshape(galweights, [len(galweights), 1])
 
     # For each radial bin of each lens we calculate
     # the weighted sum of the tangential and cross shear
-    Cs_tot = np.sum(-incosphilist*klist*galweights, axis=0)
-    Ss_tot = np.sum(-insinphilist*klist*galweights, axis=0)
-    Zs_tot = np.sum(klist**2*galweights, axis=0)
+    Cs_tot = np.sum(galweights*klist * -incosphilist, axis=0)
+    Ss_tot = np.sum(-galweights*klist * insinphilist, axis=0)
+    Zs_tot = np.sum(galweights*klist**2, axis=0)
     
-    return Cs_tot, Ss_tot, Zs_tot
+    Rsrc_tot = np.sum(galweights*klist**2 * Rsrc, axis=0)
+    
+    return Cs_tot, Ss_tot, Zs_tot, Rsrc_tot
 
 
 # Write the shear or covariance catalog to a fits file
-def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
-                  output, outputnames, variance, purpose, e1, e2, w, srcm,
-                  blindcats):
+def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
+                  output, outputnames, variance, purpose, e1, e2, w, srcm, \
+                  Rsrc, blindcats):
     fitscols = []
     Rmin = Rbins[0:nRbins] / Rconst
     Rmax = Rbins[1:nRbins+1] / Rconst
-
+    Rsrc = Rsrc / Rconst
+    
     # Adding the radial bins
     if 'bootstrap' in purpose:
         fitscols.append(
@@ -1388,7 +1409,10 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
         fitscols.append(
             pyfits.Column(name='lfweight',
                           format='{}D'.format(len(blindcats)), array=w))
+                          
         fitscols.append(pyfits.Column(name='bias_m', format='1D', array=srcm))
+        
+        fitscols.append(pyfits.Column(name='Rsource', format='1D', array=Rsrc))
 
     # Adding the variance for the 4 blind catalogs
     fitscols.append(
@@ -1412,23 +1436,23 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
 
 
 # Calculating the final output values for the ESD profile
-def calc_stack(gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum):
+def calc_stack(gammat, gammax, wk2, w2k2, srcm, Rsrc, variance, blindcatnum):
 
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
-
+    
     ESDt_tot = gammat / wk2 # Final Excess Surface Density (tangential comp.)
     ESDx_tot = gammax / wk2 # Final Excess Surface Density (cross comp.)
     error_tot = (w2k2 / wk2**2 * variance)**0.5 # Final error
-    # Final multiplicative bias (by which the signal is to be divided)
-    bias_tot = (1 + (srcm / wk2))
-
-    return ESDt_tot, ESDx_tot, error_tot, bias_tot
+    bias_tot = (1 + (srcm / wk2)) # Final multiplicative bias (by which the signal is to be divided)
+    Rsrc_tot = Rsrc / wk2 # Final weighted radius of the sources
+    
+    return ESDt_tot, ESDx_tot, error_tot, bias_tot, Rsrc_tot
 
 
 # Printing stacked ESD profile to a text file
 def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, error_tot, \
-                bias_tot, h, variance, wk2_tot, w2k2_tot, Nsrc, blindcat, blindcats, blindcatnum, \
+                bias_tot, h, variance, wk2_tot, w2k2_tot, Nsrc, Rsrc_tot, blindcat, blindcats, blindcatnum, \
                 galIDs_matched, galIDs_matched_infield):
     
     config_params = filename_var
@@ -1436,13 +1460,13 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius({0})    ESD_t(h{1:g}*M_sun/pc^2)' \
+        filehead = '# Radius({0}/h{1:g})     Rsources({0}/h{1:g})     ESD_t(h{1:g}*M_sun/pc^2)' \
                    '   ESD_x(h{1:g}*M_sun/pc^2)' \
                    '    error(h{1:g}*M_sun/pc^2)^2    bias(1+K)' \
                    '    variance(e_s)     wk2     w2k2' \
                    '     Nsources'.format(Runit, h*100)
     else:
-        filehead = '# Radius({0})    gamma_t    gamma_x    error' \
+        filehead = '# Radius({0})     Rsources({0})     gamma_t    gamma_x    error' \
                    '    bias(1+K)    variance(e_s)    wk2    w2k2' \
                    '    Nsources'.format(Runit)
 
@@ -1454,6 +1478,7 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     wk2_tot.setflags(write=True)
     w2k2_tot.setflags(write=True)
     Nsrc.setflags(write=True)
+    Rsrc_tot.setflags(write=True)
     
     ESDt_tot[index] = int(-999)
     ESDx_tot[index] = int(-999)
@@ -1462,8 +1487,9 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     wk2_tot[index] = int(-999)
     w2k2_tot[index] = int(-999)
     Nsrc[index] = int(-999)
+    Rsrc_tot[index] = int(-999)
     
-    data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
+    data_out = np.vstack((Rcenters.T, Rsrc_tot.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
                           wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
     fmt = ['%.4e' for i in range(data_out.shape[1])]

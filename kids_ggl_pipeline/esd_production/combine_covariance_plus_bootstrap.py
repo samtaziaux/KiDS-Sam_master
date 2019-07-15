@@ -106,7 +106,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
-        gammat, gammax, wk2, srcm, Nsrc = np.zeros((5,Nobsbins,nRbins))
+        gammat, gammax, wk2, srcm, Nsrc, Rsrc = np.zeros((6,Nobsbins,nRbins))
 
     ESDt_tot, ESDx_tot, error_tot, bias_tot = np.zeros((4,Nobsbins,nRbins))
 
@@ -224,18 +224,21 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         e2 = sheardat_N1['e2'][:,blindcatnum]
                         lfweight = sheardat_N1['lfweight'][:,blindcatnum]
                         srcmlist = sheardat_N1['bias_m']
+                        Rsrclist = sheardat_N1['Rsource']
                         variance = sheardat_N1['variance(e[A,B,C,D])'][0]
                     else:
                         e1 = sheardat_N1['e1']
                         e2 = sheardat_N1['e2']
                         lfweight = sheardat_N1['lfweight']
                         srcmlist = sheardat_N1['bias_m']
+                        Rsrclist = sheardat_N1['Rsource']
                         variance = sheardat_N1['variance(e[A,B,C,D])']
 
                     e1 = np.reshape(e1,[len(e1),1])
                     e2 = np.reshape(e2,[len(e2),1])
                     lfweights = np.reshape(lfweight,[len(lfweight),1])
                     srcmlists = np.reshape(srcmlist,[len(srcmlist),1])
+                    Rsrclists = np.reshape(Rsrclist,[len(Rsrclist),1])
 
                     # Calculating the relevant quantities for each field
 
@@ -246,6 +249,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     wk2[N1] = wk2[N1] + np.sum(lfweights*Zs_N1,axis=0)
                     # The total weight (lensfit weight + lensing efficiency)
                     srcm[N1] = srcm[N1] + np.sum(lfweights*Zs_N1*srcmlists,axis=0)
+                    Rsrc[N1] = Rsrc[N1] + np.sum(lfweights*Zs_N1*Rsrclists,axis=0)
                     Nsrc[N1] = Nsrc[N1] + np.sum(np.ones(srcmlists.shape),axis=0)
 
                     for N2 in xrange(Nobsbins):
@@ -289,7 +293,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = \
                 shear.calc_stack(
                     gammat[N1], gammax[N1], wk2[N1],
-                    np.diagonal(cov[N1,N1,:,:]), srcm[N1], [1,1,1,1],
+                    np.diagonal(cov[N1,N1,:,:]), srcm[N1], Rsrc[N1], [1,1,1,1],
                     blindcatnum)
 
             # Determine the stacked galIDs
@@ -312,7 +316,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             shear.write_stack(filenameESD, filename_N1, Rcenters, Runit,
                               ESDt_tot[N1], ESDx_tot[N1], error_tot[N1],
                               bias_tot[N1], h, variance, wk2[N1],
-                              np.diagonal(cov[N1,N1,:,:]), Nsrc[N1], blindcat,
+                              np.diagonal(cov[N1,N1,:,:]), Nsrc[N1], Rsrc[N1], blindcat,
                               blindcats, blindcatnum, galIDs_matched,
                               galIDs_matched_infield)
 
@@ -337,8 +341,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         for N2 in xrange(Nobsbins):
             for R1 in xrange(nRbins):
                 for R2 in xrange(nRbins):
-                    radius1[N1,N2,R1,R2] = Rcenters[R1]
-                    radius2[N1,N2,R1,R2] = Rcenters[R2]
+                    radius1[N1,N2,R1,R2] = Rsrc[R1]
+                    radius2[N1,N2,R1,R2] = Rsrc[R2]
                     bin1[N1,N2,R1,R2] = \
                         list(lens_binning.values())[0][1][N1]
                     bin2[N1,N2,R1,R2] = \

@@ -1360,12 +1360,11 @@ def calc_covariance_output(incosphilist, insinphilist, klist, Rsrc, galweights):
 
 # Write the shear or covariance catalog to a fits file
 def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
-                  output, outputnames, variance, purpose, e1, e2, w, srcm, \
-                  Rsrc, blindcats):
+        output, outputnames, variance, purpose, e1, e2, w, srcm, blindcats):
+    
     fitscols = []
     Rmin = Rbins[0:nRbins] / Rconst
     Rmax = Rbins[1:nRbins+1] / Rconst
-    Rsrc = Rsrc / Rconst
     
     # Adding the radial bins
     if 'bootstrap' in purpose:
@@ -1411,8 +1410,6 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
                           format='{}D'.format(len(blindcats)), array=w))
                           
         fitscols.append(pyfits.Column(name='bias_m', format='1D', array=srcm))
-        
-        fitscols.append(pyfits.Column(name='Rsource', format='1D', array=Rsrc))
 
     # Adding the variance for the 4 blind catalogs
     fitscols.append(
@@ -1437,7 +1434,7 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst, \
 
 # Calculating the final output values for the ESD profile
 def calc_stack(gammat, gammax, wk2, w2k2, srcm, Rsrc, variance, blindcatnum):
-
+    
     # Choosing the appropriate covariance value
     variance = variance[blindcatnum]
     
@@ -1460,10 +1457,10 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     variance = variance[blindcatnum]
 
     if 'pc' in Runit:
-        filehead = '# Radius({0}/h{1:g})     Rsources({0}/h{1:g})     ESD_t(h{1:g}*M_sun/pc^2)' \
+        filehead = '# Radius({0}/h{1:g})     ESD_t(h{1:g}*M_sun/pc^2)' \
                    '   ESD_x(h{1:g}*M_sun/pc^2)' \
                    '    error(h{1:g}*M_sun/pc^2)^2    bias(1+K)' \
-                   '    variance(e_s)     wk2     w2k2' \
+                   '    variance(e_s)     wk2     w2k2     Rsources({0}/h{1:g})' \
                    '     Nsources'.format(Runit, h*100)
     else:
         filehead = '# Radius({0})     Rsources({0})     gamma_t    gamma_x    error' \
@@ -1489,9 +1486,9 @@ def write_stack(filename, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot, err
     Nsrc[index] = int(-999)
     Rsrc_tot[index] = int(-999)
     
-    data_out = np.vstack((Rcenters.T, Rsrc_tot.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
+    data_out = np.vstack((Rcenters.T, ESDt_tot.T, ESDx_tot.T, error_tot.T, \
                           bias_tot.T, variance*np.ones(bias_tot.shape).T, \
-                          wk2_tot.T, w2k2_tot.T, Nsrc.T)).T
+                          wk2_tot.T, w2k2_tot.T, Nsrc.T, Rsrc_tot.T)).T
     fmt = ['%.4e' for i in range(data_out.shape[1])]
     fmt[-1] = '%6d'
     np.savetxt(filename, data_out, delimiter=' '*4, fmt=fmt, header=filehead)

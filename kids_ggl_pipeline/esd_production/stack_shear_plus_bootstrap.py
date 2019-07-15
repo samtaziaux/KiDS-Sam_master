@@ -229,7 +229,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         filename_bin = filename_var.replace('binnum', str(binnum))
         # These arrays will contain the stacked profiles...
         field_shears = np.zeros([len(kidscats), 7, nRbins])
-        outputnames = ['ESDt', 'ESDx', 'ESD(error)', 'bias']
+        outputnames = ['ESDt', 'ESDx', 'ESD(error)', 'bias', 'Rsource']
 
         # Stack one shearprofile per KiDS field
         for k in range(len(kidscats)):
@@ -293,7 +293,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
          # Calculate the stacked final output
         output = np.array(shear.calc_stack(
             gammat, gammax, wk2, w2k2, srcm, Rsrc, variance, blindcatnum))
-        ESDt_tot, ESDx_tot, error_poisson, bias_tot \
+            
+        ESDt_tot, ESDx_tot, error_poisson, bias_tot, Rsrc_tot \
             = [output[x] for x in range(len(outputnames))]
 
         if 'bootstrap' not in purpose:
@@ -308,7 +309,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Printing stacked shear profile to a txt file
         shear.write_stack(
             stackname, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot,
-            error_tot, bias_tot, h, variance, wk2, w2k2, Nsrc, Rsrc, blindcat,
+            error_tot, bias_tot, h, variance, wk2, w2k2, Nsrc, Rsrc_tot, blindcat,
             blindcats, blindcatnum, galIDs_matched, galIDs_matched_infield)
 
         # Plotting the data for the separate observable bins

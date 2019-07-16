@@ -145,11 +145,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             # Uploading the shear profile
             ESD = np.loadtxt(filenameESD).T
-            ESDt_tot[N1] = ESD[1]
-            ESDx_tot[N1] = ESD[2]
-            error_tot[N1] = ESD[3]
-            bias_tot[N1] = ESD[4]
-            Rsrc_tot[N1] = ESD[9]
+            Rsrc_tot[N1] = ESD[1]
+            ESDt_tot[N1] = ESD[2]
+            ESDx_tot[N1] = ESD[3]
+            error_tot[N1] = ESD[4]
+            bias_tot[N1] = ESD[5]
             #ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = ESD[1:5]
 
             for N2 in xrange(Nobsbins):
@@ -267,8 +267,6 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         # Importing the relevant data from each file
                         Cs_N2 = np.array(sheardat_N2['Cs'])
                         Ss_N2 = np.array(sheardat_N2['Ss'])
-                        Zs_N2 = np.array(sheardat_N2['Zs'])
-                        Rsrc_N2 = np.array(sheardat_N2['Rsource'])
                         if Cs_N1.size == 0:
                             continue
                         # The new covariance matrix
@@ -342,8 +340,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         for N2 in xrange(Nobsbins):
             for R1 in xrange(nRbins):
                 for R2 in xrange(nRbins):
-                    radius1[N1,N2,R1,R2] = Rsrc_tot[R1]
-                    radius2[N1,N2,R1,R2] = Rsrc_tot[R2]
+                    radius1[N1,N2,R1,R2] = Rcenters[R1]
+                    radius2[N1,N2,R1,R2] = Rcenters[R2]
                     bin1[N1,N2,R1,R2] = \
                         list(lens_binning.values())[0][1][N1]
                     bin2[N1,N2,R1,R2] = \

@@ -269,7 +269,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             shear.write_catalog(
                 splitname, np.arange(Nbootstraps), Rbins, Rcenters, nRbins,
                 Rconst, output_bootstrap, outputnames, variance, purpose, e1,
-                e2, w, srcm, Rsrc, blindcats)
+                e2, w, srcm, blindcats)
 
             error_tot = np.zeros(nRbins)
             for r in range(nRbins):

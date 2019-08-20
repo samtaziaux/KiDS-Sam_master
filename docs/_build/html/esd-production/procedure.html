@@ -163,11 +163,12 @@
 <h1>Procedure<a class="headerlink" href="#procedure" title="Permalink to this headline">¶</a></h1>
 <p>In a (small) nutshell, ESD calculation in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> proceeds as follows. The text below is mostly extracted (and somewhat
 updated) from <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract">Dvornik et al. (2017)</a>.</p>
-<p>Since KiDS-450, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> uses a single photometric redshift distribution, which in KiDS is calculated by re-weighting the
-combination of a large number of overlapping redshift surveys so it matches the lensing-weighted magnitude distribution of the
-lensed source sample; we refer to this approach as DIR photo-<cite>z</cite>, and the resulting probability disstribution is labelled
-<span class="math notranslate nohighlight">\(n(z_s)\)</span>. The KiDS implementation of this approach is described in <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.465.1454H/abstract">Hildebrandt et al. (2017)</a>. Given <span class="math notranslate nohighlight">\(n(z_s)\)</span>, we calculate
-the critical surface density, <span class="math notranslate nohighlight">\(\Sigma_\mathrm{c}\)</span>, for every lens-source pair, as</p>
+<p>Since KiDS-450, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> uses a global source redshift <em>distribution</em>, rather than attempting to estimate redshifts for each
+indificual source galaxy, which in KiDS is calculated by re-weighting the combination of a large number of overlapping redshift
+surveys so it matches the lensing-weighted magnitude distribution of the lensed source sample; we refer to this approach as “DIR
+photo-<cite>z</cite>”, and the resulting probability disstribution is labelled <span class="math notranslate nohighlight">\(n(z_s)\)</span>. The KiDS implementation of this approach is
+described in <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2017MNRAS.465.1454H/abstract">Hildebrandt et al. (2017)</a>.</p>
+<p>Given <span class="math notranslate nohighlight">\(n(z_s)\)</span>, we calculate the critical surface density, <span class="math notranslate nohighlight">\(\Sigma_\mathrm{c}\)</span>, for every lens-source pair, as</p>
 <div class="math notranslate nohighlight">
 \[\Sigma_\mathrm{c,ls}^{-1} = \frac{4\pi G}{c^2} \int_0^\infty \mathrm{d}z_l\,p(z_l)\,D(z_l)
 \int_{z_l+\delta_z}^\infty \mathrm{d}z_s\,n(z_s)\,\frac{D(z_l,z_s)}{D(z_s)}\]</div>

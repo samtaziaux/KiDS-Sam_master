@@ -212,20 +212,21 @@ your terminal shell is <code class="docutils literal notranslate"><span class="p
 </pre></div>
 </div>
 <p>This should show three panels with data points and lines resembling the Early Science satellite galaxy-galaxy lensing results of
-Sifon et al. (2015) and, after closing it, show the 3x3x14 covariance matrix.</p>
+Sifon et al. (2015) and, after closing it, show the 3x3x14x14 covariance matrix.</p>
 </div>
 <div class="section" id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> requires a configuration file to run, and there are two kinds of configuration files required, depending on the task
-you ask from it: one for the production of a lensing signal (<a href="#id1"><span class="problematic" id="id2">`see here`_</span></a>) and one if you want to calculate and sample halo model
-predictions (<a href="#id3"><span class="problematic" id="id4">`see here`_</span></a>).</p>
+you ask from it: one for the <a class="reference external" href="esd-production/index.html">production of a lensing signal</a> and one if you want to <a class="reference external" href="halomodel/index.html">calculate and
+sample halo model predictions</a>.</p>
 <div class="section" id="measure-the-lensing-signal">
 <h3>Measure the lensing signal<a class="headerlink" href="#measure-the-lensing-signal" title="Permalink to this headline">¶</a></h3>
 <p>You can use <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to measure the lensing signal from the KiDS data simply by typing</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">esd_config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">esd</span>
 </pre></div>
 </div>
-<p>In order to do this, you need either the <a href="#id5"><span class="problematic" id="id6">`right set of files`_</span></a> in your computer, or to do it from one of the <a href="#id7"><span class="problematic" id="id8">`KiDS servers`_</span></a></p>
+<p>In order to do this, you need either the <a class="reference external" href="esd-production/input-data.html">right set of files in your computer</a> or to do it from
+one of the <a class="reference external" href="esd-production/input-data.html#servers">KiDS servers</a>.</p>
 </div>
 <div class="section" id="fit-the-data-with-a-halo-model">
 <h3>Fit the data with a halo model<a class="headerlink" href="#fit-the-data-with-a-halo-model" title="Permalink to this headline">¶</a></h3>
@@ -247,7 +248,7 @@ You can run the demo without plotting the covariance with</p>
 </pre></div>
 </div>
 <p>the <code class="docutils literal notranslate"><span class="pre">--no-cov</span></code> option is ignored if <code class="docutils literal notranslate"><span class="pre">--demo</span></code> is not present.</p>
-<p>By default, if the MCMC output file exists <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> will as the user whether they want to overwrite the output. Since version
+<p>By default, if the MCMC output file exists <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> will ask the user whether they want to overwrite the output. Since version
 <code class="docutils literal notranslate"><span class="pre">2.0.0</span></code>, you can force overwrite by writing</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">kids_ggl</span> <span class="o">-</span><span class="n">c</span> <span class="o">&lt;</span><span class="n">config_file</span><span class="o">&gt;</span> <span class="o">--</span><span class="n">sampler</span> <span class="o">-</span><span class="n">f</span>
 </pre></div>
@@ -280,7 +281,7 @@ of the NFW profile) and their associated quantities (such as mass, lensing signa
 </div>
 <div class="section" id="acknowledgements">
 <h2>Acknowledgements<a class="headerlink" href="#acknowledgements" title="Permalink to this headline">¶</a></h2>
-<p>TBD</p>
+<p>See <a class="reference external" href="references.html">References</a>.</p>
 </div>
 </div>
 

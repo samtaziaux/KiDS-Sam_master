@@ -53,7 +53,7 @@ You can run a quick example by typing ::
     kids_ggl -c demo/ggl_demo_nfw_stack.txt --sampler --demo
 
 This should show three panels with data points and lines resembling the Early Science satellite galaxy-galaxy lensing results of 
-Sifon et al. (2015) and, after closing it, show the 3x3x14 covariance matrix.
+Sifon et al. (2015) and, after closing it, show the 3x3x14x14 covariance matrix.
 
 
 .. -------------------------------------------------------------------
@@ -64,8 +64,8 @@ Usage
 *****
 
 ``kids_ggl`` requires a configuration file to run, and there are two kinds of configuration files required, depending on the task 
-you ask from it: one for the production of a lensing signal (`see here`_) and one if you want to calculate and sample halo model 
-predictions (`see here`_).
+you ask from it: one for the `production of a lensing signal <esd-production/index.html>`_ and one if you want to `calculate and 
+sample halo model predictions <halomodel/index.html>`_.
 
 
 Measure the lensing signal
@@ -75,7 +75,8 @@ You can use ``kids_ggl`` to measure the lensing signal from the KiDS data simply
 
     kids_ggl -c <esd_config_file> --esd
 
-In order to do this, you need either the `right set of files`_ in your computer, or to do it from one of the `KiDS servers`_
+In order to do this, you need either the `right set of files in your computer <esd-production/input-data.html>`_ or to do it from 
+one of the `KiDS servers <esd-production/input-data.html#servers>`_.
 
 Fit the data with a halo model
 ------------------------------
@@ -100,7 +101,7 @@ You can run the demo without plotting the covariance with ::
 
 the ``--no-cov`` option is ignored if ``--demo`` is not present.
 
-By default, if the MCMC output file exists ``kids_ggl`` will as the user whether they want to overwrite the output. Since version 
+By default, if the MCMC output file exists ``kids_ggl`` will ask the user whether they want to overwrite the output. Since version 
 ``2.0.0``, you can force overwrite by writing ::
 
     kids_ggl -c <config_file> --sampler -f
@@ -137,4 +138,4 @@ Most functionality should have a working help page, accessed by typing in a ``py
 Acknowledgements
 ****************
 
-TBD
+See `References <references.html>`_.

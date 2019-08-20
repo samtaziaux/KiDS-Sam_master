@@ -6,11 +6,13 @@ In a (small) nutshell, ESD calculation in ``kids_ggl`` proceeds as follows. The 
 updated) from |ref:dvornik17|_.
 
 
-Since KiDS-450, ``kids_ggl`` uses a single photometric redshift distribution, which in KiDS is calculated by re-weighting the 
-combination of a large number of overlapping redshift surveys so it matches the lensing-weighted magnitude distribution of the 
-lensed source sample; we refer to this approach as DIR photo-`z`, and the resulting probability disstribution is labelled 
-:math:`n(z_s)`. The KiDS implementation of this approach is described in |ref:hildebrandt17|_. Given :math:`n(z_s)`, we calculate
-the critical surface density, :math:`\Sigma_\mathrm{c}`, for every lens-source pair, as
+Since KiDS-450, ``kids_ggl`` uses a global source redshift *distribution*, rather than attempting to estimate redshifts for each 
+indificual source galaxy, which in KiDS is calculated by re-weighting the combination of a large number of overlapping redshift 
+surveys so it matches the lensing-weighted magnitude distribution of the lensed source sample; we refer to this approach as "DIR 
+photo-`z`", and the resulting probability disstribution is labelled :math:`n(z_s)`. The KiDS implementation of this approach is 
+described in |ref:hildebrandt17|_.
+
+Given :math:`n(z_s)`, we calculate the critical surface density, :math:`\Sigma_\mathrm{c}`, for every lens-source pair, as
 
 .. math::
 

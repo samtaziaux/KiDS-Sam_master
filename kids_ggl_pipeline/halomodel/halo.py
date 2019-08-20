@@ -322,7 +322,7 @@ def model(theta, R, calculate_covariance=False):
         Pg_2h = np.zeros((nbins,setup['lnk_bins']))
         #if integrate_zlens:
             #Pg_2h = Pg_2h[:,None]
-    print('Pg_2h =', Pg_2h.shape)
+    #print('Pg_2h =', Pg_2h.shape)
 
     if not integrate_zlens:
         rho_bg = rho_bg[...,0]
@@ -338,7 +338,7 @@ def model(theta, R, calculate_covariance=False):
         Pg_c = np.zeros((nbins,setup['lnk_bins']))
     #else:
         #Pg_c = np.zeros(Pg_2h.shape)
-    print('Pg_c =', Pg_c.shape)
+    #print('Pg_c =', Pg_c.shape)
 
     if ingredients['satellites']:
         #ti = time()
@@ -357,7 +357,7 @@ def model(theta, R, calculate_covariance=False):
     # finally integrate over (weight by, really) lens redshift
     if integrate_zlens:
         intnorm = np.sum(nz, axis=0)
-        print('intnorm =', intnorm.shape, nz.shape, meff.shape)
+        #print('intnorm =', intnorm.shape, nz.shape, meff.shape)
         meff = np.sum(nz*meff, axis=0) / intnorm
     #print('meff =', np.squeeze(meff), meff.shape)
 

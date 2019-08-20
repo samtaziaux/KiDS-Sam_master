@@ -154,7 +154,7 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
         parameters, nparams, join, jfree, repeat, lnprior, 0,
         rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
     print('\nDemo run took {0:.2e} seconds'.format(time()-to))
-    print('model =', model[0].shape)
+    #print('model =', model[0].shape)
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
         msg = 'Could not calculate model prediction. It is likely that one' \

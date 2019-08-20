@@ -1,9 +1,0 @@
-==============================
- KiDS-GGL Halo Model Sampling
-==============================
-
-
-.. toctree::
-   :maxdepth: 2
-
-   priors

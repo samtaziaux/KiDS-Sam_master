@@ -1,8 +1,0 @@
-The Halo Occupation Distribution
-********************************
-
-The halo occupation distribution (HOD hereafter) is a commonly used analytical prescription that describes how galaxies populates 
-dark matter haloes. The version implemented by default in ``kids_ggl`` is described below, and is based on the models used in `van 
-Uitert et al. 2016 <https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract>`_ and `Dvornik et al. 2017 
-<https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract>`_.
-

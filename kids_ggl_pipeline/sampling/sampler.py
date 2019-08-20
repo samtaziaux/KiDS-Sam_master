@@ -59,14 +59,6 @@ def run(hm_options, options, args):
 
     print('Starting values =', starting)
 
-    metadata, meta_names, fits_format = \
-        sampling_utils.initialize_metadata(options, output)
-
-    # some additional requirements of lnprob
-    fail_value = sampling_utils.initialize_fail_value(metadata)
-    # initialize
-    lnprior = np.zeros(ndim)
-
     # load data files
     Ndatafiles = len(options['data'][0])
     assert Ndatafiles > 0, 'No data files found'
@@ -78,6 +70,13 @@ def run(hm_options, options, args):
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
     rng_rbins = range(Nrbins)
+
+    metadata, meta_names, fits_format = \
+        sampling_utils.initialize_metadata(options, output, esd.shape)
+    # some additional requirements of lnprob
+    fail_value = sampling_utils.initialize_fail_value(metadata)
+    # initialize
+    lnprior = np.zeros(ndim)
 
     # are we just running a demo?
     if args.demo:

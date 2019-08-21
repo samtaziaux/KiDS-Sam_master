@@ -22,4 +22,4 @@ cristobal/
 configs_andrej/
 
 # docs build
-docs/_*/*
+docsrc/_*/*

@@ -105,7 +105,7 @@ the `--no-cov` option is ignored if `--demo` is not present.
  
 If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristóbal Sifón (sifon@astro.princeton.edu).
 
----
+
 Update log:
 
 **2018 May 7** - Release v1.6.3. Features:

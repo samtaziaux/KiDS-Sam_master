@@ -28,7 +28,7 @@ def initialize_fail_value(metadata, value=9999):
     return fail_value
 
 
-def initialize_metadata(options, output):
+def initialize_metadata(options, output, shape):
     meta_names, fits_format = output
     # this assumes that all parameters are floats -- can't imagine a
     # different scenario
@@ -46,7 +46,7 @@ def initialize_metadata(options, output):
             # other than the ESD have the same length, so avoid them at
             # all cost.
             if options['exclude'] is not None \
-                    and size[1] == esd.shape[-1]+len(options['exclude']):
+                    and size[1] == shape[-1]+len(options['exclude']):
                 size[1] -= len(options['exclude'])
         metadata[j].append(np.zeros(size))
     metadata = [np.array(m) for m in metadata]

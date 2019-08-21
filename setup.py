@@ -9,7 +9,7 @@ except ImportError:
 
 
 from kids_ggl_pipeline.helpers.setup_helpers import (
-    find_location, find_version, read)
+    data_files_recursively, find_location, find_version, read)
 
 
 setup(name='kids_ggl_pipeline',
@@ -27,8 +27,11 @@ setup(name='kids_ggl_pipeline',
                 'kids_ggl_pipeline/The-wiZZ',
                 'kids_ggl_pipeline/helpers',
                 'kids_ggl_pipeline/helpers/configuration'],
-      package_data={'': ['demo/*', 'docs/*', 'README.md']},
-      #data_files=[(setup_helpers.data_files_recursively('demo'),)],
+      #package_data={'': ['demo/*', 'docs/*', 'README.md']},
+      #data_files=[('.', ['LICENSE', 'README.md']),
+                  #('demo', data_files_recursively('demo')),
+                  #('docs', data_files_recursively('docs'))],
+      include_package_data=True,
       scripts=['bin/kids_ggl'],
       install_requires=['astropy>=1.2.0',
                         'emcee>=2.1.0,<3.0',
@@ -36,5 +39,7 @@ setup(name='kids_ggl_pipeline',
                         'mpmath>=0.19',
                         'numpy>=1.5.0',
                         'scipy>=0.16.0',
-                        'psutil==3.2.1']
+                        'psutil==3.2.1'],
+      zip_safe=False
       )
+

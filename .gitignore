@@ -21,3 +21,5 @@ brouwer/
 cristobal/
 configs_andrej/
 
+# docs build
+docs/_*/*

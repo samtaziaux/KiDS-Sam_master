@@ -2,7 +2,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from numpy import array, iterable, newaxis, ones_like, log, log10, moveaxis
+from numpy import array, expand_dims, iterable, ones, log, log10, moveaxis
 from scipy.integrate import trapz
 
 from ..halomodel.tools import Integrate
@@ -30,7 +30,15 @@ def Mh_effective(mass_function, pop_number, Mh, return_log=True):
     -------
     Mh_eff : array of floats, shape (nbins,)
         effective halo mass in each observable bin
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
     """
+    if len(pop_number.shape) >= 3:
+        mass_function = expand_dims(mass_function, -2)
     return log10(trapz(Mh*mass_function * pop_number, Mh, axis=-1) \
                  / trapz(mass_function * pop_number, Mh, axis=-1))
 
@@ -55,7 +63,15 @@ def nbar(mass_function, pop_number, Mh):
     -------
     nbar : array of floats, shape (nbins,)
         average number of objects in each observable bin
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
     """
+    if len(pop_number.shape) >= 3:
+        mass_function = expand_dims(mass_function, -2)
     return trapz(mass_function * pop_number, Mh, axis=-1)
 
 
@@ -88,17 +104,23 @@ def number(obs, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
     -------
     nc : array, shape (nbins,P)
         number of galaxies for each value of Mh
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
     """
     if selection is None:
-        selection = ones_like(obs)
+        selection = ones(obs.shape)
     prob = probability(
         obs, Mh, mor, scatter_func, mor_args, scatter_args,
         obs_is_log=obs_is_log)
     if obs_is_log:
         obs = 10**obs
-    number = moveaxis(
-        Integrate(prob*selection[newaxis], obs[newaxis], axis=-1), -1, -2)
-    return number
+    number = Integrate(
+        prob*expand_dims(selection, -1), expand_dims(obs, -1), axis=-2)
+    return number, prob
 
 
 def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
@@ -125,15 +147,21 @@ def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,
     -------
     avg : array, shape (nbins,)
         average observable in each bin in Mh
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
     """
     if selection is None:
-        selection = ones_like(obs)
+        selection = ones(obs.shape)
     prob = probability(
         obs, Mh, mor, scatter_func, mor_args, scatter_args,
         obs_is_log=obs_is_log)
     if obs_is_log:
         obs = 10**obs
-    return Integrate(prob*(selection*obs)[newaxis], obs[newaxis], axis=2).T
+    return Integrate(prob*(selection*obs)[None], obs[None], axis=2).T
 
 
 def probability(obs, Mh, mor, fscatter, mor_args, scatter_args,
@@ -163,9 +191,16 @@ def probability(obs, Mh, mor, fscatter, mor_args, scatter_args,
     -------
     phi : array, shape (nbins,P)
         occupation probability for each Mh
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
     """
     if not iterable(Mh):
         Mh = array([Mh])
     Mo = mor(Mh, *mor_args, return_log=obs_is_log)
-    return fscatter(obs, Mo, Mh, *scatter_args, obs_is_log=obs_is_log)
+    prob = fscatter(obs, Mo, Mh, *scatter_args, obs_is_log=obs_is_log)
+    return prob
 

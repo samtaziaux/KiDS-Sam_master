@@ -59,14 +59,6 @@ def run(hm_options, options, args):
 
     print('Starting values =', starting)
 
-    metadata, meta_names, fits_format = \
-        sampling_utils.initialize_metadata(options, output)
-
-    # some additional requirements of lnprob
-    fail_value = sampling_utils.initialize_fail_value(metadata)
-    # initialize
-    lnprior = np.zeros(ndim)
-
     # load data files
     Ndatafiles = len(options['data'][0])
     assert Ndatafiles > 0, 'No data files found'
@@ -78,6 +70,13 @@ def run(hm_options, options, args):
     Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
     rng_rbins = range(Nrbins)
+
+    metadata, meta_names, fits_format = \
+        sampling_utils.initialize_metadata(options, output, esd.shape)
+    # some additional requirements of lnprob
+    fail_value = sampling_utils.initialize_fail_value(metadata)
+    # initialize
+    lnprior = np.zeros(ndim)
 
     # are we just running a demo?
     if args.demo:
@@ -148,13 +147,14 @@ def run(hm_options, options, args):
 def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
          prior_types, parameters, join, starting, jfree, repeat, nparams,
          names, lnprior, rng_obsbins, fail_value, Ndatafiles,
-         array, dot, inf, outer, pi, zip):
+         array, dot, inf, outer, pi, zip, plot_ext='png'):
     to = time()
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
         parameters, nparams, join, jfree, repeat, lnprior, 0,
         rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
     print('\nDemo run took {0:.2e} seconds'.format(time()-to))
+    #print('model =', model[0].shape)
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
         msg = 'Could not calculate model prediction. It is likely that one' \
@@ -165,13 +165,15 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
     print()
     # make plots
-    output = '{0}_demo_{1}.pdf'.format(
-        '.'.join(options['output'].split('.')[:-1]), setup['return'])
+    output = '{0}_demo_{1}.{2}'.format(
+        '.'.join(options['output'].split('.')[:-1]), setup['return'],
+        plot_ext)
     plotting.signal(
         R, esd, esd_err, model=model[0], observable=setup['return'],
         output=output)
     if not args.no_demo_cov:
-        output = output.replace('.pdf', '_cov.pdf')
+        output = output.replace(
+            '.{0}'.format(plot_ext), '_cov.{0}'.format(plot_ext))
         plotting.covariance(R, cov, output)
 
     return
@@ -197,6 +199,8 @@ def mock(args, function, options, setup, parameters, join, starting, jfree,
     p = update_parameters(starting, parameters, nparams, join, jfree, repeat)
     # run model!
     model = function(p, R, calculate_covariance=args.cov)
+    # apply random noise
+    #
     # this is vestigial from when I integrated the offset
     # centrals for the satellite lensing measurements
     R = R[0,1:]

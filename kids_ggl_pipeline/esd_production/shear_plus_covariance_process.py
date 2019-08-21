@@ -102,6 +102,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                       ['lfweight_'+blind+'*k^2' for blind in blindcats] + \
                       ['lfweight_'+blind+'^2*k^2' for blind in blindcats] + \
                       ['Nsources'] + \
+                      ['Rsources_'+blind for blind in blindcats] + \
                       ['bias_m_'+blind for blind in blindcats]
         output = np.zeros([len(outputnames), len(galIDlist), nRbins])
 
@@ -179,8 +180,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
             if 'covariance' in purpose:
                 # These lists will contain the final
                 # covariance output [Noutput, Nsrc, NRbins]
-                outputnames = ['Cs', 'Ss', 'Zs']
-                output = [Cs_out, Ss_out, Zs_out] = \
+                outputnames = ['Cs', 'Ss', 'Zs', 'Rsource']
+                output = [Cs_out, Ss_out, Zs_out, Rsrc_out] = \
                         np.zeros([len(outputnames), len(w.T[0]), nRbins])
 
             for l in xrange(len(lenssplits)-1):
@@ -225,7 +226,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                 
                 srcR = np.ma.filled(np.ma.array(srcR, mask = src_mask, \
                                                 fill_value = 0))
-
+                
                 # Create an lfweight matrix that can be
                 # masked according to lens-source distance
                 w_meshed = [np.meshgrid(w.T[b],np.zeros(len(k)))[0] for b in xrange(len(blindcats))]
@@ -251,6 +252,8 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                          fill_value = 0))
                         Nsrclist = np.ma.filled(np.ma.array(Nsrc, mask = Rmask,\
                                                             fill_value = 0))
+                        Rsrclist = np.ma.filled(np.ma.array(srcR/Rconst, mask = Rmask,\
+                                                            fill_value = 0))
                         wlist = np.array([np.ma.filled(np.ma.array(u, \
                                                             mask = Rmask, \
                                                             fill_value = 0)) \
@@ -262,7 +265,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                             
                             output_onebin = shear.calc_shear_output(incosphilist, insinphilist,\
                                                     e1, e2, Rmask, klist,\
-                                                     wlist, Nsrclist, srcm, Runit, blindcats)
+                                                     wlist, Nsrclist, Rsrclist, srcm, Runit, blindcats)
                             
                             # Writing the lenssplit list to the complete
                             # output lists: [galIDs, Rbins] for every variable
@@ -275,16 +278,18 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                             # For each radial bin of each lens we calculate
                             # the weighted Cs, Ss and Zs
                             if 'pc' not in Runit:
-                                output_onebin = [C_tot, S_tot, Z_tot] = \
+                                output_onebin = [C_tot, S_tot, Z_tot, Rsrc_tot] = \
                                 shear.calc_covariance_output(incosphilist, \
                                                              insinphilist, \
                                                              Nsrclist, \
+                                                             Rsrclist, \
                                                              galweights_split)
                             else:
-                                output_onebin = [C_tot, S_tot, Z_tot] = \
+                                output_onebin = [C_tot, S_tot, Z_tot, Rsrc_tot] = \
                                 shear.calc_covariance_output(incosphilist, \
                                                              insinphilist, \
                                                              klist, \
+                                                             Rsrclist, \
                                                              galweights_split)
 
                             # Writing the complete output to the output lists

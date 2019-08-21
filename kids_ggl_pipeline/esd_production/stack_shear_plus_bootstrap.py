@@ -117,16 +117,19 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     w2k2list = np.nan_to_num(sheardat['lfweight_{}^2*k^2'.format(blindcat)])
     # Bias profile of each galaxy
     srcmlist = np.nan_to_num(sheardat['bias_m_{}'.format(blindcat)])
+    # The distance R of the sources
+    Rsrclist = np.nan_to_num(sheardat['Rsources_{}'.format(blindcat)])
     # The variance
     variance = sheardat['variance(e[A,B,C,D])'][0]
     Nsrclist = sheardat['Nsources']
 
+
     # Adding the lens weights
     galweightlist = np.reshape(galweightlist, [len(galIDlist),1])
-    gammatlist, gammaxlist, wk2list, w2k2list, srcmlist, Nsrclist = \
+    gammatlist, gammaxlist, wk2list, w2k2list, srcmlist, Rsrclist, Nsrclist = \
         [gallist*galweightlist for gallist
          in [gammatlist, gammaxlist, wk2list, w2k2list*galweightlist,
-             srcmlist, Nsrclist]]
+             srcmlist, Rsrclist, Nsrclist]]
 
     # Mask the galaxies in the shear catalog, WITHOUT binning
     lenssel_binning = shear.define_lenssel(
@@ -211,10 +214,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             print('lenssel:', sum(lenssel))
             print('galIDlist:', len(galIDlist))
 
-        [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms, Nsrcs] \
+        [galIDs, gammats, gammaxs, wk2s, w2k2s, srcms, Rsrcs, Nsrcs] \
             = [gallist[lenssel]
                for gallist in [galIDlist, gammatlist, gammaxlist, wk2list,
-                               w2k2list, srcmlist, Nsrclist]]
+                               w2k2list, srcmlist, Rsrclist, Nsrclist]]
         galIDs_matched = galIDs[np.in1d(galIDs, galIDlist_matched)]
         galIDs_matched_infield = galIDs[np.in1d(galIDs, galIDs_infield)]
 
@@ -225,24 +228,24 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Paths to the resulting files
         filename_bin = filename_var.replace('binnum', str(binnum))
         # These arrays will contain the stacked profiles...
-        field_shears = np.zeros([len(kidscats), 6, nRbins])
-        outputnames = ['ESDt', 'ESDx', 'ESD(error)', 'bias']
+        field_shears = np.zeros([len(kidscats), 7, nRbins])
+        outputnames = ['ESDt', 'ESDx', 'ESD(error)', 'bias', 'Rsource']
 
         # Stack one shearprofile per KiDS field
         for k in range(len(kidscats)):
             # Mask all objects that are not in this field
             matched_galIDs = np.array(catmatch[kidscats[k]])[0]
             field_mask = np.in1d(galIDs, matched_galIDs) # Define the mask
-            [galID, gammat, gammax, wk2, w2k2, srcm, Nsrc] \
+            [galID, gammat, gammax, wk2, w2k2, srcm, Rsrc, Nsrc] \
                 = [gallist[field_mask]
                    for gallist in [galIDs, gammats, gammaxs, wk2s, w2k2s,
-                                   srcms, Nsrcs]]
+                                   srcms, Rsrcs, Nsrcs]]
             # If there are lenses in this field...
             if len(gammat) > 0:
                 # Add the field to the ESD-profile table
                 field_shears[k] = np.array(
                     [sum(gammat,0), sum(gammax,0), sum(wk2,0), sum(w2k2,0),
-                     sum(srcm,0), sum(Nsrc,0)])
+                     sum(srcm,0), sum(Rsrc,0), sum(Nsrc,0)])
 
         # Taking the bootstrap samples
         if 'bootstrap' in purpose:
@@ -251,18 +254,18 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             # the total number of fields and sum them
             shear_bootstrap = np.sum(field_shears[bootstrap_nums], 1)
             # The summed quantities
-            gammat, gammax, wk2, w2k2, srcm, Nsrc \
-                = [shear_bootstrap[:, x] for x in range(6)]
+            gammat, gammax, wk2, w2k2, srcm, Rsrc, Nsrc \
+                = [shear_bootstrap[:, x] for x in range(7)]
             # Write the output to the bootstrap sample table
             output_bootstrap = np.array(shear.calc_stack(
-                gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum))
+                gammat, gammax, wk2, w2k2, srcm, Rsrc, variance, blindcatnum))
 
             splitname = shear.define_filename_splits(
                 path_splits, purpose, filename_bin, 0, 0, filename_addition,
                 blindcat)
 
             # Write the results to a bootstrap catalog
-            e1 = e2 = w = srcm = []
+            e1 = e2 = w = srcm = Rsrc = []
             shear.write_catalog(
                 splitname, np.arange(Nbootstraps), Rbins, Rcenters, nRbins,
                 Rconst, output_bootstrap, outputnames, variance, purpose, e1,
@@ -282,15 +285,16 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Sum all fields
         shear_sample = np.array(np.sum(field_shears, 0))
         # The summed quantities
-        gammat, gammax, wk2, w2k2, srcm, Nsrc \
-            = [shear_sample[x] for x in range(6)]
+        gammat, gammax, wk2, w2k2, srcm, Rsrc, Nsrc \
+            = [shear_sample[x] for x in range(7)]
         if debug:
             print('gammat:', gammat/1.e6)
 
          # Calculate the stacked final output
         output = np.array(shear.calc_stack(
-            gammat, gammax, wk2, w2k2, srcm, variance, blindcatnum))
-        ESDt_tot, ESDx_tot, error_poisson, bias_tot \
+            gammat, gammax, wk2, w2k2, srcm, Rsrc, variance, blindcatnum))
+            
+        ESDt_tot, ESDx_tot, error_poisson, bias_tot, Rsrc_tot \
             = [output[x] for x in range(len(outputnames))]
 
         if 'bootstrap' not in purpose:
@@ -305,7 +309,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         # Printing stacked shear profile to a txt file
         shear.write_stack(
             stackname, filename_var, Rcenters, Runit, ESDt_tot, ESDx_tot,
-            error_tot, bias_tot, h, variance, wk2, w2k2, Nsrc, blindcat,
+            error_tot, bias_tot, h, variance, wk2, w2k2, Nsrc, Rsrc_tot, blindcat,
             blindcats, blindcatnum, galIDs_matched, galIDs_matched_infield)
 
         # Plotting the data for the separate observable bins

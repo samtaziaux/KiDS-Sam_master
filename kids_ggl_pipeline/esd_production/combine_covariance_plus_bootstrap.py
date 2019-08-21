@@ -106,9 +106,9 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # These lists will contain the final ESD profile
     if 'covariance' in purpose:
-        gammat, gammax, wk2, srcm, Nsrc = np.zeros((5,Nobsbins,nRbins))
+        gammat, gammax, wk2, srcm, Nsrc, Rsrc = np.zeros((6,Nobsbins,nRbins))
 
-    ESDt_tot, ESDx_tot, error_tot, bias_tot = np.zeros((4,Nobsbins,nRbins))
+    ESDt_tot, ESDx_tot, error_tot, bias_tot, Rsrc_tot = np.zeros((5,Nobsbins,nRbins))
 
     # These lists will contain the final covariance matrix
     radius1, radius2, bin1, bin2, cov, cor, covbias = \
@@ -145,10 +145,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             # Uploading the shear profile
             ESD = np.loadtxt(filenameESD).T
-            ESDt_tot[N1] = ESD[1]
-            ESDx_tot[N1] = ESD[2]
-            error_tot[N1] = ESD[3]
-            bias_tot[N1] = ESD[4]
+            Rsrc_tot[N1] = ESD[1]
+            ESDt_tot[N1] = ESD[2]
+            ESDx_tot[N1] = ESD[3]
+            error_tot[N1] = ESD[4]
+            bias_tot[N1] = ESD[5]
             #ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = ESD[1:5]
 
             for N2 in xrange(Nobsbins):
@@ -217,6 +218,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     Cs_N1 = sheardat_N1['Cs']
                     Ss_N1 = sheardat_N1['Ss']
                     Zs_N1 = sheardat_N1['Zs']
+                    Rsrc_N1 = sheardat_N1['Rsource']
                     if Cs_N1.size == 0:
                         continue
                     if len(blindcats) != 1:
@@ -231,12 +233,12 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                         lfweight = sheardat_N1['lfweight']
                         srcmlist = sheardat_N1['bias_m']
                         variance = sheardat_N1['variance(e[A,B,C,D])']
-
+                    
                     e1 = np.reshape(e1,[len(e1),1])
                     e2 = np.reshape(e2,[len(e2),1])
                     lfweights = np.reshape(lfweight,[len(lfweight),1])
                     srcmlists = np.reshape(srcmlist,[len(srcmlist),1])
-
+                    
                     # Calculating the relevant quantities for each field
 
                     # The tangential shear
@@ -244,6 +246,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     # The cross shear
                     gammax[N1] = gammax[N1] + np.sum(lfweights*(-Ss_N1*e1+Cs_N1*e2),axis=0)
                     wk2[N1] = wk2[N1] + np.sum(lfweights*Zs_N1,axis=0)
+                    Rsrc[N1] = Rsrc[N1] + np.sum(lfweights*Rsrc_N1,axis=0)
                     # The total weight (lensfit weight + lensing efficiency)
                     srcm[N1] = srcm[N1] + np.sum(lfweights*Zs_N1*srcmlists,axis=0)
                     Nsrc[N1] = Nsrc[N1] + np.sum(np.ones(srcmlists.shape),axis=0)
@@ -289,10 +292,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             # Calculating the final output values of the
             # accompanying shear data
-            ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1] = \
+            ESDt_tot[N1], ESDx_tot[N1], error_tot[N1], bias_tot[N1], Rsrc_tot[N1] = \
                 shear.calc_stack(
                     gammat[N1], gammax[N1], wk2[N1],
-                    np.diagonal(cov[N1,N1,:,:]), srcm[N1], [1,1,1,1],
+                    np.diagonal(cov[N1,N1,:,:]), srcm[N1], Rsrc[N1], [1,1,1,1],
                     blindcatnum)
 
             # Determine the stacked galIDs
@@ -315,7 +318,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
             shear.write_stack(filenameESD, filename_N1, Rcenters, Runit,
                               ESDt_tot[N1], ESDx_tot[N1], error_tot[N1],
                               bias_tot[N1], h, variance, wk2[N1],
-                              np.diagonal(cov[N1,N1,:,:]), Nsrc[N1], blindcat,
+                              np.diagonal(cov[N1,N1,:,:]), Nsrc[N1], Rsrc_tot[N1], blindcat,
                               blindcats, blindcatnum, galIDs_matched,
                               galIDs_matched_infield)
 

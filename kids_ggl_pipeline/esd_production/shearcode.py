@@ -88,10 +88,12 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
         runblinds(combine_covboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
     
+    
     # Plotting the analytical/bootstrap covariance and ESD profiles
     if ('bootstrap' in purpose) or ('covariance' in purpose):
         runblinds(plot_covboot.main, blindcats, nsplit, nsplits, nobsbin,
                   config_file, purpose)
+    
     return
 
 

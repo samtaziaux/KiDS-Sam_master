@@ -51,7 +51,7 @@ from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
-from . import covariance
+#from . import covariance
 from . import profiles
 from .tools import (
     Integrate, Integrate1, extrap1d, extrap2d, f_k, fill_nan, gas_concentration,

@@ -31,6 +31,7 @@ if sys.version_info[0] == 2:
 # local
 from . import priors, sampling_utils
 from ..helpers import io, plotting
+from .. import __version__
 
 
 def run(hm_options, options, args):
@@ -82,8 +83,8 @@ def run(hm_options, options, args):
     if args.demo:
         demo(args, function, R, esd, esd_err, cov, icov, options, setup,
              prior_types, parameters, join, starting, jfree, repeat, nparams,
-             names, lnprior, rng_obsbins, fail_value, Ndatafiles, array, dot,
-             inf, outer, pi, zip)
+             names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
+             array, dot, inf, outer, pi, zip)
         return
 
     # write header file
@@ -146,7 +147,7 @@ def run(hm_options, options, args):
 
 def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
          prior_types, parameters, join, starting, jfree, repeat, nparams,
-         names, lnprior, rng_obsbins, fail_value, Ndatafiles,
+         names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
          array, dot, inf, outer, pi, zip, plot_ext='png'):
     to = time()
     lnlike, model = lnprob(
@@ -161,6 +162,14 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
               ' of the parameters is outside its allowed prior range.'
         raise ValueError(msg)
     dof = esd.size - starting.size - 1
+    # print model values
+    print()
+    print('Model values:')
+    for e in model[0]:
+        print(e)
+    print('Output values:')
+    for name, v in zip(meta_names[1:], model[1:-3]):
+        print('{0:<20s}  {1}'.format(name, v))
     print()
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
     print()
@@ -272,7 +281,8 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 
 
 def print_opening_msg(args, options):
-    print('\nRunning KiDS-GGL pipeline - sampler\n')
+    print('\nRunning KiDS-GGL pipeline version {0} - sampler\n'.format(
+        __version__))
     if args.cov:
         print(' ** Calculating covariance matrix only **')
     elif args.demo:

@@ -176,6 +176,7 @@ def model(theta, R, calculate_covariance=False):
         {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
          'lnk_max': setup['lnk_max'], 'dlnk': k_step}
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
+
     mass_range = hmf[0].m
     rho_bg = rho_mean if setup['delta_ref'] == 'mean' \
         else rho_mean / omegam
@@ -186,7 +187,6 @@ def model(theta, R, calculate_covariance=False):
     if ingredients['satellites']:
         concentration_sat = s_concentration[0](
             mass_range, *s_concentration[1:])
-    #print('concentration =', concentration.shape)
 
     rvir_range_lin = virial_radius(
         mass_range, rho_bg, setup['delta'])
@@ -296,25 +296,12 @@ def model(theta, R, calculate_covariance=False):
              #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
              #in zip(rvir_range_lin, hmf, ngal, pop_g)])
         """
-        #ti = time()
-        #if integrate_zlens:
-        if False:
-            Pg_2h = bias * array(
-                [[TwoHalo(hmf_i, ngal_ji, pop_g_j,
-                #[[TwoHalo(hmf_i, ngal_ji, pop_g_j[:,None],
-                           rvir_range_lin_i, mass_range, axis=-1)[0]
-                   for hmf_i, ngal_ji, rvir_range_lin_i
-                   in zip(hmf, ngal_j, rvir_range_lin)]
-                  for ngal_j, pop_g_j in zip(ngal, pop_g)])
-        else:
-            Pg_2h = bias * array(
-                #[TwoHalo(hmf_i, ngal_i, pop_g_i[None],
-                [TwoHalo(hmf_i, ngal_i, pop_g_i,
-                         rvir_range_lin_i, mass_range)[0]
-                 for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-                 #in zip(rvir_range_lin, hmf, ngal, pop_g)])
-                 in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
-                        expand_dims(pop_g, -2))])
+        Pg_2h = bias * array(
+            [TwoHalo(hmf_i, ngal_i, pop_g_i,
+                     rvir_range_lin_i, mass_range)[0]
+             for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+             in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+                    expand_dims(pop_g, -2))])
         #print('Pg_2h in {0:.2e} s'.format(time()-ti))
     #elif integrate_zlens:
         #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))

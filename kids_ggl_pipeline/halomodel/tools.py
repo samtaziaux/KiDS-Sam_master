@@ -201,6 +201,7 @@ def load_hmf(z, setup, cosmo_model, transfer_params):
             )
         # shouldn't this be the mean density at the lens redshift?
         rho_mean[i] = hmf[-1].mean_density0
+        #rho_mean[i] = hmf[-1].mean_density
     return hmf, rho_mean
 
 

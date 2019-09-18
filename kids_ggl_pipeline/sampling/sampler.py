@@ -155,7 +155,6 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
         parameters, nparams, join, jfree, repeat, lnprior, 0,
         rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
     print('\nDemo run took {0:.2e} seconds'.format(time()-to))
-    #print('model =', model[0].shape)
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
         msg = 'Could not calculate model prediction. It is likely that one' \
@@ -165,11 +164,15 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
     # print model values
     print()
     print('Model values:')
-    for e in model[0]:
-        print(e)
-    print('Output values:')
-    for name, v in zip(meta_names[1:], model[1:-3]):
-        print('{0:<20s}  {1}'.format(name, v))
+    print('-------------')
+    im = 0
+    ip = 0
+    for i, name in enumerate(meta_names):
+        print('{0:<20s}  {1}'.format(name, model[im][ip]))
+        ip += 1
+        if ip == len(model[im]):
+            ip = 0
+            im += 1
     print()
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
     print()

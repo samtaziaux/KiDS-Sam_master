@@ -656,6 +656,8 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
         # If there are matched lenses in this field,
         # add it to the catmatch dictionary
         
+        print('In kidscat', kidscat, ':', len(galIDs))
+        
         # Creating a dictionary that contains the corresponding
         # Gama galaxies for each KiDS field.
         if len(galIDs)>0:
@@ -664,6 +666,7 @@ def run_catmatch(kidscoord, galIDlist, galRAlist, galDEClist, Dallist, Dcllist, 
 
     # The list of fields with lens centers in them
     kidscats = list(catmatch)
+    print('kidscats:', kidscats, len(kidscats))
 
     # The galaxies that have their centers in a field
     galIDs_infield = totgalIDs

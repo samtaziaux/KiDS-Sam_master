@@ -210,8 +210,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 if os.path.isfile(shearcatname_N1):
                     #print '    Combining field', x+1, '/', len(kidscats), \
                             #':', kidscats[x]
-                    print('    Combining field {0} / {1} : {2}'.format(
-                        x+1, len(kidscats), kidscats[x]))
+                    print('    Bin {0}: Combining field {1} / {2} : {3}'.format(
+                        N1+1, x+1, len(kidscats), kidscats[x]))
 
                     sheardat_N1 = pyfits.open(shearcatname_N1)[1].data
                     Cs_N1 = sheardat_N1['Cs']
@@ -260,29 +260,32 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                             path_splits, purpose,  filename_N2, kidscats[x],
                             0, filename_addition, blindcat)
 
-                        sheardat_N2 = pyfits.open(shearcatname_N2)[1].data
-                        # Importing the relevant data from each file
-                        Cs_N2 = np.array(sheardat_N2['Cs'])
-                        Ss_N2 = np.array(sheardat_N2['Ss'])
-                        Zs_N2 = np.array(sheardat_N2['Zs'])
-                        if Cs_N1.size == 0:
-                            continue
-                        # The new covariance matrix
-                        for R1 in xrange(nRbins):
-                            for R2 in range(nRbins):
-                                
-                                if 'covariance' in purpose:
-                                    cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2]))
-                                    if cross_cov == False:
-                                        if N1!=N2:
-                                            cov[N1,N2,R1,R2] = 0.0
+                        if os.path.isfile(shearcatname_N2):
+                            sheardat_N2 = pyfits.open(shearcatname_N2)[1].data
+                            # Importing the relevant data from each file
+                            Cs_N2 = np.array(sheardat_N2['Cs'])
+                            Ss_N2 = np.array(sheardat_N2['Ss'])
+                            Zs_N2 = np.array(sheardat_N2['Zs'])
+                            if Cs_N1.size == 0:
+                                continue
+                            # The new covariance matrix
+                            for R1 in xrange(nRbins):
+                                for R2 in range(nRbins):
+                                    
+                                    if 'covariance' in purpose:
+                                        cov[N1,N2,R1,R2] = cov[N1,N2,R1,R2] + np.sum(variance[blindcatnum]*(lfweight**2)*(Cs_N1[:,R1]*Cs_N2[:,R2]+Ss_N1[:,R1]*Ss_N2[:,R2]))
+                                        if cross_cov == False:
+                                            if N1!=N2:
+                                                cov[N1,N2,R1,R2] = 0.0
+                        else:
+                            print('No galaxies in field {0} of bin {1}, skipping ...'.format(kidscats[x], N2+1))
 
                 else:
                     # This message should be a lot more explicit
                     #print('ERROR: Not all fields are analysed! '\
                     #              'Please restart shear code!')
                     #raise SystemExit()
-                    print('ERROR: No galaxies in this field, skipping ...')
+                    print('No galaxies in field {0} of this bin, skipping ...'.format(kidscats[x]))
 
             # Calculating the final output values of the
             # accompanying shear data

@@ -749,7 +749,7 @@ def run_kidscoord_mocks(path_kidscats, cat_version):
                  = [srcRAlims[0]+i+0.5, srcDEClims[0]+j+0.5, path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*Ntiles_RA+j])]
         
         #kidscoord['mock'] = [10.0, 10.0, 0] # [RA, DEC, tile name]
-                                           
+        
         kidscat_end = ''
     
     gc.collect()

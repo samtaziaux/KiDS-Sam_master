@@ -69,7 +69,7 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
 
     # The shear calculation starts here
     
-    #out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
+    out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     
     # Combine the splits according to the purpose
 

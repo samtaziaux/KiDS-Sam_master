@@ -58,6 +58,7 @@ blinding with weight_A, e_A, etc. ::
 
     kids_columns    SeqNr,ALPHA_J2000,DELTA_J2000,Z_B,model_SNratio,MASK,THELI_NAME,weight,m_cor,e1,e2
 
+
 Lens catalogues
 +++++++++++++++
 
@@ -103,7 +104,7 @@ Algorithm
 
 * ``shearcovariance``: calculate the ESD covariance from the data (see section 3.4 of Viola et al. 2015, MNRAS, 452, 3529). The ESD comes out for free as well.
 
-* ``shearootstrap``: calculate the ESD covariance by bootstrapping KiDS fields. ::
+* ``shearbootstrap``: calculate the ESD covariance by bootstrapping KiDS fields. ::
 
     ESD_purpose         shearcatalog
 
@@ -127,19 +128,72 @@ Set how many cores should be used to run the ESD production pipeline ::
 
     ncores          4
 
+
 Lens selection
 ++++++++++++++
 
-If desired, specify the name of file containing lens IDs to be used in the analysis ::
+**Lens IDs** (optional). If desired, specify the name of file containing lens IDs to be used in the analysis ::
 
     lensID_file     None
 
-**Lens weighting scheme**. This is optionally specified with the format ``lens_weights  <weight_name>  <weight_catalogue>``, where
+**Lens weighting scheme** (optional). Applies a weight to ESD contribution of each lens. This is optionally specified with the format ``lens_weights  <weight_name>  <weight_catalogue>``, where
 
 * ``weight_name`` is the name of the weight column in the fits file. The contribution to the ESD profile of each lens will be weighted by the assigned weight value.
 
 * ``weight_catalogue`` is the path to the fits file containing the weights. The weight values in the input fits file should have exactly the same order as the lenses in the used catalogue. ::
 
-    lens_weights    None
+    lens_weights      None
+    #lens_weights     weight_name      weight_catalogue.fits
+
+**Lens binning scheme** (optional). Bins the lenses by observable parameters. This is optionally specified with the format ``lens_binning  <bin_param>  <binning_catalogue>  <bin_edges>``, where
+
+* ``bin_param`` is the name of the parameter by which you want to bin the lenses (such as "Luminosity" or "stellar mass"). The lenses will be binned and stacked according to this observable.
+
+* ``binning_catalogue`` is the path to the fits catalogue that contains the parameter by which to bin, should it not be included in the given lens catalogue. If the parameter is included in the lens catalog provided above, then write 'self'. ::
+
+* ``bin_edges`` are the comma-separated binning edges, in python format (Nedges = Nbins + 1, with bin[i-1] <= x < bin[i])
+
+    lens_binning      None
+    #lens_binning      envS4          self                        0,1,2,3,4
+    #lens_binning     logmstar      galaxy_mass_catalogue.fits    8.5,10.5,10.7,10.9,11.
+
+**Lens selection scheme** (optional). Select the allowed ranges for different galaxy parameters. This is optionally specified with the format ``lens_limits[i]  <param>  <catalogue>  <limit(s)>``, where
+
+* ``[i]`` is an indexing for the user only (e.g., lens_limits1, lens_limits2, etc).
+
+* ``param`` is the name of the parameter constraining the lens sample.
+
+* ``catalogue`` is the same as <binning_catalogue> for parameter lens_binning.
+
+* ``limit(s)`` is one or two comma-separated values. If one, then only galaxies with this exact value will be considered (for instance, choose RankBCG 1 to use only centrals in groups); if two values, then these are the limits of the allowed range.
+
+    lens_limits1      rankBCG        self       1
+    lens_limits2      Nfof           self       5,inf
 
 
+Source selection
++++++++++++++++++
+
+**Source selection scheme** (optional). Select the allowed ranges of parameters in the KiDS source catalogue. The format is similar as for lens_limits: ``src_limits[i]    <param>      <limit(s)>``, except the <catalogue> entry does not exist.
+When using with KiDS-450, use redshift limits in range [0.1, 0.9] with 0.1 increment. When using KiDS-1000, use redshift limits in range [0.1, 1.2].
+
+    src_limits1           Z_B        0.1,1.2
+
+Specify the blind for which you want to create the ESD profile. For KiDS-1000, only blind A exists.
+    kids_blinds            A,B,C
+
+
+Optional settings
++++++++++++++++++
+
+Allow for a gap between the source and lens redshifts; i.e., only select sources such that z_s > z_l + z_epsilon (optional). Default = 0.2.
+
+    z_epsilon           0.2
+
+If running shearbootstrap, select the number of patches to group in a regular patern (optional). Default = 1.
+
+    nbootstraps         1
+
+If running shearcovariance or shearbootstrap, select if you want to include the cross-covariance between the bins (optional). This is a boolean parameter! Values are either 0 or 1. Default = 1.
+
+    cross_covariance         1

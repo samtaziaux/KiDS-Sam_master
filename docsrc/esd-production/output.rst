@@ -18,25 +18,25 @@ Stacked ESD profiles:
 
 You will find the text files with the stacked ESD profiles, within your ``ESD_output_folder``. This folder contains a sequence of sub-folders which are named according to the configuration of your ESD profile.
 * These subfolders are names as follows:
-    1. *Lens binning*: the bin name followed by the values of the bin edges. If the lenses were not binned, this folder is called ``No_bins``.
-        * Example: ``logmstar_8p5_10p3_10p6_10p8_11p0``.
+1. *Lens binning*: the bin name followed by the values of the bin edges. If the lenses were not binned, this folder is called ``No_bins``.
+    * Example: ``logmstar_8p5_10p3_10p6_10p8_11p0``.
 
-    2. *Lens selection and weights*: the lens selection parameters followed by the corresponding limit values. If the lens weights were applied, this folder name ends with `lw` followed by the lens weight parameter.
-        * Example: ``dist0p1perc_3_inf-Z_0_0p5``.
+2. *Lens selection and weights*: the lens selection parameters followed by the corresponding limit values. If the lens weights were applied, this folder name ends with `lw` followed by the lens weight parameter.
+    * Example: ``dist0p1perc_3_inf-Z_0_0p5``.
     
-    3. *Source selection and cosmology*: the specified limits on the KiDS sources, followed by the selected cosmological parameters.
-        * Example: ``ZB_0p1_1p2-Om_0p2793-Ol_0p7207-Ok_0-h_0p7``.
+3. *Source selection and cosmology*: the specified limits on the KiDS sources, followed by the selected cosmological parameters.
+    * Example: ``ZB_0p1_1p2-Om_0p2793-Ol_0p7207-Ok_0-h_0p7``.
     
-    4. *Radial binning*: the specified radial bin values (in this case: Nbins, min, max) followed by the selected unit.
-        * Example: ``Rbins15_0p03_3_Mpc``.
+4. *Radial binning*: the specified radial bin values (in this case: Nbins, min, max) followed by the selected unit.
+    * Example: ``Rbins15_0p03_3_Mpc``.
     
-    5. *Purpose*: the pipeline mode which was used to create the ESD profiles:
-        * Example: ``shearcatalogue``, ``shearcovariance`` or ``shearbootstrap``.
-        
+5. *Purpose*: the pipeline mode which was used to create the ESD profiles:
+    * Example: ``shearcatalogue``, ``shearcovariance`` or ``shearbootstrap``.
+
 Example of the full path: ``/data/users/brouwer/Lensing_results/logmstar_8p5_10p3_10p6_10p8_11p0/dist0p1perc_3_inf-Z_0_0p5/ZB_0p1_1p2-Om_0p2793-Ol_0p7207-Ok_0-h_0p7/Rbins15_0p03_3_Mpc/shearcovariance/``
 
 * Within this folder, you will find text files with the following names:
     * ``<purpose>_bin_[n]_<blind>.txt``: contains the stacked ESD profile for lens bin [n], created using the given mode and blind.  Example: ``shearcovariance_bin_1_A.txt``.
     * ``<purpose>_bin_[n]_<blind>_lensIDs.txt``: contains IDs of all stacked lenses in bin [n]. Example:``shearcovariance_bin_1_lensIDs.txt``
-    * ``<purpose>_matrix_<blind>.txt``: contains the full uber-covariance matrix between all radial and lens bins. Example: ``shearcovariance_matrix_A.txt``.
+    * ``<purpose>_matrix_<blind>.txt``: contains the full uber-covariance matrix between all radial and lens bins (in the case of ``shearcovariance`` or ``shearbootstrap``). Example: ``shearcovariance_matrix_A.txt``.
     

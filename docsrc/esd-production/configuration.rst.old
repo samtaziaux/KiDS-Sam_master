@@ -2,10 +2,6 @@
  The ESD Production Configuration File
 =======================================
 
-*THIS DOCUMENT IS INCOMPLETE. SEE* ``demo/ggl_esd_production.config`` *for now*.
-
-
-
 This document explains how to write a ``kids_ggl`` ESD production configuration file, which defines the data used to compute the ESD 
 from KiDS data.
 

@@ -5,13 +5,13 @@
 The output of the ESD production will always be written to the folder which you specified using the ``ESD_output_folder`` line in your config file. For example: ``/data/users/brouwer/Lensing_results/``.
 
 Within this folder, you will find:
-  * Always:
-    * Text files containing stacked ESD profiles.
-    * Text files containing the lens IDs of the stacked lenses.
-In the case of ``shearcovariance`` or ``shearbootstrap``:
-    * A text file containing the full covariance matrix (in the case of shearcovariance and shearbootstrap).
-In the case of ``shearcatalog`` or ``shearbootstrap``:
-    * A fits catalogue containing the unstacked individual shear profiles of all lenses, which can be stacked using the ``shearcatalog`` or ``shearbootstrap`` modes.
+    * Always
+        * Text files containing stacked ESD profiles.
+        * Text files containing the lens IDs of the stacked lenses.
+    * In the case of ``shearcovariance`` or ``shearbootstrap``:
+        * A text file containing the full covariance matrix (in the case of shearcovariance and shearbootstrap).
+    * In the case of ``shearcatalog`` or ``shearbootstrap``:
+        * A fits catalogue containing the unstacked individual shear profiles of all lenses, which can be stacked using the ``shearcatalog`` or ``shearbootstrap`` modes.
 
 Stacked ESD profiles:
 Within this folder, you will find a sequence of sub-folders which are named according to the configuration of your ESD profile.
@@ -30,3 +30,13 @@ Example of the full path: ``/data/users/brouwer/Lensing_results/logmstar_8p5_10p
     Example: ``Rbins15_0p03_3_Mpc``
     
 5. *Purpose*: the pipeline mode which was used to create the ESD profiles: shearcatalogue, shearcovariance
+
+
+Future improvements
+*******************
+
+* Custom relations should be written in a user-supplied file rather than in the pipeline source code.
+* Adding a ``module_path`` optional entry to each section would easily allow custom files: the pipeline could simply add that path to ``sys.path`` and import from there.
+
+  * There is the pickling problem however. Need to check if the above would allow for multi-thread runs.
+* Might want to add a ``model`` section proper, in case the above is implemented but more generally for any future changes

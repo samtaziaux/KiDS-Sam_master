@@ -38,7 +38,7 @@ You will find the text files with the stacked ESD profiles (and covariance matri
     * ``<purpose>_bin_[n]_<blind>_lensIDs.txt``: contain IDs of all stacked lenses in bin [n]. Example:``shearcovariance_bin_1_lensIDs.txt``
     * ``<purpose>_matrix_<blind>.txt``: contains the full uber-covariance matrix between all radial and lens bins (in the case of ``shearcovariance`` or ``shearbootstrap``). Example: ``shearcovariance_matrix_A.txt``.
 
-Example of the full path to ESD file: ``/data/users/brouwer/Lensing_results/logmstar_8p5_10p3_10p6_10p8_11p0/dist0p1perc_3_inf-Z_0_0p5/ZB_0p1_1p2-Om_0p2793-Ol_0p7207-Ok_0-h_0p7/Rbins15_0p03_3_Mpc/shearcovariance/shearcovariance_bin_1_A.txt``
+* Example of the full path to ESD file: ``/data/users/brouwer/Lensing_results/logmstar_8p5_10p3_10p6_10p8_11p0/dist0p1perc_3_inf-Z_0_0p5/ZB_0p1_1p2-Om_0p2793-Ol_0p7207-Ok_0-h_0p7/Rbins15_0p03_3_Mpc/shearcovariance/shearcovariance_bin_1_A.txt``
 
 File structure of the stacked ESD profiles (and covariance matrix):
 *********************************************************************

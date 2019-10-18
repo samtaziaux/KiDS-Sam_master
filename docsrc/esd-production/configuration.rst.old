@@ -9,10 +9,7 @@
 This document explains how to write a ``kids_ggl`` ESD production configuration file, which defines the data used to compute the ESD 
 from KiDS data.
 
-The ESD production module has not been tested with any dataset other than KiDS-WL releases, and is updated with every release to 
-match new conventions, if necessary. We therefore only provide support for the ESD production module of ``kids_ggl`` when analyizing 
-KiDS data. In principle, though, if other data sets are made compliant with KiDS-WL formats, this module might be used with other 
-datasets perhaps with minor modifications. (Whether this would be worth the effort is left for the user to decide.)
+The ESD production module has not been tested with any dataset other than KiDS-WL releases, and is updated with every release to match new conventions, if necessary. We therefore only provide support for the ESD production module of ``kids_ggl`` when analyzing KiDS data. In principle, though, if other data sets are made compliant with KiDS-WL formats, this module might be used with other datasets perhaps with minor modifications. (Whether this would be worth the effort is left for the user to decide.)
 
 Some additional examples can be found in the `demo configuration file`_
 
@@ -21,12 +18,9 @@ General instructions
 ********************
 
 * All parameters must be present in the file
-
-* The structure for most parameters is, unless otherwise specified: ::
-
+* The structure for most parameters is, unless otherwise specified:
     name        value
-
-* Any optional parameter that will not be used must be assigned a ``None`` value in the second column
+* Any optional parameter that will not be used must be assigned a ``None`` value in the second column.
 
 
 General settings
@@ -38,23 +32,20 @@ Sources and lens catalogues
 KiDS catalogues
 +++++++++++++++
 
-The first parameters define the full path to the folder containing the KiDS catalogues to be used, as well as the KiDS-WL data 
-release. The paths below works if running the pipeline in one of the Leiden machines: ::
+The first parameters define the full path to the folder containing the KiDS catalogues to be used, as well as the KiDS-WL data release. The paths below works if running the pipeline in one of the Leiden machines:
 
     KiDS_path       /disks/shear10/dvornik/KidsCatalogues/DR3/
     KiDS_version    3                                               # Options: 0=mocks, 3=KiDS-450
 
-If using version ``3`` (i.e., KiDS-450), you must also specify the path to the spec-z catalogue with ::
+If using version ``3`` (i.e., KiDS-450), you must also specify the path to the spec-z catalogue with:
 
     specz_file      /disks/shear10/KiDS/KiDS-450/SPECZ/IMSIM_Gall30th_2016-01-14_deepspecz_photoz_1000_4_specweight.cat
 
-And finally you must specify the path to the multiplicative bias correction table in thin redshift slices: ::
+And finally you must specify the path to the multiplicative bias correction table in thin redshift slices:
 
     m_corr_file     m_corr_kids_450.txt
 
-*New in v1.7lite*: column names for all the required KiDS column **must** be given, comma-separated, in the following entry. For 
-KiDS use, the correct column names for the colums are given below (example for KiDS-450). **There is no need** to specify the 
-blinding with weight_A, e_A, etc. ::
+*New in v1.7lite*: column names for all the required KiDS column **must** be given, comma-separated, in the following entry. For KiDS use, the correct column names for the colums are given below (example for KiDS-450). **There is no need** to specify the blinding with weight_A, e_A, etc. ::
 
     kids_columns    SeqNr,ALPHA_J2000,DELTA_J2000,Z_B,model_SNratio,MASK,THELI_NAME,weight,m_cor,e1,e2
 
@@ -99,11 +90,11 @@ Algorithm
 
 **Purpose.** There are three options:
 
-* ``shearcatalog``: calculate the ESD by looping through lenses.
+* ``shearcatalog``: calculate the ESD by looping through lenses. The first run will create a catalogue containing the individual shear profiles of all lenses in the catalogue, which can afterwards be quickly stacked in different configurations. Useful for: testing different lens samples (bins and cuts in observables). Note that only the lens sample can be changed; cosmology, radial binning and source cuts should remain the same.
 
-* ``shearcovariance``: calculate the ESD covariance from the data (see section 3.4 of Viola et al. 2015, MNRAS, 452, 3529). The ESD comes out for free as well.
+* ``shearcovariance``: calculate the ESD covariance from the data (see section 3.4 of Viola et al. 2015, MNRAS, 452, 3529). The ESD comes out for free as well. Useful for: the final run, when you have determined your lens sample and need the analytical covariance error bars and covariance matrix.
 
-* ``shearootstrap``: calculate the ESD covariance by bootstrapping KiDS fields. ::
+* ``shearbootstrap``: calculate the ESD covariance by bootstrapping KiDS fields. The first run will create a catalogue containing the individual shear profiles of all lenses in the catalogue. Afterwards these can be stacked in different configurations. In addition, shearbootstrap will compute the bootstrap error bars and covariance matrix. Useful for: the final run, when you have determined your lens sample and need the bootstrape error bars and covariance matrix.
 
     ESD_purpose         shearcatalog
 

@@ -47,7 +47,7 @@ The text file containing the ESD profiles contains nine columns with the followi
 
 1. Radius(<Runit>)
 2. ESD_t(h70*M_sun/pc^2)
-3. ESD_x(h70*M_sun/pc^2)*
+3. ESD_x(h70*M_sun/pc^2)
 4. error(h70*M_sun/pc^2)^2
 5. bias(1+K)
 6. variance(e_s)

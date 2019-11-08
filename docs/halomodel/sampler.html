@@ -17,34 +17,37 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Customizing the Halo Model" href="custom.html" />
     <link rel="prev" title="The Halo Model Configuration File" href="configuration.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -178,69 +181,69 @@ user should make sure that the implementation in <code class="docutils literal n
 <h3>Available priors<a class="headerlink" href="#available-priors" title="Permalink to this headline">¶</a></h3>
 <p>Just as important as the sampler used are the priors used. Since <code class="docutils literal notranslate"><span class="pre">v2.0.0</span></code>, several priors are available in <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code>. These are
 all defined in <code class="docutils literal notranslate"><span class="pre">sampling/priors.py</span></code>:</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="4%" />
-<col width="11%" />
-<col width="41%" />
-<col width="43%" />
+<col style="width: 4%" />
+<col style="width: 11%" />
+<col style="width: 41%" />
+<col style="width: 43%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td>Prior</td>
-<td>Description</td>
-<td>Expression</td>
-<td>Notes</td>
+<tbody>
+<tr class="row-odd"><td><p>Prior</p></td>
+<td><p>Description</p></td>
+<td><p>Expression</p></td>
+<td><p>Notes</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">exp</span></code></td>
-<td>Exponential distribution</td>
-<td><span class="math notranslate nohighlight">\(\exp(-x)\)</span></td>
-<td>Location and scale as per <code class="docutils literal notranslate"><span class="pre">scipy.stats</span></code> not yet implemented</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">exp</span></code></p></td>
+<td><p>Exponential distribution</p></td>
+<td><p><span class="math notranslate nohighlight">\(\exp(-x)\)</span></p></td>
+<td><p>Location and scale as per <code class="docutils literal notranslate"><span class="pre">scipy.stats</span></code> not yet implemented</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">jeffreys</span></code></td>
-<td>Jeffreys prior</td>
-<td><span class="math notranslate nohighlight">\(\frac1{x}\)</span></td>
-<td>See <a class="reference external" href="https://en.wikipedia.org/wiki/Jeffreys_prior">Wikipedia</a></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">jeffreys</span></code></p></td>
+<td><p>Jeffreys prior</p></td>
+<td><p><span class="math notranslate nohighlight">\(\frac1{x}\)</span></p></td>
+<td><p>See <a class="reference external" href="https://en.wikipedia.org/wiki/Jeffreys_prior">Wikipedia</a></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">lognormal</span></code></td>
-<td>Lognormal distribution</td>
-<td><span class="math notranslate nohighlight">\(\frac{\sqrt{2\pi\sigma^2}}{x}\exp\left[-\frac{(\log(x)-x_0)^2}{2\sigma^2}\right]\)</span></td>
-<td>&#160;</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lognormal</span></code></p></td>
+<td><p>Lognormal distribution</p></td>
+<td><p><span class="math notranslate nohighlight">\(\frac{\sqrt{2\pi\sigma^2}}{x}\exp\left[-\frac{(\log(x)-x_0)^2}{2\sigma^2}\right]\)</span></p></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">normal</span></code></td>
-<td>Gaussian distribution</td>
-<td><span class="math notranslate nohighlight">\(\sqrt{2\pi\sigma^2}\exp\left[-\frac{(x-x_0)^2}{2\sigma^2}\right]\)</span></td>
-<td>&#160;</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">normal</span></code></p></td>
+<td><p>Gaussian distribution</p></td>
+<td><p><span class="math notranslate nohighlight">\(\sqrt{2\pi\sigma^2}\exp\left[-\frac{(x-x_0)^2}{2\sigma^2}\right]\)</span></p></td>
+<td></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">student</span></code></td>
-<td>Student’s <em>t</em> distribution</td>
-<td><span class="math notranslate nohighlight">\(\frac{\Gamma(\frac{\nu+1}{2})}{\sqrt{\nu\pi}\,\Gamma(\frac{\nu}{2})}\left(1+\frac{x^2}{\nu}\right)^{\!-\frac{\nu+1}{2}}\)</span></td>
-<td>Appropriate for slopes (when used with 1 degree of freedom). See <a class="reference external" href="https://en.wikipedia.org/wiki/Student%27s_t-distribution">Wikipedia</a>,
-<strong>Exercise:</strong> see why this works and a uniform prior does not!</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">student</span></code></p></td>
+<td><p>Student’s <em>t</em> distribution</p></td>
+<td><p><span class="math notranslate nohighlight">\(\frac{\Gamma(\frac{\nu+1}{2})}{\sqrt{\nu\pi}\,\Gamma(\frac{\nu}{2})}\left(1+\frac{x^2}{\nu}\right)^{\!-\frac{\nu+1}{2}}\)</span></p></td>
+<td><p>Appropriate for slopes (when used with 1 degree of freedom). See <a class="reference external" href="https://en.wikipedia.org/wiki/Student%27s_t-distribution">Wikipedia</a>,
+<strong>Exercise:</strong> see why this works and a uniform prior does not!</p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">uniform</span></code></td>
-<td>Uniform distribution</td>
-<td><span class="math notranslate nohighlight">\(x\in[a,b]\)</span></td>
-<td>&#160;</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">uniform</span></code></p></td>
+<td><p>Uniform distribution</p></td>
+<td><p><span class="math notranslate nohighlight">\(x\in[a,b]\)</span></p></td>
+<td></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">fixed</span></code></td>
-<td>Fixed scalar</td>
-<td>&#160;</td>
-<td>&#160;</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">fixed</span></code></p></td>
+<td><p>Fixed scalar</p></td>
+<td></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">array</span></code></td>
-<td>Array of fixed scalars</td>
-<td>&#160;</td>
-<td>&#160;</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">array</span></code></p></td>
+<td><p>Array of fixed scalars</p></td>
+<td></td>
+<td></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">read</span></code></td>
-<td>Like <code class="docutils literal notranslate"><span class="pre">array</span></code> but read from a file</td>
-<td>&#160;</td>
-<td>&#160;</td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">read</span></code></p></td>
+<td><p>Like <code class="docutils literal notranslate"><span class="pre">array</span></code> but read from a file</p></td>
+<td></td>
+<td></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">repeat</span></code></td>
-<td>Repeat parameter</td>
-<td>&#160;</td>
-<td>&#160;</td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">repeat</span></code></p></td>
+<td><p>Repeat parameter</p></td>
+<td></td>
+<td></td>
 </tr>
 </tbody>
 </table>
@@ -272,36 +275,36 @@ corresponds to the name that the parameter will have in the output MCMC chain (s
 lower and upper bounds of the allowed range for the prior. For instance, a mass might have a normal prior <span class="math notranslate nohighlight">\(2\pm1\)</span>, but it
 cannot physically go below zero. In this case, you’d want <code class="docutils literal notranslate"><span class="pre">lower=0</span></code>, and since <code class="docutils literal notranslate"><span class="pre">upper</span></code> must be set together with <code class="docutils literal notranslate"><span class="pre">lower</span></code>, it
 can be set to an arbitrarily large number, including <code class="docutils literal notranslate"><span class="pre">inf</span></code>. If not provided, the default limits are as follows:</p>
-<table border="1" class="docutils">
+<table class="docutils align-default">
 <colgroup>
-<col width="30%" />
-<col width="34%" />
-<col width="36%" />
+<col style="width: 30%" />
+<col style="width: 34%" />
+<col style="width: 36%" />
 </colgroup>
-<tbody valign="top">
-<tr class="row-odd"><td>Prior</td>
-<td>Lower bound</td>
-<td>Upper bound</td>
+<tbody>
+<tr class="row-odd"><td><p>Prior</p></td>
+<td><p>Lower bound</p></td>
+<td><p>Upper bound</p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">exp</span></code></td>
-<td><span class="math notranslate nohighlight">\(-10\)</span></td>
-<td><span class="math notranslate nohighlight">\(10\)</span></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">exp</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(-10\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(10\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">jeffreys</span></code></td>
-<td><span class="math notranslate nohighlight">\(10^{-10}\)</span></td>
-<td><span class="math notranslate nohighlight">\(100\)</span></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">jeffreys</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(10^{-10}\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(100\)</span></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">lognormal</span></code></td>
-<td><span class="math notranslate nohighlight">\(-10\sigma\)</span></td>
-<td><span class="math notranslate nohighlight">\(10\sigma\)</span></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lognormal</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(-10\sigma\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(10\sigma\)</span></p></td>
 </tr>
-<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">normal</span></code></td>
-<td><span class="math notranslate nohighlight">\(-10\sigma\)</span></td>
-<td><span class="math notranslate nohighlight">\(10\sigma\)</span></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">normal</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(-10\sigma\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(10\sigma\)</span></p></td>
 </tr>
-<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">student</span></code></td>
-<td><span class="math notranslate nohighlight">\(-10^6\)</span></td>
-<td><span class="math notranslate nohighlight">\(10^6\)</span></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">student</span></code></p></td>
+<td><p><span class="math notranslate nohighlight">\(-10^6\)</span></p></td>
+<td><p><span class="math notranslate nohighlight">\(10^6\)</span></p></td>
 </tr>
 </tbody>
 </table>
@@ -312,8 +315,8 @@ normalizations to this end.</p>
 <div class="section" id="notes">
 <h4>Notes<a class="headerlink" href="#notes" title="Permalink to this headline">¶</a></h4>
 <ul class="simple">
-<li>The <code class="docutils literal notranslate"><span class="pre">exp</span></code> and <code class="docutils literal notranslate"><span class="pre">jeffreys</span></code> priors take no free parameters. Make sure the parameters are of order unity or the results might not be sensible.</li>
-<li>As mentioned before, we recommend using the <code class="docutils literal notranslate"><span class="pre">student</span></code> distribution with <code class="docutils literal notranslate"><span class="pre">dof=1</span></code> as the prior for any slope parameter.</li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">exp</span></code> and <code class="docutils literal notranslate"><span class="pre">jeffreys</span></code> priors take no free parameters. Make sure the parameters are of order unity or the results might not be sensible.</p></li>
+<li><p>As mentioned before, we recommend using the <code class="docutils literal notranslate"><span class="pre">student</span></code> distribution with <code class="docutils literal notranslate"><span class="pre">dof=1</span></code> as the prior for any slope parameter.</p></li>
 </ul>
 </div>
 </div>
@@ -336,7 +339,7 @@ the halo model …</p>
         <a href="custom.html" class="btn btn-neutral float-right" title="Customizing the Halo Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="configuration.html" class="btn btn-neutral" title="The Halo Model Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="configuration.html" class="btn btn-neutral float-left" title="The Halo Model Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -362,36 +365,16 @@ the halo model …</p>
   
 
 
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'2.0.0',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

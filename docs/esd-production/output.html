@@ -17,34 +17,37 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="KiDS-GGL Halo Model" href="../halomodel/index.html" />
     <link rel="prev" title="The ESD Production Configuration File" href="configuration.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -88,7 +91,11 @@
 <li class="toctree-l2"><a class="reference internal" href="procedure.html">Procedure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="input-data.html">Input data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="configuration.html">The ESD Production Configuration File</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Output data file structure</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Output data file structure</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#folder-containing-the-stacked-esd-profiles-and-covariance-matrix">Folder containing the stacked ESD profiles (and covariance matrix):</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#file-structure-of-the-stacked-esd-profiles-and-covariance-matrix">File structure of the stacked ESD profiles (and covariance matrix):</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../halomodel/index.html">KiDS-GGL Halo Model</a></li>
@@ -161,7 +168,102 @@
             
   <div class="section" id="output-data-file-structure">
 <h1>Output data file structure<a class="headerlink" href="#output-data-file-structure" title="Permalink to this headline">¶</a></h1>
-<p>TBD</p>
+<p>The output of the ESD production will always be written to the folder which you specified using the <code class="docutils literal notranslate"><span class="pre">ESD_output_folder</span></code> line in your config file. For example: <code class="docutils literal notranslate"><span class="pre">/data/users/brouwer/Lensing_results/</span></code>.</p>
+<dl class="simple">
+<dt>Within this folder, you will find:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>Always</dt><dd><ul>
+<li><p>Text files containing stacked ESD profiles.</p></li>
+<li><p>Text files containing the lens IDs of the stacked lenses.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>In the case of <code class="docutils literal notranslate"><span class="pre">shearcovariance</span></code> or <code class="docutils literal notranslate"><span class="pre">shearbootstrap</span></code>:</dt><dd><ul>
+<li><p>A text file containing the full covariance matrix (in the case of shearcovariance and shearbootstrap).</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>In the case of <code class="docutils literal notranslate"><span class="pre">shearcatalog</span></code> or <code class="docutils literal notranslate"><span class="pre">shearbootstrap</span></code>:</dt><dd><ul>
+<li><p>A fits catalogue containing the unstacked individual shear profiles of all lenses, which can be stacked using the <code class="docutils literal notranslate"><span class="pre">shearcatalog</span></code> or <code class="docutils literal notranslate"><span class="pre">shearbootstrap</span></code> modes.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<div class="section" id="folder-containing-the-stacked-esd-profiles-and-covariance-matrix">
+<h2>Folder containing the stacked ESD profiles (and covariance matrix):<a class="headerlink" href="#folder-containing-the-stacked-esd-profiles-and-covariance-matrix" title="Permalink to this headline">¶</a></h2>
+<p>You will find the text files with the stacked ESD profiles (and covariance matrix) within your <code class="docutils literal notranslate"><span class="pre">ESD_output_folder</span></code>. This folder contains a sequence of sub-folders which are named according to the configuration of your ESD profile. These subfolders are names as follows:</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt><em>Lens binning</em>:</dt><dd><p>The bin name followed by the values of the bin edges. If the lenses were not binned, this folder is called <code class="docutils literal notranslate"><span class="pre">No_bins</span></code>. Example: <code class="docutils literal notranslate"><span class="pre">logmstar_8p5_10p3_10p6_10p8_11p0</span></code>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><em>Lens selection and weights</em>:</dt><dd><p>The lens selection parameters followed by the corresponding limit values. If the lens weights were applied, this folder name ends with <cite>lw</cite> followed by the lens weight parameter. Example: <code class="docutils literal notranslate"><span class="pre">dist0p1perc_3_inf-Z_0_0p5</span></code>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><em>Source selection and cosmology</em>:</dt><dd><p>The specified limits on the KiDS sources, followed by the selected cosmological parameters. Example: <code class="docutils literal notranslate"><span class="pre">ZB_0p1_1p2-Om_0p2793-Ol_0p7207-Ok_0-h_0p7</span></code>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><em>Radial binning</em>:</dt><dd><p>The specified radial bin values (in this case: Nbins, min, max) followed by the selected unit. Example: <code class="docutils literal notranslate"><span class="pre">Rbins15_0p03_3_Mpc</span></code>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><em>Purpose</em>:</dt><dd><p>The pipeline mode which was used to create the ESD profiles. Example: <code class="docutils literal notranslate"><span class="pre">shearcatalogue</span></code>, <code class="docutils literal notranslate"><span class="pre">shearcovariance</span></code> or <code class="docutils literal notranslate"><span class="pre">shearbootstrap</span></code>.</p>
+</dd>
+</dl>
+</li>
+</ol>
+<ul class="simple">
+<li><dl class="simple">
+<dt>Within this folder, you will find text files with the following names:</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;purpose&gt;_bin_[n]_&lt;blind&gt;.txt</span></code>: contain the stacked ESD profile for lens bin [n], created using the given mode and blind.  Example: <code class="docutils literal notranslate"><span class="pre">shearcovariance_bin_1_A.txt</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;purpose&gt;_bin_[n]_&lt;blind&gt;_lensIDs.txt</span></code>: contain IDs of all stacked lenses in bin [n]. Example:<code class="docutils literal notranslate"><span class="pre">shearcovariance_bin_1_lensIDs.txt</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;purpose&gt;_matrix_&lt;blind&gt;.txt</span></code>: contains the full uber-covariance matrix between all radial and lens bins (in the case of <code class="docutils literal notranslate"><span class="pre">shearcovariance</span></code> or <code class="docutils literal notranslate"><span class="pre">shearbootstrap</span></code>). Example: <code class="docutils literal notranslate"><span class="pre">shearcovariance_matrix_A.txt</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Example of the full path to ESD file: <code class="docutils literal notranslate"><span class="pre">/data/users/brouwer/Lensing_results/logmstar_8p5_10p3_10p6_10p8_11p0/dist0p1perc_3_inf-Z_0_0p5/ZB_0p1_1p2-Om_0p2793-Ol_0p7207-Ok_0-h_0p7/Rbins15_0p03_3_Mpc/shearcovariance/shearcovariance_bin_1_A.txt</span></code></p></li>
+</ul>
+</div>
+<div class="section" id="file-structure-of-the-stacked-esd-profiles-and-covariance-matrix">
+<h2>File structure of the stacked ESD profiles (and covariance matrix):<a class="headerlink" href="#file-structure-of-the-stacked-esd-profiles-and-covariance-matrix" title="Permalink to this headline">¶</a></h2>
+<p>The text file containing the ESD profiles contains nine columns with the following data:</p>
+<ol class="arabic simple">
+<li><p>Radius(&lt;Runit&gt;)</p></li>
+<li><p>ESD_t(h70*M_sun/pc^2)</p></li>
+<li><p>ESD_x(h70*M_sun/pc^2)</p></li>
+<li><p>error(h70*M_sun/pc^2)^2</p></li>
+<li><p>bias(1+K)</p></li>
+<li><p>variance(e_s)</p></li>
+<li><p>wk2</p></li>
+<li><p>w2k2</p></li>
+<li><p>Nsources</p></li>
+</ol>
+<p>The text file containing the covariance matrix contains seven columns with the following data:</p>
+<ol class="arabic simple">
+<li><p>logmstar_GL_min[m]</p></li>
+<li><p>logmstar_GL_min[n]</p></li>
+<li><p>Radius[i](kpc/h70)</p></li>
+<li><p>Radius[j](kpc/h70)</p></li>
+<li><p>covariance(h70*M_sun/pc^2)^2</p></li>
+<li><p>correlation</p></li>
+<li><p>bias(1+K[m,i])(1+K[n,j])</p></li>
+</ol>
+</div>
 </div>
 
 
@@ -175,7 +277,7 @@
         <a href="../halomodel/index.html" class="btn btn-neutral float-right" title="KiDS-GGL Halo Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="configuration.html" class="btn btn-neutral" title="The ESD Production Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="configuration.html" class="btn btn-neutral float-left" title="The ESD Production Configuration File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -201,36 +303,16 @@
   
 
 
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'2.0.0',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

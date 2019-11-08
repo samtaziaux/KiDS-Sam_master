@@ -27,13 +27,22 @@ _default_values = {
     'logR_bins': 20,
     'logR_min': -1.3,
     'logR_max': 1.,
+    # these are used in the unit conversion when loading the data
+    'R_unit': 'Mpc',
+    'esd_unit': 'Msun/pc^2',
+    'cov_unit': 'Msun^2/pc^4',
     }
 
 _necessary_entries = {
     'delta': 'overdensity for mass definition (typically 200 or 500)',
     'delta_ref': 'background density reference: {"mean","crit"}',
     'distances': 'whether to use "proper" or "comoving" distances',
-    'return': 'which quantity should the halo model return'
+    'return': 'which quantity should the halo model return',
+    'R_unit': 'units of the radial bins',
+    'esd_unit': 'units of the lensing observable (e.g., ESD).' \
+        ' Ignored if the lensing observable is kappa.',
+    'cov_unit': 'units of the lensing covariance.' \
+        ' Ignored if the lensing observable is kappa.',
     }
 
 _valid_entries = {
@@ -53,7 +62,10 @@ _valid_entries = {
     #'return': ('esd', 'kappa', 'power', 'sigma', 'xi')
     # will implement others in the future, require handling different
     # x-values
-    'return': ('esd', 'kappa', 'sigma')
+    'return': ('esd', 'kappa', 'sigma'),
+    'R_unit': str,
+    'esd_unit': str,
+    'cov_unit': str,
     }
 
 

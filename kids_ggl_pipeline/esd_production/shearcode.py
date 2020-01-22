@@ -209,6 +209,7 @@ def run_esd(config_file):
 
     print('\n \n \n \n \n')
     print('Running KiDS-GGL pipeline - signal extraction')
+    print('This is the installed version')
     #print 'Running:', purpose
     print()
 

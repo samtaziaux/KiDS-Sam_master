@@ -742,11 +742,12 @@ def run_kidscoord_mocks(path_kidscats, cat_version):
         %(srcRAlims[0], srcRAlims[1], srcDEClims[0], srcDEClims[1]))
         
         # Divide the mock field into 1 deg2 tiles
-        tile = np.arange(Ntiles_RA*Ntiles_DEC)
+        
         for i in range(Ntiles_RA):
             for j in range(Ntiles_DEC):
-                kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*Ntiles_RA+j])] \
-                 = [srcRAlims[0]+i+0.5, srcDEClims[0]+j+0.5, path_kidscats.split('/', -1)[-1]+'-'+str(tile[i*Ntiles_RA+j])]
+                
+                kidscoord[path_kidscats.split('/', -1)[-1]+'-'+str(i*Ntiles_DEC+j)] \
+                 = [srcRAlims[0]+i+0.5, srcDEClims[0]+j+0.5, path_kidscats.split('/', -1)[-1]+'-'+str(i*Ntiles_DEC+j)]
         
         #kidscoord['mock'] = [10.0, 10.0, 0] # [RA, DEC, tile name]
         
@@ -1280,6 +1281,7 @@ def import_kids_mocks(path_kidscats, kidscatname, kidscat_end, \
             cond = (srcRAlims[0]+i < srcRA) & (srcRA < srcRAlims[0]+i+1) & (srcDEClims[0]+j < srcDEC) & (srcDEC < srcDEClims[0]+j+1)
             tile[cond] = path_kidscats.split('/', -1)[-1]+'-'+str(i*Ntiles_RA + j)
     
+            #print(i, j, sum(cond)) ???
 
     srcm = np.zeros(srcNr.size, dtype=np.float64) # The multiplicative bias m
 
@@ -1760,12 +1762,15 @@ def write_catalog(filename, galIDlist, Rbins, Rcenters, nRbins, Rconst,
 
         # This need to be figured out, it is causing pipeline to stall
         # if there is an empty lens list passed.
+        #print(galIDlist)
+        
         if isinstance(galIDlist[0], six.string_types):
             fmt = '50A'
         elif isinstance(galIDlist[0], int):
             fmt = 'J'
         else:
             fmt = 'E'
+
         fitscols.append(
             pyfits.Column(name='ID', format=fmt, array=galIDlist))
 

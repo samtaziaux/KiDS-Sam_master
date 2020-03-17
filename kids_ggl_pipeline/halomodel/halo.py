@@ -236,7 +236,7 @@ def model(theta, R, calculate_covariance=False):
         pop_s = np.zeros(pop_c.shape)
 
     pop_g = pop_c + pop_s
-
+    
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal = hod.nbar(dndm, pop_g, mass_range)
@@ -459,7 +459,7 @@ def model(theta, R, calculate_covariance=False):
              #for xi2_i, rho_i in zip(xi2, rho_bg)])
             [sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
              for xi2_i, rho_i in zip(xi2, rho_bg)])
-
+    
     #print('surf_dens2 in {0:.2e} s'.format(time()-ti))
     #if setup['return'] == 'kappa':
         #print('sigma_crit =', sigma_crit(cosmo_model, z, zs).T)
@@ -502,11 +502,11 @@ def model(theta, R, calculate_covariance=False):
             if setup['return'] == 'kappa' else nz
         zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
         #print('zeff =', zeff)
-
+        
     # in Msun/pc^2
     if not setup['return'] == 'kappa':
         surf_dens2 /= 1e12
-
+    
     #print('surf_dens2 =', surf_dens2.shape)
     # fill/interpolate nans
     surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan

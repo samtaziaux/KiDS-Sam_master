@@ -121,7 +121,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
             """
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 90: # If it is too high...
-                print 'Waiting: More memory required'
+                print('Waiting: More memory required')
                 time.sleep(30) # wait before continuing the calculation
             """
             kidscatN = kidscatN+1

@@ -122,6 +122,9 @@ def model(theta, R, calculate_covariance=False):
         s_concentration, s_mor, s_scatter = theta
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
+    
+    # PASS THROUGH THE beta AND OTHER QUANTITIES NOT PART OF THE HOD OR OTHER FUNCTIONS!
+    
     if ingredients['nzlens']:
         nz = cosmo[9].T
         size_cosmo = 10

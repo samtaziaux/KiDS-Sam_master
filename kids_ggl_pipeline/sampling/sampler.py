@@ -64,7 +64,7 @@ def run(hm_options, options, args):
     Ndatafiles = len(options['data'][0])
     assert Ndatafiles > 0, 'No data files found'
     # Rrange, angles are used in nfw_stack only
-    R, esd, cov, Rrange, angles = io.load_data(options)
+    R, esd, cov, Rrange, angles = io.load_data(options, setup)
     #val1 = np.append(val1, [Rrange, angles])
     cov, icov, likenorm, esd_err, cov2d = cov
     # utility variables

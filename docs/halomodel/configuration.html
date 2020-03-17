@@ -17,34 +17,37 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Sampling the Halo Model" href="sampler.html" />
     <link rel="prev" title="Halo Model Formalism" href="formalism.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -315,11 +318,10 @@ Uitert et al., through the equation</p>
 <div class="math notranslate nohighlight">
 \[\log[\phi_s(M_\mathrm{h})] = \sum_{i=0}^{n} b_i\,\left(\log M_\mathrm{13}\right)^i\]</div>
 <p>where <span class="math notranslate nohighlight">\(n=2\)</span> in the paper.</p>
-<dl class="docutils">
-<dt><strong>Notes</strong></dt>
-<dd><ul class="first last simple">
-<li>Joint parameters need not be fixed. You may use any prior for each of the joint parameter separately, even e.g., fixing some but not others.</li>
-<li>Even if you decide to use only one of the joint parameters (e.g., only <span class="math notranslate nohighlight">\(b_0\)</span> above), <strong>you must still give it the join label</strong>. This will allow <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to interpret it as an array rather than a scalar (the <code class="docutils literal notranslate"><span class="pre">array</span></code> prior can only be used if the variable is fixed).</li>
+<dl class="simple">
+<dt><strong>Notes</strong></dt><dd><ul class="simple">
+<li><p>Joint parameters need not be fixed. You may use any prior for each of the joint parameter separately, even e.g., fixing some but not others.</p></li>
+<li><p>Even if you decide to use only one of the joint parameters (e.g., only <span class="math notranslate nohighlight">\(b_0\)</span> above), <strong>you must still give it the join label</strong>. This will allow <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> to interpret it as an array rather than a scalar (the <code class="docutils literal notranslate"><span class="pre">array</span></code> prior can only be used if the variable is fixed).</p></li>
 </ul>
 </dd>
 </dl>
@@ -540,12 +542,13 @@ pipeline will stop running. The autocorrelation times are stored in the header f
 <div class="section" id="future-improvements">
 <h2>Future improvements<a class="headerlink" href="#future-improvements" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li>Custom relations should be written in a user-supplied file rather than in the pipeline source code.</li>
-<li>Adding a <code class="docutils literal notranslate"><span class="pre">module_path</span></code> optional entry to each section would easily allow custom files: the pipeline could simply add that path to <code class="docutils literal notranslate"><span class="pre">sys.path</span></code> and import from there.<ul>
-<li>There is the pickling problem however. Need to check if the above would allow for multi-thread runs.</li>
+<li><p>Custom relations should be written in a user-supplied file rather than in the pipeline source code.</p></li>
+<li><p>Adding a <code class="docutils literal notranslate"><span class="pre">module_path</span></code> optional entry to each section would easily allow custom files: the pipeline could simply add that path to <code class="docutils literal notranslate"><span class="pre">sys.path</span></code> and import from there.</p>
+<ul>
+<li><p>There is the pickling problem however. Need to check if the above would allow for multi-thread runs.</p></li>
 </ul>
 </li>
-<li>Might want to add a <code class="docutils literal notranslate"><span class="pre">model</span></code> section proper, in case the above is implemented but more generally for any future changes</li>
+<li><p>Might want to add a <code class="docutils literal notranslate"><span class="pre">model</span></code> section proper, in case the above is implemented but more generally for any future changes</p></li>
 </ul>
 </div>
 </div>
@@ -561,7 +564,7 @@ pipeline will stop running. The autocorrelation times are stored in the header f
         <a href="sampler.html" class="btn btn-neutral float-right" title="Sampling the Halo Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="formalism.html" class="btn btn-neutral" title="Halo Model Formalism" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="formalism.html" class="btn btn-neutral float-left" title="Halo Model Formalism" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -587,36 +590,16 @@ pipeline will stop running. The autocorrelation times are stored in the header f
   
 
 
-  
-
-    
-    
-      <script type="text/javascript">
-          var DOCUMENTATION_OPTIONS = {
-              URL_ROOT:'../',
-              VERSION:'2.0.0',
-              LANGUAGE:'None',
-              COLLAPSE_INDEX:false,
-              FILE_SUFFIX:'.html',
-              HAS_SOURCE:  true,
-              SOURCELINK_SUFFIX: '.txt'
-          };
-      </script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

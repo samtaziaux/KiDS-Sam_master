@@ -5,6 +5,7 @@ from __future__ import (absolute_import, division, print_function,
 from astropy.io import ascii, fits
 from astropy.io.fits import BinTableHDU, Column
 from astropy.table import Table
+from astropy.units import Quantity
 from glob import glob
 from itertools import count
 import numpy as np
@@ -18,6 +19,7 @@ if sys.version_info[0] == 2:
     range = xrange
 
 # local
+from .configuration.configsetup import _default_values
 # this shouldn't happen!
 from ..sampling import sampling_utils
 
@@ -144,7 +146,7 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     return cov, icov, likenorm, esd_err, cov2d
 
 
-def load_data(options):
+def load_data(options, setup):
     # need to run this without exclude to throw out invalid values in it
     R, esd = load_datapoints(*options['data'])
     if options['exclude'] is not None:
@@ -158,6 +160,17 @@ def load_data(options):
     cov = load_covariance(
           options['covariance'][0], options['covariance'][1],
           Nobsbins, Nrbins, options['exclude'])
+    # convert units if necessary
+    if setup['return'] in ('esd', 'sigma'):
+        if setup['R_unit'] != _default_values['R_unit']:
+            R = Quantity(R, unit=setup['R_unit'])
+            R = R.to(_default_values['R_unit']).value
+        if setup['esd_unit'] != _default_values['esd_unit']:
+            esd = Quantity(esd, unit=setup['esd_unit'])
+            esd = esd.to(_default_values['esd_unit']).value
+        if setup['cov_unit'] != _default_values['cov_unit']:
+            cov = Quantity(cov, unit=setup['cov_unit'])
+            cov = cov.to(_default_values['cov_unit']).value
     # needed for offset central profile
     # only used in nfw_stack, not in the halo model proper
     R, Rrange = sampling_utils.setup_integrand(

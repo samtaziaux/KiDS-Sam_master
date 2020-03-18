@@ -123,7 +123,7 @@ def model(theta, R, calculate_covariance=False):
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
     
-    # PASS THROUGH THE beta AND OTHER QUANTITIES NOT PART OF THE HOD OR OTHER FUNCTIONS!
+    output = []
     
     if ingredients['nzlens']:
         nz = cosmo[9].T
@@ -337,7 +337,6 @@ def model(theta, R, calculate_covariance=False):
             meff = np.sum(nz*meff, axis=0) / intnorm
     
     
-
     # Galaxy - galaxy spectra (for clustering)
     if ingredients['gg']:
         if ingredients['twohalo']:
@@ -374,30 +373,55 @@ def model(theta, R, calculate_covariance=False):
         Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
                     
                             
-    
     # Matter - matter spectra
     if ingredients['mm']:
         Pmm_1h = F_k1 * MM_analy(dndm, uk_c, rho_bg, mass_range)
                             
         Pmm_k = Pmm_1h + array([hmf_i.power for hmf_i in hmf])
-                    
+                
+                
+    # Outputs
     
     if ingredients['gm']:
-        # not yet allowed
-        if setup['return'] == 'power':
-            # note this doesn't include the point mass! also, we probably
-            # need to return k
-            if integrate_zlens:
-                Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
-            return [Pgm_k, meff]
+        # note this doesn't include the point mass! also, we probably
+        # need to return k
+        if integrate_zlens:
+            Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
+        #return [Pgm_k, meff]
+        output.append(Pgm_k)
+    if ingredients['gg']:
+        #return [Pgg_k, meff]
+        output.append(Pgg_k)
+    if ingredients['mm']:
+        #return [Pmm_k, meff]
+        output.append(Pmm_k)
+    if setup['return'] == 'power':
+        output.append(meff)
+        return output
+    elif setup['return'] == 'all':
+        pass
+    else:
+        output = []
+           
+           
+    if ingredients['gm']:
         if integrate_zlens:
             P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
                     for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
         else:
             P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                   for Pg_k_i in Pgm_k]
+                    for Pg_k_i in Pgm_k]
+                   
+    if ingredients['gg']:
+        P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
+                    for Pgg_k_i in _izip(Pgg_k)]
+                    
+    if ingredients['mm']:
+        P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+                    for Pmm_k_i in _izip(Pmm_k)]
     
-        # correlation functions
+    # correlation functions
+    if ingredients['gm']:
         if integrate_zlens:
             xi2 = np.array(
                 [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
@@ -410,21 +434,47 @@ def model(theta, R, calculate_covariance=False):
         if setup['return'] == 'xi':
             if integrate_zlens:
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
-            return [xi2, meff]
+            #return [xi2, meff]
+            output.append(xi2)
     
-        # projected surface density
-        # this is the slowest part of the model
-        #
-        # do we require a double loop here when weighting n(zlens)?
-        # perhaps should not integrate over zlens at the power spectrum level
-        # but only here -- or even just at the return stage!
-        #
-        # this avoids the interpolation necessary for better
-        # accuracy of the ESD when returning sigma or kappa
-        rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
-            else rvir_range_3d_i
+    if ingredients['gg']:
+        xi2_2 = np.array(
+            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+            for P_inter_i in P_inter_2])
+              
+        if setup['return'] == 'xi':
+            #return [xi2_2, meff]
+            output.append(xi2_2)
+        
+    if ingredients['mm']:
+        xi2_3 = np.array(
+            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+            for P_inter_i in P_inter_3])
+        if setup['return'] == 'xi':
+            #return [xi2_3, meff]
+            output.append(xi2_3)
+    if setup['return'] == 'xi':
+        output.append(meff)
+        return output
+    elif setup['return'] == 'all':
+        pass
+    else:
+        output = []
+        
 
+    # projected surface density
+    # this is the slowest part of the model
+    #
+    # do we require a double loop here when weighting n(zlens)?
+    # perhaps should not integrate over zlens at the power spectrum level
+    # but only here -- or even just at the return stage!
+    #
+    # this avoids the interpolation necessary for better
+    # accuracy of the ESD when returning sigma or kappa
+    rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
+        else rvir_range_3d_i
 
+    if ingredients['gm']:
         if integrate_zlens:
             surf_dens2 = array(
                 [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_sigma)
@@ -469,7 +519,6 @@ def model(theta, R, calculate_covariance=False):
         if not setup['return'] == 'kappa':
             surf_dens2 /= 1e12
     
-        #print('surf_dens2 =', surf_dens2.shape)
         # fill/interpolate nans
         surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
         for i in range(nbins):
@@ -479,100 +528,38 @@ def model(theta, R, calculate_covariance=False):
                 [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
                 for si in zip(surf_dens2)])
             surf_dens2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_r])
-            return [surf_dens2, meff]
-
-        # excess surface density
-        d_surf_dens2 = array(
-            [np.nan_to_num(
-                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
-            for surf_dens2_i in surf_dens2])
-    
-        out_esd_tot = array(
-            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
-            for d_surf_dens2_i in d_surf_dens2])
-    
-        out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
-        for i in range(nbins):
-            out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-    
-
-        # this should be moved to the power spectrum calculation
-        if ingredients['pointmass']:
-            # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
-            pointmass = c_pm[1]/(np.pi*1e12) * array(
-                [10**m_pm / (rvir_range_2d_i**2) for m_pm in c_pm[0]])
-            out_esd_tot_inter = out_esd_tot_inter + pointmass
-
-
-    if ingredients['gg']:
-        if setup['return'] == 'power':
-            return [Pgg_k, meff]
-        P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
-                    for Pgg_k_i in _izip(Pgg_k)]
-        
-        xi2_2 = np.array(
-            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-            for P_inter_i in P_inter_2])
-                    
-        if setup['return'] == 'xi':
-            return [xi2_2, meff]
-        
-        rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
-            else rvir_range_3d_i
+            #return [surf_dens2, meff]
+            output.append(surf_dens2)
+            return output
             
+    if ingredients['gg']:
         surf_dens2_2 = array([rho_i * wp(xi2_i, rvir_range_3d, rvir_sigma)
             for xi2_i, rho_i in zip(xi2_2, rho_bg)])
         
         if setup['distances'] == 'proper':
             surf_dens2_2 *= (1+zo)**2
         
+        # in Msun/pc^2
+        if not setup['return'] in ('kappa', 'wp'):
+            surf_dens2_2 /= 1e12
+        
         # fill/interpolate nans
         surf_dens2_2[(surf_dens2_2 <= 0) | (surf_dens2_2 >= 1e20)] = np.nan
         for i in range(nbins):
             surf_dens2_2[i] = fill_nan(surf_dens2_2[i])
-        if setup['return'] in ('kappa', 'sigma'):
+        if setup['return'] in ('kappa', 'sigma', 'wp'):
             surf_dens2_2_r = array(
                 [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
                 for si in zip(surf_dens2_2)])
             surf_dens2_2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_2_r])
+        if setup['return'] in ('kappa', 'sigma'):
+            output.appen(surf_dens2_2)
+        if setup['return'] == 'wp':
             wp = surf_dens2_2/rho_bg
-            return [wp, meff]
+            #return [wp, meff]
+            output.append(wp)
             
-        # in Msun/pc^2
-        if not setup['return'] == 'kappa':
-            surf_dens2_2 /= 1e12
-        
-        d_surf_dens2_2 = array(
-                [np.nan_to_num(
-                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
-                for surf_dens2_i in surf_dens2_2])
-
-        out_esd_tot_2 = array(
-            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
-             for d_surf_dens2_i in d_surf_dens2_2])
-        
-        out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i.size))
-        for i in range(nbins):
-            out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
-            
-                    
-        
-    
     if ingredients['mm']:
-        if setup['return'] == 'power':
-            return [Pmm_k, meff]
-        P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
-            for Pmm_k_i in _izip(Pmm_k)]
-
-        xi2_3 = np.array(
-            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-            for P_inter_i in P_inter_3])
-        if setup['return'] == 'xi':
-            return [xi2_3, meff]
-            
-        rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
-            else rvir_range_3d_i
-            
         surf_dens2_3 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
             for xi2_i, rho_i in zip(xi2_3, rho_bg)])
         
@@ -592,10 +579,59 @@ def model(theta, R, calculate_covariance=False):
                 [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
                 for si in zip(surf_dens2_3)])
             surf_dens2_3 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_3_r])
-            return [surf_dens2_3, meff]
-            
+            #return [surf_dens2_3, meff]
+            output.append(surf_dens2_3)
         
+    if setup['return'] in ('kappa', 'sigma', 'wp'):
+        output.append(meff)
+        return output
+    elif setup['return'] == 'all':
+        pass
+    else:
+        output = []
+
+    
+    if ingredients['gm']:
+        # excess surface density
+        d_surf_dens2 = array(
+            [np.nan_to_num(
+                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+            for surf_dens2_i in surf_dens2])
+    
+        out_esd_tot = array(
+            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+            for d_surf_dens2_i in d_surf_dens2])
+    
+        out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
+        for i in range(nbins):
+            out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
+    
+        # this should be moved to the power spectrum calculation
+        if ingredients['pointmass']:
+            # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
+            pointmass = c_pm[1]/(np.pi*1e12) * array(
+                [10**m_pm / (rvir_range_2d_i**2) for m_pm in c_pm[0]])
+            out_esd_tot_inter = out_esd_tot_inter + pointmass
+        output.append(out_esd_tot_inter)
+
+
+    if ingredients['gg']
+        d_surf_dens2_2 = array(
+                [np.nan_to_num(
+                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+                for surf_dens2_i in surf_dens2_2])
+
+        out_esd_tot_2 = array(
+            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+             for d_surf_dens2_i in d_surf_dens2_2])
         
+        out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i.size))
+        for i in range(nbins):
+            out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
+        output.append(out_esd_tot_inter_2)
+    
+    
+    if ingredients['mm']:
         d_surf_dens2_3 = array(
                 [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
@@ -608,10 +644,12 @@ def model(theta, R, calculate_covariance=False):
         out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i.size))
         for i in range(nbins):
             out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
-
-
+        output.append(out_esd_tot_inter_3)
+    
+    
+    output.append(meff)
     # Add other outputs as needed. Total ESD should always be first!
-    return [out_esd_tot_inter, meff]
+    return output#[out_esd_tot_inter, meff]
     
 
 if __name__ == '__main__':

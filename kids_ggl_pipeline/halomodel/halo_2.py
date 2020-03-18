@@ -118,7 +118,7 @@ def model(theta, R, calculate_covariance=False):
     hod_observable = observable.sampling
 
     cosmo, \
-        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, c_beta, \
         s_concentration, s_mor, s_scatter = theta
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
@@ -252,6 +252,7 @@ def model(theta, R, calculate_covariance=False):
     F_k1 = f_k(k_range_lin)
     #F_k1 = 1
     # Fourier Transform of the NFW profile
+    
     if ingredients['centrals']:
         uk_c = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin, concentration, rho_bg,
@@ -282,386 +283,336 @@ def model(theta, R, calculate_covariance=False):
             expand_dims(concentration, -1), uk_c.shape)
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
+    
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*k_range_lin.size).T
-    if ingredients['twohalo']:
-        """
-        # unused but not removing as we might want to use it later
-        #bias_out = bias.T[0] * array(
-            #[TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
+    if ingredients['gm']:
+        if ingredients['twohalo']:
+            """
+            # unused but not removing as we might want to use it later
+            #bias_out = bias.T[0] * array(
+                #[TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
                      #mass_range)[1]
-             #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-             #in zip(rvir_range_lin, hmf, ngal, pop_g)])
-        """
-        Pgm_2h = bias * array(
-            [TwoHalo(hmf_i, ngal_i, pop_g_i,
-                     rvir_range_lin_i, mass_range)[0]
-             for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-             in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
-                    expand_dims(pop_g, -2))])
-        #print('Pg_2h in {0:.2e} s'.format(time()-ti))
-    #elif integrate_zlens:
-        #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
-    else:
-        Pgm_2h = np.zeros((nbins,setup['lnk_bins']))
+                #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+                #in zip(rvir_range_lin, hmf, ngal, pop_g)])
+            """
+            Pgm_2h = bias * array(
+                [TwoHalo(hmf_i, ngal_i, pop_g_i,
+                        rvir_range_lin_i, mass_range)[0]
+                for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+                in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+                        expand_dims(pop_g, -2))])
+            #print('Pg_2h in {0:.2e} s'.format(time()-ti))
+        #elif integrate_zlens:
+            #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
+        else:
+            Pgm_2h = np.zeros((nbins,setup['lnk_bins']))
 
-    if not integrate_zlens:
-        rho_bg = rho_bg[...,0]
+        if not integrate_zlens:
+            rho_bg = rho_bg[...,0]
 
-    if ingredients['centrals']:
+        if ingredients['centrals']:
 
-        Pgm_c = F_k1 * GM_cen_analy(
-            dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
-    elif integrate_zlens:
-        Pgm_c = np.zeros((z.size,nbins,setup['lnk_bins']))
-    else:
-        Pgm_c = np.zeros((nbins,setup['lnk_bins']))
+            Pgm_c = F_k1 * GM_cen_analy(
+                dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
+        elif integrate_zlens:
+            Pgm_c = np.zeros((z.size,nbins,setup['lnk_bins']))
+        else:
+            Pgm_c = np.zeros((nbins,setup['lnk_bins']))
 
 
-    if ingredients['satellites']:
+        if ingredients['satellites']:
 
-        Pgm_s = F_k1 * GM_sat_analy(
-            dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
-    else:
-        Pgm_s = np.zeros(Pg_c.shape)
+            Pgm_s = F_k1 * GM_sat_analy(
+                dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
+        else:
+            Pgm_s = np.zeros(Pg_c.shape)
 
-    Pgm_k = Pgm_c + Pg_s + Pgm_2h
+        Pgm_k = Pgm_c + Pg_s + Pgm_2h
     
-    # finally integrate over (weight by, really) lens redshift
-    if integrate_zlens:
-        intnorm = np.sum(nz, axis=0)
-        meff = np.sum(nz*meff, axis=0) / intnorm
+        # finally integrate over (weight by, really) lens redshift
+        if integrate_zlens:
+            intnorm = np.sum(nz, axis=0)
+            meff = np.sum(nz*meff, axis=0) / intnorm
     
     
 
     # Galaxy - galaxy spectra (for clustering)
-    if ingredients['twohalo']:
-        Pgg_2h = bias * array(
-        [TwoHalo_gg(hmf_i, ngal_i, pop_g_i,
-                 rvir_range_lin_i, mass_range)[0]
-         for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-         in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
-                expand_dims(pop_g, -2))])
+    if ingredients['gg']:
+        if ingredients['twohalo']:
+            Pgg_2h = bias * array(
+            [TwoHalo_gg(hmf_i, ngal_i, pop_g_i,
+                    rvir_range_lin_i, mass_range)[0]
+            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+            in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+                    expand_dims(pop_g, -2))])
 
-    ncen = hod.nbar(dndm, pop_c, mass_range)
-    nsat = hod.nbar(dndm, pop_s, mass_range)
+        ncen = hod.nbar(dndm, pop_c, mass_range)
+        nsat = hod.nbar(dndm, pop_s, mass_range)
 
     
-    if ingredients['centrals']:
-        """
-        Pgg_c = F_k1 * GG_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
-        """
-        Pgg_c = np.zeros((nbins,setup['lnk_bins']))
-    else:
-        Pgg_c = np.zeros((nbins,setup['lnk_bins']))
+        if ingredients['centrals']:
+            """
+            Pgg_c = F_k1 * GG_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
+            """
+            Pgg_c = np.zeros((nbins,setup['lnk_bins']))
+        else:
+            Pgg_c = np.zeros((nbins,setup['lnk_bins']))
     
-    if ingredients['satellites']:
-        Pgg_s = F_k1 * GG_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
-    else:
-        Pgg_s = np.zeros(Pgg_c.shape)
+        if ingredients['satellites']:
+            beta = c_beta
+            Pgg_s = F_k1 * GG_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
+        else:
+            Pgg_s = np.zeros(Pgg_c.shape)
         
-    if ingredients['centrals'] and ingredients['satellites']:
-        Pgg_cs = F_k1 * GG_cen_sat_analy(dndm, uk_s, pop_c, pop_s, ngal, mass_range)
-    else:
-        Pgg_cs = np.zeros(Pgg_c.shape)
+        if ingredients['centrals'] and ingredients['satellites']:
+            Pgg_cs = F_k1 * GG_cen_sat_analy(dndm, uk_s, pop_c, pop_s, ngal, mass_range)
+        else:
+            Pgg_cs = np.zeros(Pgg_c.shape)
         
-    Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
+        Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
                     
                             
     
     # Matter - matter spectra
-    Pmm_1h = F_k1 * MM_analy(dndm, uk_c, rho_bg, mass_range)
+    if ingredients['mm']:
+        Pmm_1h = F_k1 * MM_analy(dndm, uk_c, rho_bg, mass_range)
                             
-    Pmm_k = Pmm_1h + array([hmf_i.power for hmf_i in hmf])
+        Pmm_k = Pmm_1h + array([hmf_i.power for hmf_i in hmf])
                     
     
-         
-    # not yet allowed
-    if setup['return'] == 'power':
-        # note this doesn't include the point mass! also, we probably
-        # need to return k
+    if ingredients['gm']:
+        # not yet allowed
+        if setup['return'] == 'power':
+            # note this doesn't include the point mass! also, we probably
+            # need to return k
+            if integrate_zlens:
+                Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
+            return [Pgm_k, meff]
         if integrate_zlens:
-            Pg_k = np.sum(z*Pg_k, axis=1) / intnorm
-        return [Pg_k, meff]
-    if integrate_zlens:
-        P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                    for logPg_ij in logPg_i] for logPg_i in np.log(Pg_k)]
-    else:
-        P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                   for Pg_k_i in Pg_k]
-    
-    ######## !!!!!!!!!! ########
-    # I am not completely sure how to either make the output of those parts optional,
-    # or how to deal with the output if we want to have all parts output here.
-    # Same goes for the correlation function that follow.
-    ######## !!!!!!!!!! ########
-    
-    P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
-                    for Pgg_k_i in _izip(Pgg_k)]
-    
-    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
-                    for Pmm_i in _izip(Pmm_k)]
-
-         
-    
-    # correlation functions
-    if integrate_zlens:
-        #to = time()
-        xi2 = np.array(
-            [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
-              for P_inter_ji in P_inter_j] for P_inter_j in P_inter])
-        #print('xi2 in {0:.2e}'.format(time()-to))
-    else:
-        #to = time()
-        xi2 = np.array(
-            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-             for P_inter_i in P_inter])
-        #print('xi2 in {0:.2e}'.format(time()-to))
-    # not yet allowed
-    if setup['return'] == 'xi':
-        if integrate_zlens:
-            xi2 = np.sum(z*xi2, axis=1) / intnorm
-        return [xi2, meff]
-    
-
-    xi2_2 = np.zeros((M_bin_min.size,rvir_range_3d.size))
-    for i in xrange(M_bin_min.size):
-        xi2_2[i] = power_to_corr_ogata(P_inter_2[i], rvir_range_3d)
-
-    xi2_3 = np.zeros((M_bin_min.size,rvir_range_3d.size))
-    for i in xrange(M_bin_min.size):
-        xi2_3[i] = power_to_corr_ogata(P_inter_3[i], rvir_range_3d)
-
-    # projected surface density
-    # this is the slowest part of the model
-    #
-    # do we require a double loop here when weighting n(zlens)?
-    # perhaps should not integrate over zlens at the power spectrum level
-    # but only here -- or even just at the return stage!
-    #
-    # this avoids the interpolation necessary for better
-    # accuracy of the ESD when returning sigma or kappa
-    rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
-        else rvir_range_3d_i
-
-
-    if integrate_zlens:
-        surf_dens2 = array(
-            [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_sigma)
-              for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
-        """
-        if setup['distances'] == 'proper':
-            surf_dens2 = trapz(
-                surf_dens2*expand_dims(nz*(1+z)**2, -1), z[:,0], axis=0)
+            P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
+                    for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
         else:
-            surf_dens2 = trapz(surf_dens2*expand_dims(nz, -1), z[:,0], axis=0)
-        surf_dens2 = surf_dens2 / trapz(nz, z, axis=0)[:,None]
-        """
-    else:
-        surf_dens2 = array(
-            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
-             for xi2_i, rho_i in zip(xi2, rho_bg)])
+            P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+                   for Pg_k_i in Pgm_k]
+    
+        # correlation functions
+        if integrate_zlens:
+            xi2 = np.array(
+                [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
+                for P_inter_ji in P_inter_j] for P_inter_j in P_inter])
+        else:
+            xi2 = np.array(
+                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                for P_inter_i in P_inter])
+        # not yet allowed
+        if setup['return'] == 'xi':
+            if integrate_zlens:
+                xi2 = np.sum(z*xi2, axis=1) / intnorm
+            return [xi2, meff]
+    
+        # projected surface density
+        # this is the slowest part of the model
+        #
+        # do we require a double loop here when weighting n(zlens)?
+        # perhaps should not integrate over zlens at the power spectrum level
+        # but only here -- or even just at the return stage!
+        #
+        # this avoids the interpolation necessary for better
+        # accuracy of the ESD when returning sigma or kappa
+        rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
+            else rvir_range_3d_i
+
+
+        if integrate_zlens:
+            surf_dens2 = array(
+                [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_sigma)
+                for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
+            """
+            if setup['distances'] == 'proper':
+                surf_dens2 = trapz(
+                    surf_dens2*expand_dims(nz*(1+z)**2, -1), z[:,0], axis=0)
+            else:
+                surf_dens2 = trapz(surf_dens2*expand_dims(nz, -1), z[:,0], axis=0)
+            surf_dens2 = surf_dens2 / trapz(nz, z, axis=0)[:,None]
+            """
+        else:
+            surf_dens2 = array(
+                [sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
+                for xi2_i, rho_i in zip(xi2, rho_bg)])
              
-    # units of Msun/pc^2
-    if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
-        pointmass = c_pm[1]/(2*np.pi) * array(
-            [10**m_pm / rvir_range_2d_i**2 for m_pm in c_pm[0]])
-        #print('pointmass =', pointmass.shape)
-        surf_dens2 = surf_dens2 + pointmass
+        # units of Msun/pc^2
+        if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
+            pointmass = c_pm[1]/(2*np.pi) * array(
+                [10**m_pm / rvir_range_2d_i**2 for m_pm in c_pm[0]])
+            surf_dens2 = surf_dens2 + pointmass
 
-    zo = expand_dims(z, -1) if integrate_zlens else z
-    if setup['distances'] == 'proper':
-        surf_dens2 *= (1+zo)**2
-    if setup['return'] == 'kappa':
-        surf_dens2 /= sigma_crit(cosmo_model, zo, zs)
-    if integrate_zlens:
-        # haven't checked the denominator below
-        norm = trapz(nz, z, axis=0)
-        #if setup['return'] == 'kappa':
-            #print('sigma_crit =', sigma_crit(cosmo_model, z, zs).shape)
-        surf_dens2 = \
-            trapz(surf_dens2 * expand_dims(nz, -1), z[:,0], axis=0) \
-            / norm[:,None]
-        zw = nz * sigma_crit(cosmo_model, z, zs) \
-            if setup['return'] == 'kappa' else nz
-        zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
-        #print('zeff =', zeff)
+        zo = expand_dims(z, -1) if integrate_zlens else z
+        if setup['distances'] == 'proper':
+            surf_dens2 *= (1+zo)**2
+        if setup['return'] == 'kappa':
+            surf_dens2 /= sigma_crit(cosmo_model, zo, zs)
+        if integrate_zlens:
+            # haven't checked the denominator below
+            norm = trapz(nz, z, axis=0)
+            #if setup['return'] == 'kappa':
+                #print('sigma_crit =', sigma_crit(cosmo_model, z, zs).shape)
+            surf_dens2 = \
+                trapz(surf_dens2 * expand_dims(nz, -1), z[:,0], axis=0) \
+                / norm[:,None]
+            zw = nz * sigma_crit(cosmo_model, z, zs) \
+                if setup['return'] == 'kappa' else nz
+            zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
         
-    # in Msun/pc^2
-    if not setup['return'] == 'kappa':
-        surf_dens2 /= 1e12
+        # in Msun/pc^2
+        if not setup['return'] == 'kappa':
+            surf_dens2 /= 1e12
     
-    #print('surf_dens2 =', surf_dens2.shape)
-    # fill/interpolate nans
-    surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
-    for i in range(nbins):
-        surf_dens2[i] = fill_nan(surf_dens2[i])
-    if setup['return'] in ('kappa', 'sigma'):
-        surf_dens2_r = array(
-            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
-             for si in zip(surf_dens2)])
-        surf_dens2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_r])
-        return [surf_dens2, meff]
+        #print('surf_dens2 =', surf_dens2.shape)
+        # fill/interpolate nans
+        surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
+        for i in range(nbins):
+            surf_dens2[i] = fill_nan(surf_dens2[i])
+        if setup['return'] in ('kappa', 'sigma'):
+            surf_dens2_r = array(
+                [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
+                for si in zip(surf_dens2)])
+            surf_dens2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_r])
+            return [surf_dens2, meff]
 
-    # excess surface density
-    d_surf_dens2 = array(
-        [np.nan_to_num(
-            d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
-         for surf_dens2_i in surf_dens2])
+        # excess surface density
+        d_surf_dens2 = array(
+            [np.nan_to_num(
+                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+            for surf_dens2_i in surf_dens2])
     
-    out_esd_tot = array(
-        [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
-         for d_surf_dens2_i in d_surf_dens2])
+        out_esd_tot = array(
+            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+            for d_surf_dens2_i in d_surf_dens2])
     
-    out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
-    for i in range(nbins):
-        out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
+        out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
+        for i in range(nbins):
+            out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
     
 
-    # this should be moved to the power spectrum calculation
-    if ingredients['pointmass']:
-        # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
-        pointmass = c_pm[1]/(np.pi*1e12) * array(
-            [10**m_pm / (rvir_range_2d_i**2) for m_pm in c_pm[0]])
-        out_esd_tot_inter = out_esd_tot_inter + pointmass
+        # this should be moved to the power spectrum calculation
+        if ingredients['pointmass']:
+            # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
+            pointmass = c_pm[1]/(np.pi*1e12) * array(
+                [10**m_pm / (rvir_range_2d_i**2) for m_pm in c_pm[0]])
+            out_esd_tot_inter = out_esd_tot_inter + pointmass
+
+
+    if ingredients['gg']:
+        if setup['return'] == 'power':
+            return [Pgg_k, meff]
+        P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
+                    for Pgg_k_i in _izip(Pgg_k)]
+        
+        xi2_2 = np.array(
+            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+            for P_inter_i in P_inter_2])
+                    
+        if setup['return'] == 'xi':
+            return [xi2_2, meff]
+        
+        rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
+            else rvir_range_3d_i
+            
+        surf_dens2_2 = array([rho_i * wp(xi2_i, rvir_range_3d, rvir_sigma)
+            for xi2_i, rho_i in zip(xi2_2, rho_bg)])
+        
+        if setup['distances'] == 'proper':
+            surf_dens2_2 *= (1+zo)**2
+        
+        # fill/interpolate nans
+        surf_dens2_2[(surf_dens2_2 <= 0) | (surf_dens2_2 >= 1e20)] = np.nan
+        for i in range(nbins):
+            surf_dens2_2[i] = fill_nan(surf_dens2_2[i])
+        if setup['return'] in ('kappa', 'sigma'):
+            surf_dens2_2_r = array(
+                [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
+                for si in zip(surf_dens2_2)])
+            surf_dens2_2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_2_r])
+            wp = surf_dens2_2/rho_bg
+            return [wp, meff]
+            
+        # in Msun/pc^2
+        if not setup['return'] == 'kappa':
+            surf_dens2_2 /= 1e12
+        
+        d_surf_dens2_2 = array(
+                [np.nan_to_num(
+                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+                for surf_dens2_i in surf_dens2_2])
+
+        out_esd_tot_2 = array(
+            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+             for d_surf_dens2_i in d_surf_dens2_2])
+        
+        out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i.size))
+        for i in range(nbins):
+            out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
+            
+                    
+        
+    
+    if ingredients['mm']:
+        if setup['return'] == 'power':
+            return [Pmm_k, meff]
+        P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+            for Pmm_k_i in _izip(Pmm_k)]
+
+        xi2_3 = np.array(
+            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+            for P_inter_i in P_inter_3])
+        if setup['return'] == 'xi':
+            return [xi2_3, meff]
+            
+        rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
+            else rvir_range_3d_i
+            
+        surf_dens2_3 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
+            for xi2_i, rho_i in zip(xi2_3, rho_bg)])
+        
+        if setup['distances'] == 'proper':
+            surf_dens2_3 *= (1+zo)**2
+        
+        # in Msun/pc^2
+        if not setup['return'] == 'kappa':
+            surf_dens2_3 /= 1e12
+        
+        # fill/interpolate nans
+        surf_dens2_3[(surf_dens2_3 <= 0) | (surf_dens2_3 >= 1e20)] = np.nan
+        for i in range(nbins):
+            surf_dens2_3[i] = fill_nan(surf_dens2_3[i])
+        if setup['return'] in ('kappa', 'sigma'):
+            surf_dens2_3_r = array(
+                [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
+                for si in zip(surf_dens2_3)])
+            surf_dens2_3 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_3_r])
+            return [surf_dens2_3, meff]
+            
+        
+        
+        d_surf_dens2_3 = array(
+                [np.nan_to_num(
+                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+                for surf_dens2_i in surf_dens2_3])
+
+        out_esd_tot_3 = array(
+            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+             for d_surf_dens2_i in d_surf_dens2_3])
+        
+        out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i.size))
+        for i in range(nbins):
+            out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
 
 
     # Add other outputs as needed. Total ESD should always be first!
     return [out_esd_tot_inter, meff]
     
-
-
-
-    # deal with this!
-
-        
-    sur_den2 = _array([sigma(xi2_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
-                        for xi2_i, rho_mean_i in _izip(xi2, rho_mean)])
-    for i in xrange(M_bin_min.size):
-        sur_den2[i][(sur_den2[i] <= 0.0) | (sur_den2[i] >= 1e20)] = np.nan
-        sur_den2[i] = fill_nan(sur_den2[i])
-
-    sur_den2_2 = _array([rho_mean_i * wp(xi2_2_i, rvir_range_3d, rvir_range_3d_i)
-                         for xi2_2_i, rho_mean_i in _izip(xi2_2, rho_mean)])
-
-    w_p = np.zeros((M_bin_min.size,rvir_range_3d_i.size))
-    for i in xrange(M_bin_min.size):
-        sur_den2_2[i][(sur_den2_2[i] <= 0.0) | (sur_den2_2[i] >= 1e20)] = np.nan
-        sur_den2_2[i] = fill_nan(sur_den2_2[i])
-        w_p[i] = sur_den2_2[i]/rho_mean[i]
-
-    #"""
-    sur_den2_3 = _array([sigma(xi2_3_i, rho_mean_i, rvir_range_3d, rvir_range_3d_i)
-                         for xi2_3_i, rho_mean_i in _izip(xi2_3, rho_mean)])
-    for i in xrange(M_bin_min.size):
-        sur_den2_3[i][(sur_den2_3[i] <= 0.0) | (sur_den2_3[i] >= 1e20)] = np.nan
-        sur_den2_3[i] = fill_nan(sur_den2_3[i])
-    #"""
-
-    """
-    # Excess surface density
-    """
-    #mass_range_dm = mass_range*baryons.f_dm(omegab, omegac)
-    #from dark_matter import av_delta_NFW
-    #NFW_d_sigma_av = (rho_dm/rho_mean) * \
-    #_array([av_delta_NFW(hmf.dndm, z, rho_mean, pop_c_i,
-    #mass_range,
-    #rvir_range_2d_i) / 1e12
-    #for pop_c_i in _izip(pop_c)])
-    
-    d_sur_den2 = _array([np.nan_to_num(d_sigma(sur_den2_i,
-                                               rvir_range_3d_i,
-                                               rvir_range_2d_i))
-                         for sur_den2_i in _izip(sur_den2)]) / 1e12
-    #"""
-    d_sur_den2_2 = _array([np.nan_to_num(d_sigma(sur_den2_2_i,
-                                                rvir_range_3d_i,
-                                                rvir_range_2d_i))
-                        for sur_den2_2_i in _izip(sur_den2_2)]) / 1e12
-                         
-    #"""
-    d_sur_den2_3 = _array([np.nan_to_num(d_sigma(sur_den2_3_i,
-                                                 rvir_range_3d_i,
-                                                 rvir_range_2d_i))
-                        for sur_den2_3_i in _izip(sur_den2_3)]) / 1e12
-    #"""
-
-                         
-                         
-                         
-    out_esd_tot = _array([UnivariateSpline(rvir_range_2d_i,
-                        np.nan_to_num(d_sur_den2_i), s=0)
-                        for d_sur_den2_i in _izip(d_sur_den2)])
-                         
-    out_esd_tot_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size)) 
-    
-        
-    #"""
-    out_esd_tot_2 = _array([UnivariateSpline(rvir_range_2d_i,
-                            np.nan_to_num(d_sur_den2_2_i), s=0)
-                            for d_sur_den2_2_i in _izip(d_sur_den2_2)])
-                         
-    out_esd_tot_inter_2 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-                         
-    #"""
-    out_esd_tot_3 = _array([UnivariateSpline(rvir_range_2d_i,
-                            np.nan_to_num(d_sur_den2_3_i), s=0)
-                            for d_sur_den2_3_i in _izip(d_sur_den2_3)])
-                         
-    out_esd_tot_inter_3 = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    #"""
-
-    for i in xrange(M_bin_min.size):
-        out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
-        out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
-
-    if include_baryons:
-        pointmass = _array([Mi/(np.pi*rvir_range_2d_i**2.0)/1e12 \
-                        for Mi in izip(effective_mass_bar)])
-    else:
-        pointmass = _array([(10.0**Mi[0])/(np.pi*rvir_range_2d_i**2.0)/1e12 \
-                        for Mi in izip(Mstar)])
-                        
-    out_esd_tot_inter = out_esd_tot_inter + pointmass
-    
-    print(sigma_c, A, M_1, gamma_1, gamma_2)
-    #print z, f, sigma_c, A, M_1, gamma_1, gamma_2, alpha_s, b_0, b_1, b_2
-    
-    # Add other outputs as needed. Total ESD should always be first!
-    #"""
-    sur_den2_2_out = _array([UnivariateSpline(rvir_range_3d_i,
-                            np.nan_to_num(wp_i), s=0)
-                             for wp_i in _izip(w_p)])
-        
-    sur_den2_2_out_inter = np.zeros((M_bin_min.size, rvir_range_2d_i.size))
-    for i in xrange(M_bin_min.size):
-        sur_den2_2_out_inter[i] = sur_den2_2_out[i](rvir_range_2d_i)
-    #"""
-    # This is for w_p and esd, separated in bins
-    """
-    out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
-    wp_out = np.vstack((out_esd_tot_inter, sur_den2_2_out_inter))
-    #wp_out = wp_out.flatten()
-    #print(wp_out)
-    """
-
-    # This is for w_p and esd, used in one bin
-    """
-    out_esd_tot_inter = _array([out_esd_tot_inter_i * (1.0+z_i)**2.0 for out_esd_tot_inter_i, z_i in izip(out_esd_tot_inter, z)])
-    if exclude_bins_esd != 0:
-        out_esd_tot_inter = np.delete(out_esd_tot_inter, exclude_bins_esd-1, axis=1)
-    if exclude_bins_wp != 0:
-        sur_den2_2_out_inter = np.delete(sur_den2_2_out_inter, exclude_bins_wp-1, axis=1)
-
-    wp_out = np.hstack((out_esd_tot_inter.flatten(), sur_den2_2_out_inter.flatten()))
-    #"""
-
-    return np.array([k_range, Pg_k, Pgg_k, Pmm, rvir_range_3d, xi2, xi2_2, xi2_3, rvir_range_3d_i, sur_den2, sur_den2_2_out_inter, sur_den2_3, rvir_range_2d_i, out_esd_tot_inter, out_esd_tot_inter_2, out_esd_tot_inter_3, effective_mass, rho_mean])
-    #return [wp_out]
-    #return [out_esd_tot_inter_2/out_esd_tot_inter]
-    #return [k_range, Pg_c, Pg_s, Pg_2h, Pg_k, Pgg_s, Pgg_cs, Pgg_2h, Pgg_k, Pmm_1h, [hmf[0].power, hmf[1].power, hmf[2].power], Pmm]
 
 if __name__ == '__main__':
     print(0)

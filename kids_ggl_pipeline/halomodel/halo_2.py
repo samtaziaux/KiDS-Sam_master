@@ -118,8 +118,8 @@ def model(theta, R, calculate_covariance=False):
     hod_observable = observable.sampling
 
     cosmo, \
-        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, c_beta, \
-        s_concentration, s_mor, s_scatter = theta
+        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        s_concentration, s_mor, s_scatter, s_beta = theta
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
     
@@ -360,7 +360,7 @@ def model(theta, R, calculate_covariance=False):
             Pgg_c = np.zeros((nbins,setup['lnk_bins']))
     
         if ingredients['satellites']:
-            beta = c_beta
+            beta = s_beta
             Pgg_s = F_k1 * GG_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
         else:
             Pgg_s = np.zeros(Pgg_c.shape)
@@ -622,6 +622,7 @@ def model(theta, R, calculate_covariance=False):
         for i in range(nbins):
             out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
         output.insert(0, out_esd_tot_inter_2)
+        
         
     if ingredients['gm']:
         d_surf_dens2 = array(

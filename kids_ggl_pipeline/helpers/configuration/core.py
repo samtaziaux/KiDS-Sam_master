@@ -180,7 +180,7 @@ class ConfigFile(object):
         if self._valid_modules is None:
             _modules = {
                 'nfw': nfw, 'nfw_stack': nfw_stack, 'halo': halo,
-                'halo_2': halo_2, 'halo_2_mc': halo_2_mc}
+                'halo_2': halo_2}
             try:
                 _modules['models'] = models
             except NameError:

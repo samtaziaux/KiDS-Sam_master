@@ -15,7 +15,7 @@ from ...sampling.priors import (
 
 
 def add_default_ingredients(ingredients):
-    options = ('centrals', 'pointmass', 'miscentring', 'satellites',
+    options = ('gm', 'gg', 'mm', 'centrals', 'pointmass', 'miscentring', 'satellites',
                'twohalo', 'nzlens')
     default = {key: False for key in options}
     for key in ingredients:

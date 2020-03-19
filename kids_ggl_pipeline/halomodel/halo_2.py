@@ -590,9 +590,40 @@ def model(theta, R, calculate_covariance=False):
     else:
         output = []
 
+
+    # excess surface density
+    if ingredients['mm']:
+        d_surf_dens2_3 = array(
+            [np.nan_to_num(
+            d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+            for surf_dens2_i in surf_dens2_3])
+
+        out_esd_tot_3 = array(
+            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+            for d_surf_dens2_i in d_surf_dens2_3])
     
+        out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i.size))
+        for i in range(nbins):
+            out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
+        output.insert(0, out_esd_tot_inter_3) # This insert makes sure that the ESD's are on the fist place.
+    
+
+    if ingredients['gg']
+        d_surf_dens2_2 = array(
+                [np.nan_to_num(
+                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
+                for surf_dens2_i in surf_dens2_2])
+
+        out_esd_tot_2 = array(
+            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
+             for d_surf_dens2_i in d_surf_dens2_2])
+        
+        out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i.size))
+        for i in range(nbins):
+            out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
+        output.insert(0, out_esd_tot_inter_2)
+        
     if ingredients['gm']:
-        # excess surface density
         d_surf_dens2 = array(
             [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
@@ -612,39 +643,7 @@ def model(theta, R, calculate_covariance=False):
             pointmass = c_pm[1]/(np.pi*1e12) * array(
                 [10**m_pm / (rvir_range_2d_i**2) for m_pm in c_pm[0]])
             out_esd_tot_inter = out_esd_tot_inter + pointmass
-        output.append(out_esd_tot_inter)
-
-
-    if ingredients['gg']
-        d_surf_dens2_2 = array(
-                [np.nan_to_num(
-                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
-                for surf_dens2_i in surf_dens2_2])
-
-        out_esd_tot_2 = array(
-            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
-             for d_surf_dens2_i in d_surf_dens2_2])
-        
-        out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i.size))
-        for i in range(nbins):
-            out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i)
-        output.append(out_esd_tot_inter_2)
-    
-    
-    if ingredients['mm']:
-        d_surf_dens2_3 = array(
-                [np.nan_to_num(
-                d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))
-                for surf_dens2_i in surf_dens2_3])
-
-        out_esd_tot_3 = array(
-            [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(d_surf_dens2_i), s=0)
-             for d_surf_dens2_i in d_surf_dens2_3])
-        
-        out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i.size))
-        for i in range(nbins):
-            out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i)
-        output.append(out_esd_tot_inter_3)
+        output.insert(0, out_esd_tot_inter)
     
     
     output.append(meff)

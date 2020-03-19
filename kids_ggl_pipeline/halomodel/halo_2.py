@@ -199,7 +199,14 @@ def model(theta, R, calculate_covariance=False):
     # assuming this means arcmin for now -- implement a way to check later!
     #if setup['distances'] == 'angular':
         #R = R * cosmo.
-    rvir_range_2d_i = R[0][1:]
+        
+    #rvir_range_2d_i = R[0][1:]
+    #if setup['return'] == 'xi':
+    #    rvir_range_3d_i = R[0][1:]
+    #if setup['return'] == 'power':
+    #    k_range_lin = R[0][1:] #this will not quite work, but hey, something along these lines
+    #etc...
+        
 
     # Calculating halo model
     

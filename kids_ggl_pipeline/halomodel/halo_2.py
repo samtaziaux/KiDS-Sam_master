@@ -239,6 +239,13 @@ def model(theta, R, calculate_covariance=False):
 
     pop_g = pop_c + pop_s
     
+    # TODO: add luminosity or mass function as an output!
+    #if setup['return'] == 'prob':
+    #output.append(prob_c, prob_s) ... something like this + total
+    #if setup['return'] == 'hod':
+    #output.append(pop_c, pop_s, pop_g)
+    # What to return when prob is not evaluated? Zeros, skip?
+    
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal = hod.nbar(dndm, pop_g, mass_range)

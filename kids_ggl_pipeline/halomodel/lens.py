@@ -305,7 +305,8 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
 
 def sigma_crit(cosmo, zl, zs):
     """Critical surface density in Msun/pc^2"""
-    beta = cosmo.angular_diameter_distance_z1z2(zl, zs) \
+    # To be consistent in halo model, this needs to be in comoving, thus (1+zl)^2
+    beta = (1+zl)**2.0 * cosmo.angular_diameter_distance_z1z2(zl, zs) \
         * cosmo.angular_diameter_distance(zl) \
         / cosmo.angular_diameter_distance(zs)
     # the first factor is c^2/(4*pi*G) in Msun/Mpc

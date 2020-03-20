@@ -192,20 +192,24 @@ def model(theta, R, calculate_covariance=False):
         mass_range, rho_bg, setup['delta'])
     rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
     # these are not very informative names but the "i" stands for
-    # integrand
+    # interpolated
     rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
     #rvir_range_3d_i = logspace(-4, 2, 60, endpoint=True)
     # integrate over redshift later on
     # assuming this means arcmin for now -- implement a way to check later!
     #if setup['distances'] == 'angular':
         #R = R * cosmo.
-        
-    #rvir_range_2d_i = R[0][1:]
+    rvir_range_2d_i = R[0][1:]
+    
     #if setup['return'] == 'xi':
-    #    rvir_range_3d_i = R[0][1:]
+    #    rvir_range_3d = R[0][1:]
+    #if setup['return'] in ('kappa', 'sigma'):
+    #   rvir_range_3d_i = R[0][1:]
     #if setup['return'] == 'power':
     #    k_range_lin = R[0][1:] #this will not quite work, but hey, something along these lines
-    #etc...
+    #etc... The thing is, those values are somewhat optimal in the rvir_range_3d and
+    # rvir_range_3d_i. I think better method would be to interpolate the outputs
+    # before outputting to whatever R is. But that should not happen when dumping all out.
         
 
     # Calculating halo model
@@ -235,6 +239,7 @@ def model(theta, R, calculate_covariance=False):
             obs_is_log=observable.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
+        prob_c = np.zeros((nbins,hod_observable.size)) #?? Not clear if the shape still follows what was done before by me. Slightly confused...
 
     if ingredients['satellites']:
         pop_s, prob_s = hod.number(
@@ -243,15 +248,24 @@ def model(theta, R, calculate_covariance=False):
             obs_is_log=observable.is_log)
     else:
         pop_s = np.zeros(pop_c.shape)
+        prob_s = np.zeros(prob_c.shape)
 
     pop_g = pop_c + pop_s
+    prob_g = prob_c + prob_s
     
     # TODO: add luminosity or mass function as an output!
-    #if setup['return'] == 'prob':
-    #output.append(prob_c, prob_s) ... something like this + total
-    #if setup['return'] == 'hod':
-    #output.append(pop_c, pop_s, pop_g)
-    # What to return when prob is not evaluated? Zeros, skip?
+    # This needs a new integral to be performed, of prob over halo mass function!
+    # Add the relevant function to the hod/core.py
+    if setup['return'] in ('prob', 'all'):
+        output.append([prob_c, prob_s, prob_g])
+    if setup['return'] in ('hod', 'all'):
+        output.append([pop_c, pop_s, pop_g])
+    if setup['return'] in ('prob', 'hod'):
+        return output
+    elif setup['return'] == 'all':
+        output.append([hod_observable, mass_range]) #??
+    else:
+        output = []
     
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
@@ -413,7 +427,7 @@ def model(theta, R, calculate_covariance=False):
         output.append(meff)
         return output
     elif setup['return'] == 'all':
-        pass
+        output.append(k_range_lin)
     else:
         output = []
            
@@ -471,7 +485,7 @@ def model(theta, R, calculate_covariance=False):
         output.append(meff)
         return output
     elif setup['return'] == 'all':
-        pass
+        output.append(rvir_range_3d)
     else:
         output = []
         
@@ -600,7 +614,7 @@ def model(theta, R, calculate_covariance=False):
         output.append(meff)
         return output
     elif setup['return'] == 'all':
-        pass
+        output.append(rvir_range_3d_i)
     else:
         output = []
 
@@ -661,7 +675,7 @@ def model(theta, R, calculate_covariance=False):
         output.insert(0, out_esd_tot_inter)
     
     
-    output.append(meff)
+    output.append(meff) # Should output Sigma_crit as well
     # Add other outputs as needed. Total ESD should always be first!
     return output#[out_esd_tot_inter, meff]
     

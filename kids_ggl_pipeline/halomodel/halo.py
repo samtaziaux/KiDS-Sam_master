@@ -296,7 +296,7 @@ def model(theta, R, calculate_covariance=False):
              #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
              #in zip(rvir_range_lin, hmf, ngal, pop_g)])
         """
-        Pg_2h = bias * array(
+        Pgm_2h = bias * array(
             [TwoHalo(hmf_i, ngal_i, pop_g_i,
                      rvir_range_lin_i, mass_range)[0]
              for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
@@ -306,7 +306,7 @@ def model(theta, R, calculate_covariance=False):
     #elif integrate_zlens:
         #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
     else:
-        Pg_2h = np.zeros((nbins,setup['lnk_bins']))
+        Pgm_2h = np.zeros((nbins,setup['lnk_bins']))
         #if integrate_zlens:
             #Pg_2h = Pg_2h[:,None]
     #print('Pg_2h =', Pg_2h.shape)
@@ -316,29 +316,29 @@ def model(theta, R, calculate_covariance=False):
 
     if ingredients['centrals']:
         #ti = time()
-        Pg_c = F_k1 * GM_cen_analy(
+        Pgm_c = F_k1 * GM_cen_analy(
             dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
         #print('Pg_c in {0:.2e} s'.format(time()-ti))
     elif integrate_zlens:
-        Pg_c = np.zeros((z.size,nbins,setup['lnk_bins']))
+        Pgm_c = np.zeros((z.size,nbins,setup['lnk_bins']))
     else:
-        Pg_c = np.zeros((nbins,setup['lnk_bins']))
+        Pgm_c = np.zeros((nbins,setup['lnk_bins']))
     #else:
         #Pg_c = np.zeros(Pg_2h.shape)
     #print('Pg_c =', Pg_c.shape)
 
     if ingredients['satellites']:
         #ti = time()
-        Pg_s = F_k1 * GM_sat_analy(
+        Pgm_s = F_k1 * GM_sat_analy(
             dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
         #print('Pg_s in {0:.2e} s'.format(time()-ti))
     else:
-        Pg_s = np.zeros(Pg_c.shape)
+        Pgm_s = np.zeros(Pg_c.shape)
 
     #print('Pg_i =', Pg_c.shape, Pg_s.shape, Pg_2h.shape)
     #print('nan(Pg_i) =', np.isnan(Pg_c).sum(), np.isnan(Pg_s).sum(),
           #np.isnan(Pg_2h).sum())
-    Pg_k = Pg_c + Pg_s + Pg_2h
+    Pgm_k = Pgm_c + Pgm_s + Pgm_2h
     #print('Pg_k =', Pg_k.shape, '- nan:', np.isnan(Pg_k).sum())
 
     # finally integrate over (weight by, really) lens redshift
@@ -353,14 +353,19 @@ def model(theta, R, calculate_covariance=False):
         # note this doesn't include the point mass! also, we probably
         # need to return k
         if integrate_zlens:
-            Pg_k = np.sum(z*Pg_k, axis=1) / intnorm
-        return [Pg_k, meff]
-    if integrate_zlens:
-        P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                    for logPg_ij in logPg_i] for logPg_i in np.log(Pg_k)]
-    else:
+            Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
         P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                   for Pg_k_i in Pg_k]
+            for Pg_k_i in Pgm_k]
+    else:
+        if integrate_zlens:
+            P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
+                    for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
+        else:
+            P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+                   for Pg_k_i in Pgm_k]
+    if setup['return'] == 'power':
+        Pgm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter)]
+        return [Pgm_out, meff]
 
     """
     for i, Pk in enumerate(Pg_k):
@@ -399,7 +404,9 @@ def model(theta, R, calculate_covariance=False):
     if setup['return'] == 'xi':
         if integrate_zlens:
             xi2 = np.sum(z*xi2, axis=1) / intnorm
-        return [xi2, meff]
+        xi_out_i = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2)])
+        xi_out = np.array([x_i(rvir_range_2d_i) for x_i in xi_out_i])
+        return [xi_out, meff]
 
     debug = False
     if debug:

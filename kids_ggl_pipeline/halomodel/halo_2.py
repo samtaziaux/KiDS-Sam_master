@@ -409,13 +409,17 @@ def model(theta, R, calculate_covariance=False):
     if ingredients['gm']:
         # note this doesn't include the point mass! also, we probably
         # need to return k
-        if integrate_zlens:
-            Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
-        if integrate_zlens:
-            P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                    for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
-        else:
+        if setup['return'] == 'power':
+            if integrate_zlens:
+                Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
             P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+                for Pg_k_i in Pgm_k]
+        else:
+            if integrate_zlens:
+                P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
+                    for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
+            else:
+                P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                     for Pg_k_i in Pgm_k]
                    
     if ingredients['gg']:

@@ -262,7 +262,7 @@ def model(theta, R, calculate_covariance=False):
         uk_s = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin, concentration_sat, rho_bg,
             setup['delta'])
-        uk_s = uk_s/uk_s[:,0][:,None]
+        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
     elif integrate_zlens:
         uk_s = np.ones((nbins,z.size//nbins,mass_range.size,k_range_lin.size))
     else:
@@ -333,7 +333,7 @@ def model(theta, R, calculate_covariance=False):
             dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
         #print('Pg_s in {0:.2e} s'.format(time()-ti))
     else:
-        Pgm_s = np.zeros(Pg_c.shape)
+        Pgm_s = np.zeros(Pgm_c.shape)
 
     #print('Pg_i =', Pg_c.shape, Pg_s.shape, Pg_2h.shape)
     #print('nan(Pg_i) =', np.isnan(Pg_c).sum(), np.isnan(Pg_s).sum(),
@@ -364,7 +364,7 @@ def model(theta, R, calculate_covariance=False):
             P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                    for Pg_k_i in Pgm_k]
     if setup['return'] == 'power':
-        Pgm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter)]
+        Pgm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in P_inter]
         return [Pgm_out, meff]
 
     """

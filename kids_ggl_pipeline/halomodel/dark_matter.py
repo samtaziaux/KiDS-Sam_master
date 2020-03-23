@@ -305,11 +305,8 @@ def MM_analy(dndm, uk, rho_dm, Mh):
     norm = rho_dm
     if np.iterable(rho_dm):
         rho_dm = expand_dims(rho_dm, -1)
-    if len(population.shape) >= 3:
-        dndm = expand_dims(dndm, -2)
-        uk = expand_dims(uk, -3)
-    return trapz(Mh**2.0 * expand_dims(dndm, -1) * uk**2.0,
-             m_x, axis=1) / (rho_dm**2.0)
+    return trapz(expand_dims(Mh**2.0 * dndm, -1) * uk**2.0,
+             Mh, axis=1) / (rho_dm**2.0)
 
 
 def GM_cen_analy(dndm, uk, rho_dm, population, ngal, Mh):
@@ -457,11 +454,11 @@ def GG_sat_analy(dndm, uk_s, population_sat, ngal, beta, Mh):
         ngal = expand_dims(ngal, -1)
     if np.iterable(beta):
         beta = expand_dims(beta, -1)
-    if len(population.shape) >= 3:
+    if len(population_sat.shape) >= 3:
         dndm = expand_dims(dndm, -2)
         uk_s = expand_dims(uk_s, -3)
 
-    return trapz(beta * expand_dims(dndm*population_say**2.0, -1) * uk_s**2.0,
+    return trapz(beta * expand_dims(dndm*population_sat**2.0, -1) * uk_s**2.0,
                  Mh, axis=1) / (ngal**2.0)
 
 
@@ -498,7 +495,7 @@ def GG_cen_sat_analy(dndm, uk_s, population_cen, population_sat, ngal, Mh):
     """
     if np.iterable(ngal):
         ngal = expand_dims(ngal, -1)
-    if len(population.shape) >= 3:
+    if len(population_sat.shape) >= 3:
         dndm = expand_dims(dndm, -2)
         uk_s = expand_dims(uk_s, -3)
 

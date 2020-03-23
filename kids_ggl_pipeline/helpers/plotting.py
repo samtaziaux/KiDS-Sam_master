@@ -15,7 +15,8 @@ def axlabel(return_value):
               'kappa': r'\kappa',
               'power': r'\P(k)',
               'sigma': r'\Sigma',
-              'xi': r'\xi'}
+              'xi': r'\xi',
+              'wp': r'w_{p}'}
     return labels[return_value]
 
 

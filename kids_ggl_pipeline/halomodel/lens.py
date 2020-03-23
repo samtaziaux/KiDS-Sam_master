@@ -245,11 +245,14 @@ def d_sigma(sigma, r_i, r_x):
 
 def wp(corr, r_i, r_x):
     _log10 = log10
-    c = UnivariateSpline(_log10(r_i), _log10(1+corr), s=0, ext=0)
+    #c = UnivariateSpline(_log10(r_i), _log10(1+corr), s=0, ext=0)
+    #integ = lambda x, rxi: 10.0**c(_log10(rxi/x)) / (x**2 * (1-x**2)**0.5)
     
-    integ = lambda x, rxi: 10.0**c(_log10(rxi/x)) / (x**2 * (1-x**2)**0.5)
+    c = UnivariateSpline(log10(r_i), log10(1+corr), s=0, ext=0)
+    integ = lambda x, rxi: (10**c(log10(rxi/x))-1) / \
+                           (x*x * (1-x*x)**0.5)
+    
     s = np.array([quad(integ, 0, 1, args=(rxi,), full_output=1)[0] for rxi in r_x])
-        
     return 2.0 * s * r_x
 
 

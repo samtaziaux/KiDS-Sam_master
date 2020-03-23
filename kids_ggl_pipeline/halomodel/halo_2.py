@@ -229,7 +229,7 @@ def model(theta, R, calculate_covariance=False):
             obs_is_log=observable.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
-        prob_c = np.zeros((nbins,hod_observable.size)) #?? Not clear if the shape still follows what was done before by me. Slightly confused...
+        prob_c = np.zeros((nbins,hod_observable.shape[1],mass_range.size))
 
     if ingredients['satellites']:
         pop_s, prob_s = hod.number(
@@ -267,7 +267,7 @@ def model(theta, R, calculate_covariance=False):
         return output
     if setup['return'] == 'all':
         output.append(ngal)
-    else
+    else:
         output = []
     
     """Power spectra"""
@@ -290,7 +290,7 @@ def model(theta, R, calculate_covariance=False):
         uk_s = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin, concentration_sat, rho_bg,
             setup['delta'])
-        uk_s = uk_s/uk_s[:,0][:,None]
+        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
     elif integrate_zlens:
         uk_s = np.ones((nbins,z.size//nbins,mass_range.size,k_range_lin.size))
     else:
@@ -311,6 +311,10 @@ def model(theta, R, calculate_covariance=False):
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*k_range_lin.size).T
+    
+    if not integrate_zlens:
+        rho_bg = rho_bg[...,0]
+    
     if ingredients['gm']:
         if ingredients['twohalo']:
             """
@@ -333,9 +337,6 @@ def model(theta, R, calculate_covariance=False):
         else:
             Pgm_2h = np.zeros((nbins,setup['lnk_bins']))
 
-        if not integrate_zlens:
-            rho_bg = rho_bg[...,0]
-
         if ingredients['centrals']:
 
             Pgm_c = F_k1 * GM_cen_analy(
@@ -343,7 +344,7 @@ def model(theta, R, calculate_covariance=False):
         elif integrate_zlens:
             Pgm_c = np.zeros((z.size,nbins,setup['lnk_bins']))
         else:
-            Pgm_c = np.zeros((nbins,setup['lnk_bins']))
+            Pgm_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
 
 
         if ingredients['satellites']:
@@ -351,9 +352,9 @@ def model(theta, R, calculate_covariance=False):
             Pgm_s = F_k1 * GM_sat_analy(
                 dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
         else:
-            Pgm_s = np.zeros(Pg_c.shape)
+            Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
 
-        Pgm_k = Pgm_c + Pg_s + Pgm_2h
+        Pgm_k = Pgm_c + Pgm_s + Pgm_2h
     
         # finally integrate over (weight by, really) lens redshift
         if integrate_zlens:
@@ -363,46 +364,87 @@ def model(theta, R, calculate_covariance=False):
     
     # Galaxy - galaxy spectra (for clustering)
     if ingredients['gg']:
-        if ingredients['twohalo']:
+        if ingredients['twohalo']:
             Pgg_2h = bias * array(
             [TwoHalo_gg(hmf_i, ngal_i, pop_g_i,
                     rvir_range_lin_i, mass_range)[0]
             for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
             in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
-
+        else:
+            Pgg_2h = F_k1 * np.zeros((nbins,setup['lnk_bins']))
+            
         ncen = hod.nbar(dndm, pop_c, mass_range)
         nsat = hod.nbar(dndm, pop_s, mass_range)
 
     
-        if ingredients['centrals']:
+        if ingredients['centrals']:
             """
             Pgg_c = F_k1 * GG_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
             """
-            Pgg_c = np.zeros((nbins,setup['lnk_bins']))
+            Pgg_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
         else:
-            Pgg_c = np.zeros((nbins,setup['lnk_bins']))
+            Pgg_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
     
-        if ingredients['satellites']:
+        if ingredients['satellites']:
             beta = s_beta
             Pgg_s = F_k1 * GG_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
         else:
-            Pgg_s = np.zeros(Pgg_c.shape)
+            Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
         
-        if ingredients['centrals'] and ingredients['satellites']:
+        if ingredients['centrals'] and ingredients['satellites']:
             Pgg_cs = F_k1 * GG_cen_sat_analy(dndm, uk_s, pop_c, pop_s, ngal, mass_range)
         else:
-            Pgg_cs = np.zeros(Pgg_c.shape)
+            Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
         
         Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
                     
                             
     # Matter - matter spectra
-    if ingredients['mm']:
-        Pmm_1h = F_k1 * MM_analy(dndm, uk_c, rho_bg, mass_range)
+    if ingredients['mm']:
+        if ingredients['centrals']:
+            Pmm_1h = F_k1 * MM_analy(dndm, uk_c, rho_bg, mass_range)
+        else:
+            Pmm_1h = F_k1 * np.zeros((nbins,setup['lnk_bins']))
                             
         Pmm_k = Pmm_1h + array([hmf_i.power for hmf_i in hmf])
-                
+            
+    """
+    import matplotlib.pyplot as pl
+    pl.plot(k_range_lin, Pgm_c[0])
+    pl.plot(k_range_lin, Pgm_s[0])
+    pl.plot(k_range_lin, Pgm_2h[0])
+    pl.plot(k_range_lin, Pgm_k[0])
+    pl.plot(k_range_lin, Pgm_k[1])
+    pl.plot(k_range_lin, Pgm_k[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/power_gm.png')
+    pl.show()
+    pl.clf()
+    
+    pl.plot(k_range_lin, Pgg_c[0])
+    pl.plot(k_range_lin, Pgg_cs[0])
+    pl.plot(k_range_lin, Pgg_s[0])
+    pl.plot(k_range_lin, Pgg_2h[0])
+    pl.plot(k_range_lin, Pgg_k[0])
+    pl.plot(k_range_lin, Pgg_k[1])
+    pl.plot(k_range_lin, Pgg_k[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/power_gg.png')
+    pl.show()
+    pl.clf()
+    
+    pl.plot(k_range_lin, Pmm_k[0])
+    pl.plot(k_range_lin, Pmm_k[1])
+    pl.plot(k_range_lin, Pmm_k[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/power_mm.png')
+    pl.show()
+    pl.clf()
+    """
                 
     # Outputs
            
@@ -424,29 +466,29 @@ def model(theta, R, calculate_covariance=False):
                    
     if ingredients['gg']:
         P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
-                    for Pgg_k_i in _izip(Pgg_k)]
+                    for Pgg_k_i in Pgg_k]
                     
     if ingredients['mm']:
         P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
-                    for Pmm_k_i in _izip(Pmm_k)]
+                    for Pmm_k_i in Pmm_k]
     
     if ingredients['gm']:
         if setup['return'] == 'all':
             output.append(Pgm_k)
         if setup['return'] == 'power':
-            Pgm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter)]
+            Pgm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in P_inter]
             output.append(Pgm_out)
     if ingredients['gg']:
         if setup['return'] == 'all':
             output.append(Pgg_k)
         if setup['return'] == 'power':
-            Pgg_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter_2)]
+            Pgg_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in P_inter_2]
             output.append(Pgg_out)
     if ingredients['mm']:
         if setup['return'] == 'all':
             output.append(Pmm_k)
         if setup['return'] == 'power':
-            Pmm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter_3)]
+            Pmm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in P_inter_3]
             output.append(Pmm_out)
     if setup['return'] == 'power':
         output.append(meff)
@@ -506,7 +548,18 @@ def model(theta, R, calculate_covariance=False):
         output.append(rvir_range_3d)
     else:
         output = []
-        
+    
+    """
+    import matplotlib.pyplot as pl
+    pl.plot(rvir_range_3d, xi2_2[0])
+    pl.plot(rvir_range_3d, xi2_2[1])
+    pl.plot(rvir_range_3d, xi2_2[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/xi_gg.png')
+    pl.show()
+    pl.clf()
+    """
 
     # projected surface density
     # this is the slowest part of the model
@@ -571,8 +624,8 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2[i] = fill_nan(surf_dens2[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_r = array(
-                [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
-                for si in zip(surf_dens2)])
+                [UnivariateSpline(rvir_sigma, np.nan_to_num(si), s=0)
+                for si in surf_dens2])
             surf_dens2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_r])
             #return [surf_dens2, meff]
             output.append(surf_dens2)
@@ -580,7 +633,8 @@ def model(theta, R, calculate_covariance=False):
             output.append(surf_dens2)
             
     if ingredients['gg']:
-        surf_dens2_2 = array([rho_i * wp(xi2_i, rvir_range_3d, rvir_sigma)
+        surf_dens2_2 = array(
+            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
             for xi2_i, rho_i in zip(xi2_2, rho_bg)])
         
         if setup['distances'] == 'proper':
@@ -594,21 +648,35 @@ def model(theta, R, calculate_covariance=False):
         surf_dens2_2[(surf_dens2_2 <= 0) | (surf_dens2_2 >= 1e20)] = np.nan
         for i in range(nbins):
             surf_dens2_2[i] = fill_nan(surf_dens2_2[i])
-        if setup['return'] in ('kappa', 'sigma', 'wp'):
+        if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_2_r = array(
-                [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
-                for si in zip(surf_dens2_2)])
+                [UnivariateSpline(rvir_sigma, np.nan_to_num(si), s=0)
+                for si in surf_dens2_2])
             surf_dens2_2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_2_r])
         if setup['return'] in ('kappa', 'sigma'):
-            output.appen(surf_dens2_2)
+            output.append(surf_dens2_2)
         if setup['return'] == 'wp':
-            wp = surf_dens2_2/rho_bg
-            output.append(wp)
+            wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
+            wp_out_i = array([UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi), s=0)
+                        for wi in wp_out])
+            wp_out = np.array([wp_i(rvir_range_2d_i) for wp_i in wp_out_i])
+            output.append(wp_out)
         if setup['return'] == 'all':
-            wp = surf_dens2_2/rho_bg
-            output.append([surf_dens2_2, wp])
-        
-        
+            wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
+            output.append([surf_dens2_2, wp_out])
+    
+    """
+    print(wp_out)
+    pl.plot(rvir_range_2d_i, wp_out[0])
+    pl.plot(rvir_range_2d_i, wp_out[1])
+    pl.plot(rvir_range_2d_i, wp_out[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/sigma_gg.png')
+    pl.show()
+    pl.clf()
+    """
+    
     if ingredients['mm']:
         surf_dens2_3 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
             for xi2_i, rho_i in zip(xi2_3, rho_bg)])
@@ -626,8 +694,8 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2_3[i] = fill_nan(surf_dens2_3[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_3_r = array(
-                [UnivariateSpline(rvir_range_2d_i, np.nan_to_num(si), s=0)
-                for si in zip(surf_dens2_3)])
+                [UnivariateSpline(rvir_sigma, np.nan_to_num(si), s=0)
+                for si in surf_dens2_3])
             surf_dens2_3 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_3_r])
             #return [surf_dens2_3, meff]
             output.append(surf_dens2_3)
@@ -641,7 +709,7 @@ def model(theta, R, calculate_covariance=False):
         output.append(rvir_range_3d_i)
     else:
         output = []
-
+    
 
     # excess surface density
     if ingredients['mm']:
@@ -660,7 +728,7 @@ def model(theta, R, calculate_covariance=False):
         output.insert(0, out_esd_tot_inter_3) # This insert makes sure that the ESD's are on the fist place.
     
 
-    if ingredients['gg']
+    if ingredients['gg']:
         d_surf_dens2_2 = array(
                 [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, rvir_range_2d_i))

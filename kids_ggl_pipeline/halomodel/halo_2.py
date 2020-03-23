@@ -201,17 +201,7 @@ def model(theta, R, calculate_covariance=False):
         #R = R * cosmo.
     rvir_range_2d_i = R[0][1:]
     
-    #if setup['return'] == 'xi':
-    #    rvir_range_3d = R[0][1:]
-    #if setup['return'] in ('kappa', 'sigma'):
-    #   rvir_range_3d_i = R[0][1:]
-    #if setup['return'] == 'power':
-    #    k_range_lin = R[0][1:] #this will not quite work, but hey, something along these lines
-    #etc... The thing is, those values are somewhat optimal in the rvir_range_3d and
-    # rvir_range_3d_i. I think better method would be to interpolate the outputs
-    # before outputting to whatever R is. But that should not happen when dumping all out.
-        
-
+    
     # Calculating halo model
     
     """Calculating halo model"""
@@ -254,8 +244,6 @@ def model(theta, R, calculate_covariance=False):
     prob_g = prob_c + prob_s
     
     # TODO: add luminosity or mass function as an output!
-    # This needs a new integral to be performed, of prob over halo mass function!
-    # Add the relevant function to the hod/core.py
     if setup['return'] in ('prob', 'all'):
         output.append([prob_c, prob_s, prob_g])
     if setup['return'] in ('hod', 'all'):
@@ -273,6 +261,14 @@ def model(theta, R, calculate_covariance=False):
     meff = hod.Mh_effective(
         dndm, pop_g, mass_range, return_log=observable.is_log)
     
+    # ngal is the mass or luminosity or observable function! See van Uitert+16 that that is the case.
+    if setup['return'] == 'ngal':
+        output.append(ngal)
+        return output
+    if setup['return'] == 'all':
+        output.append(ngal)
+    else
+        output = []
     
     """Power spectra"""
 
@@ -409,30 +405,12 @@ def model(theta, R, calculate_covariance=False):
                 
                 
     # Outputs
-    
+           
     if ingredients['gm']:
         # note this doesn't include the point mass! also, we probably
         # need to return k
         if integrate_zlens:
             Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
-        #return [Pgm_k, meff]
-        output.append(Pgm_k)
-    if ingredients['gg']:
-        #return [Pgg_k, meff]
-        output.append(Pgg_k)
-    if ingredients['mm']:
-        #return [Pmm_k, meff]
-        output.append(Pmm_k)
-    if setup['return'] == 'power':
-        output.append(meff)
-        return output
-    elif setup['return'] == 'all':
-        output.append(k_range_lin)
-    else:
-        output = []
-           
-           
-    if ingredients['gm']:
         if integrate_zlens:
             P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
                     for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
@@ -448,6 +426,32 @@ def model(theta, R, calculate_covariance=False):
         P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
                     for Pmm_k_i in _izip(Pmm_k)]
     
+    if ingredients['gm']:
+        if setup['return'] == 'all':
+            output.append(Pgm_k)
+        if setup['return'] == 'power':
+            Pgm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter)]
+            output.append(Pgm_out)
+    if ingredients['gg']:
+        if setup['return'] == 'all':
+            output.append(Pgg_k)
+        if setup['return'] == 'power':
+            Pgg_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter_2)]
+            output.append(Pgg_out)
+    if ingredients['mm']:
+        if setup['return'] == 'all':
+            output.append(Pmm_k)
+        if setup['return'] == 'power':
+            Pmm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in _izip(P_inter_3)]
+            output.append(Pmm_out)
+    if setup['return'] == 'power':
+        output.append(meff)
+        return output
+    elif setup['return'] == 'all':
+        output.append(k_range_lin)
+    else:
+        output = []
+    
     # correlation functions
     if ingredients['gm']:
         if integrate_zlens:
@@ -462,16 +466,23 @@ def model(theta, R, calculate_covariance=False):
         if setup['return'] == 'xi':
             if integrate_zlens:
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
-            #return [xi2, meff]
+            xi_out_i = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2)])
+            xi_out = np.array([x_i(rvir_range_2d_i) for x_i in xi_out_i])
+            output.append(xi_out)
+        if setup['return'] == 'all':
+            if integrate_zlens:
+                xi2 = np.sum(z*xi2, axis=1) / intnorm
             output.append(xi2)
     
     if ingredients['gg']:
         xi2_2 = np.array(
             [power_to_corr_ogata(P_inter_i, rvir_range_3d)
             for P_inter_i in P_inter_2])
-              
         if setup['return'] == 'xi':
-            #return [xi2_2, meff]
+            xi_out_i_2 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_2)])
+            xi_out_2 = np.array([x_i(rvir_range_2d_i) for x_i in xi_out_i_2])
+            output.append(xi_out_2)
+        if setup['return'] == 'all':
             output.append(xi2_2)
         
     if ingredients['mm']:
@@ -479,7 +490,10 @@ def model(theta, R, calculate_covariance=False):
             [power_to_corr_ogata(P_inter_i, rvir_range_3d)
             for P_inter_i in P_inter_3])
         if setup['return'] == 'xi':
-            #return [xi2_3, meff]
+            xi_out_i_3 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_3)])
+            xi_out_3 = np.array([x_i(rvir_range_2d_i) for x_i in xi_out_i_3])
+            output.append(xi_out_3)
+        if setup['return'] == 'all':
             output.append(xi2_3)
     if setup['return'] == 'xi':
         output.append(meff)
@@ -558,7 +572,8 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_r])
             #return [surf_dens2, meff]
             output.append(surf_dens2)
-            return output
+        if setup['return'] == 'all':
+            output.append(surf_dens2)
             
     if ingredients['gg']:
         surf_dens2_2 = array([rho_i * wp(xi2_i, rvir_range_3d, rvir_sigma)
@@ -584,9 +599,12 @@ def model(theta, R, calculate_covariance=False):
             output.appen(surf_dens2_2)
         if setup['return'] == 'wp':
             wp = surf_dens2_2/rho_bg
-            #return [wp, meff]
             output.append(wp)
-            
+        if setup['return'] == 'all':
+            wp = surf_dens2_2/rho_bg
+            output.append([surf_dens2_2, wp])
+        
+        
     if ingredients['mm']:
         surf_dens2_3 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
             for xi2_i, rho_i in zip(xi2_3, rho_bg)])
@@ -608,6 +626,8 @@ def model(theta, R, calculate_covariance=False):
                 for si in zip(surf_dens2_3)])
             surf_dens2_3 = np.array([s_r(rvir_range_2d_i) for s_r in surf_dens2_3_r])
             #return [surf_dens2_3, meff]
+            output.append(surf_dens2_3)
+        if setup['return'] == 'all':
             output.append(surf_dens2_3)
         
     if setup['return'] in ('kappa', 'sigma', 'wp'):

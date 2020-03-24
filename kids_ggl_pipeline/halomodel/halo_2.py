@@ -54,15 +54,13 @@ from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
 from . import profiles
 from .tools import (
-    Integrate, Integrate1, extrap1d, extrap2d, f_k, fill_nan, gas_concentration,
-    load_hmf, star_concentration, virial_mass, virial_radius)
+    fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
-    DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
-    delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
-    GG_sat_analy, GG_cen_sat_analy, miscenter, TwoHalo, TwoHalo_gg)
+    mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg)
 from .. import hod
 
 
@@ -273,8 +271,9 @@ def model(theta, R, calculate_covariance=False):
     """Power spectra"""
 
     # damping of the 1h power spectra at small k
-    F_k1 = f_k(k_range_lin)
-    #F_k1 = 1
+    F_k1 = sp.erf(k_range_lin/0.1)
+    F_k2 = sp.erfc(k_range_lin/1500.0)
+    #F_k1 = np.ones_like(k_range_lin)
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
@@ -298,10 +297,8 @@ def model(theta, R, calculate_covariance=False):
 
     # If there is miscentring to be accounted for
     if ingredients['miscentring']:
-
-        p_off, r_off = c_miscent[1:]
-        
-        uk_c = uk_c * miscenter(
+        p_off, r_off = c_miscent#[1:]
+        uk_c = uk_c * nfw.miscenter(
             p_off, r_off, expand_dims(mass_range, -1),
             expand_dims(rvir_range_lin, -1), k_range_lin,
             expand_dims(concentration, -1), uk_c.shape)
@@ -325,8 +322,8 @@ def model(theta, R, calculate_covariance=False):
                 #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
                 #in zip(rvir_range_lin, hmf, ngal, pop_g)])
             """
-            Pgm_2h = bias * array(
-                [TwoHalo(hmf_i, ngal_i, pop_g_i,
+            Pgm_2h = F_k2 * bias * array(
+                [two_halo_gm(hmf_i, ngal_i, pop_g_i,
                         rvir_range_lin_i, mass_range)[0]
                 for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
                 in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
@@ -339,7 +336,7 @@ def model(theta, R, calculate_covariance=False):
 
         if ingredients['centrals']:
 
-            Pgm_c = F_k1 * GM_cen_analy(
+            Pgm_c = F_k1 * gm_cen_analy(
                 dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
         elif integrate_zlens:
             Pgm_c = np.zeros((z.size,nbins,setup['lnk_bins']))
@@ -349,7 +346,7 @@ def model(theta, R, calculate_covariance=False):
 
         if ingredients['satellites']:
 
-            Pgm_s = F_k1 * GM_sat_analy(
+            Pgm_s = F_k1 * gm_sat_analy(
                 dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
         else:
             Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
@@ -365,8 +362,8 @@ def model(theta, R, calculate_covariance=False):
     # Galaxy - galaxy spectra (for clustering)
     if ingredients['gg']:
         if ingredients['twohalo']:
-            Pgg_2h = bias * array(
-            [TwoHalo_gg(hmf_i, ngal_i, pop_g_i,
+            Pgg_2h = F_k2 * bias * array(
+            [two_halo_gg(hmf_i, ngal_i, pop_g_i,
                     rvir_range_lin_i, mass_range)[0]
             for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
             in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
@@ -380,7 +377,7 @@ def model(theta, R, calculate_covariance=False):
     
         if ingredients['centrals']:
             """
-            Pgg_c = F_k1 * GG_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
+            Pgg_c = F_k1 * gg_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
             """
             Pgg_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
         else:
@@ -388,12 +385,12 @@ def model(theta, R, calculate_covariance=False):
     
         if ingredients['satellites']:
             beta = s_beta
-            Pgg_s = F_k1 * GG_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
+            Pgg_s = F_k1 * gg_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
         else:
             Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
         
         if ingredients['centrals'] and ingredients['satellites']:
-            Pgg_cs = F_k1 * GG_cen_sat_analy(dndm, uk_s, pop_c, pop_s, ngal, mass_range)
+            Pgg_cs = F_k1 * gg_cen_sat_analy(dndm, uk_s, pop_c, pop_s, ngal, mass_range)
         else:
             Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
         
@@ -403,13 +400,13 @@ def model(theta, R, calculate_covariance=False):
     # Matter - matter spectra
     if ingredients['mm']:
         if ingredients['centrals']:
-            Pmm_1h = F_k1 * MM_analy(dndm, uk_c, rho_bg, mass_range)
+            Pmm_1h = F_k1 * mm_analy(dndm, uk_c, rho_bg, mass_range)
         else:
             Pmm_1h = F_k1 * np.zeros((nbins,setup['lnk_bins']))
                             
-        Pmm_k = Pmm_1h + array([hmf_i.power for hmf_i in hmf])
+        Pmm_k = Pmm_1h + F_k2 * array([hmf_i.power for hmf_i in hmf])
             
-    """
+    #"""
     import matplotlib.pyplot as pl
     pl.plot(k_range_lin, Pgm_c[0])
     pl.plot(k_range_lin, Pgm_s[0])
@@ -419,6 +416,7 @@ def model(theta, R, calculate_covariance=False):
     pl.plot(k_range_lin, Pgm_k[2])
     pl.xscale('log')
     pl.yscale('log')
+    pl.ylim([1e-10,1e6])
     pl.savefig('/home/dvornik/test_pipeline2/power_gm.png')
     pl.show()
     pl.clf()
@@ -432,6 +430,7 @@ def model(theta, R, calculate_covariance=False):
     pl.plot(k_range_lin, Pgg_k[2])
     pl.xscale('log')
     pl.yscale('log')
+    pl.ylim([1e-10,1e6])
     pl.savefig('/home/dvornik/test_pipeline2/power_gg.png')
     pl.show()
     pl.clf()
@@ -441,10 +440,11 @@ def model(theta, R, calculate_covariance=False):
     pl.plot(k_range_lin, Pmm_k[2])
     pl.xscale('log')
     pl.yscale('log')
+    pl.ylim([1e-10,1e6])
     pl.savefig('/home/dvornik/test_pipeline2/power_mm.png')
     pl.show()
     pl.clf()
-    """
+    #"""
                 
     # Outputs
            

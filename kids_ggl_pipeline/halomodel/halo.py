@@ -54,15 +54,13 @@ from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
 from . import profiles
 from .tools import (
-    Integrate, Integrate1, extrap1d, extrap2d, f_k, fill_nan, gas_concentration,
-    load_hmf, star_concentration, virial_mass, virial_radius)
+    fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
-    DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
-    delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
-    GG_sat_analy, GG_cen_sat_analy, miscenter, TwoHalo)
+    mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm)
 from .. import hod
 
 
@@ -246,8 +244,9 @@ def model(theta, R, calculate_covariance=False):
     """Power spectra"""
 
     # damping of the 1h power spectra at small k
-    F_k1 = f_k(k_range_lin)
-    #F_k1 = 1
+    F_k1 = sp.erf(k_range_lin/0.1)
+    F_k2 = sp.erfc(k_range_lin/1500.0)
+    #F_k1 = np.ones_like(k_range_lin)
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         uk_c = nfw.uk(
@@ -271,13 +270,13 @@ def model(theta, R, calculate_covariance=False):
     # If there is miscentring to be accounted for
     if ingredients['miscentring']:
         #ti = time()
-        p_off, r_off = c_miscent[1:]
+        p_off, r_off = c_miscent#[1:]
         # these should be implemented as iterables
         #if not iterable(p_off):
             #p_off = array([p_off]*nbins)
         #if not iterable(r_off):
             #r_off = array([r_off]*nbins)
-        uk_c = uk_c * miscenter(
+        uk_c = uk_c * nfw.miscenter(
             p_off, r_off, expand_dims(mass_range, -1),
             expand_dims(rvir_range_lin, -1), k_range_lin,
             expand_dims(concentration, -1), uk_c.shape)
@@ -296,8 +295,8 @@ def model(theta, R, calculate_covariance=False):
              #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
              #in zip(rvir_range_lin, hmf, ngal, pop_g)])
         """
-        Pgm_2h = bias * array(
-            [TwoHalo(hmf_i, ngal_i, pop_g_i,
+        Pgm_2h = F_k2 * bias * array(
+            [two_halo_gm(hmf_i, ngal_i, pop_g_i,
                      rvir_range_lin_i, mass_range)[0]
              for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
              in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
@@ -316,7 +315,7 @@ def model(theta, R, calculate_covariance=False):
 
     if ingredients['centrals']:
         #ti = time()
-        Pgm_c = F_k1 * GM_cen_analy(
+        Pgm_c = F_k1 * gm_cen_analy(
             dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
         #print('Pg_c in {0:.2e} s'.format(time()-ti))
     elif integrate_zlens:
@@ -329,7 +328,7 @@ def model(theta, R, calculate_covariance=False):
 
     if ingredients['satellites']:
         #ti = time()
-        Pgm_s = F_k1 * GM_sat_analy(
+        Pgm_s = F_k1 * gm_sat_analy(
             dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
         #print('Pg_s in {0:.2e} s'.format(time()-ti))
     else:

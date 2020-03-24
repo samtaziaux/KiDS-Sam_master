@@ -33,7 +33,7 @@ import scipy.special as sp
 
 from . import cmf
 #from .halo import Bias_Tinker10
-from .dark_matter import Bias_Tinker10
+from .dark_matter import bias_tinker10
 from .tools import Integrate, Integrate1, extrap1d, extrap2d, fill_nan
 
 
@@ -78,6 +78,16 @@ def f_gas(omegab, omegac, m):
     f = np.where(x >= 1,
                  omegab/(omegab+omegac) * sp.erf(np.log10(x)/sigma), 0.0)
     return f
+
+
+def gas_concentration(mass, x_1, power):
+    r_c = 0.05 * (mass/(x_1))**(power)
+    return r_c
+    
+    
+def star_concentration(mass, x_1, power):
+    r_t = 0.02 * (mass/(x_1))**(power)
+    return r_t
 
 
 """

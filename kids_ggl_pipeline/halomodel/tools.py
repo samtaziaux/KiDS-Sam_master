@@ -155,24 +155,6 @@ def extrap2d(interpolator):
     return ufunclike
 
 
-#~ def fill_nan(a):
-    #~
-    #~ # Replaces nan with closest value,
-    #~ so we are not left with 0 or 10^308-something!
-    #~
-    #~ ind = np.where(~np.isnan(a))[0]
-    #~ first, last = ind[0], ind[-1]
-    #~ a[:first] = a[first]
-    #~ a[last + 1:] = a[last]
-    #~
-    #~ return a
-
-
-def f_k(k_x):
-    F = sp.erf(k_x/0.1) #0.05!
-    return F
-
-
 def fill_nan(a):
     not_nan = np.logical_not(np.isnan(a))
     indices = np.arange(len(a))
@@ -180,11 +162,6 @@ def fill_nan(a):
         return a
     else:
         return np.interp(indices, indices[not_nan], a[not_nan])
-
-
-def gas_concentration(mass, x_1, power):
-    r_c = 0.05 * (mass/(x_1))**(power)
-    return r_c
 
 
 def load_hmf(z, setup, cosmo_model, transfer_params):
@@ -204,11 +181,6 @@ def load_hmf(z, setup, cosmo_model, transfer_params):
         #rho_mean[i] = hmf[-1].mean_density
     return hmf, rho_mean
 
-
-
-def star_concentration(mass, x_1, power):
-    r_t = 0.02 * (mass/(x_1))**(power)
-    return r_t
 
 def virial_mass(r, rho_mean, delta_halo):
     """

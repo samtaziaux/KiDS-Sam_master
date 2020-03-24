@@ -42,13 +42,16 @@ from .tools import (Integrate, Integrate1, extrap1d, extrap2d, fill_nan,
 
 """
 # NFW profile and corresponding parameters.
+# All these NFW functions should either be moved to the nfw.py or removed from here. Still some cleaning to do!
+
+
 """
 
-def NFW(rho_mean, c, R_array):
+def nfw(rho_mean, c, R_array):
 
     r_max = R_array[-1]
-    d_c = NFW_Dc(200.0, c)
-    r_s = NFW_RS(c, r_max)
+    d_c = nfw_dc(200.0, c)
+    r_s = nfw_rs(c, r_max)
 
     # When using baryons, rho_mean gets is rho_dm!
 
@@ -60,29 +63,29 @@ def NFW(rho_mean, c, R_array):
     return profile
 
 
-def NFW_RS(c, r_max):
+def nfw_rs(c, r_max):
     #print ("RS.")
     return r_max/c
 
 
-def NFW_Dc(delta_h, c):
+def nfw_dc(delta_h, c):
     #print ("DC.")
     return (delta_h*(c**3.0))/(3.0*(np.log(1.0+c)-(c/(1.0+c))))
 
 
 # Fourier transform of NFW profile - analytic!
 
-def NFW_f(z, rho_mean, f, m_x, r_x, k_x, c=None):
+def nfw_f(z, rho_mean, f, m_x, r_x, k_x, c=None):
     #if len(m_x.shape) == 0:
         #m_x = np.array([m_x])
         #r_x = np.array([r_x])
     u_k = np.zeros((k_x.size,m_x.size))
     if c is None:
-        c = Con(z, m_x, f)
+        c = con(z, m_x, f)
     else:
         c = c * np.ones(m_x.size)
     for i in xrange(m_x.size):
-        r_s = NFW_RS(c[i], r_x[i])
+        r_s = nfw_rs(c[i], r_x[i])
         K = k_x*r_s
         bs, bc = sp.sici(K)
         asi, ac = sp.sici((1+c[i]) * K)
@@ -98,15 +101,15 @@ def miscenter(p_off, r_off, m_x, r_x, k_x, c=None, shape=None):
         shape = (k_x.size, m_x.size)
     u_k = np.zeros(shape)
     if c is None:
-        c = Con(z, m_x, f)
+        c = con(z, m_x, f)
     #else:
         #c = c * np.ones(m_x.size)
-    rs = NFW_RS(c, r_x)
+    rs = nfw_rs(c, r_x)
     u_k = 1 - p_off + p_off*np.exp(-0.5*(k_x**2)*(rs*r_off)**2)
     return u_k
 
 
-def Con(z, M, f, scaling='duffy08'):
+def con(z, M, f, scaling='duffy08'):
     #duffy rho_crit
     #c = f * 6.71 * (M/2e12)**-0.091 * (1+z)**-0.44
     #duffy rho_mean
@@ -133,9 +136,9 @@ def Con(z, M, f, scaling='duffy08'):
     return c
 
 
-def delta_NFW(z, rho_mean, f, M, r):
+def delta_nfw(z, rho_mean, f, M, r):
 
-    c = Con(z, M, f)
+    c = con(z, M, f)
     r_vir = virial_radius(M, rho_mean, 200.0)
     r_s = NFW_RS(c, r_vir)
     d_c = NFW_Dc(200.0, c)
@@ -164,7 +167,7 @@ def delta_NFW(z, rho_mean, f, M, r):
     return r_s * d_c * rho_mean * g
 
 
-def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
+def av_delta_nfw(mass_func, z, rho_mean, f, hod, M, r):
 
     integ = np.ones((len(M), len(r)))
     average = np.ones(len(r))
@@ -172,7 +175,7 @@ def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 
     for i in range(len(M)):
 
-        integ[i,:] = delta_NFW(z, rho_mean, f, M[i], r)
+        integ[i,:] = delta_nfw(z, rho_mean, f, M[i], r)
 
     for i in range(len(r)):
 
@@ -187,7 +190,7 @@ def av_delta_NFW(mass_func, z, rho_mean, f, hod, M, r):
 # Some bias functions
 """
 
-def Bias(hmf, r_x):
+def bias_ps(hmf, r_x):
     """
     PS bias - analytic
         
@@ -197,7 +200,7 @@ def Bias(hmf, r_x):
     return bias
 
 
-def Bias_Tinker10_func(hmf, r_x):
+def bias_tinker10_func(hmf, r_x):
     """
     Tinker 2010 bias - empirical
         
@@ -214,7 +217,7 @@ def Bias_Tinker10_func(hmf, r_x):
     return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
 
 
-def Bias_Tinker10(hmf, r_x):
+def bias_tinker10(hmf, r_x):
     """
     Tinker 2010 bias - empirical
         
@@ -222,14 +225,14 @@ def Bias_Tinker10(hmf, r_x):
     nu = hmf.nu**0.5
     
     f_nu = hmf.fsigma / nu
-    b_nu = Bias_Tinker10_func(hmf, r_x)
+    b_nu = bias_tinker10_func(hmf, r_x)
     norm = trapz(f_nu * b_nu, nu)
     
-    func = Bias_Tinker10_func(hmf, r_x)
+    func = bias_tinker10_func(hmf, r_x)
     return func / norm
 
 
-def TwoHalo(hmf, ngal, population, r_x, m_x, **kwargs):
+def two_halo_gm(hmf, ngal, population, r_x, m_x, **kwargs):
     """
     Note that I removed the argument k_x which was required but not
     used
@@ -245,7 +248,7 @@ def TwoHalo(hmf, ngal, population, r_x, m_x, **kwargs):
     #print('m_x =', m_x.shape)
     #print('integrand =', (hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x).shape)
     b_g = trapz(
-        hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x,
+        hmf.dndlnm * population * bias_tinker10(hmf, r_x) / m_x,
         m_x, **kwargs) / ngal
     #print('b_g =', b_g.shape)#, b_g[:,None].shape)
     #try:
@@ -257,14 +260,14 @@ def TwoHalo(hmf, ngal, population, r_x, m_x, **kwargs):
     return (hmf.power * b_g), b_g
     
     
-def TwoHalo_gg(hmf, ngal, population, r_x, m_x, **kwargs):
+def two_halo_gg(hmf, ngal, population, r_x, m_x, **kwargs):
     """
     Note that I removed the argument k_x which was required but not
     used
     """
 
     b_g = trapz(
-        hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x,
+        hmf.dndlnm * population * bias_tinker10(hmf, r_x) / m_x,
         m_x, **kwargs) / ngal
 
     return (hmf.power * b_g**2.0), b_g**2.0
@@ -275,7 +278,7 @@ def TwoHalo_gg(hmf, ngal, population, r_x, m_x, **kwargs):
 # Spectrum 1-halo components for dark matter.
 """
 
-def MM_analy(dndm, uk, rho_dm, Mh):
+def mm_analy(dndm, uk, rho_dm, Mh):
     """Analytical calculation of the matter-matter power spectrum
 
     Uses the trapezoidal rule to integrate using halo mass samples
@@ -309,7 +312,7 @@ def MM_analy(dndm, uk, rho_dm, Mh):
              Mh, axis=1) / (rho_dm**2.0)
 
 
-def GM_cen_analy(dndm, uk, rho_dm, population, ngal, Mh):
+def gm_cen_analy(dndm, uk, rho_dm, population, ngal, Mh):
     """Analytical calculation of the galaxy-matter power spectrum
 
     Uses the trapezoidal rule to integrate using halo mass samples
@@ -351,7 +354,7 @@ def GM_cen_analy(dndm, uk, rho_dm, population, ngal, Mh):
     return trapz(expand_dims(dndlnm*population, -1) * uk,
                  Mh, axis=-2) / norm
 
-def GM_sat_analy(dndm, uk_m, uk_s, rho_dm, population, ngal, Mh):
+def gm_sat_analy(dndm, uk_m, uk_s, rho_dm, population, ngal, Mh):
     """Analytical calculation of the galaxy-matter power spectrum
 
     Uses the trapezoidal rule to integrate using halo mass samples
@@ -384,10 +387,10 @@ def GM_sat_analy(dndm, uk_m, uk_s, rho_dm, population, ngal, Mh):
         above, such as one for redshift distributions. These will be
         carried through and will remain at their location.
     """
-    return GM_cen_analy(dndm, uk_m*uk_s, rho_dm, population, ngal, Mh)
+    return gm_cen_analy(dndm, uk_m*uk_s, rho_dm, population, ngal, Mh)
 
 
-def GG_cen_analy(dndm, ncen, ngal, shape, Mh):
+def gg_cen_analy(dndm, ncen, ngal, shape, Mh):
     """Analytical calculation of the galaxy-galaxy power spectrum
 
     Uses the trapezoidal rule to integrate using halo mass samples
@@ -419,7 +422,7 @@ def GG_cen_analy(dndm, ncen, ngal, shape, Mh):
     return np.ones(shape) * ncen / (ngal**2.0)
 
 
-def GG_sat_analy(dndm, uk_s, population_sat, ngal, beta, Mh):
+def gg_sat_analy(dndm, uk_s, population_sat, ngal, beta, Mh):
     """Analytical calculation of the galaxy-gaalxy power spectrum
 
     Uses the trapezoidal rule to integrate using halo mass samples
@@ -462,7 +465,7 @@ def GG_sat_analy(dndm, uk_s, population_sat, ngal, beta, Mh):
                  Mh, axis=1) / (ngal**2.0)
 
 
-def GG_cen_sat_analy(dndm, uk_s, population_cen, population_sat, ngal, Mh):
+def gg_cen_sat_analy(dndm, uk_s, population_cen, population_sat, ngal, Mh):
     """Analytical calculation of the galaxy-gaalxy power spectrum
 
     Uses the trapezoidal rule to integrate using halo mass samples
@@ -503,7 +506,7 @@ def GG_cen_sat_analy(dndm, uk_s, population_cen, population_sat, ngal, Mh):
                  Mh, axis=1) / (ngal**2.0)
 
 
-def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
+def dm_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
 
     """
     Calculates the power spectrum for the component given in the name. 
@@ -554,7 +557,7 @@ def DM_mm_spectrum(mass_func, z, rho_dm, rho_mean, n, k_x, r_x, m_x, T):
     return spec_ext
 
 
-def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
+def gm_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
                     ngal, k_x, r_x, m_x, T, T_tot):
 
     """
@@ -591,7 +594,7 @@ def GM_cen_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
     return spec_ext
 
 
-def GM_sat_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
+def gm_sat_spectrum(mass_func, z, rho_dm, rho_mean, n, population, \
                     ngal, k_x, r_x, m_x, T, T_tot):
 
     """

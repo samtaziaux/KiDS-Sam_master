@@ -7,7 +7,7 @@ from six import string_types
 import sys
 
 from . import confighod, configsampler, configsetup
-from ...halomodel import nfw, nfw_stack, halo, halo_2, halo_2_mc
+from ...halomodel import nfw, nfw_stack, halo, halo_2
 from ...halomodel.observables import Observable
 from ...halomodel.selection import Selection
 

@@ -76,7 +76,7 @@ except ImportError:
     izip = zip
 from numpy import append, arctan, arctanh, arccos, array, cos, expand_dims, \
                   hypot, iterable, log, log10, logspace, meshgrid, \
-                  ones, pi, sin, sum as nsum, transpose, zeros
+                  ones, pi, sin, sum as nsum, transpose, zeros, exp
 from scipy.integrate import cumtrapz, trapz
 from scipy.interpolate import interp1d
 from scipy.special import sici
@@ -512,6 +512,48 @@ def uk(kx, Mh, rvir, c, rho_bg, overdensity=200):
         rho_bg = expand_dims(rho_bg, -1)
     return  4*pi * rho_bg * dc * rs**3 / expand_dims(Mh, -1) \
         * (sin(k)*(asi-bs) - sin(c*k)/((1+c)*k) + cos(k)*(ac-bc))
+
+
+def miscenter(p_off, r_off, Mh, rvir, kx, c=None, shape=None):
+    """Miscentering of the central profile
+
+    This function takes a different set of parameters from other
+    functions for convenience. Will try to change this later
+
+    Parameters
+    ----------
+    p_off : float array, shape (nbins,)
+        probability for miscentering
+    r_off : float array, shape (nbins,)
+        average miscentering radius (Mpc)
+    kx : float array, shape (K,)
+        wavenumbers in 1/Mpc
+    Mh : float array, shape (P,)
+        halo mass
+    rvir : float array, shape (nbins,P)
+        virial radius
+    c : float array, shape (nbins,P)
+        halo concentration
+    shape : tuple of integers,
+        shape of nfw profile array
+
+    Returns
+    -------
+    uk : float array, shape (nbins,P,K)
+        modification of the NFW profile to account for miscentering
+
+    Notes
+    -----
+        -There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
+        -`rho_bg` has an extra dimension in `halo.model`. We account
+        for that here when applicable
+    """
+    rs = rvir / c
+    uk = 1 - p_off + p_off*exp(-0.5*(kx**2)*(rs*r_off)**2)
+    return uk
+
 
 
 #-----------------------------------#

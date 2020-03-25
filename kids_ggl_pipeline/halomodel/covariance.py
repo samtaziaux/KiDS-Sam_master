@@ -27,52 +27,42 @@ from __future__ import (absolute_import, division, print_function,
 # Halo model code
 # Andrej Dvornik, 2014/2015
 
+from astropy.units import eV
 import multiprocessing as multi
 import numpy as np
 import mpmath as mp
-import matplotlib.pyplot as pl
+import matplotlib.pyplot as plt
 import scipy
 import sys
-from numpy import arange, array, exp, linspace, logspace, ones
+from numpy import (arange, array, exp, expand_dims, iterable, linspace,
+                   logspace, ones)
 from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, interp2d, UnivariateSpline, \
     SmoothBivariateSpline, RectBivariateSpline, interpn, RegularGridInterpolator
 from itertools import count
 if sys.version_info[0] == 2:
-    from itertools import izip
-else:
-    izip = zip
-import itertools
+    from itertools import izip as zip
+    range = xrange
 from time import time
-from astropy.cosmology import LambdaCDM
+from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
 
 from hmf import MassFunction
 from hmf import fitting_functions as ff
 from hmf import transfer_models as tf
 
-from . import baryons as baryons
-from . import longdouble_utils as ld
+from . import baryons, longdouble_utils as ld, nfw
+#from . import covariance
+from . import profiles
 from .tools import (
-    Integrate, Integrate1, extrap1d, extrap2d, fill_nan, gas_concentration,
-    star_concentration, virial_mass, virial_radius)
+    fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
-    power_to_corr, power_to_corr_multi, sigma, d_sigma, power_to_corr_ogata,
-    wp, wp_beta_correction)
+    power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
+    power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
-    NFW, NFW_Dc, NFW_f, Con, DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
-    delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
-    GG_sat_analy, GG_cen_sat_analy, miscenter, Bias, Bias_Tinker10)
-from .cmf import *
-
-
-"""
-#-------- Declaring functions ----------
-"""
-
-"""
-# --------------- Actual halo functions and stuff ------------------
-"""
+    mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg)
+from .. import hod
 
 
 """
@@ -98,62 +88,6 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
                         delta_c=1.686,
                         **cosmology_params)
 """
-
-"""
-# Integrals of mass functions with density profiles and population functions.
-"""
-
-def f_k(k_x):
-    F = sp.erf(k_x/0.1) #0.05!
-    return F
-
-
-def n_gal(mass_func, population, m_x):
-    """
-    Calculates average number of galaxies!
-        
-    """
-    #print mass_func.dndm.shape, population.shape, m_x.shape
-    return trapz(mass_func.dndm * population, m_x)
-
-
-def eff_mass(z, mass_func, population, m_x):
-    #integ1 = mass_func.dndlnm*population
-    #integ2 = mass_func.dndm*population
-    #mass = Integrate(integ1, m_x)/Integrate(integ2, m_x)
-    #return mass
-    return trapz(mass_func.dndlnm * population, m_x) / \
-        trapz(mass_func.dndm * population, m_x)
-
-
-"""
-# Two halo term for matter-galaxy and galaxy-galaxy specta!
-# For matter-matter it is only P_lin!
-"""
-
-def TwoHalo(mass_func, norm, population, k_x, r_x, m_x):
-    """
-    This is ok!
-    
-    """
-    #P2 = (exp(mass_func.power)/norm) * \
-    #(Integrate((mass_func.dndlnm * population * \
-    #Bias_Tinker10(mass_func,r_x)/m_x), m_x))
-    ##print ("Two halo term calculated.")
-    #return P2
-    
-    b_g = trapz(mass_func.dndlnm * population * \
-                Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
-                
-    return (mass_func.power * b_g), b_g
-
-
-def TwoHalo_gg(mass_func, norm, population, k_x, r_x, m_x):
-    
-    b_g = trapz(mass_func.dndlnm * population * \
-                Bias_Tinker10(mass_func, r_x) / m_x, m_x) / norm
-                
-    return (mass_func.power * b_g**2.0), b_g**2.0
 
 
 def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
@@ -832,137 +766,141 @@ def cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape
     return cov_wp, cov_esd, cov_cross
 
 
-def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., lnk_max=17.):
-    np.seterr(divide='ignore', over='ignore', under='ignore', invalid='ignore')
-    # making them local doesn't seem to make any difference
-    # but keeping for now
-    _array = array
-    _izip = izip
-    _logspace = logspace
-    _linspace = linspace
+def covariance(theta, R, calculate_covariance=False):
+    np.seterr(
+        divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-              
-    sigma_8, H0, omegam, omegab, omegav, n, \
-    z, f, sigma_c, A, M_1, gamma_1, gamma_2, \
-    fc_nsat, alpha_s, b_0, b_1, b_2, \
-    bias, beta, \
-    M_bin_min, M_bin_max, \
-    Mstar, \
-    Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, gauss, ssc, ng, spec_z_path, nproc, \
-    smth1, smth2 = theta
-    # hard-coded in the current version
-    Ac2s = 0.56
-    M_min = 5.
-    M_max = 16.
-    M_step = 200
-    #centrals = 1
-    #satellites = 1
+    # this has to happen before because theta is re-purposed below
+    if calculate_covariance:
+        covar = theta[1][theta[0].index('covariance')]
+
+    observables, selection, ingredients, theta, setup \
+        = [theta[1][theta[0].index(name)]
+            for name in ('observables', 'selection', 'ingredients',
+                    'parameters', 'setup')]
+
+    assert len(observables) == 1, \
+        'working with more than one observable is not yet supported.' \
+        ' If you would like this feature added please raise an issue.'
+    observable = observables[0]
+    hod_observable = observable.sampling
+
+    cosmo, \
+        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        s_concentration, s_mor, s_scatter, s_beta = theta
+
+    sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
+
     
-    #to = time()
+
+    if ingredients['nzlens']:
+        nz = cosmo[9].T
+        size_cosmo = 10
+    else:
+        size_cosmo = 9
+    # cheap hack. I'll use this for CMB lensing, but we can
+    # also use this to account for difference between shear
+    # and reduced shear
+    if len(cosmo) == size_cosmo+1:
+        zs = cosmo[-1]
+    elif setup['return'] == 'kappa':
+        raise ValueError(
+            'If return=kappa then you must provide a source redshift as' \
+            ' the last cosmological parameter. Alternatively, make sure' \
+            ' that the redshift parameters are properly set given your' \
+            ' choice for the zlens parameter')
+
+    integrate_zlens = ingredients['nzlens']
+
     # HMF set up parameters
-    k_step = (lnk_max-lnk_min) / n_bins
-    k_range = arange(lnk_min, lnk_max, k_step)
+    k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
+    k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
     k_range_lin = exp(k_range)
-    #mass_range = _logspace(M_min, M_max, int((M_max-M_min)/M_step))
-    mass_range = 10**_linspace(M_min, M_max, M_step)
-    M_step = (M_max - M_min)/M_step
-    
-    if not np.iterable(M_bin_min):
-        M_bin_min = np.array([M_bin_min])
-        M_bin_max = np.array([M_bin_max])
+    # endpoint must be False for mass_range to be equal to hmf.m
+    mass_range = 10**linspace(
+        setup['logM_min'], setup['logM_max'], setup['logM_bins'],
+        endpoint=False)
+    setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
+                    / setup['logM_bins']
+
+    nbins = observable.nbins
+    # if a single value is given for more than one bin, assign same
+    # value to all bins
     if not np.iterable(z):
-        z = np.array([z]*M_bin_min.size)
-    if not np.iterable(f):
-        f = np.array([f]*M_bin_min.size)
-    if not np.iterable(fc_nsat):
-        fc_nsat = np.array([fc_nsat]*M_bin_min.size)
-    if not np.iterable(Mstar):
-        Mstar = np.array([Mstar]*M_bin_min.size)
-    if not np.iterable(beta):
-        beta = np.array([beta]*M_bin_min.size)
+        z = np.array([z])
+    if z.size == 1 and nbins > 1:
+        z = array(list(z)*nbins)
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter (where the new dimension will
+    # be occupied by mass)
+    z = expand_dims(z, -1)
 
+    cosmo_model = Flatw0waCDM(
+        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
+        Neff=Neff, w0=w0, wa=wa)
 
-    concentration = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i)) for z_i, f_i in _izip(z,f)])
-
-    concentration_sat = np.array([Con(np.float64(z_i), mass_range, np.float64(f_i*fc_nsat_i)) for z_i, f_i,fc_nsat_i in _izip(z,f,fc_nsat)])
-    
-    n_bins_obs = M_bin_min.size
-    bias = np.array([bias]*k_range_lin.size).T
-    
-    hod_mass = _array([_logspace(Mi, Mx, 200, endpoint=False,
-                                 dtype=np.longdouble)
-                       for Mi, Mx in _izip(M_bin_min, M_bin_max)])
-        
-    transfer_params = _array([])
-    for z_i in z:
-        transfer_params = np.append(transfer_params, {'sigma_8': sigma_8,
-                                    'n': n,
-                                    'lnk_min': lnk_min ,'lnk_max': lnk_max,
-                                    'dlnk': k_step,
-                                    'z':np.float64(z_i)})
-    
-    # Calculation
     # Tinker10 should also be read from theta!
-    #to = time()
-    hmf = _array([])
-    h = H0/100.0
-    cosmo_model = LambdaCDM(H0=H0, Ob0=omegab, Om0=omegam, Ode0=omegav, Tcmb0=2.725)
-    for i in transfer_params:
-        hmf_temp = MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=M_step,
-                                hmf_model=ff.Tinker10, delta_h=200.0, delta_wrt='mean',
-                                delta_c=1.686,
-                                **i)
-        hmf_temp.update(cosmo_model=cosmo_model)
-        hmf = np.append(hmf, hmf_temp)
+    transfer_params = \
+        {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
+        'lnk_max': setup['lnk_max'], 'dlnk': k_step}
+    hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
 
-    mass_func = np.zeros((z.size, mass_range.size))
-    rho_mean = np.zeros(z.shape)
-    rho_crit = np.zeros(z.shape)
-    #rho_dm = np.zeros(z.shape)
+    mass_range = hmf[0].m
+    rho_bg = rho_mean if setup['delta_ref'] == 'mean' \
+        else rho_mean / omegam
+    # same as with redshift
+    rho_bg = expand_dims(rho_bg, -1)
 
-    omegab = hmf[0].cosmo.Ob0
-    omegac = hmf[0].cosmo.Om0-omegab
-    omegav = hmf[0].cosmo.Ode0
+    concentration = c_concentration[0](mass_range, *c_concentration[1:])
+    if ingredients['satellites']:
+        concentration_sat = s_concentration[0](
+            mass_range, *s_concentration[1:])
 
-    for i in xrange(z.size):
-        mass_func[i] = hmf[i].dndlnm
-        rho_mean[i] = hmf[i].mean_density0
-        rho_crit[i] = rho_mean[i] / (omegac+omegab)
-        #rho_dm[i] = rho_mean[i]# * baryons.f_dm(omegab, omegac)
-
-
-    rvir_range_lin = _array([virial_radius(mass_range, rho_mean_i, 200.0)
-                         for rho_mean_i in rho_mean])
-    rvir_range = np.log10(rvir_range_lin)
-    rvir_range_3d = _logspace(-3.2, 4, 200, endpoint=True)
-    rvir_range_3d_i = _logspace(-2.5, 1.2, 25, endpoint=True)
+    rvir_range_lin = virial_radius(
+        mass_range, rho_bg, setup['delta'])
+    rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
+    # these are not very informative names but the "i" stands for
+    # interpolated
+    rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
+    #rvir_range_3d_i = logspace(-4, 2, 60, endpoint=True)
+    # integrate over redshift later on
+    # assuming this means arcmin for now -- implement a way to check later!
+    #if setup['distances'] == 'angular':
+        #R = R * cosmo.
     rvir_range_2d_i = R[0][1:]
 
     # Calculating halo model
     
-    pop_c = _array([ncm(hmf_i, i, mass_range, sigma_c, alpha_s, A, M_1,
-                                gamma_1, gamma_2, b_0, b_1, b_2)
-                            for hmf_i, i in _izip(hmf, hod_mass)])
+    # interpolate selection function to the same grid as redshift and
+    # observable to be used in trapz
+    
+    completeness = np.ones(hod_observable.shape)
+    if ingredients['centrals']:
+        pop_c, prob_c = hod.number(
+            hod_observable, mass_range, c_mor[0], c_scatter[0],
+            c_mor[1:], c_scatter[1:], completeness,
+            obs_is_log=observable.is_log)
+    else:
+        pop_c = np.zeros((nbins,mass_range.size))
+        prob_c = np.zeros((nbins,hod_observable.shape[1],mass_range.size))
 
-    
-    
-    pop_s = _array([nsm(hmf_i, i, mass_range, sigma_c, alpha_s, A, M_1,
-                                gamma_1, gamma_2, b_0, b_1, b_2, Ac2s)
-                            for hmf_i, i in _izip(hmf, hod_mass)])
+    if ingredients['satellites']:
+        pop_s, prob_s = hod.number(
+            hod_observable, mass_range, s_mor[0], s_scatter[0],
+            s_mor[1:], s_scatter[1:], completeness,
+            obs_is_log=observable.is_log)
+    else:
+        pop_s = np.zeros(pop_c.shape)
+        prob_s = np.zeros(prob_c.shape)
 
     pop_g = pop_c + pop_s
+    prob_g = prob_c + prob_s
 
-    ngal = _array([n_gal(hmf_i, pop_g_i , mass_range)
-                   for hmf_i, pop_g_i in _izip(hmf, pop_g)])
-        
-    effective_mass = _array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range)
-                        for z_i, hmf_i, pop_g_i in _izip(z, hmf, pop_g)])
-    # Why does this only have pop_c and not pop_g?
-    # Do we need it? It's not used anywhere in the code
-    effective_mass_bar = _array([eff_mass(np.float64(z_i), hmf_i, pop_g_i, mass_range) * \
-                        (1.0 - baryons.f_dm(omegab, omegac))
-                        for z_i, hmf_i, pop_g_i in _izip(z, hmf, pop_g)])
-
+    # note that pop_g already accounts for incompleteness
+    dndm = array([hmf_i.dndm for hmf_i in hmf])
+    ngal = hod.nbar(dndm, pop_g, mass_range)
+    meff = hod.Mh_effective(
+        dndm, pop_g, mass_range, return_log=observable.is_log)
                    
     """
     # Power spectrum
@@ -970,108 +908,115 @@ def covariance(theta, R, h=0.7, Om=0.315, Ol=0.685, n_bins=10000, lnk_min=-13., 
                    
                    
     # damping of the 1h power spectra at small k
-    F_k1 = f_k(k_range_lin)
+    F_k1 = sp.erf(k_range_lin/0.1)
+    F_k2 = sp.erfc(k_range_lin/1500.0)
+    #F_k1 = np.ones_like(k_range_lin)
     # Fourier Transform of the NFW profile
-    u_k = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
-                rvir_range_lin_i, k_range_lin,\
-                c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
-                f_i, concentration_i in _izip(rvir_range_lin, \
-                rho_mean, z, f, concentration)])
-    u_k = u_k/u_k[:,0][:,None]
+    
+    if ingredients['centrals']:
+        uk_c = nfw.uk(
+            k_range_lin, mass_range, rvir_range_lin, concentration, rho_bg,
+            setup['delta'])
+        uk_c = uk_c / expand_dims(uk_c[...,0], -1)
+    else:
+        uk_c = np.ones((nbins,mass_range.size,k_range_lin.size))
     # and of the NFW profile of the satellites
-    """
-    uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(fc_nsat_i), \
-                mass_range, rvir_range_lin_i, k_range_lin)
-                for rvir_range_lin_i, rho_mean_i, z_i, fc_nsat_i in \
-                _izip(rvir_range_lin, rho_mean, z, fc_nsat)])
-    """
-    uk_s = _array([NFW_f(np.float64(z_i), rho_mean_i, np.float64(f_i), mass_range,\
-                rvir_range_lin_i, k_range_lin,\
-                c=concentration_i) for rvir_range_lin_i, rho_mean_i, z_i,\
-                f_i, concentration_i in _izip(rvir_range_lin, \
-                rho_mean, z, f, concentration_sat)])
-    #uk_s = u_k
-    uk_s = uk_s/uk_s[:,0][:,None]
+    if ingredients['satellites']:
+        uk_s = nfw.uk(
+            k_range_lin, mass_range, rvir_range_lin, concentration_sat, rho_bg,
+            setup['delta'])
+        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
+    else:
+        uk_s = np.ones((nbins,mass_range.size,k_range_lin.size))
 
-
+    
+    
     # Galaxy - dark matter spectra (for lensing)
-    Pg_2h = bias * _array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
+    bias = c_twohalo
+    bias = array([bias]*k_range_lin.size).T
+    
+   
+    rho_bg = rho_bg[...,0]
+    
+    Pgm_2h = F_k2 * bias * array(
+            [two_halo_gm(hmf_i, ngal_i, pop_g_i,
                     rvir_range_lin_i, mass_range)[0]
-                    for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
-                    _izip(rvir_range_lin, hmf, ngal, pop_g)])
-    
-    bias_out = bias.T[0] * _array([TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin,
-                    rvir_range_lin_i, mass_range)[1]
-                    for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
-                    _izip(rvir_range_lin, hmf, ngal, pop_g)])
-        
-        
-    
-    Pg_c = F_k1 * _array([GM_cen_analy(hmf_i, u_k_i, rho_mean_i, pop_c_i,
-                    ngal_i, mass_range)
-                    for rho_mean_i, hmf_i, pop_c_i, ngal_i, u_k_i in\
-                    _izip(rho_mean, hmf, pop_c, ngal, u_k)])
+            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+            in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+                    expand_dims(pop_g, -2))])
 
-    Pg_s = F_k1 * _array([GM_sat_analy(hmf_i, u_k_i, uk_s_i, rho_mean_i,
-                    pop_s_i, ngal_i, mass_range)
-                    for rho_mean_i, hmf_i, pop_s_i, ngal_i, u_k_i, uk_s_i in\
-                    _izip(rho_mean, hmf, pop_s, ngal, u_k, uk_s)])
-    
+    if ingredients['centrals']:
+        Pgm_c = F_k1 * gm_cen_analy(
+            dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
+    else:
+        Pgm_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
 
+    if ingredients['satellites']:
+        Pgm_s = F_k1 * gm_sat_analy(
+            dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
+    else:
+        Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
 
-
-    Pg_k = _array([(Pg_c_i + Pg_s_i + Pg_2h_i)
-                   for Pg_c_i, Pg_s_i, Pg_2h_i
-                   in _izip(Pg_c, Pg_s, Pg_2h)])
+    Pgm_k = Pgm_c + Pgm_s + Pgm_2h
     
     
     
     # Galaxy - galaxy spectra (for clustering)
-    Pgg_2h = bias * _array([TwoHalo_gg(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i, mass_range)[0]
-                    for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i in \
-                    _izip(rvir_range_lin, hmf, ngal, pop_g)])
-    """
-    ncen = _array([n_gal(hmf_i, pop_c_i, mass_range)
-                    for hmf_i, pop_c_i in _izip(hmf, pop_c)])
-    Pgg_c = F_k1 * _array([GG_cen_analy(hmf_i, ncen_i*np.ones(k_range_lin.shape),
-                    ngal_i*np.ones(k_range_lin.shape), mass_range)
-                    for hmf_i, ncen_i, ngal_i in\
-                    _izip(hmf, ncen, ngal)])
-    """
-    Pgg_c = np.zeros((n_bins_obs,n_bins))
-    #beta = np.ones(M_bin_min.size)
-    Pgg_s = F_k1 * _array([GG_sat_analy(hmf_i, u_k_i, pop_s_i, ngal_i, beta_i, mass_range)
-                    for hmf_i, u_k_i, pop_s_i, ngal_i, beta_i in\
-                    _izip(hmf, uk_s, pop_s, ngal, beta)])
-                            
-    Pgg_cs = F_k1 * _array([GG_cen_sat_analy(hmf_i, u_k_i, pop_c_i, pop_s_i, ngal_i, mass_range)
-                    for hmf_i, pop_c_i, pop_s_i, ngal_i, u_k_i in\
-                    _izip(hmf, pop_c, pop_s, ngal, uk_s)])
-                            
-    Pgg_k = _array([(Pgg_c_i + (2.0 * Pgg_cs_i) + Pgg_s_i) + Pgg_2h_i
-                    for Pgg_c_i, Pgg_cs_i, Pgg_s_i, Pgg_2h_i
-                    in _izip(Pgg_c, Pgg_cs, Pgg_s, Pgg_2h)])
+    
+    Pgg_2h = F_k2 * bias * array(
+            [two_halo_gg(hmf_i, ngal_i, pop_g_i,
+                    rvir_range_lin_i, mass_range)[0]
+            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
+            in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+                    expand_dims(pop_g, -2))])
+        
+    ncen = hod.nbar(dndm, pop_c, mass_range)
+    nsat = hod.nbar(dndm, pop_s, mass_range)
+
+    if ingredients['centrals']:
+        """
+        Pgg_c = F_k1 * gg_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
+        """
+        Pgg_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
+    else:
+        Pgg_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
+    
+    if ingredients['satellites']:
+        beta = s_beta
+        Pgg_s = F_k1 * gg_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
+    else:
+        Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
+        
+    if ingredients['centrals'] and ingredients['satellites']:
+        Pgg_cs = F_k1 * gg_cen_sat_analy(dndm, uk_s, pop_c, pop_s, ngal, mass_range)
+    else:
+        Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
+        
+    Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
                             
                             
     # Matter - matter spectra
-    Pmm_1h = F_k1 * _array([MM_analy(hmf_i, u_k_i, rho_mean_i, mass_range)
-                    for hmf_i, u_k_i, rho_mean_i, beta_i in\
-                    _izip(hmf, u_k, rho_mean, beta)])
+   
+    if ingredients['centrals']:
+        Pmm_1h = F_k1 * mm_analy(dndm, uk_c, rho_bg, mass_range)
+    else:
+        Pmm_1h = F_k1 * np.zeros((nbins,setup['lnk_bins']))
                             
-    Pmm = _array([(Pmm_1h_i + hmf_i.power)
-                    for Pmm_1h_i, hmf_i
-                    in _izip(Pmm_1h, hmf)])
+    Pmm_k = Pmm_1h + F_k2 * array([hmf_i.power for hmf_i in hmf])
 
 
-    P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                    for Pg_k_i in _izip(Pg_k)]
+
+    P_inter = [UnivariateSpline(k_range, np.log(Pgm_k_i), s=0, ext=0)
+                    for Pgm_k_i in Pgm_k]
         
     P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
-                    for Pgg_k_i in _izip(Pgg_k)]
+                    for Pgg_k_i in Pgg_k]
 
-    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_i), s=0, ext=0)
-                    for Pmm_i in _izip(Pmm)]
+    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+                    for Pmm_k_i in Pmm_k]
                     
+    #### TO-DO!
+    #### Stuff below needs updating!
             
     # Evaluate halo model integrals needed for SSC
     

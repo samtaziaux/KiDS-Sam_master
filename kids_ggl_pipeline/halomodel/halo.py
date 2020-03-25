@@ -245,8 +245,9 @@ def model(theta, R, calculate_covariance=False):
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(k_range_lin/0.1)
-    F_k2 = sp.erfc(k_range_lin/1500.0)
-    #F_k1 = np.ones_like(k_range_lin)
+    #F_k2 = sp.erfc(k_range_lin/1500.0) # This should be replaced with halo exclusion.
+    # i.e. no 2h term on scales smaller than average halo viriral radius
+    F_k2 = np.ones_like(k_range_lin)
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         uk_c = nfw.uk(

@@ -272,8 +272,9 @@ def model(theta, R, calculate_covariance=False):
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(k_range_lin/0.1)
-    F_k2 = sp.erfc(k_range_lin/1500.0)
-    #F_k1 = np.ones_like(k_range_lin)
+    F_k2 = sp.erfc(k_range_lin/1500.0) # This should be replaced with halo exclusion.
+    # i.e. no 2h term on scales smaller than average halo viriral radius
+    #F_k2 = np.ones_like(k_range_lin)
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
@@ -547,8 +548,17 @@ def model(theta, R, calculate_covariance=False):
     else:
         output = []
     
-    """
+    #"""
     import matplotlib.pyplot as pl
+    pl.plot(rvir_range_3d, xi2[0])
+    pl.plot(rvir_range_3d, xi2[1])
+    pl.plot(rvir_range_3d, xi2[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/xi_gm.png')
+    pl.show()
+    pl.clf()
+    
     pl.plot(rvir_range_3d, xi2_2[0])
     pl.plot(rvir_range_3d, xi2_2[1])
     pl.plot(rvir_range_3d, xi2_2[2])
@@ -557,7 +567,16 @@ def model(theta, R, calculate_covariance=False):
     pl.savefig('/home/dvornik/test_pipeline2/xi_gg.png')
     pl.show()
     pl.clf()
-    """
+    
+    pl.plot(rvir_range_3d, xi2_3[0])
+    pl.plot(rvir_range_3d, xi2_3[1])
+    pl.plot(rvir_range_3d, xi2_3[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/xi_mm.png')
+    pl.show()
+    pl.clf()
+    #"""
 
     # projected surface density
     # this is the slowest part of the model
@@ -663,17 +682,6 @@ def model(theta, R, calculate_covariance=False):
             wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
             output.append([surf_dens2_2, wp_out])
     
-    """
-    print(wp_out)
-    pl.plot(rvir_range_2d_i, wp_out[0])
-    pl.plot(rvir_range_2d_i, wp_out[1])
-    pl.plot(rvir_range_2d_i, wp_out[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.savefig('/home/dvornik/test_pipeline2/sigma_gg.png')
-    pl.show()
-    pl.clf()
-    """
     
     if ingredients['mm']:
         surf_dens2_3 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
@@ -707,6 +715,37 @@ def model(theta, R, calculate_covariance=False):
         output.append(rvir_range_3d_i)
     else:
         output = []
+    
+    
+    #"""
+    pl.plot(rvir_range_3d_i, surf_dens2[0])
+    pl.plot(rvir_range_3d_i, surf_dens2[1])
+    pl.plot(rvir_range_3d_i, surf_dens2[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/sigma_gm.png')
+    pl.show()
+    pl.clf()
+    
+    pl.plot(rvir_range_3d_i, surf_dens2_2[0])
+    pl.plot(rvir_range_3d_i, surf_dens2_2[1])
+    pl.plot(rvir_range_3d_i, surf_dens2_2[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/sigma_gg.png')
+    pl.show()
+    pl.clf()
+    
+    pl.plot(rvir_range_3d_i, surf_dens2_3[0])
+    pl.plot(rvir_range_3d_i, surf_dens2_3[1])
+    pl.plot(rvir_range_3d_i, surf_dens2_3[2])
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/sigma_mm.png')
+    pl.show()
+    pl.clf()
+    
+    #"""
     
 
     # excess surface density

@@ -60,7 +60,7 @@ from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
-    mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
+    bias_tinker10, mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
     gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg)
 from .. import hod
 
@@ -466,31 +466,31 @@ def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, populat
     return trispec_1h_interp
 
 
-def halo_model_integrals(mass_func, uk, bias, rho_mean, ngal, population_cen, population_sat, m_x, x):
+def halo_model_integrals(dndm, uk, bias, rho_mean, ngal, population_cen, population_sat, Mh, x):
     
     if x == 'g':
-        integ1 = mass_func.dndm * bias * (population_cen + population_sat * uk)
-        I = trapz(integ1, m_x, axis=1)/ngal
+        integ1 = dndm * bias * (population_cen + population_sat * uk)
+        I = trapz(integ1, Mh, axis=1)/ngal
     
     if x == 'm':
-        integ2 = mass_func.dndm * bias * uk * m_x
-        I = trapz(integ2, m_x, axis=1)/rho_mean
+        integ2 = dndm * bias * uk * Mh
+        I = trapz(integ2, Mh, axis=1)/rho_mean
 
     if x == 'gg':
-        integ3 = mass_func.dndm * bias * (population_cen * population_sat * uk + population_sat**2.0 * uk**2.0)
-        I = trapz(integ3, m_x, axis=1)/(ngal**2.0)
+        integ3 = dndm * bias * (population_cen * population_sat * uk + population_sat**2.0 * uk**2.0)
+        I = trapz(integ3, Mh, axis=1)/(ngal**2.0)
 
     if x == 'gm':
-        integ4 = mass_func.dndm * bias * uk * m_x * (population_cen + population_sat * uk)
-        I = trapz(integ4, m_x, axis=1)/(rho_mean*ngal)
+        integ4 = dndm * bias * uk * Mh * (population_cen + population_sat * uk)
+        I = trapz(integ4, Mh, axis=1)/(rho_mean*ngal)
 
     if x == 'mm':
-        integ5 = mass_func.dndm * bias * (uk * m_x)**2.0
-        I = trapz(integ5, m_x, axis=1)/(rho_mean**2.0)
+        integ5 = dndm * bias * (uk * Mh)**2.0
+        I = trapz(integ5, Mh, axis=1)/(rho_mean**2.0)
 
     if x == 'mmm':
-        integ6 = mass_func.dndm * bias * (uk * m_x)**3.0
-        I = trapz(integ6, m_x, axis=1)/(rho_mean**3.0)
+        integ6 = dndm * bias * (uk * Mh)**3.0
+        I = trapz(integ6, Mh, axis=1)/(rho_mean**3.0)
 
     return I
 
@@ -939,10 +939,9 @@ def covariance(theta, R, calculate_covariance=False):
     rho_bg = rho_bg[...,0]
     
     Pgm_2h = F_k2 * bias * array(
-            [two_halo_gm(hmf_i, ngal_i, pop_g_i,
-                    rvir_range_lin_i, mass_range)[0]
-            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-            in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+            [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+            for hmf_i, ngal_i, pop_g_i
+            in zip(hmf, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
 
     if ingredients['centrals']:
@@ -964,10 +963,9 @@ def covariance(theta, R, calculate_covariance=False):
     # Galaxy - galaxy spectra (for clustering)
     
     Pgg_2h = F_k2 * bias * array(
-            [two_halo_gg(hmf_i, ngal_i, pop_g_i,
-                    rvir_range_lin_i, mass_range)[0]
-            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-            in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+            for hmf_i, ngal_i, pop_g_i
+            in zip(hmf, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
         
     ncen = hod.nbar(dndm, pop_c, mass_range)
@@ -1020,25 +1018,25 @@ def covariance(theta, R, calculate_covariance=False):
             
     # Evaluate halo model integrals needed for SSC
     
-    I_g = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
+    I_g = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                   _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                   izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
                                    
-    I_m = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
+    I_m = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
                                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
                                     
-    I_gg = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
+    I_gg = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
                                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
                                     
-    I_gm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
+    I_gm = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
                                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
                                     
-    I_mm = _array([halo_model_integrals(hmf_i, uk_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
+    I_mm = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
                                     for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
     
     I_inter_g = [UnivariateSpline(k_range, np.log(I_g_i), s=0, ext=0)
                for I_g_i in _izip(I_g)]

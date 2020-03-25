@@ -323,10 +323,9 @@ def model(theta, R, calculate_covariance=False):
                 #in zip(rvir_range_lin, hmf, ngal, pop_g)])
             """
             Pgm_2h = F_k2 * bias * array(
-                [two_halo_gm(hmf_i, ngal_i, pop_g_i,
-                        rvir_range_lin_i, mass_range)[0]
-                for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-                in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+                [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+                for hmf_i, ngal_i, pop_g_i
+                in zip(hmf, expand_dims(ngal, -1),
                         expand_dims(pop_g, -2))])
             #print('Pg_2h in {0:.2e} s'.format(time()-ti))
         #elif integrate_zlens:
@@ -363,10 +362,9 @@ def model(theta, R, calculate_covariance=False):
     if ingredients['gg']:
         if ingredients['twohalo']:
             Pgg_2h = F_k2 * bias * array(
-            [two_halo_gg(hmf_i, ngal_i, pop_g_i,
-                    rvir_range_lin_i, mass_range)[0]
-            for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-            in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+            for hmf_i, ngal_i, pop_g_i
+            in zip(hmf, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
         else:
             Pgg_2h = F_k1 * np.zeros((nbins,setup['lnk_bins']))

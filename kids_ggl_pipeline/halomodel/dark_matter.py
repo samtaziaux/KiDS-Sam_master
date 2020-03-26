@@ -28,7 +28,7 @@ import time
 import matplotlib.pyplot as pl
 import numpy as np
 import sys
-from numpy import cos, expand_dims, pi, sin
+from numpy import cos, expand_dims, pi, sin, piecewise
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
@@ -272,6 +272,37 @@ def two_halo_gg(hmf, ngal, population, m_x, **kwargs):
 
     return (hmf.power * b_g**2.0), b_g**2.0
 
+
+def halo_exclusion(xi, r, meff, rho_dm, delta):
+    """ Halo exclusion function that makes sure that in 2-halo term
+        neighbouring haloes do not overlap and are at least Rvir apart
+        from each other. This prescription follows Giocoly et al. 2010
+        but maybe a better model might be implemented
+    
+    Parameters
+    ----------
+    xi : float array, shape (nbins,P)
+        2-halo correlation function
+    r : float array, shape (P,)
+        x-axis array of radial values for xi
+    meff : float array, shape (nbins,)
+        average halo mass in observable bin
+    rho_dm : float or float array, shape (nbins,)
+        average background density
+    delta : float
+        overdensity factor
+
+    Returns
+    -------
+    xi_exc : float array, shape (nbins,P)
+        modified 2-halo correlation function
+    """
+    rvir = virial_radius(10.0**meff, rho_dm, delta)
+    #filter = np.array([piecewise(r, [r <= rvir_i, r > rvir_i], [0.0, 1.0]) for rvir_i in rvir])
+    filter = np.array([sp.erf(r/rvir_i) for rvir_i in rvir]) # Implemented with err function to smooth out step! 
+    #xi_exc = ((1.0 + xi) * filter) - 1.0 # Given how sigma function in lens.py is coded up, the simple method is fine!
+    xi_exc = xi * filter
+    return xi_exc
 
 
 """

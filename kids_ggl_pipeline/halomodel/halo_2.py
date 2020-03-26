@@ -60,7 +60,7 @@ from .lens import (
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
     mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
-    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg)
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion)
 from .. import hod
 
 
@@ -272,9 +272,7 @@ def model(theta, R, calculate_covariance=False):
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(k_range_lin/0.1)
-    F_k2 = sp.erfc(k_range_lin/1500.0) # This should be replaced with halo exclusion.
-    # i.e. no 2h term on scales smaller than average halo viriral radius
-    #F_k2 = np.ones_like(k_range_lin)
+    F_k2 = np.ones_like(k_range_lin)
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
@@ -335,7 +333,6 @@ def model(theta, R, calculate_covariance=False):
             Pgm_2h = np.zeros((nbins,setup['lnk_bins']))
 
         if ingredients['centrals']:
-
             Pgm_c = F_k1 * gm_cen_analy(
                 dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
         elif integrate_zlens:
@@ -345,13 +342,15 @@ def model(theta, R, calculate_covariance=False):
 
 
         if ingredients['satellites']:
-
             Pgm_s = F_k1 * gm_sat_analy(
                 dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
         else:
             Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
-
-        Pgm_k = Pgm_c + Pgm_s + Pgm_2h
+        
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            Pgm_k = Pgm_c + Pgm_s
+        else:
+            Pgm_k = Pgm_c + Pgm_s + Pgm_2h
     
         # finally integrate over (weight by, really) lens redshift
         if integrate_zlens:
@@ -393,56 +392,76 @@ def model(theta, R, calculate_covariance=False):
         else:
             Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
         
-        Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s
+        else:
+            Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
                     
                             
     # Matter - matter spectra
     if ingredients['mm']:
+        if ingredients['twohalo']:
+            Pmm_2h = F_k2 * array([hmf_i.power for hmf_i in hmf])
+        else:
+            Pmm_2h = np.zeros((nbins,setup['lnk_bins']))
+            
         if ingredients['centrals']:
             Pmm_1h = F_k1 * mm_analy(dndm, uk_c, rho_bg, mass_range)
         else:
-            Pmm_1h = F_k1 * np.zeros((nbins,setup['lnk_bins']))
-                            
-        Pmm_k = Pmm_1h + F_k2 * array([hmf_i.power for hmf_i in hmf])
+            Pmm_1h = np.zeros((nbins,setup['lnk_bins']))
+          
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            Pmm_k = Pmm_1h
+        else:
+            Pmm_k = Pmm_1h + Pmm_2h
             
     #"""
     import matplotlib.pyplot as pl
-    pl.plot(k_range_lin, Pgm_c[0])
-    pl.plot(k_range_lin, Pgm_s[0])
-    pl.plot(k_range_lin, Pgm_2h[0])
-    pl.plot(k_range_lin, Pgm_k[0])
-    pl.plot(k_range_lin, Pgm_k[1])
-    pl.plot(k_range_lin, Pgm_k[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.ylim([1e-10,1e6])
-    pl.savefig('/home/dvornik/test_pipeline2/power_gm.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(k_range_lin, Pgm_c[0])
+        pl.plot(k_range_lin, Pgm_s[0])
+        pl.plot(k_range_lin, Pgm_2h[0])
+        pl.plot(k_range_lin, Pgm_k[0])
+        pl.plot(k_range_lin, Pgm_k[1])
+        pl.plot(k_range_lin, Pgm_k[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.ylim([1e-10,1e6])
+        pl.savefig('/home/dvornik/test_pipeline2/power_gm.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     
-    pl.plot(k_range_lin, Pgg_c[0])
-    pl.plot(k_range_lin, Pgg_cs[0])
-    pl.plot(k_range_lin, Pgg_s[0])
-    pl.plot(k_range_lin, Pgg_2h[0])
-    pl.plot(k_range_lin, Pgg_k[0])
-    pl.plot(k_range_lin, Pgg_k[1])
-    pl.plot(k_range_lin, Pgg_k[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.ylim([1e-10,1e6])
-    pl.savefig('/home/dvornik/test_pipeline2/power_gg.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(k_range_lin, Pgg_c[0])
+        pl.plot(k_range_lin, Pgg_cs[0])
+        pl.plot(k_range_lin, Pgg_s[0])
+        pl.plot(k_range_lin, Pgg_2h[0])
+        pl.plot(k_range_lin, Pgg_k[0])
+        pl.plot(k_range_lin, Pgg_k[1])
+        pl.plot(k_range_lin, Pgg_k[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.ylim([1e-10,1e6])
+        pl.savefig('/home/dvornik/test_pipeline2/power_gg.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     
-    pl.plot(k_range_lin, Pmm_k[0])
-    pl.plot(k_range_lin, Pmm_k[1])
-    pl.plot(k_range_lin, Pmm_k[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.ylim([1e-10,1e6])
-    pl.savefig('/home/dvornik/test_pipeline2/power_mm.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(k_range_lin, Pmm_k[0])
+        pl.plot(k_range_lin, Pmm_k[1])
+        pl.plot(k_range_lin, Pmm_k[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.ylim([1e-10,1e6])
+        pl.savefig('/home/dvornik/test_pipeline2/power_mm.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     #"""
                 
     # Outputs
@@ -457,19 +476,44 @@ def model(theta, R, calculate_covariance=False):
                 for Pg_k_i in Pgm_k]
         else:
             if integrate_zlens:
-                P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                    for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
+                if ingredients['haloexclusion'] and setup['return'] != 'power':
+                    P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
+                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
+                    P_inter_2h = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
+                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_2h)]
+                else:
+                    P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
+                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
             else:
-                P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                    for Pg_k_i in Pgm_k]
+                if ingredients['haloexclusion'] and setup['return'] != 'power':
+                    P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+                        for Pg_k_i in Pgm_k]
+                    P_inter_2h = [UnivariateSpline(k_range, np.log(Pg_2h_i), s=0, ext=0)
+                        for Pg_2h_i in Pgm_2h]
+                else:
+                    P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+                        for Pg_k_i in Pgm_k]
                    
     if ingredients['gg']:
-        P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
+                    for Pgg_k_i in Pgg_k]
+            P_inter_2_2h = [UnivariateSpline(k_range, np.log(Pgg_2h_i), s=0, ext=0)
+                    for Pgg_2h_i in Pgg_2h]
+        else:
+            P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
                     for Pgg_k_i in Pgg_k]
                     
     if ingredients['mm']:
-        P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
                     for Pmm_k_i in Pmm_k]
+            P_inter_3_2h = [UnivariateSpline(k_range, np.log(Pmm_2h_i), s=0, ext=0)
+                    for Pmm_2h_i in Pmm_2h]
+        else:
+            P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+                    for Pmm_k_i in Pmm_k]
+    
     
     if ingredients['gm']:
         if setup['return'] == 'all':
@@ -500,13 +544,31 @@ def model(theta, R, calculate_covariance=False):
     # correlation functions
     if ingredients['gm']:
         if integrate_zlens:
-            xi2 = np.array(
-                [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
-                for P_inter_ji in P_inter_j] for P_inter_j in P_inter])
+            if ingredients['haloexclusion']:
+                xi2 = np.array(
+                    [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
+                    for P_inter_ji in P_inter_j] for P_inter_j in P_inter])
+                xi2_2h = np.array(
+                    [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
+                    for P_inter_ji in P_inter_j] for P_inter_j in P_inter_2h])
+                xi2 = xi2 + halo_exclusion(xi2_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+            else:
+                xi2 = np.array(
+                    [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
+                    for P_inter_ji in P_inter_j] for P_inter_j in P_inter])
         else:
-            xi2 = np.array(
-                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                for P_inter_i in P_inter])
+            if ingredients['haloexclusion']:
+                xi2 = np.array(
+                    [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                    for P_inter_i in P_inter])
+                xi2_2h = np.array(
+                    [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                    for P_inter_i in P_inter_2h])
+                xi2 = xi2 + halo_exclusion(xi2_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+            else:
+                xi2 = np.array(
+                    [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                    for P_inter_i in P_inter])
         # not yet allowed
         if setup['return'] == 'xi':
             if integrate_zlens:
@@ -520,9 +582,18 @@ def model(theta, R, calculate_covariance=False):
             output.append(xi2)
     
     if ingredients['gg']:
-        xi2_2 = np.array(
-            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-            for P_inter_i in P_inter_2])
+        if ingredients['haloexclusion']:
+            xi2_2 = np.array(
+                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                for P_inter_i in P_inter_2])
+            xi2_2_2h = np.array(
+                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                for P_inter_i in P_inter_2_2h])
+            xi2_2 = xi2_2 + halo_exclusion(xi2_2_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+        else:
+            xi2_2 = np.array(
+                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                for P_inter_i in P_inter_2])
         if setup['return'] == 'xi':
             xi_out_i_2 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_2)])
             xi_out_2 = np.array([x_i(rvir_range_2d_i) for x_i in xi_out_i_2])
@@ -531,15 +602,25 @@ def model(theta, R, calculate_covariance=False):
             output.append(xi2_2)
         
     if ingredients['mm']:
-        xi2_3 = np.array(
-            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-            for P_inter_i in P_inter_3])
+        if ingredients['haloexclusion']:
+            xi2_3 = np.array(
+                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                for P_inter_i in P_inter_3])
+            xi2_3_2h = np.array(
+                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                for P_inter_i in P_inter_3_2h])
+            xi2_3 = xi2_3 + halo_exclusion(xi2_3_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+        else:
+            xi2_3 = np.array(
+                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+                for P_inter_i in P_inter_3])
         if setup['return'] == 'xi':
             xi_out_i_3 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_3)])
             xi_out_3 = np.array([x_i(rvir_range_2d_i) for x_i in xi_out_i_3])
             output.append(xi_out_3)
         if setup['return'] == 'all':
             output.append(xi2_3)
+            
     if setup['return'] == 'xi':
         output.append(meff)
         return output
@@ -550,32 +631,40 @@ def model(theta, R, calculate_covariance=False):
     
     #"""
     import matplotlib.pyplot as pl
-    pl.plot(rvir_range_3d, xi2[0])
-    pl.plot(rvir_range_3d, xi2[1])
-    pl.plot(rvir_range_3d, xi2[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.savefig('/home/dvornik/test_pipeline2/xi_gm.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(rvir_range_3d, xi2[0])
+        pl.plot(rvir_range_3d, xi2[1])
+        pl.plot(rvir_range_3d, xi2[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.savefig('/home/dvornik/test_pipeline2/xi_gm.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
+    try:
+        pl.plot(rvir_range_3d, xi2_2[0])
+        pl.plot(rvir_range_3d, xi2_2[1])
+        pl.plot(rvir_range_3d, xi2_2[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.savefig('/home/dvornik/test_pipeline2/xi_gg.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     
-    pl.plot(rvir_range_3d, xi2_2[0])
-    pl.plot(rvir_range_3d, xi2_2[1])
-    pl.plot(rvir_range_3d, xi2_2[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.savefig('/home/dvornik/test_pipeline2/xi_gg.png')
-    pl.show()
-    pl.clf()
-    
-    pl.plot(rvir_range_3d, xi2_3[0])
-    pl.plot(rvir_range_3d, xi2_3[1])
-    pl.plot(rvir_range_3d, xi2_3[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.savefig('/home/dvornik/test_pipeline2/xi_mm.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(rvir_range_3d, xi2_3[0])
+        pl.plot(rvir_range_3d, xi2_3[1])
+        pl.plot(rvir_range_3d, xi2_3[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.savefig('/home/dvornik/test_pipeline2/xi_mm.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     #"""
 
     # projected surface density
@@ -718,32 +807,41 @@ def model(theta, R, calculate_covariance=False):
     
     
     #"""
-    pl.plot(rvir_range_3d_i, surf_dens2[0])
-    pl.plot(rvir_range_3d_i, surf_dens2[1])
-    pl.plot(rvir_range_3d_i, surf_dens2[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.savefig('/home/dvornik/test_pipeline2/sigma_gm.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(rvir_range_3d_i, surf_dens2[0])
+        pl.plot(rvir_range_3d_i, surf_dens2[1])
+        pl.plot(rvir_range_3d_i, surf_dens2[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.savefig('/home/dvornik/test_pipeline2/sigma_gm.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     
-    pl.plot(rvir_range_3d_i, surf_dens2_2[0])
-    pl.plot(rvir_range_3d_i, surf_dens2_2[1])
-    pl.plot(rvir_range_3d_i, surf_dens2_2[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.savefig('/home/dvornik/test_pipeline2/sigma_gg.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(rvir_range_3d_i, surf_dens2_2[0])
+        pl.plot(rvir_range_3d_i, surf_dens2_2[1])
+        pl.plot(rvir_range_3d_i, surf_dens2_2[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.savefig('/home/dvornik/test_pipeline2/sigma_gg.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     
-    pl.plot(rvir_range_3d_i, surf_dens2_3[0])
-    pl.plot(rvir_range_3d_i, surf_dens2_3[1])
-    pl.plot(rvir_range_3d_i, surf_dens2_3[2])
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.savefig('/home/dvornik/test_pipeline2/sigma_mm.png')
-    pl.show()
-    pl.clf()
+    try:
+        pl.plot(rvir_range_3d_i, surf_dens2_3[0])
+        pl.plot(rvir_range_3d_i, surf_dens2_3[1])
+        pl.plot(rvir_range_3d_i, surf_dens2_3[2])
+        pl.xscale('log')
+        pl.yscale('log')
+        pl.savefig('/home/dvornik/test_pipeline2/sigma_mm.png')
+        pl.show()
+        pl.clf()
+    except:
+        pass
     
     #"""
     

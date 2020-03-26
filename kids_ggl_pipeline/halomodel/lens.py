@@ -260,10 +260,7 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
     # See Cacciato et al. 2012, equations 21 - 28
     # Gives the same resutls as wp above. :/
     
-    #import scipy.integrate as intg
-    
-    _log10 = log10
-    c = UnivariateSpline(_log10(r_i), corr, s=0, ext=1)
+    c = UnivariateSpline(log10(r_i), corr, s=0, ext=1)
     
     beta = omegam**0.6 / bias
     
@@ -277,18 +274,18 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
         
         x_int = np.linspace(0.0, r_i[i], 10000, endpoint=True)
         
-        int_j3 = lambda x: c(_log10(x))*x**2.0
-        int_j5 = lambda x: c(_log10(x))*x**4.0
+        int_j3 = lambda x: c(log10(x))*x**2.0
+        int_j5 = lambda x: c(log10(x))*x**4.0
     
         J_3[i] = (1.0/r_i[i]**3.0) * intg.cumtrapz((int_j3(x_int)), x_int, initial=None)[-1]
         J_5[i] = (1.0/r_i[i]**5.0) * intg.cumtrapz((int_j5(x_int)), x_int, initial=None)[-1]
     
-    J_3_interpolated = UnivariateSpline(_log10(r_i), J_3, s=0, ext=1)
-    J_5_interpolated = UnivariateSpline(_log10(r_i), J_5, s=0, ext=1)
+    J_3_interpolated = UnivariateSpline(log10(r_i), J_3, s=0, ext=1)
+    J_5_interpolated = UnivariateSpline(log10(r_i), J_5, s=0, ext=1)
     
-    xi_0 = lambda x: (1.0 + (2.0/3.0) * beta + (1.0/5.0) * beta**2.0) * c(_log10(x))
-    xi_2 = lambda x: ((4.0/3.0) * beta + (4.0/7.0) * beta**2.0) * (c(_log10(x)) - 3.0*J_3_interpolated(_log10(x)))
-    xi_4 = lambda x: ((8.0/35.0) * beta**2.0) * (c(_log10(x)) + (15.0/2.0)*J_3_interpolated(_log10(x)) - (35.0/2.0)*J_5_interpolated(_log10(x)))
+    xi_0 = lambda x: (1.0 + (2.0/3.0) * beta + (1.0/5.0) * beta**2.0) * c(log10(x))
+    xi_2 = lambda x: ((4.0/3.0) * beta + (4.0/7.0) * beta**2.0) * (c(log10(x)) - 3.0*J_3_interpolated(log10(x)))
+    xi_4 = lambda x: ((8.0/35.0) * beta**2.0) * (c(log10(x)) + (15.0/2.0)*J_3_interpolated(log10(x)) - (35.0/2.0)*J_5_interpolated(log10(x)))
     
     int_1 = np.zeros(len(r_x))
     int_2 = np.zeros(len(r_x))

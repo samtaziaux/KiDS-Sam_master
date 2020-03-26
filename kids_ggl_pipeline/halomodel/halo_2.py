@@ -61,6 +61,7 @@ from .lens import (
 from .dark_matter import (
     mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
     gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion)
+from .covariance import covariance
 from .. import hod
 
 
@@ -100,6 +101,8 @@ def model(theta, R, calculate_covariance=False):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
+    #cov = covariance(theta, R)
+    #quit()
     # this has to happen before because theta is re-purposed below
     if calculate_covariance:
         covar = theta[1][theta[0].index('covariance')]

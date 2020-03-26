@@ -57,7 +57,7 @@ from . import profiles
 from .tools import (
     fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
-    power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
+    power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit as sigma_crit_func,
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
     bias_tinker10, mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
@@ -352,8 +352,8 @@ def trispectra_234h(krange, P_lin_inter, mass_func, uk, bias, rho_mean, m_x, k_x
     trispec_4h = np.zeros((krange.size, krange.size))
     
     # Evaluate u(k) on different k grid!
-    u_k = np.array([UnivariateSpline(k_x, uk[:,m], s=0, ext=0) for m in xrange(len(m_x))])
-    u_k_new = np.array([u_k[m](krange) for m in xrange(len(m_x))])
+    u_k = np.array([UnivariateSpline(k_x, uk[m,:], s=0, ext=0) for m in range(len(m_x))])
+    u_k_new = np.array([u_k[m](krange) for m in range(len(m_x))])
     
     def Im(i, mass_func, uk, bias, rho_mean, m_x):
         integ = mass_func.dndm * bias * uk[:,i] * m_x
@@ -413,21 +413,21 @@ def trispectra_234h(krange, P_lin_inter, mass_func, uk, bias, rho_mean, m_x, k_x
     return trispec_tot_interp
 
 
-def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, population_sat, m_x, k_x, x):
+def trispectra_1h(krange, mass_func, uk_c, uk_s, rho_mean, ngal, population_cen, population_sat, m_x, k_x, x):
     
     trispec_1h = np.zeros((krange.size, krange.size))
 
-    u_g_prod = (population_cen + population_sat * uk)
-    u_m_prod = m_x * uk
+    u_g_prod = (expand_dims(population_cen, -1) + expand_dims(population_sat, -1) * uk_s)
+    u_m_prod = expand_dims(m_x, -1) * uk_c
     norm_g = ngal
     norm_m = rho_mean
     
     # Evaluate u(k) on different k grid!
-    u_g = np.array([UnivariateSpline(k_x, u_g_prod[:,m], s=0, ext=0) for m in xrange(len(m_x))])
-    u_m = np.array([UnivariateSpline(k_x, u_m_prod[:,m], s=0, ext=0) for m in xrange(len(m_x))])
+    u_g = np.array([UnivariateSpline(k_x, u_g_prod[m,:], s=0, ext=0) for m in range(len(m_x))])
+    u_m = np.array([UnivariateSpline(k_x, u_m_prod[m,:], s=0, ext=0) for m in range(len(m_x))])
     
-    u_m_new = np.array([u_m[m](krange) for m in xrange(len(m_x))])
-    u_g_new = np.array([u_g[m](krange) for m in xrange(len(m_x))])
+    u_m_new = np.array([u_m[m](krange) for m in range(len(m_x))])
+    u_g_new = np.array([u_g[m](krange) for m in range(len(m_x))])
     
     if x == 'gmgm':
         for i, k1 in enumerate(krange):
@@ -466,31 +466,35 @@ def trispectra_1h(krange, mass_func, uk, rho_mean, ngal, population_cen, populat
     return trispec_1h_interp
 
 
-def halo_model_integrals(dndm, uk, bias, rho_mean, ngal, population_cen, population_sat, Mh, x):
+def halo_model_integrals(dndm, uk_c, uk_s, bias, rho_mean, ngal, population_cen, population_sat, Mh, x):
     
     if x == 'g':
-        integ1 = dndm * bias * (population_cen + population_sat * uk)
-        I = trapz(integ1, Mh, axis=1)/ngal
+        integ1 = expand_dims(dndm * bias, -1) * (expand_dims(population_cen, -1) + expand_dims(population_sat, -1) * uk_s)
+        I = trapz(integ1, Mh, axis=0)/ngal
     
     if x == 'm':
-        integ2 = dndm * bias * uk * Mh
-        I = trapz(integ2, Mh, axis=1)/rho_mean
+        rho_mean = expand_dims(rho_mean, -1)
+        integ2 = expand_dims(dndm * bias * Mh, -1) * uk_c
+        I = trapz(integ2, Mh, axis=0)/rho_mean
 
     if x == 'gg':
-        integ3 = dndm * bias * (population_cen * population_sat * uk + population_sat**2.0 * uk**2.0)
-        I = trapz(integ3, Mh, axis=1)/(ngal**2.0)
+        integ3 = expand_dims(dndm * bias, -1) * (expand_dims(population_cen * population_sat, -1) * uk_s + expand_dims(population_sat**2.0, -1) * uk_s**2.0)
+        I = trapz(integ3, Mh, axis=0)/(ngal**2.0)
 
     if x == 'gm':
-        integ4 = dndm * bias * uk * Mh * (population_cen + population_sat * uk)
-        I = trapz(integ4, Mh, axis=1)/(rho_mean*ngal)
+        rho_mean = expand_dims(rho_mean, -1)
+        integ4 = expand_dims(dndm * bias * Mh, -1) * uk_c * (expand_dims(population_cen, -1) + expand_dims(population_sat, -1) * uk_s)
+        I = trapz(integ4, Mh, axis=0)/(rho_mean*ngal)
 
     if x == 'mm':
-        integ5 = dndm * bias * (uk * Mh)**2.0
-        I = trapz(integ5, Mh, axis=1)/(rho_mean**2.0)
+        rho_mean = expand_dims(rho_mean, -1)
+        integ5 = expand_dims(dndm * bias * Mh**2.0, -1) * uk_c**2.0
+        I = trapz(integ5, Mh, axis=0)/(rho_mean**2.0)
 
     if x == 'mmm':
-        integ6 = dndm * bias * (uk * Mh)**3.0
-        I = trapz(integ6, Mh, axis=1)/(rho_mean**3.0)
+        rho_mean = expand_dims(rho_mean, -1)
+        integ6 = expand_dims(dndm * bias * Mh**3.0, -1) * uk_c**3.0
+        I = trapz(integ6, Mh, axis=0)/(rho_mean**3.0)
 
     return I
 
@@ -1013,45 +1017,43 @@ def covariance(theta, R, calculate_covariance=False):
     P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
                     for Pmm_k_i in Pmm_k]
                     
-    #### TO-DO!
-    #### Stuff below needs updating!
-            
+    
     # Evaluate halo model integrals needed for SSC
     
-    I_g = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
-                                   for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                   izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    I_g = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
+                                   for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                   zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
                                    
-    I_m = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
-                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    I_m = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
                                     
-    I_gg = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
-                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    I_gg = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
                                     
-    I_gm = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
-                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    I_gm = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
                                     
-    I_mm = _array([halo_model_integrals(hmf_i.dndm, uk_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
-                                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                                    izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    I_mm = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                                    zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
     
     I_inter_g = [UnivariateSpline(k_range, np.log(I_g_i), s=0, ext=0)
-               for I_g_i in _izip(I_g)]
+               for I_g_i in I_g]
                
     I_inter_m = [UnivariateSpline(k_range, np.log(I_m_i), s=0, ext=0)
-                for I_m_i in _izip(I_m)]
+                for I_m_i in I_m]
                  
     I_inter_gg = [UnivariateSpline(k_range, np.log(I_gg_i), s=0, ext=0)
-                for I_gg_i in _izip(I_gg)]
+                for I_gg_i in I_gg]
                  
     I_inter_gm = [UnivariateSpline(k_range, np.log(I_gm_i), s=0, ext=0)
-                for I_gm_i in _izip(I_gm)]
+                for I_gm_i in I_gm]
                 
     I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
-                for I_mm_i in _izip(I_mm)]
+                for I_mm_i in I_mm]
     
     P_lin_inter = [UnivariateSpline(k_range, np.log(hmf_i.power), s=0, ext=0)
                 for hmf_i in hmf]
@@ -1062,7 +1064,13 @@ def covariance(theta, R, calculate_covariance=False):
     dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
     
     
+    #### TO-DO!
+    #### Stuff below needs updating!
+    
     # Start covariance calculations (and for now set survey details)
+
+    # These are inputs!!!!!
+    Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, gauss, ssc, ng, spec_z_path, nproc
 
     #Pi_max = 100.0
     
@@ -1073,8 +1081,10 @@ def covariance(theta, R, calculate_covariance=False):
     #z_kids = 0.6
     
     #sigma_crit_old = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h
-    sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
-    print(sigma_crit/10.0**12.0)
+    #sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
+    sigma_crit = sigma_crit_func(cosmo_model, 0.2, 0.9)
+    #print(sigma_crit/10.0**12.0)
+    
     
     
     eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
@@ -1102,9 +1112,9 @@ def covariance(theta, R, calculate_covariance=False):
 
     print(rvir_range_2d_i.shape)
 
-    cov_wp = np.zeros((rvir_range_2d_i.size*M_bin_min.size, rvir_range_2d_i.size*M_bin_min.size), dtype=np.float64)
-    cov_esd = np.zeros((rvir_range_2d_i.size*M_bin_min.size, rvir_range_2d_i.size*M_bin_min.size), dtype=np.float64)
-    cov_cross = np.zeros((rvir_range_2d_i.size*M_bin_min.size, rvir_range_2d_i.size*M_bin_min.size), dtype=np.float64)
+    cov_wp = np.zeros((rvir_range_2d_i.size*nbins, rvir_range_2d_i.size*nbins), dtype=np.float64)
+    cov_esd = np.zeros((rvir_range_2d_i.size*nbins, rvir_range_2d_i.size*nbins), dtype=np.float64)
+    cov_cross = np.zeros((rvir_range_2d_i.size*nbins, rvir_range_2d_i.size*nbins), dtype=np.float64)
 
     #W = 2.0 * np.pi * radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     #W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
@@ -1130,21 +1140,21 @@ def covariance(theta, R, calculate_covariance=False):
     #"""
     global Tgggg, Tgggm, Tgmgm, T234h
     
-    Tgggg = _array([trispectra_1h(k_temp_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggg')
-                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    Tgggg = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggg')
+                    for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                    zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
                     
-    Tgggm = _array([trispectra_1h(k_temp_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggm')
-                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    Tgggm = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggm')
+                    for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                    zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
                     
-    Tgmgm = _array([trispectra_1h(k_temp_lin, hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gmgm')
-                    for hmf_i, uk_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
-                    _izip(hmf, u_k, rho_mean, ngal, pop_c, pop_s)])
+    Tgmgm = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gmgm')
+                    for hmf_i, uk_c_i, uk_s_i, rho_mean_i, ngal_i, pop_c_i, pop_s_i in
+                    zip(hmf, uk_c, uk_s, rho_mean, ngal, pop_c, pop_s)])
     
-    T234h = _array([trispectra_234h(k_temp_lin, P_lin_inter_i, hmf_i, u_k_i, Bias_Tinker10(hmf_i, 0), rho_mean_i, mass_range, k_range_lin)
+    T234h = array([trispectra_234h(k_temp_lin, P_lin_inter_i, hmf_i, u_k_i, bias_tinker10(hmf_i), rho_mean_i, mass_range, k_range_lin)
                     for P_lin_inter_i, hmf_i, u_k_i, rho_mean_i in
-                    _izip(P_lin_inter, hmf, u_k, rho_mean)])
+                    zip(P_lin_inter, hmf, uk_c, rho_mean)])
     #"""
     print('Trispectra done.')
     """
@@ -1160,14 +1170,14 @@ def covariance(theta, R, calculate_covariance=False):
     
     ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))*np.sqrt(dlnk3P_lin_interdlnk[0](k_temp))) * np.sqrt(np.exp(P_lin_inter[0](k_temp)))*np.sqrt(np.exp(P_lin_inter[0](k_temp))) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.sqrt(np.exp(I_inter_mm[0](k_temp)))*np.sqrt(np.exp(I_inter_mm[0](k_temp))) )/ (np.exp(P_inter_3[0](k_temp)))
     
-    test_1h = trispectra_1h(k_temp_lin, hmf[0], u_k[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
+    test_1h = trispectra_1h(k_temp_lin, hmf[0], uk_c[0], uk_s[0], rho_mean[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
     test_1h = test_1h(k_temp_lin, k_temp_lin)
     import matplotlib.pyplot as pl
     #pl.imshow(test_1h, interpolation='nearest')
     #pl.show()
     #print(test_1h)
 
-    test = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], u_k[0], Bias_Tinker10(hmf[0], 0), rho_mean[0], mass_range, k_range_lin)
+    test = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], uk_c[0], bias_tinker10(hmf[0]), rho_mean[0], mass_range, k_range_lin)
     test = test(k_temp_lin, k_temp_lin)
     #test = test/100.0
     #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
@@ -1184,15 +1194,16 @@ def covariance(theta, R, calculate_covariance=False):
     #pl.yscale('log')
     #pl.show()
     
-    #pl.plot(k_temp_lin, ps_deriv_mm)
-    #pl.xscale('log')
-    #pl.yscale('log')
-    #pl.xlim([0.01, 2.5])
+    pl.plot(k_temp_lin, ps_deriv_mm)
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.xlim([0.01, 2.5])
     #pl.ylim([0.15, 4])
-    #pl.xlabel('k [h/Mpc]')
-    #pl.ylabel(r'$\rm{d \ln} P(k) / \rm{d \delta_{b}}$')
-    #pl.savefig('/home/dvornik/GalaxyBias_link/data/ssc_mm.png', bbox_inches='tight')
-    #pl.show()
+    pl.xlabel('k [h/Mpc]')
+    pl.ylabel(r'$\rm{d \ln} P(k) / \rm{d \delta_{b}}$')
+    pl.savefig('/home/dvornik/test_pipeline2/covariance/ssc_mm.png', bbox_inches='tight')
+    pl.show()
+    pl.clf()
 
 
     volume = 500.0**3.0#np.pi*radius**2.0*Pi_max*2.0
@@ -1213,23 +1224,27 @@ def covariance(theta, R, calculate_covariance=False):
     pl.plot(k_temp_lin, np.sqrt((survey_var[0] * ps_deriv_mm * ps_deriv_mm)), color='blue')
     pl.xscale('log')
     pl.xlim([0.01, 1.0])
-    pl.ylim([0.0, 0.08])
+    #pl.ylim([0.0, 0.08])
     #pl.yscale('log')
     pl.xlabel('k [h/Mpc]')
     pl.ylabel(r'$\rm{\sqrt{Cov/P(k)P(k\prime)}}$')
     pl.title(r'$k\prime = %f $'%loc)
-    pl.savefig('/home/dvornik/GalaxyBias_link/data/tot_mm.png', bbox_inches='tight')
+    pl.savefig('/home/dvornik/test_pipeline2/covariance/tot_mm.png', bbox_inches='tight')
     pl.show()
+    pl.clf()
 
     pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test)**(1.0/3.0))
     pl.xscale('log')
     pl.xlim([0.01, 100.0])
     #pl.ylim([0.0, 0.08])
     pl.yscale('log')
+    pl.savefig('/home/dvornik/test_pipeline2/covariance/diag_mm.png', bbox_inches='tight')
     pl.show()
+    pl.clf()
     
     quit()
-    """
+    #"""
+    #"""
     cov_wp_tot = cov_wp.copy()
     cov_esd_tot = cov_esd.copy()
     cov_cross_tot = cov_cross.copy()
@@ -1262,11 +1277,11 @@ def covariance(theta, R, calculate_covariance=False):
     #cov_esd_tot = cov_esd_gauss + cov_esd_ssc + cov_esd_non_gauss
     #cov_cross_tot = cov_cross_gauss + cov_cross_ssc + cov_cross_non_gauss
     
-    return cov_wp_tot, (cov_esd_tot * rho_mean[0]**2.0) / 10.0**24.0, (cov_cross_tot * rho_mean[0]) / 10.0**12.0, M_bin_min.size
-    #return cov_wp_gauss, cov_esd_gauss, cov_cross_gauss, M_bin_min.size
-    #return cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss, M_bin_min.size
-    #return cov_wp_ssc, cov_esd_ssc, cov_cross_ssc, M_bin_min.size
-
+    return cov_wp_tot, (cov_esd_tot * rho_mean[0]**2.0) / 10.0**24.0, (cov_cross_tot * rho_mean[0]) / 10.0**12.0, nbins
+    #return cov_wp_gauss, cov_esd_gauss, cov_cross_gauss, nbins
+    #return cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss, nbins
+    #return cov_wp_ssc, cov_esd_ssc, cov_cross_ssc, nbins
+    #"""
 
 if __name__ == '__main__':
     print(0)

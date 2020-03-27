@@ -101,8 +101,8 @@ def model(theta, R, calculate_covariance=False):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-    #cov = covariance(theta, R)
-    #quit()
+    cov = covariance(theta, R)
+    quit()
     # this has to happen before because theta is re-purposed below
     if calculate_covariance:
         covar = theta[1][theta[0].index('covariance')]

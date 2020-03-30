@@ -864,6 +864,7 @@ def covariance(theta, R, calculate_covariance=False):
     #if setup['distances'] == 'angular':
         #R = R * cosmo.
     rvir_range_2d_i = R[0][1:]
+    #rvir_range_2d_i = R[:,1:]
     
     """
         HERE WE NEED A SECOND RADIAL BINNING, if esd and wp are having different number of radial bins!

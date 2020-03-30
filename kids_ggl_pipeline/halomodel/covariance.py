@@ -115,7 +115,7 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     lens_angular = lens_comoving/(1.0+lens_redshifts)
     k = np.zeros_like(lens_redshifts)
             
-    for i in xrange(lens_redshifts.size):
+    for i in range(lens_redshifts.size):
         srcmask *= (lens_redshifts[i]+z_epsilon <= spec_cat['Z_B']) & (spec_cat['Z_B'] < srclim)
         srcNZ_k, spec_weight_k = Z_S[srcmask], spec_weight[srcmask]
                     
@@ -399,8 +399,12 @@ def trispectra_234h(krange, P_lin_inter, mass_func, uk, bias, rho_mean, m_x, k_x
     trispec_tot = trispec_2h + trispec_3h + trispec_4h
     trispec_tot_interp = RectBivariateSpline(krange, krange, trispec_tot, kx=1, ky=1)
     
+    #trispec_2h_interp = RectBivariateSpline(krange, krange, trispec_2h, kx=1, ky=1)
+    #trispec_3h_interp = RectBivariateSpline(krange, krange, trispec_3h, kx=1, ky=1)
+    #trispec_4h_interp = RectBivariateSpline(krange, krange, trispec_4h, kx=1, ky=1)
+    
     return trispec_tot_interp
-
+    #return trispec_tot_interp, trispec_2h_interp, trispec_3h_interp, trispec_4h_interp
 
 def trispectra_1h(krange, mass_func, uk_c, uk_s, rho_mean, ngal, population_cen, population_sat, m_x, k_x, x):
     
@@ -490,10 +494,10 @@ def halo_model_integrals(dndm, uk_c, uk_s, bias, rho_mean, ngal, population_cen,
 
 def calc_cov_non_gauss(params):
     
-    b_i, b_j, i, j, rvir_range_2d_i, b_g, W_p, volume = params
-    r_i, r_j = rvir_range_2d_i[i], rvir_range_2d_i[j]
+    b_i, b_j, i, j, radius_1, radius_2, b_g, W_p, volume = params
+    r_i, r_j = radius_1[i], radius_2[j]
     
-    delta = np.eye(b_g.size)
+    #delta = np.eye(b_g.size)
     
     # the number of steps to fit into a half-period at high-k.
     # 6 is better than 1e-4.
@@ -546,21 +550,21 @@ def calc_cov_non_gauss(params):
     b = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_esd
     c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_cross
     
-    return b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j, [a, b, c]
+    return b_i*radius_1.size+i,b_j*radius_2.size+j, [a, b, c]
 
 
-def cov_non_gauss(rvir_range_2d_i, b_g, W_p, volume, cov_wp, cov_esd, cov_cross, nproc):
+def cov_non_gauss(radius_1, radius_2, b_g, W_p, volume, cov_wp, cov_esd, cov_cross, nproc):
     
     print('Calculating the connected (non-Gaussian) part of the covariance ...')
     
-    b_i = xrange(len(b_g))
-    b_j = xrange(len(b_g))
-    i = xrange(len(rvir_range_2d_i))
-    j = xrange(len(rvir_range_2d_i))
+    b_i = range(len(b_g))
+    b_j = range(len(b_g))
+    i = range(len(radius_1))
+    j = range(len(radius_2))
     
     paramlist = [list(tup) for tup in itertools.product(b_i,b_j,i,j)]
     for i in paramlist:
-        i.extend([rvir_range_2d_i, b_g, W_p, volume])
+        i.extend([radius_1, radius_2, b_g, W_p, volume])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.imap(calc_cov_non_gauss, paramlist):
@@ -574,10 +578,10 @@ def cov_non_gauss(rvir_range_2d_i, b_g, W_p, volume, cov_wp, cov_esd, cov_cross,
 
 def calc_cov_ssc(params):
     
-    b_i, b_j, i, j, rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var = params
-    r_i, r_j = rvir_range_2d_i[i], rvir_range_2d_i[j]
+    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var = params
+    r_i, r_j = radius_1[i], radius_2[j]
     
-    delta = np.eye(b_g.size)
+    #delta = np.eye(b_g.size)
     
     # the number of steps to fit into a half-period at high-k.
     # 6 is better than 1e-4.
@@ -650,21 +654,21 @@ def calc_cov_ssc(params):
     c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ3, dx=dlnk)
     
 
-    return b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j, [a, b, c]
+    return b_i*radius_1.size+i,b_j*radius_2.size+j, [a, b, c]
 
 
-def cov_ssc(rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, cov_wp, cov_esd, cov_cross, nproc):
+def cov_ssc(radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, cov_wp, cov_esd, cov_cross, nproc):
     
     print('Calculating the super-sample covariance ...')
     
-    b_i = xrange(len(Pgm))
-    b_j = xrange(len(Pgm))
-    i = xrange(len(rvir_range_2d_i))
-    j = xrange(len(rvir_range_2d_i))
+    b_i = range(len(Pgm))
+    b_j = range(len(Pgm))
+    i = range(len(radius_1))
+    j = range(len(radius_2))
     
     paramlist = [list(tup) for tup in itertools.product(b_i,b_j,i,j)]
     for i in paramlist:
-        i.extend([rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var])
+        i.extend([radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var])
 
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_ssc, paramlist):
@@ -678,8 +682,8 @@ def cov_ssc(rvir_range_2d_i, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_
 
 def calc_cov_gauss(params):
     
-    b_i, b_j, i, j, rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal = params
-    r_i, r_j = rvir_range_2d_i[i], rvir_range_2d_i[j]
+    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal = params
+    r_i, r_j = radius_1[i], radius_2[j]
     
     delta = np.eye(shape_noise.size)
     
@@ -732,21 +736,21 @@ def calc_cov_gauss(params):
     integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j]))
     c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk)
     
-    return b_i*rvir_range_2d_i.size+i,b_j*rvir_range_2d_i.size+j, [a, b, c]
+    return b_i*radius_1.size+i,b_j*radius_2.size+j, [a, b, c]
 
 
-def cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross, nproc):
+def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross, nproc):
 
     print('Calculating the Gaussian part of the covariance ...')
 
-    b_i = xrange(len(P_inter_2))
-    b_j = xrange(len(P_inter_2))
-    i = xrange(len(rvir_range_2d_i))
-    j = xrange(len(rvir_range_2d_i))
+    b_i = range(len(P_inter_2))
+    b_j = range(len(P_inter_2))
+    i = range(len(radius_1))
+    j = range(len(radius_2))
     
     paramlist = [list(tup) for tup in itertools.product(b_i,b_j,i,j)]
     for i in paramlist:
-        i.extend([rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal])
+        i.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_gauss, paramlist):
@@ -860,6 +864,10 @@ def covariance(theta, R, calculate_covariance=False):
     #if setup['distances'] == 'angular':
         #R = R * cosmo.
     rvir_range_2d_i = R[0][1:]
+    
+    """
+        HERE WE NEED A SECOND RADIAL BINNING, if esd and wp are having different number of radial bins!
+    """
 
     # Calculating halo model
     
@@ -1118,7 +1126,7 @@ def covariance(theta, R, calculate_covariance=False):
                     zip(P_lin_inter, hmf, uk_c, rho_bg)])
     #"""
     print('Trispectra done.')
-    #"""
+    """
     
     # For simulation cube as in Mohammed et al. 2017!
     W = 500.0**3.0 * sp.jv(1, k_range_lin*500.0) / (k_range_lin*500.0)
@@ -1146,8 +1154,11 @@ def covariance(theta, R, calculate_covariance=False):
     pl.clf()
     #print(test_1h)
 
-    test = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], uk_c[0], bias_tinker10(hmf[0]), rho_bg[0], mass_range, k_range_lin)
-    test = test(k_temp_lin, k_temp_lin)
+    test_ah = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], uk_c[0], bias_tinker10(hmf[0]), rho_bg[0], mass_range, k_range_lin)
+    test = test_ah[0](k_temp_lin, k_temp_lin)
+    test_2h = test_ah[1](k_temp_lin, k_temp_lin)
+    test_3h = test_ah[2](k_temp_lin, k_temp_lin)
+    test_4h = test_ah[3](k_temp_lin, k_temp_lin)
     #test = test/100.0
     #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
     test_tot = test_1h + test
@@ -1178,8 +1189,9 @@ def covariance(theta, R, calculate_covariance=False):
 
 
     volume = 500.0**3.0#np.pi*radius**2.0*Pi_max*2.0
-    loc = 0.02#0.51
+    loc = 0.51
     index = np.argmin(np.abs(k_temp_lin - loc))
+    #index = 25
     print(k_temp_lin[index])
     print(index)
     st = (k_temp_lin[index+1]-k_temp_lin[index-1])/(k_temp_lin[index+1]+k_temp_lin[index-1])#/k_temp_lin[index]
@@ -1191,12 +1203,15 @@ def covariance(theta, R, calculate_covariance=False):
     #pl.plot(k_temp_lin, np.sqrt(((test_gauss/Nmode) / denom))[:,index], color='red', label='gauss')
     #pl.plot(k_temp_lin, np.sqrt((test_gauss/Nmode + test_tot/volume)/denom + (survey_var[0] * np.outer(ps_deriv_mm, ps_deriv_mm)))[:,index], color='black', label='tot')
     pl.plot(k_temp_lin, np.sqrt((test/volume)/denom)[:,index], color='orange', ls='-.', label='tri')
-    #pl.plot(k_temp_lin, np.sqrt((test_1h/volume)/denom)[:,index], color='orange', ls='--', label='1h')
+    pl.plot(k_temp_lin, np.sqrt((test_2h/volume)/denom)[:,index], label='2h')
+    pl.plot(k_temp_lin, np.sqrt((test_3h/volume)/denom)[:,index], label='3h')
+    pl.plot(k_temp_lin, np.sqrt((test_4h/volume)/denom)[:,index], label='4h')
+    pl.plot(k_temp_lin, np.sqrt((test_1h/volume)/denom)[:,index], color='orange', ls='--', label='1h')
     #pl.plot(k_temp_lin, np.sqrt((survey_var[0] * np.outer(ps_deriv_mm, ps_deriv_mm)))[:,index], color='blue', label='ssc')
     pl.xscale('log')
     pl.xlim([0.01, 1.0])
-    pl.legend()
     pl.ylim([0.0, 0.08])
+    pl.legend()
     #pl.yscale('log')
     pl.xlabel('k [h/Mpc]')
     pl.ylabel(r'$\rm{\sqrt{Cov/P(k)P(k\prime)}}$')
@@ -1205,12 +1220,16 @@ def covariance(theta, R, calculate_covariance=False):
     pl.show()
     pl.clf()
 
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test)**(1.0/3.0))
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_1h)**(1.0/3.0))
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_tot)**(1.0/3.0))
+    #pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test)**(1.0/3.0))
+    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_1h)**(1.0/3.0), label='1h')
+    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_2h)**(1.0/3.0), label='2h')
+    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_3h)**(1.0/3.0), label='3h')
+    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_4h)**(1.0/3.0), label='4h')
+    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_tot)**(1.0/3.0), label='tot')
     pl.xscale('log')
     pl.xlim([0.01, 100.0])
     #pl.ylim([0.0, 0.08])
+    pl.legend()
     pl.yscale('log')
     pl.savefig('/home/dvornik/test_pipeline2/covariance/diag_mm.png', bbox_inches='tight')
     pl.show()
@@ -1224,37 +1243,30 @@ def covariance(theta, R, calculate_covariance=False):
     cov_cross_tot = cov_cross.copy()
     
     if gauss == True:
-        cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
+        cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
         cov_wp_tot += cov_wp_gauss
         cov_esd_tot += cov_esd_gauss
         cov_cross_tot += cov_cross_gauss
     else:
-        pass#cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
+        pass
 
     if ssc == True:
-        cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
+        cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
         cov_wp_tot += cov_wp_ssc
         cov_esd_tot += cov_esd_ssc
         cov_cross_tot += cov_cross_ssc
     else:
-        pass#cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
+        pass
 
     if ng == True:
-        cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
+        cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i, rvir_range_2d_i, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
         cov_wp_tot += cov_wp_non_gauss
         cov_esd_tot += cov_esd_non_gauss
         cov_cross_tot += cov_cross_non_gauss
     else:
-        pass#cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_wp.copy(), cov_esd.copy(), cov_cross.copy()
-    
-    #cov_wp_tot = cov_wp_gauss + cov_wp_ssc + cov_wp_non_gauss
-    #cov_esd_tot = cov_esd_gauss + cov_esd_ssc + cov_esd_non_gauss
-    #cov_cross_tot = cov_cross_gauss + cov_cross_ssc + cov_cross_non_gauss
+        pass
     
     return cov_wp_tot, (cov_esd_tot * rho_bg[0]**2.0) / 10.0**24.0, (cov_cross_tot * rho_bg[0]) / 10.0**12.0, nbins
-    #return cov_wp_gauss, cov_esd_gauss, cov_cross_gauss, nbins
-    #return cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss, nbins
-    #return cov_wp_ssc, cov_esd_ssc, cov_cross_ssc, nbins
     #"""
 
 if __name__ == '__main__':

@@ -112,6 +112,13 @@ def model(theta, R, calculate_covariance=False):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
+    if setup['return'] in ('wp', 'esd_wp', 'esd') and not ingredients['gg'] or not ingredients['gm']:
+        raise ValueError(
+        'If return=wp or return=esd_wp then you must toggle the' \
+        ' clustering as an ingredient. Similarly, if return=esd' \
+        ' or return=esd_wp then you must toggle the lensing' \
+        ' as an ingredient as well.')
+
     assert len(observables) == 1, \
         'working with more than one observable is not yet supported.' \
         ' If you would like this feature added please raise an issue.'
@@ -202,6 +209,10 @@ def model(theta, R, calculate_covariance=False):
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
     rvir_range_2d_i = R[:,1:]
+    if R.shape[0] > nbins:
+        rvir_range_2d_i = R[0:nbins,1:]
+    # Some fancier determination needed for which radius to which bin!
+    
     
     
     # Calculating halo model
@@ -419,54 +430,6 @@ def model(theta, R, calculate_covariance=False):
         else:
             Pmm_k = Pmm_1h + Pmm_2h
             
-    #"""
-    import matplotlib.pyplot as pl
-    try:
-        pl.plot(k_range_lin, Pgm_c[0])
-        pl.plot(k_range_lin, Pgm_s[0])
-        pl.plot(k_range_lin, Pgm_2h[0])
-        pl.plot(k_range_lin, Pgm_k[0])
-        pl.plot(k_range_lin, Pgm_k[1])
-        pl.plot(k_range_lin, Pgm_k[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.ylim([1e-10,1e6])
-        pl.savefig('/home/dvornik/test_pipeline2/power_gm.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    
-    try:
-        pl.plot(k_range_lin, Pgg_c[0])
-        pl.plot(k_range_lin, Pgg_cs[0])
-        pl.plot(k_range_lin, Pgg_s[0])
-        pl.plot(k_range_lin, Pgg_2h[0])
-        pl.plot(k_range_lin, Pgg_k[0])
-        pl.plot(k_range_lin, Pgg_k[1])
-        pl.plot(k_range_lin, Pgg_k[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.ylim([1e-10,1e6])
-        pl.savefig('/home/dvornik/test_pipeline2/power_gg.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    
-    try:
-        pl.plot(k_range_lin, Pmm_k[0])
-        pl.plot(k_range_lin, Pmm_k[1])
-        pl.plot(k_range_lin, Pmm_k[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.ylim([1e-10,1e6])
-        pl.savefig('/home/dvornik/test_pipeline2/power_mm.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    #"""
                 
     # Outputs
            
@@ -545,6 +508,7 @@ def model(theta, R, calculate_covariance=False):
     else:
         output = []
     
+    
     # correlation functions
     if ingredients['gm']:
         if integrate_zlens:
@@ -620,7 +584,7 @@ def model(theta, R, calculate_covariance=False):
                 for P_inter_i in P_inter_3])
         if setup['return'] == 'xi':
             xi_out_i_3 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_3)])
-            xi_out_3 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_3, r_i)])
+            xi_out_3 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_3, rvir_range_2d_i)])
             output.append(xi_out_3)
         if setup['return'] == 'all':
             output.append(xi2_3)
@@ -633,44 +597,6 @@ def model(theta, R, calculate_covariance=False):
     else:
         output = []
     
-    #"""
-    import matplotlib.pyplot as pl
-    try:
-        pl.plot(rvir_range_3d, xi2[0])
-        pl.plot(rvir_range_3d, xi2[1])
-        pl.plot(rvir_range_3d, xi2[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.savefig('/home/dvornik/test_pipeline2/xi_gm.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    try:
-        pl.plot(rvir_range_3d, xi2_2[0])
-        pl.plot(rvir_range_3d, xi2_2[1])
-        pl.plot(rvir_range_3d, xi2_2[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.savefig('/home/dvornik/test_pipeline2/xi_gg.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    
-    try:
-        pl.plot(rvir_range_3d, xi2_3[0])
-        pl.plot(rvir_range_3d, xi2_3[1])
-        pl.plot(rvir_range_3d, xi2_3[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.savefig('/home/dvornik/test_pipeline2/xi_mm.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    #"""
-
     # projected surface density
     # this is the slowest part of the model
     #
@@ -736,7 +662,7 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2_r = array(
                 [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
                 for si in surf_dens2])
-            surf_dens2 = np.array([s_r(r_i) for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i)])
+            surf_dens2 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i)])
             #return [surf_dens2, meff]
             output.append(surf_dens2)
         if setup['return'] == 'all':
@@ -751,7 +677,7 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2_2 *= (1+zo)**2
         
         # in Msun/pc^2
-        if not setup['return'] in ('kappa', 'wp'):
+        if not setup['return'] in ('kappa', 'wp', 'esd_wp'):
             surf_dens2_2 /= 1e12
         
         # fill/interpolate nans
@@ -765,11 +691,10 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2_2 = np.array([s_r(r_i) for s_r, r_i in zip(surf_dens2_2_r, rvir_range_2d_i)])
         if setup['return'] in ('kappa', 'sigma'):
             output.append(surf_dens2_2)
-        if setup['return'] == 'wp':
-            wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
-            wp_out_i = array([UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi), s=0)
-                        for wi in wp_out])
-            wp_out = np.array([wp_i(r_i) for wp_i,r_i in zip(wp_out_i, rvir_range_2d_i)])
+        if setup['return'] in ('wp', 'esd_wp'):
+            wp_out_i = array([UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i), s=0)
+                        for wi, rho_i in zip(surf_dens2_2, rho_bg)])
+            wp_out = array([wp_i(r_i) for wp_i, r_i in zip(wp_out_i, rvir_range_2d_i)])
             output.append(wp_out)
         if setup['return'] == 'all':
             wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
@@ -795,7 +720,7 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2_3_r = array(
                 [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
                 for si in surf_dens2_3])
-            surf_dens2_3 = np.array([s_r(r_i) for s_r, r_i in zip(surf_dens2_3_r, rvir_range_2d_i)])
+            surf_dens2_3 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_3_r, rvir_range_2d_i)])
             #return [surf_dens2_3, meff]
             output.append(surf_dens2_3)
         if setup['return'] == 'all':
@@ -806,51 +731,15 @@ def model(theta, R, calculate_covariance=False):
         return output
     elif setup['return'] == 'all':
         output.append(rvir_range_3d_i)
+    elif setup['return'] == 'esd_wp':
+        pass
     else:
         output = []
     
     
-    #"""
-    try:
-        pl.plot(rvir_range_3d_i, surf_dens2[0])
-        pl.plot(rvir_range_3d_i, surf_dens2[1])
-        pl.plot(rvir_range_3d_i, surf_dens2[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.savefig('/home/dvornik/test_pipeline2/sigma_gm.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    
-    try:
-        pl.plot(rvir_range_3d_i, surf_dens2_2[0])
-        pl.plot(rvir_range_3d_i, surf_dens2_2[1])
-        pl.plot(rvir_range_3d_i, surf_dens2_2[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.savefig('/home/dvornik/test_pipeline2/sigma_gg.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    
-    try:
-        pl.plot(rvir_range_3d_i, surf_dens2_3[0])
-        pl.plot(rvir_range_3d_i, surf_dens2_3[1])
-        pl.plot(rvir_range_3d_i, surf_dens2_3[2])
-        pl.xscale('log')
-        pl.yscale('log')
-        pl.savefig('/home/dvornik/test_pipeline2/sigma_mm.png')
-        pl.show()
-        pl.clf()
-    except:
-        pass
-    
-    #"""
-    
-
     # excess surface density
+    """
+    # These two options are not really used for any observable! Keeping in for now.
     if ingredients['mm']:
         d_surf_dens2_3 = array(
             [np.nan_to_num(
@@ -883,7 +772,7 @@ def model(theta, R, calculate_covariance=False):
         #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i[i])
         out_esd_tot_inter_2 = [out_esd_tot_2[i](rvir_range_2d_i[i]) for i in range(nbins)]
         output.insert(0, out_esd_tot_inter_2)
-        
+    """
         
     if ingredients['gm']:
         d_surf_dens2 = array(
@@ -899,17 +788,20 @@ def model(theta, R, calculate_covariance=False):
         #for i in range(nbins):
         #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
         out_esd_tot_inter = [out_esd_tot[i](rvir_range_2d_i[i]) for i in range(nbins)]
-    
         # this should be moved to the power spectrum calculation
         if ingredients['pointmass']:
             # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
             pointmass = c_pm[1]/(np.pi*1e12) * array(
                 [10**m_pm / (r_i**2) for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i)])
-            out_esd_tot_inter = [out_esd_tot_inter[i] + pointmass[i] for i in range(nbins)]
-        output.insert(0, out_esd_tot_inter)
-    
-    
-    output.append(meff) # Should output Sigma_crit as well
+            out_esd_tot_inter = array([out_esd_tot_inter[i] + pointmass[i] for i in range(nbins)])
+        if setup['return'] == 'esd_wp':
+            output = np.concatenate([out_esd_tot_inter, output[0]])
+            output = [output, meff]
+        else:
+            output.insert(0, out_esd_tot_inter)
+            output.append(meff)
+            
+    #output.append(meff) # Should output Sigma_crit as well
     # Add other outputs as needed. Total ESD should always be first!
     return output#[out_esd_tot_inter, meff]
     

@@ -161,7 +161,7 @@ def load_data(options, setup):
           options['covariance'][0], options['covariance'][1],
           Nobsbins, Nrbins, options['exclude'])
     # convert units if necessary
-    if setup['return'] in ('esd', 'sigma', 'wp'):
+    if setup['return'] in ('esd', 'sigma', 'wp', 'esd_wp'):
         if setup['R_unit'] != _default_values['R_unit']:
             R = Quantity(R, unit=setup['R_unit'])
             R = R.to(_default_values['R_unit']).value

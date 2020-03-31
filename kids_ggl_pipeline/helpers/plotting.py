@@ -16,7 +16,8 @@ def axlabel(return_value):
               'power': r'\P(k)',
               'sigma': r'\Sigma',
               'xi': r'\xi',
-              'wp': r'w_{p}'}
+              'wp': r'w_{p}',
+              'esd_wp': r'unit'}
     return labels[return_value]
 
 

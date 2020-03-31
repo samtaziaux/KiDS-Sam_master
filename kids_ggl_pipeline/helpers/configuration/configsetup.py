@@ -62,7 +62,8 @@ _valid_entries = {
     #'return': ('esd', 'kappa', 'power', 'sigma', 'xi')
     # will implement others in the future, require handling different
     # x-values
-    'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all'),
+    #'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp'),
+    'return': ('esd', 'wp', 'esd_wp'),
     'R_unit': str,
     'esd_unit': str,
     'cov_unit': str,

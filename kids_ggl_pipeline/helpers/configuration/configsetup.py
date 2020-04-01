@@ -38,6 +38,7 @@ _necessary_entries = {
     'delta_ref': 'background density reference: {"mean","crit"}',
     'distances': 'whether to use "proper" or "comoving" distances',
     'return': 'which quantity should the halo model return',
+    'bins_per_obs': 'number of bins per observable/ingredient (gm, gg, mm)',
     'R_unit': 'units of the radial bins',
     'esd_unit': 'units of the lensing observable (e.g., ESD).' \
         ' Ignored if the lensing observable is kappa.',
@@ -64,6 +65,7 @@ _valid_entries = {
     # x-values
     #'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp'),
     'return': ('esd', 'wp', 'esd_wp'),
+    'bins_per_obs': str,
     'R_unit': str,
     'esd_unit': str,
     'cov_unit': str,

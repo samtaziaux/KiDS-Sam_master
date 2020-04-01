@@ -40,7 +40,7 @@ from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, interp2d, UnivariateSpline, \
     SmoothBivariateSpline, RectBivariateSpline, interpn, RegularGridInterpolator
-from itertools import count
+from itertools import count, product
 if sys.version_info[0] == 2:
     from itertools import izip as zip
     range = xrange
@@ -494,8 +494,8 @@ def halo_model_integrals(dndm, uk_c, uk_s, bias, rho_mean, ngal, population_cen,
 
 def calc_cov_non_gauss(params):
     
-    b_i, b_j, i, j, radius, b_g, W_p, volume, ingredients = params
-    r_i, r_j = radius[i], radius[j]
+    b_i, b_j, i, j, radius_1, radius_2, b_g, W_p, volume, ingredients = params
+    r_i, r_j = radius_1[i], radius_2[j]
     
     #delta = np.eye(b_g.size)
     
@@ -533,9 +533,7 @@ def calc_cov_non_gauss(params):
         integ1 = np.outer(np.exp(lnk)**(1.0) * sp.jv(0, np.exp(lnk) * r_i), np.exp(lnk)**(1.0) * sp.jv(0, np.exp(lnk) * r_j)) * (np.sqrt(Tgggg_i * Tgggg_j) + b_g[b_i]*b_g[b_i]*b_g[b_j]*b_g[b_j]*np.sqrt(T234_i * T234_j))
         I_wp = trapz(trapz(integ1, dx=dlnk, axis=0), dx=dlnk)/volume
         Tgggg_i, Tgggg_j = [], []
-        a = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_wp
-    else:
-        a = 0.0
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_wp
         
     if ingredients['gm']:
         Tgmgm_i = Tgmgm[b_i](np.exp(lnk), np.exp(lnk))
@@ -543,9 +541,7 @@ def calc_cov_non_gauss(params):
         integ2 = np.outer(np.exp(lnk)**(1.0) * sp.jv(2, np.exp(lnk) * r_i), np.exp(lnk)**(1.0) * sp.jv(2, np.exp(lnk) * r_j)) * (np.sqrt(Tgmgm_i * Tgmgm_j) + b_g[b_i]*b_g[b_j]*np.sqrt(T234_i * T234_j))
         I_esd = trapz(trapz(integ2, dx=dlnk, axis=0), dx=dlnk)/volume
         Tgmgm_i, Tgmgm_j = [], []
-        b = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_esd
-    else:
-        b = 0.0
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_es
         
     if ingredients['gg'] and ingredients['gm']:
         Tgggm_i = Tgggm[b_i](np.exp(lnk), np.exp(lnk))
@@ -553,42 +549,38 @@ def calc_cov_non_gauss(params):
         integ3 = np.outer(np.exp(lnk)**(1.0) * sp.jv(0, np.exp(lnk) * r_i), np.exp(lnk)**(1.0) * sp.jv(2, np.exp(lnk) * r_j)) * (np.sqrt(Tgggm_i * Tgggm_j) + b_g[b_i]*b_g[b_j]*np.sqrt(b_g[b_i]*b_g[b_j])*np.sqrt(T234_i * T234_j))
         I_cross = trapz(trapz(integ3, dx=dlnk, axis=0), dx=dlnk)/volume
         Tgggm_i, Tgggm_j = [], []
-        c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_cross
-    else:
-        c = 0.0
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_cross
 
     T234_i, T234_j = [], []
     
-    return b_i*radius.size+i,b_j*radius.size+j, [a, b, c]
+    return b_i*radius_1.size+i,b_j*radius_2.size+j, val
 
 
-def cov_non_gauss(radius, b_g, W_p, volume, cov_wp, cov_esd, cov_cross, nproc, ingredients):
+def cov_non_gauss(radius_1, radius_2, b_g, W_p, volume, cov_out, nproc, ingredients):
     
     print('Calculating the connected (non-Gaussian) part of the covariance ...')
     
     b_i = range(len(b_g))
     b_j = range(len(b_g))
-    i = range(len(radius))
-    j = range(len(radius))
+    i = range(len(radius_1))
+    j = range(len(radius_2))
     
-    paramlist = [list(tup) for tup in itertools.product(b_i,b_j,i,j)]
+    paramlist = [list(tup) for tup in product(b_i,b_j,i,j)]
     for i in paramlist:
-        i.extend([radius, b_g, W_p, volume, ingredients])
+        i.extend([radius_1, radius_2, b_g, W_p, volume, ingredients])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.imap(calc_cov_non_gauss, paramlist):
         #print(i, j, val)
-        cov_wp[i,j] = val[0]
-        cov_esd[i,j] = val[1]
-        cov_cross[i,j] = val[2]
+        cov_out[i,j] = val
     
-    return cov_wp, cov_esd, cov_cross
+    return cov_out
 
 
 def calc_cov_ssc(params):
     
-    b_i, b_j, i, j, radius, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredients = params
-    r_i, r_j = radius[i], radius[j]
+    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredients = params
+    r_i, r_j = radius_1[i], radius_2[j]
     
     #delta = np.eye(b_g.size)
     
@@ -650,57 +642,53 @@ def calc_cov_ssc(params):
     # wp
     if ingredients['gg']:
         integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * ps_deriv_gg_i * ps_deriv_gg_j
-        a = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ1, dx=dlnk)
-    else:
-        a = 0.0
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ1, dx=dlnk)
     
     # ESD
     if ingredients['gm']:
         integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * ps_deriv_gm_i * ps_deriv_gm_j
-        b = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ2, dx=dlnk)
-    else:
-        b = 0.0
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ2, dx=dlnk)
     
     # cross
     if ingredients['gg'] and ingredients['gm']:
         integ3 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * ps_deriv_gg_i * ps_deriv_gm_j
-        c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ3, dx=dlnk)
-    else:
-        c = 0.0
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ3, dx=dlnk)
     
 
-    return b_i*radius.size+i,b_j*radius.size+j, [a, b, c]
+    return b_i*radius_1.size+i,b_j*radius_2.size+j, val
 
 
-def cov_ssc(radius, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, cov_wp, cov_esd, cov_cross, nproc, ingredients):
+def cov_ssc(radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, cov_out, nproc, ingredients):
     
     print('Calculating the super-sample covariance ...')
     
     b_i = range(len(Pgm))
     b_j = range(len(Pgm))
-    i = range(len(radius))
-    j = range(len(radius))
+    i = range(len(radius_1))
+    j = range(len(radius_2))
     
-    paramlist = [list(tup) for tup in itertools.product(b_i,b_j,i,j)]
+    paramlist = [list(tup) for tup in product(b_i,b_j,i,j)]
     for i in paramlist:
-        i.extend([radius, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredients])
+        i.extend([radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredients])
 
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_ssc, paramlist):
         #print(i, j, val)
-        cov_wp[i,j] = val[0]
-        cov_esd[i,j] = val[1]
-        cov_cross[i,j] = val[2]
+        cov_out[i,j] = val
+        
+    return cov_out
     
-    return cov_wp, cov_esd, cov_cross
-
 
 def calc_cov_gauss(params):
     
-    b_i, b_j, i, j, radius, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredients = params
-    r_i, r_j = radius[i], radius[j]
+    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredient, idx_1, idx_2 = params
+    r_i, r_j = radius_1[b_i,i], radius_2[b_j,j]
     
-    delta = np.eye(shape_noise.size)
+    shape_noise_i = shape_noise[idx_1]
+    shape_noise_j = shape_noise[idx_2]
+    ngal_i = ngal[idx_1]
+    ngal_j = ngal[idx_2]
+    delta = np.eye(radius_1.shape[0], radius_2.shape[0])
     
     # the number of steps to fit into a half-period at high-k.
     # 6 is better than 1e-4.
@@ -725,65 +713,60 @@ def calc_cov_gauss(params):
     Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
     Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
     Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+                
+    P_gm_i = P_inter[idx_1][b_i](lnk)
+    P_gm_j = P_inter[idx_2][b_j](lnk)
                     
-    P_gm_i = P_inter[b_i](lnk)
-    P_gm_j = P_inter[b_j](lnk)
+    P_gg_i = P_inter_2[idx_1][b_i](lnk)
+    P_gg_j = P_inter_2[idx_2][b_j](lnk)
                     
-    P_gg_i = P_inter_2[b_i](lnk)
-    P_gg_j = P_inter_2[b_j](lnk)
-                    
-    P_mm_i = P_inter_3[b_i](lnk)
-    P_mm_j = P_inter_3[b_j](lnk)
+    P_mm_i = P_inter_3[idx_1][b_i](lnk)
+    P_mm_j = P_inter_3[idx_2][b_j](lnk)
                     
                     
     # wp
-    if ingredients['gg']:
-        integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j])*(np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j])
-        integ2 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j]))
-        a = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ1, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ2, dx=dlnk)
-    else:
-        a = 0.0
+    if ingredient == 'gg':
+        integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (np.exp(P_gg_i) + 1.0/ngal_i[b_i]* delta[b_i, b_j])*(np.exp(P_gg_j) + 1.0/ngal_j[b_j]* delta[b_i, b_j])
+        integ2 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((np.exp(P_gg_i) + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
+        val = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ1, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ2, dx=dlnk)
+    
                     
     # ESD
-    if ingredients['gm']:
-        integ3 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (np.exp(P_mm_i) + shape_noise[b_i]* delta[b_i, b_j]) * (np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j]) + np.exp(P_gm_i)*np.exp(P_gm_j) )
-        integ4 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * (np.sqrt(np.exp(P_mm_i) + shape_noise[b_i]* delta[b_i, b_j])*np.sqrt(np.exp(P_mm_j) + shape_noise[b_j]* delta[b_i, b_j]))
-        b = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ3, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ4, dx=dlnk)
-    else:
-        b = 0.0
-                    
-    # cross
-    if ingredients['gg'] and ingredients['gm']:
-        integ5 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (np.exp(P_gm_i)* (np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j])) + (np.exp(P_gm_j)* (np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j])) )
-        integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((np.exp(P_gg_i) + 1.0/ngal[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal[b_j]* delta[b_i, b_j]))
-        c = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk)
-    else:
-        c = 0.0
+    if ingredient == 'gm':
+        integ3 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (np.exp(P_mm_i) + shape_noise_i[b_i]* delta[b_i, b_j]) * (np.exp(P_gg_j) + 1.0/ngal_j[b_j]* delta[b_i, b_j]) + np.exp(P_gm_i)*np.exp(P_gm_j) )
+        integ4 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * (np.sqrt(np.exp(P_mm_i) + shape_noise_i[b_i]* delta[b_i, b_j])*np.sqrt(np.exp(P_mm_j) + shape_noise_j[b_j]* delta[b_i, b_j]))
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ3, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ4, dx=dlnk)
     
-    return b_i*radius.size+i,b_j*radius.size+j, [a, b, c]
+    
+    # cross
+    if ingredient == 'cross':
+        integ5 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (np.exp(P_gm_i)* (np.exp(P_gg_i) + 1.0/ngal_i[b_i]* delta[b_i, b_j])) + (np.exp(P_gm_j)* (np.exp(P_gg_j) + 1.0/ngal_j[b_j]* delta[b_i, b_j])) )
+        integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((np.exp(P_gg_i) + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((np.exp(P_gg_j) + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk)
+    
+    
+    return b_i*radius_1.shape[1]+i,b_j*radius_2.shape[1]+j, val
 
 
-def cov_gauss(radius, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp, cov_esd, cov_cross, nproc, ingredients):
+def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_out, nproc, ingredient, idx_1, idx_2):
 
     print('Calculating the Gaussian part of the covariance ...')
 
-    b_i = range(len(P_inter_2))
-    b_j = range(len(P_inter_2))
-    i = range(len(radius))
-    j = range(len(radius))
+    b_i = range(len(P_inter_2[idx_1]))
+    b_j = range(len(P_inter_2[idx_2]))
+    i = range(radius_1.shape[1])
+    j = range(radius_2.shape[1])
     
-    paramlist = [list(tup) for tup in itertools.product(b_i,b_j,i,j)]
+    paramlist = [list(tup) for tup in product(b_i,b_j,i,j)]
     for i in paramlist:
-        i.extend([radius, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredients])
+        i.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredient, idx_1, idx_2])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_gauss, paramlist):
         #print(i, j, val)
-        cov_wp[i,j] = val[0]
-        cov_esd[i,j] = val[1]
-        cov_cross[i,j] = val[2]
-
-    return cov_wp, cov_esd, cov_cross
+        cov_out[i,j] = val
+    
+    return cov_out
 
 
 def covariance(theta, R, calculate_covariance=False):
@@ -811,6 +794,16 @@ def covariance(theta, R, calculate_covariance=False):
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
 
+    bins_per_obs = np.array(setup['bins_per_obs'].split(','), dtype=int)
+    nbins = observable.nbins
+    if ingredients['gm']:
+        idx_gm = np.s_[:bins_per_obs[0]]
+    if ingredients['gg']:
+        idx_gg = np.s_[bins_per_obs[0]:bins_per_obs[0]+bins_per_obs[1]]
+    if ingredients['mm']: # mm not used in this code!
+        idx_mm = np.s_[bins_per_obs[0]+bins_per_obs[1]:bins_per_obs[0]+bins_per_obs[1]++bins_per_obs[2]]
+    # This indexing is needed, but not for individual power spectra,
+    # but in getting the right terms together in the covariances!
     
 
     if ingredients['nzlens']:
@@ -887,13 +880,17 @@ def covariance(theta, R, calculate_covariance=False):
     # assuming this means arcmin for now -- implement a way to check later!
     #if setup['distances'] == 'angular':
         #R = R * cosmo.
-    rvir_range_2d_i = R[0][1:]
+    #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
+    if ingredients['gm']:
+        rvir_range_2d_i_gm = R[idx_gm,1:]
+    if ingredients['gg']:
+        rvir_range_2d_i_gg = R[idx_gg,1:]
+    if ingredients['mm']:
+        rvir_range_2d_i_mm = R[idx_mm,1:] # mm not used in this code!
+    # We might want to move this in the configuration part of the code!
+    # Same goes for the bins above
     
-    """
-        HERE WE NEED A SECOND RADIAL BINNING, if esd and wp are having different number of radial bins!
-    """
-
     # Calculating halo model
     
     # interpolate selection function to the same grid as redshift and
@@ -964,6 +961,12 @@ def covariance(theta, R, calculate_covariance=False):
     
     Pgm_2h = F_k2 * bias * array(
             [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+            for hmf_i, ngal_i, pop_g_i
+            in zip(hmf, expand_dims(ngal, -1),
+                    expand_dims(pop_g, -2))])
+
+    bias_out = bias * array(
+            [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[1]
             for hmf_i, ngal_i, pop_g_i
             in zip(hmf, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
@@ -1082,14 +1085,11 @@ def covariance(theta, R, calculate_covariance=False):
                 for hmf_i in hmf]
                 
     dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
-    
-    
-    #### TO-DO!
-    #### Stuff below needs updating!
+
     
     # Start covariance calculations (and for now set survey details)
 
-    # These are inputs!!!!!
+    # These need to be inputs!!!!!
     #Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, gauss, ssc, ng, spec_z_path, nproc
     
     Pi_max = 100.0
@@ -1097,6 +1097,11 @@ def covariance(theta, R, calculate_covariance=False):
     eff_density = 8.53
     kids_variance_squared = 0.082
     z_kids = 0.6
+    gauss = True
+    ssc = False
+    ng = False
+    cross = True
+    nproc = 8
 
     #sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
     sigma_crit = sigma_crit_func(cosmo_model, 0.2, 0.9)
@@ -1112,12 +1117,14 @@ def covariance(theta, R, calculate_covariance=False):
     print(eff_density_in_mpc)
     
     print(shape_noise * rho_bg[0]**2.0 / 10.0**24.0)
+    print(shape_noise)
     print(1.0/ngal)
     
-    cov_wp = np.zeros((rvir_range_2d_i.size*nbins, rvir_range_2d_i.size*nbins), dtype=np.float64)
-    cov_esd = np.zeros((rvir_range_2d_i.size*nbins, rvir_range_2d_i.size*nbins), dtype=np.float64)
-    cov_cross = np.zeros((rvir_range_2d_i.size*nbins, rvir_range_2d_i.size*nbins), dtype=np.float64)
+    cov_esd = np.zeros((rvir_range_2d_i_gm.size, rvir_range_2d_i_gm.size), dtype=np.float64)
+    cov_wp = np.zeros((rvir_range_2d_i_gg.size, rvir_range_2d_i_gg.size), dtype=np.float64)
+    cov_cross = np.zeros((rvir_range_2d_i_gm.size, rvir_range_2d_i_gg.size), dtype=np.float64)
 
+    print(cov_esd.shape)
     
     W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
@@ -1130,7 +1137,7 @@ def covariance(theta, R, calculate_covariance=False):
     lnk_min, lnk_max = np.log(0.001), np.log(100.0)
     k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
     k_temp_lin = np.exp(k_temp)
-    #"""
+    """
     global Tgggg, Tgggm, Tgmgm, T234h
     
     Tgggg = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggg')
@@ -1267,29 +1274,63 @@ def covariance(theta, R, calculate_covariance=False):
     cov_cross_tot = cov_cross.copy()
     
     if gauss == True:
-        cov_wp_gauss, cov_esd_gauss, cov_cross_gauss = cov_gauss(rvir_range_2d_i, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
-        cov_wp_tot += cov_wp_gauss
-        cov_esd_tot += cov_esd_gauss
-        cov_cross_tot += cov_cross_gauss
+        if ingredients['gm']:
+            cov_esd_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_esd.copy(), nproc, 'gm', idx_gm, idx_gm)
+            cov_esd_tot += cov_esd_gauss
+        if ingredients['gg']:
+            cov_wp_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), nproc, 'gg', idx_gg, idx_gg)
+            cov_wp_tot += cov_wp_gauss
+        if ingredients['gm'] and ingredients['gg'] and cross:
+            cov_cross_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, 'cross', idx_gm, idx_gg)
+            cov_cross_tot += cov_cross_gauss
     else:
         pass
+        
+    import matplotlib.pyplot as pl
+    pl.imshow(cov_esd_tot/np.sqrt(np.outer(np.diag(cov_esd_tot), np.diag(cov_esd_tot.T))))
+    pl.savefig('/home/dvornik/test_pipeline2/covariance/esd_gauss.png', bbox_inches='tight')
+    pl.show()
+    pl.clf()
+    
+    pl.imshow(cov_wp_tot/np.sqrt(np.outer(np.diag(cov_wp_tot), np.diag(cov_wp_tot.T))))
+    pl.savefig('/home/dvornik/test_pipeline2/covariance/wp_gauss.png', bbox_inches='tight')
+    pl.show()
+    pl.clf()
+    
+    cov_block = np.block([[cov_esd_tot, cov_cross_tot],
+                        [cov_cross_tot.T, cov_wp_tot]])
+    pl.imshow(cov_block/np.sqrt(np.outer(np.diag(cov_block), np.diag(cov_block.T))))
+    pl.savefig('/home/dvornik/test_pipeline2/covariance/tot_gauss.png', bbox_inches='tight')
+    pl.show()
+    pl.clf()
 
     if ssc == True:
-        cov_wp_ssc, cov_esd_ssc, cov_cross_ssc = cov_ssc(rvir_range_2d_i, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
-        cov_wp_tot += cov_wp_ssc
-        cov_esd_tot += cov_esd_ssc
-        cov_cross_tot += cov_cross_ssc
+        if ingredients['gm']:
+            cov_esd_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_esd.copy(), nproc)
+            cov_esd_tot += cov_esd_ssc
+        if ingredients['gg']:
+            cov_wp_ssc = cov_ssc(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_wp.copy(), nproc)
+            cov_wp_tot += cov_wp_ssc
+        if ingredients['gm'] and ingredients['gg'] and cross:
+            cov_cross_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_out, survey_var, cov_cross.copy(), nproc)
+            cov_cross_tot += cov_cross_ssc
     else:
         pass
 
     if ng == True:
-        cov_wp_non_gauss, cov_esd_non_gauss, cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), cov_esd.copy(), cov_cross.copy(), nproc)
-        cov_wp_tot += cov_wp_non_gauss
-        cov_esd_tot += cov_esd_non_gauss
-        cov_cross_tot += cov_cross_non_gauss
+        if ingredients['gm']:
+            cov_esd_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_esd.copy(), nproc)
+            cov_esd_tot += cov_esd_non_gauss
+        if ingredients['gg']:
+            cov_wp_non_gauss = cov_non_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), nproc)
+            cov_wp_tot += cov_wp_non_gauss
+        if ingredients['gm'] and ingredients['gg'] and cross:
+            cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, bias_out, W_p, np.pi*radius**2.0*Pi_max, cov_cross.copy(), nproc)
+            cov_cross_tot += cov_cross_non_gauss
     else:
         pass
     
+    # Smarter ruturn with combine to one large covariance here using the block functions in numpy and cov2d and cov4d functions from pipeline!
     return cov_wp_tot, (cov_esd_tot * rho_bg[0]**2.0) / 10.0**24.0, (cov_cross_tot * rho_bg[0]) / 10.0**12.0, nbins
     #"""
 

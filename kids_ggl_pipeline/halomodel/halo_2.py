@@ -101,8 +101,8 @@ def model(theta, R, calculate_covariance=False):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-    #cov = covariance(theta, R)
-    #quit()
+    cov = covariance(theta, R)
+    quit()
     # this has to happen before because theta is re-purposed below
     if calculate_covariance:
         covar = theta[1][theta[0].index('covariance')]
@@ -124,7 +124,7 @@ def model(theta, R, calculate_covariance=False):
         ' If you would like this feature added please raise an issue.'
     observable = observables[0]
     hod_observable = observable.sampling
-
+    
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
@@ -132,6 +132,15 @@ def model(theta, R, calculate_covariance=False):
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
     
     output = []
+    
+    bins_per_obs = np.array(setup['bins_per_obs'].split(','), dtype=int)
+    nbins = observable.nbins
+    if ingredients['gm']:
+        idx_gm = np.s_[:bins_per_obs[0]]
+    if ingredients['gg']:
+        idx_gg = np.s_[bins_per_obs[0]:bins_per_obs[0]+bins_per_obs[1]]
+    if ingredients['mm']:
+        idx_mm = np.s_[bins_per_obs[0]+bins_per_obs[1]:bins_per_obs[0]+bins_per_obs[1]++bins_per_obs[2]]
     
     if ingredients['nzlens']:
         nz = cosmo[9].T
@@ -163,7 +172,6 @@ def model(theta, R, calculate_covariance=False):
     setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
                      / setup['logM_bins']
 
-    nbins = observable.nbins
     # if a single value is given for more than one bin, assign same
     # value to all bins
     if not np.iterable(z):
@@ -208,10 +216,15 @@ def model(theta, R, calculate_covariance=False):
     #if setup['distances'] == 'angular':
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
-    rvir_range_2d_i = R[:,1:]
-    if R.shape[0] > nbins:
-        rvir_range_2d_i = R[0:nbins,1:]
-    # Some fancier determination needed for which radius to which bin!
+    #rvir_range_2d_i = R[:,1:]
+    if ingredients['gm']:
+        rvir_range_2d_i_gm = R[idx_gm,1:]
+    if ingredients['gg']:
+        rvir_range_2d_i_gg = R[idx_gg,1:]
+    if ingredients['mm']:
+        rvir_range_2d_i_mm = R[idx_mm,1:]
+    # We might want to move this in the configuration part of the code!
+    # Same goes for the bins above
     
     
     
@@ -339,26 +352,26 @@ def model(theta, R, calculate_covariance=False):
             Pgm_2h = F_k2 * bias * array(
                 [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
                 for hmf_i, ngal_i, pop_g_i
-                in zip(hmf, expand_dims(ngal, -1),
-                        expand_dims(pop_g, -2))])
+                in zip(hmf[idx_gm], expand_dims(ngal[idx_gm], -1),
+                        expand_dims(pop_g[idx_gm], -2))])
             #print('Pg_2h in {0:.2e} s'.format(time()-ti))
         #elif integrate_zlens:
             #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
         else:
-            Pgm_2h = np.zeros((nbins,setup['lnk_bins']))
+            Pgm_2h = np.zeros((bins_per_obs[0],setup['lnk_bins']))
 
         if ingredients['centrals']:
             Pgm_c = F_k1 * gm_cen_analy(
-                dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
+                dndm[idx_gm], uk_c[idx_gm], rho_bg[idx_gm], pop_c[idx_gm], ngal[idx_gm], mass_range)
         elif integrate_zlens:
-            Pgm_c = np.zeros((z.size,nbins,setup['lnk_bins']))
+            Pgm_c = np.zeros((z.size,bins_per_obs[0],setup['lnk_bins']))
         else:
-            Pgm_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
+            Pgm_c = F_k1 * np.zeros((bins_per_obs[0],setup['lnk_bins']))
 
 
         if ingredients['satellites']:
             Pgm_s = F_k1 * gm_sat_analy(
-                dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
+                dndm[idx_gm], uk_c[idx_gm], uk_s[idx_gm], rho_bg[idx_gm], pop_s[idx_gm], ngal[idx_gm], mass_range)
         else:
             Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
         
@@ -379,31 +392,31 @@ def model(theta, R, calculate_covariance=False):
             Pgg_2h = F_k2 * bias * array(
             [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
             for hmf_i, ngal_i, pop_g_i
-            in zip(hmf, expand_dims(ngal, -1),
-                    expand_dims(pop_g, -2))])
+            in zip(hmf[idx_gg], expand_dims(ngal[idx_gg], -1),
+                    expand_dims(pop_g[idx_gg], -2))])
         else:
-            Pgg_2h = F_k1 * np.zeros((nbins,setup['lnk_bins']))
+            Pgg_2h = F_k1 * np.zeros((bins_per_obs[1],setup['lnk_bins']))
             
-        ncen = hod.nbar(dndm, pop_c, mass_range)
-        nsat = hod.nbar(dndm, pop_s, mass_range)
+        ncen = hod.nbar(dndm[idx_gg], pop_c[idx_gg], mass_range)
+        nsat = hod.nbar(dndm[idx_gg], pop_s[idx_gg], mass_range)
 
     
         if ingredients['centrals']:
             """
             Pgg_c = F_k1 * gg_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
             """
-            Pgg_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
+            Pgg_c = F_k1 * np.zeros((bins_per_obs[1],setup['lnk_bins']))
         else:
-            Pgg_c = F_k1 * np.zeros((nbins,setup['lnk_bins']))
+            Pgg_c = F_k1 * np.zeros((bins_per_obs[1],setup['lnk_bins']))
     
         if ingredients['satellites']:
             beta = s_beta
-            Pgg_s = F_k1 * gg_sat_analy(dndm, uk_s, pop_s, ngal, beta, mass_range)
+            Pgg_s = F_k1 * gg_sat_analy(dndm[idx_gg], uk_s[idx_gg], pop_s[idx_gg], ngal[idx_gg], beta, mass_range)
         else:
             Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
         
         if ingredients['centrals'] and ingredients['satellites']:
-            Pgg_cs = F_k1 * gg_cen_sat_analy(dndm, uk_s, pop_c, pop_s, ngal, mass_range)
+            Pgg_cs = F_k1 * gg_cen_sat_analy(dndm[idx_gg], uk_s[idx_gg], pop_c[idx_gg], pop_s[idx_gg], ngal[idx_gg], mass_range)
         else:
             Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
         
@@ -416,14 +429,14 @@ def model(theta, R, calculate_covariance=False):
     # Matter - matter spectra
     if ingredients['mm']:
         if ingredients['twohalo']:
-            Pmm_2h = F_k2 * array([hmf_i.power for hmf_i in hmf])
+            Pmm_2h = F_k2 * array([hmf_i[idx_mm].power for hmf_i in hmf])
         else:
-            Pmm_2h = np.zeros((nbins,setup['lnk_bins']))
+            Pmm_2h = np.zeros((bins_per_obs[2],setup['lnk_bins']))
             
         if ingredients['centrals']:
-            Pmm_1h = F_k1 * mm_analy(dndm, uk_c, rho_bg, mass_range)
+            Pmm_1h = F_k1 * mm_analy(dndm[idx_mm], uk_c[idx_mm], rho_bg[idx_mm], mass_range)
         else:
-            Pmm_1h = np.zeros((nbins,setup['lnk_bins']))
+            Pmm_1h = np.zeros((bins_per_obs[2],setup['lnk_bins']))
           
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pmm_k = Pmm_1h
@@ -486,19 +499,19 @@ def model(theta, R, calculate_covariance=False):
         if setup['return'] == 'all':
             output.append(Pgm_k)
         if setup['return'] == 'power':
-            Pgm_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter, rvir_range_2d_i)]
+            Pgm_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter, rvir_range_2d_i_gm)]
             output.append(Pgm_out)
     if ingredients['gg']:
         if setup['return'] == 'all':
             output.append(Pgg_k)
         if setup['return'] == 'power':
-            Pgg_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter_2, rvir_range_2d_i)]
+            Pgg_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter_2, rvir_range_2d_i_gg)]
             output.append(Pgg_out)
     if ingredients['mm']:
         if setup['return'] == 'all':
             output.append(Pmm_k)
         if setup['return'] == 'power':
-            Pmm_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter_3, rvir_range_2d_i)]
+            Pmm_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter_3, rvir_range_2d_i_mm)]
             output.append(Pmm_out)
     if setup['return'] == 'power':
         output.append(meff)
@@ -519,7 +532,7 @@ def model(theta, R, calculate_covariance=False):
                 xi2_2h = np.array(
                     [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
                     for P_inter_ji in P_inter_j] for P_inter_j in P_inter_2h])
-                xi2 = xi2 + halo_exclusion(xi2_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+                xi2 = xi2 + halo_exclusion(xi2_2h, rvir_range_3d, meff[idx_gm], rho_bg[idx_gm], setup['delta'])
             else:
                 xi2 = np.array(
                     [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
@@ -532,7 +545,7 @@ def model(theta, R, calculate_covariance=False):
                 xi2_2h = np.array(
                     [power_to_corr_ogata(P_inter_i, rvir_range_3d)
                     for P_inter_i in P_inter_2h])
-                xi2 = xi2 + halo_exclusion(xi2_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+                xi2 = xi2 + halo_exclusion(xi2_2h, rvir_range_3d, meff[idx_gm], rho_bg[idx_gm], setup['delta'])
             else:
                 xi2 = np.array(
                     [power_to_corr_ogata(P_inter_i, rvir_range_3d)
@@ -542,7 +555,7 @@ def model(theta, R, calculate_covariance=False):
             if integrate_zlens:
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
             xi_out_i = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2)])
-            xi_out = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i, rvir_range_2d_i)])
+            xi_out = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i, rvir_range_2d_i_gm)])
             output.append(xi_out)
         if setup['return'] == 'all':
             if integrate_zlens:
@@ -557,14 +570,14 @@ def model(theta, R, calculate_covariance=False):
             xi2_2_2h = np.array(
                 [power_to_corr_ogata(P_inter_i, rvir_range_3d)
                 for P_inter_i in P_inter_2_2h])
-            xi2_2 = xi2_2 + halo_exclusion(xi2_2_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+            xi2_2 = xi2_2 + halo_exclusion(xi2_2_2h, rvir_range_3d, meff[idx_gg], rho_bg[idx_gg], setup['delta'])
         else:
             xi2_2 = np.array(
                 [power_to_corr_ogata(P_inter_i, rvir_range_3d)
                 for P_inter_i in P_inter_2])
         if setup['return'] == 'xi':
             xi_out_i_2 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_2)])
-            xi_out_2 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_2, rvir_range_2d_i)])
+            xi_out_2 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_2, rvir_range_2d_i_gg)])
             output.append(xi_out_2)
         if setup['return'] == 'all':
             output.append(xi2_2)
@@ -577,14 +590,14 @@ def model(theta, R, calculate_covariance=False):
             xi2_3_2h = np.array(
                 [power_to_corr_ogata(P_inter_i, rvir_range_3d)
                 for P_inter_i in P_inter_3_2h])
-            xi2_3 = xi2_3 + halo_exclusion(xi2_3_2h, rvir_range_3d, meff, rho_bg, setup['delta'])
+            xi2_3 = xi2_3 + halo_exclusion(xi2_3_2h, rvir_range_3d, meff[idx_mm], rho_bg[idx_mm], setup['delta'])
         else:
             xi2_3 = np.array(
                 [power_to_corr_ogata(P_inter_i, rvir_range_3d)
                 for P_inter_i in P_inter_3])
         if setup['return'] == 'xi':
             xi_out_i_3 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_3)])
-            xi_out_3 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_3, rvir_range_2d_i)])
+            xi_out_3 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_3, rvir_range_2d_i_mm)])
             output.append(xi_out_3)
         if setup['return'] == 'all':
             output.append(xi2_3)
@@ -630,7 +643,7 @@ def model(theta, R, calculate_covariance=False):
         # units of Msun/pc^2
         if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
             pointmass = c_pm[1]/(2*np.pi) * array(
-                [10**m_pm / r_i**2 for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i)])
+                [10**m_pm / r_i**2 for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i_gm)])
             surf_dens2 = surf_dens2 + pointmass
 
         zo = expand_dims(z, -1) if integrate_zlens else z
@@ -656,13 +669,13 @@ def model(theta, R, calculate_covariance=False):
     
         # fill/interpolate nans
         surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
-        for i in range(nbins):
+        for i in range(bins_per_obs[0]):
             surf_dens2[i] = fill_nan(surf_dens2[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_r = array(
                 [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
                 for si in surf_dens2])
-            surf_dens2 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i)])
+            surf_dens2 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i_gm)])
             #return [surf_dens2, meff]
             output.append(surf_dens2)
         if setup['return'] == 'all':
@@ -682,19 +695,19 @@ def model(theta, R, calculate_covariance=False):
         
         # fill/interpolate nans
         surf_dens2_2[(surf_dens2_2 <= 0) | (surf_dens2_2 >= 1e20)] = np.nan
-        for i in range(nbins):
+        for i in range(bins_per_obs[1]):
             surf_dens2_2[i] = fill_nan(surf_dens2_2[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_2_r = array(
                 [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
                 for si in surf_dens2_2])
-            surf_dens2_2 = np.array([s_r(r_i) for s_r, r_i in zip(surf_dens2_2_r, rvir_range_2d_i)])
+            surf_dens2_2 = np.array([s_r(r_i) for s_r, r_i in zip(surf_dens2_2_r, rvir_range_2d_i_gg)])
         if setup['return'] in ('kappa', 'sigma'):
             output.append(surf_dens2_2)
         if setup['return'] in ('wp', 'esd_wp'):
             wp_out_i = array([UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i), s=0)
                         for wi, rho_i in zip(surf_dens2_2, rho_bg)])
-            wp_out = array([wp_i(r_i) for wp_i, r_i in zip(wp_out_i, rvir_range_2d_i)])
+            wp_out = array([wp_i(r_i) for wp_i, r_i in zip(wp_out_i, rvir_range_2d_i_gg)])
             output.append(wp_out)
         if setup['return'] == 'all':
             wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
@@ -714,13 +727,13 @@ def model(theta, R, calculate_covariance=False):
         
         # fill/interpolate nans
         surf_dens2_3[(surf_dens2_3 <= 0) | (surf_dens2_3 >= 1e20)] = np.nan
-        for i in range(nbins):
+        for i in range(bins_per_obs[2]):
             surf_dens2_3[i] = fill_nan(surf_dens2_3[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_3_r = array(
                 [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
                 for si in surf_dens2_3])
-            surf_dens2_3 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_3_r, rvir_range_2d_i)])
+            surf_dens2_3 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_3_r, rvir_range_2d_i_mm)])
             #return [surf_dens2_3, meff]
             output.append(surf_dens2_3)
         if setup['return'] == 'all':
@@ -744,16 +757,16 @@ def model(theta, R, calculate_covariance=False):
         d_surf_dens2_3 = array(
             [np.nan_to_num(
             d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-            for surf_dens2_i, r_i in zip(surf_dens2_3, rvir_range_2d_i)])
+            for surf_dens2_i, r_i in zip(surf_dens2_3, rvir_range_2d_i_mm)])
 
         out_esd_tot_3 = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
             for d_surf_dens2_i, r_i in zip(d_surf_dens2_3, r_i)])
     
-        #out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i[0].size))
+        #out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i_mm[0].size))
         #for i in range(nbins):
-        #    out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i[i])
-        out_esd_tot_inter_3 = [out_esd_tot_3[i](rvir_range_2d_i[i]) for i in range(nbins)]
+        #    out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i_mm[i])
+        out_esd_tot_inter_3 = [out_esd_tot_3[i](rvir_range_2d_i_mm[i]) for i in range(bins_per_obs[2])]
         output.insert(0, out_esd_tot_inter_3) # This insert makes sure that the ESD's are on the fist place.
     
 
@@ -761,16 +774,16 @@ def model(theta, R, calculate_covariance=False):
         d_surf_dens2_2 = array(
                 [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-                for surf_dens2_i, r_i in zip(surf_dens2_2, rvir_range_2d_i)])
+                for surf_dens2_i, r_i in zip(surf_dens2_2, rvir_range_2d_i_gg)])
 
         out_esd_tot_2 = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
              for d_surf_dens2_i, r_i in zip(d_surf_dens2_2, rvir_range_2d_i)])
         
-        #out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i.size))
+        #out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i_gg.size))
         #for i in range(nbins):
-        #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i[i])
-        out_esd_tot_inter_2 = [out_esd_tot_2[i](rvir_range_2d_i[i]) for i in range(nbins)]
+        #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i_gg[i])
+        out_esd_tot_inter_2 = [out_esd_tot_2[i](rvir_range_2d_i_gg[i]) for i in range(bins_per_obs[1])]
         output.insert(0, out_esd_tot_inter_2)
     """
         
@@ -778,22 +791,22 @@ def model(theta, R, calculate_covariance=False):
         d_surf_dens2 = array(
             [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-            for surf_dens2_i, r_i in zip(surf_dens2, rvir_range_2d_i)])
+            for surf_dens2_i, r_i in zip(surf_dens2, rvir_range_2d_i_gm)])
     
         out_esd_tot = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
-            for d_surf_dens2_i, r_i in zip(d_surf_dens2, rvir_range_2d_i)])
+            for d_surf_dens2_i, r_i in zip(d_surf_dens2, rvir_range_2d_i_gm)])
     
         #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
         #for i in range(nbins):
         #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter = [out_esd_tot[i](rvir_range_2d_i[i]) for i in range(nbins)]
+        out_esd_tot_inter = [out_esd_tot[i](rvir_range_2d_i_gm[i]) for i in range(bins_per_obs[0])]
         # this should be moved to the power spectrum calculation
         if ingredients['pointmass']:
             # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
             pointmass = c_pm[1]/(np.pi*1e12) * array(
-                [10**m_pm / (r_i**2) for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i)])
-            out_esd_tot_inter = array([out_esd_tot_inter[i] + pointmass[i] for i in range(nbins)])
+                [10**m_pm / (r_i**2) for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i_gm)])
+            out_esd_tot_inter = array([out_esd_tot_inter[i] + pointmass[i] for i in range(bins_per_obs[0])])
         if setup['return'] == 'esd_wp':
             output = np.concatenate([out_esd_tot_inter, output[0]])
             output = [output, meff]

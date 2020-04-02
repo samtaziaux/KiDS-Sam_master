@@ -28,13 +28,18 @@ def covariance(R, cov, output=None):
     # as an (optional) argument
     fig, axes = plt.subplots(
         figsize=(10,8), nrows=cov.shape[0], ncols=cov.shape[0])
-    vmin, vmax = np.percentile(cov, [1,99])
+    #vmin, vmax = np.percentile(cov, [1,99])
+    vmin, vmax = -1.0, 1.0
     if len(R) == 1:
         axes = [[axes]]
     for m, axm in enumerate(axes):
         for n, axmn in enumerate(axm):
             axmn.imshow(cov[m][-n-1], origin='lower', interpolation='nearest',
                         vmin=vmin, vmax=vmax)
+            #axmn.imshow(cov[m][-n-1]/np.sqrt(np.outer(np.diag(cov[m][-n-1]),
+            #            np.diag(cov[m][-n-1].T))),
+            #            origin='lower', interpolation='nearest',
+            #            vmin=vmin, vmax=vmax)
     fig.tight_layout(pad=0.4)
     if output:
         save(output, fig, 'covariance')
@@ -59,7 +64,7 @@ def save(output, fig=None, name='', tight=True, close=True,
     return
 
 
-def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
+def signal(R, y, yerr, Nobsbins, model=None, observable='', fig=None, axes=None,
            output=None, **save_kwargs):
     """
     observable should be the name of the thing on the y axis
@@ -67,11 +72,9 @@ def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
     how exactly should we decide when the y axis should be
     log scale?
     """
-    if len(R.shape) == 1:
+    if Nobsbins == 1:
         R = [R]
-    if len(y.shape) == 1:
         y = [y]
-    if len(yerr.shape) == 1:
         yerr = [yerr]
     n = len(R)
     if axes is None:

@@ -64,13 +64,13 @@ def run(hm_options, options, args):
     Ndatafiles = len(options['data'][0])
     assert Ndatafiles > 0, 'No data files found'
     # Rrange, angles are used in nfw_stack only
-    R, esd, cov, Rrange, angles = io.load_data(options, setup)
+    R, esd, cov, Rrange, angles, Nobsbins, Nrbins = io.load_data(options, setup)
     #val1 = np.append(val1, [Rrange, angles])
     cov, icov, likenorm, esd_err, cov2d = cov
     # utility variables
-    Nobsbins, Nrbins = esd.shape
+    #Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
-    rng_rbins = range(Nrbins)
+    #rng_rbins = range(Nrbins) #not used
 
     metadata, meta_names, fits_format = \
         sampling_utils.initialize_metadata(options, output, esd.shape)
@@ -160,7 +160,9 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
         msg = 'Could not calculate model prediction. It is likely that one' \
               ' of the parameters is outside its allowed prior range.'
         raise ValueError(msg)
-    dof = esd.size - starting.size - 1
+    #dof = esd.size - starting.size - 1
+    esd_size = array([e.size for e in esd]).sum()
+    dof = esd_size - starting.size - 1
     # print model values
     print()
     print('Model values:')
@@ -181,7 +183,7 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
         '.'.join(options['output'].split('.')[:-1]), setup['return'],
         plot_ext)
     plotting.signal(
-        R, esd, esd_err, model=model[0], observable=setup['return'],
+        R, esd, esd_err, rng_obsbins, model=model[0], observable=setup['return'],
         output=output)
     if not args.no_demo_cov:
         output = output.replace(

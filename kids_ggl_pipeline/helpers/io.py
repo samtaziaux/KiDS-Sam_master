@@ -144,39 +144,141 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     # Hartlap correction
     #icov = (45.0 - Nrbins - 2.0)/(45.0 - 1.0)*icov
     return cov, icov, likenorm, esd_err, cov2d
+    
+    
+def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
+    """Load covariance from a 2d matrix like covariance file, like analytical covariance
+
+    Parameters
+    ----------
+    covfile : str
+        filename of covariance file
+    covcols : list-like or int
+        not used, expects a 2d array
+    Nrbins : list-like
+        number of data points per observable bin in a list
+    Nobsbins : int, optional
+        number of observable bins (default 1). Must be provided if >1
+    exclude : list-like, optional
+        bins to be excluded from the covariance. Only supports one set
+        of bins, which is excluded from the entire dataset
+
+    Returns
+    -------
+    cov : array, shape (Nobsbins,Nobsbins,Nrbins,Nrbins)
+        four-dimensional covariance matrix
+    icov : array, shape (Nobsbins,Nobsbins,Nrbins,Nrbins)
+        four-dimensional inverse covariance matrix
+    likenorm : float
+        constant additive term for the likelihood
+    esd_err : array, shape (Nobsbins,Nrbins)
+        square root of the diagonal elements of the covariance matrix
+    cov2d : array, shape (Nobsbins*Nrbins,Nobsbins*Nrbins)
+        re-shaped covariance matrix, for plotting or other uses
+    """
+    cov2d = np.loadtxt(covfile)
+    print(Nrbins, Nobsbins)
+    if exclude is None:
+        nexcl = 0
+    else:
+        if not hasattr(exclude, '__iter__'):
+            exclude = [exclude]
+        nexcl = len(exclude)
+    
+    # are there any bins excluded? THIS TO BE STILL CHECKED!
+    if exclude is not None:
+        for a in range(Nobsbins):
+            for b in exclude[::-1]:
+                try:
+                    cov2d = np.delete(cov2d, a*b, axis=3)
+                    cov2d = np.delete(cov2d, a*b, axis=2)
+                except:
+                    pass
+    
+    icov_in = np.linalg.inv(cov2d)
+    icov = np.empty((Nobsbins, Nobsbins), dtype=object)
+    cov = np.empty((Nobsbins, Nobsbins), dtype=object)
+    esd_err = np.empty(Nobsbins, dtype=object)
+    for i in range(Nobsbins):
+        for j in range(Nobsbins):
+            cov[i,j] = cov2d[i*Nrbins[i]:(i+1)*Nrbins[i],j*Nrbins[j]:(j+1)*Nrbins[j]]
+            icov[i,j] = icov_in[i*Nrbins[i]:(i+1)*Nrbins[i],j*Nrbins[j]:(j+1)*Nrbins[j]]
+            if i==j:
+                esd_err[i] = np.sqrt(np.diag(cov2d[i*Nrbins[i]:(i+1)*Nrbins[i],j*Nrbins[j]:(j+1)*Nrbins[j]]))
+            
+    # product of the determinants
+    prod_detC = np.linalg.det(cov2d)
+    # likelihood normalization
+    likenorm = -(Nobsbins**2*np.log(2*np.pi) + np.log(prod_detC)) / 2
+    
+    # Hartlap correction
+    #icov = (45.0 - Nrbins - 2.0)/(45.0 - 1.0)*icov
+    return cov, icov, likenorm, esd_err, cov2d
 
 
 def load_data(options, setup):
     # need to run this without exclude to throw out invalid values in it
-    R, esd = load_datapoints(*options['data'])
-    if options['exclude'] is not None:
-        options['exclude'] = \
-            options['exclude'][options['exclude'] < esd.shape[1]]
-    R, esd = load_datapoints(
-        options['data'][0], options['data'][1], options['exclude'])
+    if options['format'] == '2d':
+        R, esd, Nobsbins = load_datapoints_2d(*options['data'])
+        
+        #Nobsbins = esd.size
+        Nrbins = np.array([sh.size for sh in esd])
+        
+        cov = load_covariance_2d(
+            options['covariance'][0], options['covariance'][1],
+            Nobsbins, Nrbins, options['exclude'])
+        
+        # convert units if necessary
+        if setup['return'] in ('esd', 'sigma', 'wp', 'esd_wp'):
+            if setup['R_unit'] != _default_values['R_unit']:
+                for i,Ri in enumerate(R):
+                    Ri = Quantity(Ri, unit=setup['R_unit'])
+                    R[i] = Ri.to(_default_values['R_unit']).value
+            if setup['esd_unit'] != _default_values['esd_unit']:
+                for i,ei in enumerate(esd):
+                    ei = Quantity(ei, unit=setup['esd_unit'])
+                    esd[i] = ei.to(_default_values['esd_unit']).value
+            if setup['cov_unit'] != _default_values['cov_unit']:
+                cov = Quantity(cov, unit=setup['cov_unit'])
+                cov = cov.to(_default_values['cov_unit']).value
+        # needed for offset central profile
+        # only used in nfw_stack, not in the halo model proper
+        # need to adapt or remove
+        R, Rrange = sampling_utils.setup_integrand(
+            R, options['precision'])
+        angles = np.linspace(0, 2*np.pi, 540)
+        
+    else:
+        R, esd = load_datapoints(*options['data'])
+        if options['exclude'] is not None:
+            options['exclude'] = \
+                options['exclude'][options['exclude'] < esd.shape[1]]
+        R, esd = load_datapoints(
+            options['data'][0], options['data'][1], options['exclude'])
 
-    Nobsbins, Nrbins = esd.shape
-    # load covariance
-    cov = load_covariance(
-          options['covariance'][0], options['covariance'][1],
-          Nobsbins, Nrbins, options['exclude'])
-    # convert units if necessary
-    if setup['return'] in ('esd', 'sigma', 'wp', 'esd_wp'):
-        if setup['R_unit'] != _default_values['R_unit']:
-            R = Quantity(R, unit=setup['R_unit'])
-            R = R.to(_default_values['R_unit']).value
-        if setup['esd_unit'] != _default_values['esd_unit']:
-            esd = Quantity(esd, unit=setup['esd_unit'])
-            esd = esd.to(_default_values['esd_unit']).value
-        if setup['cov_unit'] != _default_values['cov_unit']:
-            cov = Quantity(cov, unit=setup['cov_unit'])
-            cov = cov.to(_default_values['cov_unit']).value
-    # needed for offset central profile
-    # only used in nfw_stack, not in the halo model proper
-    R, Rrange = sampling_utils.setup_integrand(
-        R, options['precision'])
-    angles = np.linspace(0, 2*np.pi, 540)
-    return R, esd, cov, Rrange, angles
+        Nobsbins, Nrbins = esd.shape
+        # load covariance
+        cov = load_covariance(
+            options['covariance'][0], options['covariance'][1],
+            Nobsbins, Nrbins, options['exclude'])
+        # convert units if necessary
+        if setup['return'] in ('esd', 'sigma', 'wp', 'esd_wp'):
+            if setup['R_unit'] != _default_values['R_unit']:
+                R = Quantity(R, unit=setup['R_unit'])
+                R = R.to(_default_values['R_unit']).value
+            if setup['esd_unit'] != _default_values['esd_unit']:
+                esd = Quantity(esd, unit=setup['esd_unit'])
+                esd = esd.to(_default_values['esd_unit']).value
+            if setup['cov_unit'] != _default_values['cov_unit']:
+                cov = Quantity(cov, unit=setup['cov_unit'])
+                cov = cov.to(_default_values['cov_unit']).value
+        # needed for offset central profile
+        # only used in nfw_stack, not in the halo model proper
+        R, Rrange = sampling_utils.setup_integrand(
+            R, options['precision'])
+        angles = np.linspace(0, 2*np.pi, 540)
+    
+    return R, esd, cov, Rrange, angles, Nobsbins, Nrbins
 
 
 def load_datapoints(datafiles, datacols, exclude=None):
@@ -194,6 +296,26 @@ def load_datapoints(datafiles, datacols, exclude=None):
         esd = np.array([[esdi[j] for j in range(len(esdi))
                          if j not in exclude] for esdi in esd])
     return R, esd
+    
+    
+def load_datapoints_2d(datafiles, datacols, exclude=None):
+    if isinstance(datafiles, six.string_types):
+        datafiles = sorted(glob(datafiles))
+    R = np.array([np.loadtxt(df, usecols=datacols[0])
+                       for df in datafiles], dtype=object)
+    esd = np.array([np.loadtxt(df, usecols=datacols[1])
+                        for df in datafiles], dtype=object)
+    Nobsbins = len(datafiles)
+    if len(datacols) == 3:
+        oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
+                         for df in datafiles], dtype=object)
+        esd /= oneplusk
+    if exclude is not None:
+        R = np.array([[Ri[j] for j in range(len(Ri))
+                   if j not in exclude] for Ri in R], dtype=object)
+        esd = np.array([[esdi[j] for j in range(len(esdi))
+                     if j not in exclude] for esdi in esd], dtype=object)
+    return R, esd, Nobsbins
 
 
 def read_ascii(file, columns=None):

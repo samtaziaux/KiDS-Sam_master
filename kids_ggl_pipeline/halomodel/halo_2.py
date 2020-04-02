@@ -101,8 +101,8 @@ def model(theta, R, calculate_covariance=False):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-    cov = covariance(theta, R)
-    quit()
+    #cov = covariance(theta, R)
+    #quit()
     # this has to happen before because theta is re-purposed below
     if calculate_covariance:
         covar = theta[1][theta[0].index('covariance')]
@@ -218,15 +218,16 @@ def model(theta, R, calculate_covariance=False):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     if ingredients['gm']:
-        rvir_range_2d_i_gm = R[idx_gm,1:]
+        #rvir_range_2d_i_gm = R[idx_gm][1:]
+        rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
     if ingredients['gg']:
-        rvir_range_2d_i_gg = R[idx_gg,1:]
+        #rvir_range_2d_i_gg = R[idx_gg][1:]
+        rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
     if ingredients['mm']:
-        rvir_range_2d_i_mm = R[idx_mm,1:]
+        #rvir_range_2d_i_mm = R[idx_mm][1:]
+        rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]]
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
-    
-    
     
     # Calculating halo model
     
@@ -707,8 +708,8 @@ def model(theta, R, calculate_covariance=False):
         if setup['return'] in ('wp', 'esd_wp'):
             wp_out_i = array([UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i), s=0)
                         for wi, rho_i in zip(surf_dens2_2, rho_bg)])
-            wp_out = array([wp_i(r_i) for wp_i, r_i in zip(wp_out_i, rvir_range_2d_i_gg)])
-            output.append(wp_out)
+            wp_out = [wp_i(r_i) for wp_i, r_i in zip(wp_out_i, rvir_range_2d_i_gg)]
+            #output.append(wp_out)
         if setup['return'] == 'all':
             wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
             output.append([surf_dens2_2, wp_out])
@@ -806,9 +807,10 @@ def model(theta, R, calculate_covariance=False):
             # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
             pointmass = c_pm[1]/(np.pi*1e12) * array(
                 [10**m_pm / (r_i**2) for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i_gm)])
-            out_esd_tot_inter = array([out_esd_tot_inter[i] + pointmass[i] for i in range(bins_per_obs[0])])
+            out_esd_tot_inter = [out_esd_tot_inter[i] + pointmass[i] for i in range(bins_per_obs[0])]
         if setup['return'] == 'esd_wp':
-            output = np.concatenate([out_esd_tot_inter, output[0]])
+            #output = np.concatenate([out_esd_tot_inter, wp_out])
+            output = out_esd_tot_inter + wp_out
             output = [output, meff]
         else:
             output.insert(0, out_esd_tot_inter)

@@ -21,7 +21,7 @@ def axlabel(return_value):
     return labels[return_value]
 
 
-def covariance(R, cov, output=None):
+def covariance(R, cov, cor, output=None):
     # still need to add axes labels (complicated by the fact that
     # bins aree usually in log space), and also add a colorbar
     # with a label i.e., this function should probably take `setup`
@@ -34,12 +34,10 @@ def covariance(R, cov, output=None):
         axes = [[axes]]
     for m, axm in enumerate(axes):
         for n, axmn in enumerate(axm):
-            axmn.imshow(cov[m][-n-1], origin='lower', interpolation='nearest',
-                        vmin=vmin, vmax=vmax)
-            #axmn.imshow(cov[m][-n-1]/np.sqrt(np.outer(np.diag(cov[m][-n-1]),
-            #            np.diag(cov[m][-n-1].T))),
-            #            origin='lower', interpolation='nearest',
+            #axmn.imshow(cov[m][-n-1], origin='lower', interpolation='nearest',
             #            vmin=vmin, vmax=vmax)
+            axmn.imshow(cor[m][-n-1], origin='lower', interpolation='nearest',
+                        vmin=vmin, vmax=vmax)
     fig.tight_layout(pad=0.4)
     if output:
         save(output, fig, 'covariance')

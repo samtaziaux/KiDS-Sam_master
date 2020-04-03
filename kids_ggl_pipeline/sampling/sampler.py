@@ -66,7 +66,7 @@ def run(hm_options, options, args):
     # Rrange, angles are used in nfw_stack only
     R, esd, cov, Rrange, angles, Nobsbins, Nrbins = io.load_data(options, setup)
     #val1 = np.append(val1, [Rrange, angles])
-    cov, icov, likenorm, esd_err, cov2d = cov
+    cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
     #Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
@@ -81,7 +81,7 @@ def run(hm_options, options, args):
 
     # are we just running a demo?
     if args.demo:
-        demo(args, function, R, esd, esd_err, cov, icov, options, setup,
+        demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
              prior_types, parameters, join, starting, jfree, repeat, nparams,
              names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
              array, dot, inf, outer, pi, zip)
@@ -145,7 +145,7 @@ def run(hm_options, options, args):
     return
 
 
-def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
+def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
          prior_types, parameters, join, starting, jfree, repeat, nparams,
          names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
          array, dot, inf, outer, pi, zip, plot_ext='png'):
@@ -188,7 +188,7 @@ def demo(args, function, R, esd, esd_err, cov, icov, options, setup,
     if not args.no_demo_cov:
         output = output.replace(
             '.{0}'.format(plot_ext), '_cov.{0}'.format(plot_ext))
-        plotting.covariance(R, cov, output)
+        plotting.covariance(R, cov, cor, output)
 
     return
 

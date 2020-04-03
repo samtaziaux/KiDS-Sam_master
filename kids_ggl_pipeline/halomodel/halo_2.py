@@ -26,7 +26,11 @@ from __future__ import (absolute_import, division, print_function,
 
 # Halo model code
 # Andrej Dvornik, 2014/2015
-
+import os
+# disable threading in numpy
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
 from astropy.units import eV
 import multiprocessing as multi
 import numpy as np
@@ -101,8 +105,8 @@ def model(theta, R, calculate_covariance=False):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-    #cov = covariance(theta, R)
-    #quit()
+    cov = covariance(theta, R)
+    quit()
     # this has to happen before because theta is re-purposed below
     if calculate_covariance:
         covar = theta[1][theta[0].index('covariance')]

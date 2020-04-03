@@ -494,8 +494,8 @@ def halo_model_integrals(dndm, uk_c, uk_s, bias, rho_mean, ngal, population_cen,
 
 def calc_cov_non_gauss(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, b_g, W_p, volume, ingredient, idx_1, idx_2 = params
-    r_i, r_j = radius_1[b_i,i], radius_2[b_j,j]
+    b_i, b_j, i, j, radius_1, radius_2, b_g, W_p, volume, ingredient, idx_1, idx_2, size_1, size_2 = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     bg_i = b_g[idx_1][0]
     bg_j = b_g[idx_2][0]
@@ -555,22 +555,23 @@ def calc_cov_non_gauss(params):
         val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * I_cross
 
     T234_i, T234_j = [], []
-    
-    return b_i*radius_1.shape[1]+i,b_j*radius_2.shape[1]+j, val
+    print(val)
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
 
 
-def cov_non_gauss(radius_1, radius_2, b_g, W_p, volume, cov_out, nproc, ingredient, idx_1, idx_2):
+def cov_non_gauss(radius_1, radius_2, b_g, W_p, volume, cov_out, nproc, ingredient, idx_1, idx_2, size_1, size_2):
     
     print('Calculating the connected (non-Gaussian) part of the covariance ...')
     
-    b_i = range(radius_1.shape[0])
-    b_j = range(radius_2.shape[0])
-    i = range(radius_1.shape[1])
-    j = range(radius_2.shape[1])
-    
-    paramlist = [list(tup) for tup in product(b_i,b_j,i,j)]
+    paramlist = []
+    for a in range(len(radius_1)):
+        for b in range(len(radius_1)):
+            for c in range(len(radius_1[a])):
+                for d in range(len(radius_2[b])):
+                    paramlist.append([a, b, c, d])
+                    
     for i in paramlist:
-        i.extend([radius_1, radius_2, b_g, W_p, volume, ingredient, idx_1, idx_2])
+        i.extend([radius_1, radius_2, b_g, W_p, volume, ingredient, idx_1, idx_2, size_1, size_2])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.imap(calc_cov_non_gauss, paramlist):
@@ -582,8 +583,8 @@ def cov_non_gauss(radius_1, radius_2, b_g, W_p, volume, cov_out, nproc, ingredie
 
 def calc_cov_ssc(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredient, idx_1, idx_2 = params
-    r_i, r_j = radius_1[b_i,i], radius_2[b_j,j]
+    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredient, idx_1, idx_2, size_1, size_2 = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     bg_i = b_g[idx_1][0]
     bg_j = b_g[idx_2][0]
@@ -663,21 +664,22 @@ def calc_cov_ssc(params):
         val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ3, dx=dlnk)
     
 
-    return b_i*radius_1.shape[1]+i,b_j*radius_2.shape[1]+j, val
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
 
 
-def cov_ssc(radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, cov_out, nproc, ingredient, idx_1, idx_2):
+def cov_ssc(radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, cov_out, nproc, ingredient, idx_1, idx_2, size_1, size_2):
     
     print('Calculating the super-sample covariance ...')
     
-    b_i = range(radius_1.shape[0])
-    b_j = range(radius_2.shape[0])
-    i = range(radius_1.shape[1])
-    j = range(radius_2.shape[1])
-    
-    paramlist = [list(tup) for tup in product(b_i,b_j,i,j)]
+    paramlist = []
+    for a in range(len(radius_1)):
+        for b in range(len(radius_1)):
+            for c in range(len(radius_1[a])):
+                for d in range(len(radius_2[b])):
+                    paramlist.append([a, b, c, d])
+                    
     for i in paramlist:
-        i.extend([radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredient, idx_1, idx_2])
+        i.extend([radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, ingredient, idx_1, idx_2, size_1, size_2])
 
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_ssc, paramlist):
@@ -689,14 +691,14 @@ def cov_ssc(radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm,
 
 def calc_cov_gauss(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredient, idx_1, idx_2 = params
-    r_i, r_j = radius_1[b_i,i], radius_2[b_j,j]
+    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredient, idx_1, idx_2, size_1, size_2 = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     shape_noise_i = shape_noise[idx_1]
     shape_noise_j = shape_noise[idx_2]
     ngal_i = ngal[idx_1]
     ngal_j = ngal[idx_2]
-    delta = np.eye(radius_1.shape[0], radius_2.shape[0])
+    delta = np.eye(len(radius_1), len(radius_2))
     
     # the number of steps to fit into a half-period at high-k.
     # 6 is better than 1e-4.
@@ -753,21 +755,22 @@ def calc_cov_gauss(params):
         val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk)
     
     
-    return b_i*radius_1.shape[1]+i,b_j*radius_2.shape[1]+j, val
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
 
 
-def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_out, nproc, ingredient, idx_1, idx_2):
+def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_out, nproc, ingredient, idx_1, idx_2, size_1, size_2):
 
     print('Calculating the Gaussian part of the covariance ...')
 
-    b_i = range(radius_1.shape[0]) #len(P_inter_2[idx_1]))
-    b_j = range(radius_2.shape[0]) #len(P_inter_2[idx_2]))
-    i = range(radius_1.shape[1])
-    j = range(radius_2.shape[1])
+    paramlist = []
+    for a in range(len(radius_1)):
+        for b in range(len(radius_1)):
+            for c in range(len(radius_1[a])):
+                for d in range(len(radius_2[b])):
+                    paramlist.append([a, b, c, d])
     
-    paramlist = [list(tup) for tup in product(b_i,b_j,i,j)]
     for i in paramlist:
-        i.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredient, idx_1, idx_2])
+        i.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, ingredient, idx_1, idx_2, size_1, size_2])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_gauss, paramlist):
@@ -892,13 +895,17 @@ def covariance(theta, R, calculate_covariance=False):
     #rvir_range_2d_i = R[:,1:]
     if ingredients['gm']:
         #rvir_range_2d_i_gm = R[idx_gm][1:]
-        rvir_range_2d_i_gm = [r[1:] for r in R[idx_gm]]
+        rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
     if ingredients['gg']:
         #rvir_range_2d_i_gg = R[idx_gg][1:]
-        rvir_range_2d_i_gg = [r[1:] for r in R[idx_gg]]
+        rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
     if ingredients['mm']:
         #rvir_range_2d_i_mm = R[idx_mm][1:]
-        rvir_range_2d_i_mm = [r[1:] for r in R[idx_mm]] # mm not used in this code!
+        rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
+        
+    size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])#.sum()
+    size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])#.sum()
+    
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
     
@@ -1131,9 +1138,9 @@ def covariance(theta, R, calculate_covariance=False):
     print(shape_noise)
     print(1.0/ngal)
     
-    cov_esd = np.zeros((rvir_range_2d_i_gm.size, rvir_range_2d_i_gm.size), dtype=np.float64)
-    cov_wp = np.zeros((rvir_range_2d_i_gg.size, rvir_range_2d_i_gg.size), dtype=np.float64)
-    cov_cross = np.zeros((rvir_range_2d_i_gm.size, rvir_range_2d_i_gg.size), dtype=np.float64)
+    cov_esd = np.zeros((size_r_gm.sum(), size_r_gm.sum()), dtype=np.float64)
+    cov_wp = np.zeros((size_r_gg.sum(), size_r_gg.sum()), dtype=np.float64)
+    cov_cross = np.zeros((size_r_gm.sum(), size_r_gg.sum()), dtype=np.float64)
 
     print(cov_esd.shape)
     
@@ -1287,13 +1294,13 @@ def covariance(theta, R, calculate_covariance=False):
     
     if gauss == True:
         if ingredients['gm']:
-            cov_esd_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_esd.copy(), nproc, 'gm', idx_gm, idx_gm)
+            cov_esd_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_esd.copy(), nproc, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
             cov_esd_tot += cov_esd_gauss
         if ingredients['gg']:
-            cov_wp_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), nproc, 'gg', idx_gg, idx_gg)
+            cov_wp_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), nproc, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_gauss
         if ingredients['gm'] and ingredients['gg'] and cross:
-            cov_cross_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, 'cross', idx_gm, idx_gg)
+            cov_cross_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, 'cross', idx_gm, idx_gg, size_r_gm, size_r_gg)
             cov_cross_tot += cov_cross_gauss
     else:
         pass
@@ -1301,26 +1308,26 @@ def covariance(theta, R, calculate_covariance=False):
 
     if ssc == True:
         if ingredients['gm']:
-            cov_esd_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_esd.copy(), nproc, 'gm', idx_gm, idx_gm)
+            cov_esd_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_esd.copy(), nproc, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
             cov_esd_tot += cov_esd_ssc
         if ingredients['gg']:
-            cov_wp_ssc = cov_ssc(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_wp.copy(), nproc, 'gg', idx_gg, idx_gg)
+            cov_wp_ssc = cov_ssc(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_wp.copy(), nproc, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_ssc
         if ingredients['gm'] and ingredients['gg'] and cross:
-            cov_cross_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_cross.copy(), nproc, 'cross', idx_gm, idx_gg)
+            cov_cross_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_cross.copy(), nproc, 'cross', idx_gm, idx_gg, size_r_gm, size_r_gg)
             cov_cross_tot += cov_cross_ssc
     else:
         pass
 
     if ng == True:
         if ingredients['gm']:
-            cov_esd_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_esd.copy(), nproc, 'gm', idx_gm, idx_gm)
+            cov_esd_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_esd.copy(), nproc, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
             cov_esd_tot += cov_esd_non_gauss
         if ingredients['gg']:
-            cov_wp_non_gauss = cov_non_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), nproc, 'gg', idx_gg, idx_gg)
+            cov_wp_non_gauss = cov_non_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), nproc, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_non_gauss
         if ingredients['gm'] and ingredients['gg'] and cross:
-            cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_cross.copy(), nproc, 'cross', idx_gm, idx_gg)
+            cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_cross.copy(), nproc, 'cross', idx_gm, idx_gg, size_r_gm, size_r_gg)
             cov_cross_tot += cov_cross_non_gauss
     else:
         pass

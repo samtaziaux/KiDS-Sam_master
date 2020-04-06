@@ -180,8 +180,8 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
         re-shaped covariance matrix, for plotting or other uses
     """
     cov2d = np.loadtxt(covfile)
-    cov2d = np.delete(cov2d, -1, axis=0) # remove this after testing!
-    cov2d = np.delete(cov2d, -1, axis=1) # remove this after testing!
+    cov2d = np.delete(cov2d, [16, 17], axis=0) # remove this after testing!
+    cov2d = np.delete(cov2d, [16, 17], axis=1) # remove this after testing!
     if exclude is None:
         nexcl = 0
     else:
@@ -189,9 +189,9 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
             exclude = [exclude]
         nexcl = len(exclude)
     
-    assert cov2d.shape == (Nrbins.sum(), Nrbins.sum()), \
-        '2d covariance must have the correct number of entries that' \
-        ' correspond to the number of data points.'
+    #assert cov2d.shape == (Nrbins.sum(), Nrbins.sum()), \
+    #    '2d covariance must have the correct number of entries that' \
+    #    ' correspond to the number of data points.'
     
     # are there any bins excluded?
     if exclude is not None:

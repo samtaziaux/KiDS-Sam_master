@@ -116,7 +116,13 @@ def model(theta, R, calculate_covariance=False):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
-    if setup['return'] in ('wp', 'esd_wp', 'esd') and not ingredients['gg'] or not ingredients['gm']:
+    if setup['return'] in ('wp', 'esd_wp') and not ingredients['gg']:
+        raise ValueError(
+        'If return=wp or return=esd_wp then you must toggle the' \
+        ' clustering as an ingredient. Similarly, if return=esd' \
+        ' or return=esd_wp then you must toggle the lensing' \
+        ' as an ingredient as well.')
+    if setup['return'] in ('esd', 'esd_wp') and not ingredients['gm']:
         raise ValueError(
         'If return=wp or return=esd_wp then you must toggle the' \
         ' clustering as an ingredient. Similarly, if return=esd' \
@@ -178,14 +184,14 @@ def model(theta, R, calculate_covariance=False):
 
     # if a single value is given for more than one bin, assign same
     # value to all bins
-    if not np.iterable(z):
-        z = np.array([z])
+    #if not np.iterable(z):
+    #    z = np.array([z])
     if z.size == 1 and nbins > 1:
-        z = array(list(z)*nbins)
+        z = z*np.ones(nbins)
     # this is in case redshift is used in the concentration or
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
-    z = expand_dims(z, -1)
+    #z = expand_dims(z, -1)
 
     cosmo_model = Flatw0waCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,

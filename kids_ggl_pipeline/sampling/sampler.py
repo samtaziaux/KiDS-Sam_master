@@ -6,7 +6,13 @@ Galaxy-galaxy lensing EMCEE wrapper
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import sys
+sys.path.insert(0,'/home/dvornik/.local/lib/python3.7/site-packages/')
+import pkg_resources
+pkg_resources.require('emcee==2.2.1') # We need to force this, as newer version of emcee breaks backwards compatibility.
 import emcee
+print(emcee.__version__)
+quit()
 import numpy as np
 import os
 import sys

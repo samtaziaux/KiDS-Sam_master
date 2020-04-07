@@ -749,12 +749,10 @@ def calc_cov_gauss(params):
     
     # cross
     if ingredient == 'cross':
-        integ5 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (np.sqrt(P_gm_i*P_gm_j) * np.sqrt(P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j])*np.sqrt(P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j])) + (np.sqrt(P_gm_i*P_gm_j)* np.sqrt(P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j])*np.sqrt(P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j])) )
+        integ5 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (P_gm_i * (P_gg_i + 1.0/ngal_i[b_i]*delta[b_i, b_j])) + (P_gm_j  * (P_gg_j + 1.0/ngal_j[b_j]*delta[b_i, b_j])) )
         integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
-        #integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
-        #integ7 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt(P_gm_i*P_gm_j)
-        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk)
-        #val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ7, dx=dlnk) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
+        integ7 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt(P_gm_i*P_gm_j)
+        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ7, dx=dlnk) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
     
     
     return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
@@ -1118,13 +1116,13 @@ def covariance(theta, R, calculate_covariance=False):
     kids_variance_squared = 0.082
     z_kids = 0.6
     gauss = True
-    ssc = True
-    ng = True
+    ssc = False
+    ng = False
     cross = True
     nproc = 4
 
     #sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
-    sigma_crit = sigma_crit_func(cosmo_model, 0.2, 0.9)
+    sigma_crit = sigma_crit_func(cosmo_model, z, 0.9)
     print(sigma_crit)
     
     eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
@@ -1180,7 +1178,7 @@ def covariance(theta, R, calculate_covariance=False):
         cov_wp = np.zeros((size_r_gg.sum(), size_r_gg.sum()), dtype=np.float64)
         cov_wp_tot = cov_wp.copy()
     if ingredients['gm'] and ingredients['gg']:
-        cov_cross = np.zeros((size_r_gm.sum(), size_r_gg.sum()), dtype=np.float64)
+        cov_cross = np.zeros((size_r_gg.sum(), size_r_gm.sum()), dtype=np.float64)
         cov_cross_tot = cov_cross.copy()
     
     """
@@ -1303,7 +1301,7 @@ def covariance(theta, R, calculate_covariance=False):
             cov_wp_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), nproc, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_gauss
         if ingredients['gm'] and ingredients['gg'] and cross:
-            cov_cross_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gm, idx_gg, size_r_gm, size_r_gg)
+            cov_cross_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
             cov_cross_tot += cov_cross_gauss
     else:
         pass
@@ -1317,7 +1315,7 @@ def covariance(theta, R, calculate_covariance=False):
             cov_wp_ssc = cov_ssc(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_wp.copy(), nproc, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_ssc
         if ingredients['gm'] and ingredients['gg'] and cross:
-            cov_cross_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gm, idx_gg, size_r_gm, size_r_gg)
+            cov_cross_ssc = cov_ssc(rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
             cov_cross_tot += cov_cross_ssc
     else:
         pass
@@ -1330,7 +1328,7 @@ def covariance(theta, R, calculate_covariance=False):
             cov_wp_non_gauss = cov_non_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, Tgggg, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), nproc, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_non_gauss
         if ingredients['gm'] and ingredients['gg'] and cross:
-            cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gg, Tgggm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gm, idx_gg, size_r_gm, size_r_gg)
+            cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gm, Tgggm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
             cov_cross_tot += cov_cross_non_gauss
     else:
         pass
@@ -1341,7 +1339,7 @@ def covariance(theta, R, calculate_covariance=False):
     if ingredients['gg']:
         return cov_wp_tot
     if ingredients['gm'] and ingredients['gg']:
-        return np.block([[cov_esd_tot, cov_cross_tot], [cov_cross_tot.T, cov_wp_tot]])
+        return np.block([[cov_esd_tot, cov_cross_tot.T], [cov_cross_tot, cov_wp_tot]])
     """
         
     import matplotlib.pyplot as pl
@@ -1355,8 +1353,8 @@ def covariance(theta, R, calculate_covariance=False):
     pl.show()
     pl.clf()
     
-    cov_block = np.block([[cov_esd_tot, cov_cross_tot],
-                        [cov_cross_tot.T, cov_wp_tot]])
+    cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
+                        [cov_cross_tot, cov_wp_tot]])
     pl.rcParams["figure.figsize"] = (10,10)
     pl.imshow(cov_block/np.sqrt(np.outer(np.diag(cov_block), np.diag(cov_block.T))))
     [pl.axhline(_x, lw=1, color='white') for _x in [7.5, 15.5, 21.5, 29.5]]

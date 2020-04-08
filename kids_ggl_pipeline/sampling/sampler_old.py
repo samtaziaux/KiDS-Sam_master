@@ -6,8 +6,13 @@ Galaxy-galaxy lensing EMCEE wrapper
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-
+import sys
+sys.path.insert(0,'/home/dvornik/.local/lib/python3.7/site-packages/emcee-2.2.1-py3.7.egg')
+import pkg_resources
+pkg_resources.require('emcee==2.2.1') # We need to force this, as newer version of emcee breaks backwards compatibility.
 import emcee
+print(emcee.__version__)
+#quit()
 import numpy as np
 import os
 import sys
@@ -22,7 +27,6 @@ from os.path import isfile
 from scipy import stats
 from six import string_types
 from time import ctime, time
-from multiprocessing import Pool
 
 # Python 2/3 compatibility
 if sys.version_info[0] == 2:
@@ -88,20 +92,17 @@ def run(hm_options, options, args):
              names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
              array, dot, inf, outer, pi, zip)
         return
-    
-    meta_names.extend(['lnprior','chi2','lnlike'])
-    formats = [np.dtype((np.float64, esd[i].size)) for i in rng_obsbins] + \
-              [np.float64 for i in rng_obsbins] + [np.float64, np.float64, np.float64]
-    dtype = np.dtype({'names':tuple(meta_names), 'formats':tuple(formats)})
-    print(dtype)
 
     # write header file
     hdrfile = io.write_hdr(options, function, parameters, names, prior_types)
 
     # initialize sampler
-    backend = emcee.backends.HDFBackend(options['output'])
-    backend.reset(options['nwalkers'], ndim)
-    
+    sampler = emcee.EnsembleSampler(
+        options['nwalkers'], ndim, lnprob, threads=options['threads'],
+        args=(R,esd,icov,function,names,prior_types[jfree],
+              parameters,nparams,join,jfree,repeat,lnprior,likenorm,
+              rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
+
     # set up starting point for all walkers
     po = sample_ball(
         names, prior_types, jfree, starting, parameters,
@@ -109,55 +110,42 @@ def run(hm_options, options, args):
 
     # burn-in
     if options['nburn'] > 0:
-        with Pool(processes=options['threads']) as pool:
-            sampler = emcee.EnsembleSampler(
-                                            options['nwalkers'], ndim, lnprob,
-                                            args=(R,esd,icov,function,names,prior_types[jfree],
-                                            parameters,nparams,join,jfree,repeat,lnprior,likenorm,
-                                            rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-                                            pool=pool, blobs_dtype=dtype)
-            pos = sampler.run_mcmc(po, options['nburn'], progress=True)
+        pos, prob, state, blobs = sampler.run_mcmc(po, options['nburn'])
         sampler.reset()
         print('{1}: {0} Burn-in steps finished'.format(
             options['nburn'], ctime()))
     else:
         pos = po
 
-
-    index = 0
-    autocorr = np.empty(options['nsteps'])
-    # This will be useful to testing convergence
-    old_tau = np.inf
-    with Pool(processes=options['threads']) as pool:
-        sampler = emcee.EnsembleSampler(
-                                    options['nwalkers'], ndim, lnprob,
-                                    args=(R,esd,icov,function,names,prior_types[jfree],
-                                    parameters,nparams,join,jfree,repeat,lnprior,likenorm,
-                                    rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-                                    pool=pool, backend=backend)#, blobs_dtype=dtype)
-        #result = sampler.run_mcmc(pos, options['nsteps'], progress=True)
-        #"""
-        for sample in sampler.sample(pos, iterations=options['nsteps'], thin_by=options['thin'], progress=True):
-            print(sample.blobs)
-            if options['stop_when_converged']:
-                # Only check convergence every 100 steps
-                if sampler.iteration % 100:
-                    continue
-                # Compute the autocorrelation time so far
-                # Using tol=0 means that we'll always get an estimate even
-                # if it isn't trustworthy
-                tau = sampler.get_autocorr_time(tol=0)
-                autocorr[index] = np.mean(tau)
-                index += 1
-                # Check convergence
-                converged = np.all(tau * 100 < sampler.iteration)
-                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
-                if converged:
-                    break
-                old_tau = tau
-        #"""
+    # incrementally save output
+    # this array contains lnprior, chi2, lnlike
+    chi2 = [zeros(options['nwalkers']*options['nsteps']//options['thin'])
+            for i in range(3)]
+    nwritten = 0
+    for i, result in enumerate(
+            sampler.sample(pos, iterations=options['nsteps'],
+                           thin=options['thin'])):
+        if i > 0 and ((i+1)*options['nwalkers'] \
+                      > options['nwalkers']*nwritten + options['update']):
+            out = io.write_chain(
+                sampler, options, chi2, names, jfree, output, metadata, i,
+                nwritten, Nobsbins, fail_value)
+            metadata, nwritten = out
 
     io.finalize_hdr(sampler, hdrfile)
+
+    tmp = options['output'].replace('.fits', '.temp.fits')
+    if os.path.isfile(options['output']):
+        cmd = 'mv {0} {1}'.format(options['output'], tmp)
+        print(cmd)
+        os.system(cmd)
+    print('Saving everything to {0}...'.format(options['output']))
+    #write_to_fits(
+    io.write_chain(
+        sampler, options, chi2, names, jfree, output, metadata, i+1,
+        nwritten, Nobsbins, fail_value)
+    if os.path.isfile(tmp):
+        os.remove(tmp)
     print('Everything saved to {0}!'.format(options['output']))
 
     return
@@ -171,7 +159,7 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
         parameters, nparams, join, jfree, repeat, lnprior, 0,
-        rng_obsbins, fail_value, array, dot, inf, zip, outer, pi, args)
+        rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
     print('\nDemo run took {0:.2e} seconds'.format(time()-to))
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
@@ -247,7 +235,7 @@ def mock(args, function, options, setup, parameters, join, starting, jfree,
 
 def lnprob(theta, R, esd, icov, function, names, prior_types,
            parameters, nparams, join, jfree, repeat, lnprior, likenorm,
-           rng_obsbins, fail_value, array, dot, inf, zip, outer, pi, args):
+           rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
     given a model, times the prior on the model parameters.
@@ -294,20 +282,12 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
     if not isfinite(chi2):
-        chi2 = -inf
-        #return -inf, fail_value
+        return -inf, fail_value
     lnlike = -chi2/2. + likenorm
-    if args.demo:
-        model.extend([lnprior_total, chi2, lnlike])
-        return lnlike + lnprior_total, model
-    else:
-        model.extend([[lnprior_total], [chi2], [lnlike]])
-        flat = [m for inner_list in model for m in inner_list]
-        out = [lnlike + lnprior_total]
-        out.extend([lnprior_total, chi2, lnlike])#flat)
-        out = np.array(out)#, dtype=object)
-        #print(out)
-        return out #(lnlike + lnprior_total, *flat)
+    model.append(lnprior_total)
+    model.append(chi2)
+    model.append(lnlike)
+    return lnlike + lnprior_total, model
 
 
 

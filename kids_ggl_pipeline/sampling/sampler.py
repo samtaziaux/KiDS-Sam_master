@@ -103,8 +103,12 @@ def run(hm_options, options, args):
     hdrfile = io.write_hdr(options, function, parameters, names, prior_types)
 
     # initialize sampler
-    backend = emcee.backends.HDFBackend(options['output'])
-    backend.reset(options['nwalkers'], ndim)
+    if options['restart']:
+        backend = emcee.backends.HDFBackend(options['output'])
+        print('Initial size: {0}'.format(backend.iteration))
+    else:
+        backend = emcee.backends.HDFBackend(options['output'])
+        backend.reset(options['nwalkers'], ndim)
     
     # set up starting point for all walkers
     po = sample_ball(
@@ -319,6 +323,8 @@ def print_opening_msg(args, options):
         print(' ** Running demo only **')
     elif args.mock:
         print(' ** Generating mock observations **')
+    elif options['restart']:
+        print('** Restarting sampler from last sample **')
     elif isfile(options['output']) and not args.force_overwrite:
         msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
             options['output'])

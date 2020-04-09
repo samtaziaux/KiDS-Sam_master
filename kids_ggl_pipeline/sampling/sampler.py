@@ -77,7 +77,7 @@ def run(hm_options, options, args):
     metadata, meta_names, fits_format = \
         sampling_utils.initialize_metadata(options, output, esd.shape)
     # some additional requirements of lnprob
-    fail_value = sampling_utils.initialize_fail_value(metadata)
+    #fail_value = sampling_utils.initialize_fail_value(metadata)
     # initialize
     lnprior = np.zeros(ndim)
 
@@ -89,12 +89,16 @@ def run(hm_options, options, args):
              array, dot, inf, outer, pi, zip)
         return
     
-    meta_names.extend(['lnprior','chi2','lnlike'])
-    formats = [np.dtype((np.float64, esd[i].size)) for i in rng_obsbins] + \
+    names_extend = ['lnprior','chi2','lnlike']
+    meta_names.extend(names_extend)
+    formats = [np.dtype((np.float64, esd[i].shape)) for i in rng_obsbins] + \
               [np.float64 for i in rng_obsbins] + [np.float64, np.float64, np.float64]
-    dtype = np.dtype({'names':tuple(meta_names), 'formats':tuple(formats)})
-    print(dtype)
-
+    dtype = np.dtype({'names':meta_names, 'formats':formats})
+    fail_value = np.zeros(1, dtype=dtype)
+    for n in names_extend:
+        fail_value[n] = 9999
+    fail_value = list(fail_value[0])
+    
     # write header file
     hdrfile = io.write_hdr(options, function, parameters, names, prior_types)
 
@@ -134,11 +138,10 @@ def run(hm_options, options, args):
                                     args=(R,esd,icov,function,names,prior_types[jfree],
                                     parameters,nparams,join,jfree,repeat,lnprior,likenorm,
                                     rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-                                    pool=pool, backend=backend)#, blobs_dtype=dtype)
-        #result = sampler.run_mcmc(pos, options['nsteps'], progress=True)
-        #"""
-        for sample in sampler.sample(pos, iterations=options['nsteps'], thin_by=options['thin'], progress=True):
-            print(sample.blobs)
+                                    pool=pool, backend=backend, blobs_dtype=dtype)
+        #result = sampler.run_mcmc(pos, options['nsteps'], thin_by=options['thin'], progress=True, store=True)
+        for sample in sampler.sample(pos, iterations=options['nsteps'],
+                                     thin_by=options['thin'], progress=True, store=True):
             if options['stop_when_converged']:
                 # Only check convergence every 100 steps
                 if sampler.iteration % 100:
@@ -155,11 +158,10 @@ def run(hm_options, options, args):
                 if converged:
                     break
                 old_tau = tau
-        #"""
-
+    
     io.finalize_hdr(sampler, hdrfile)
     print('Everything saved to {0}!'.format(options['output']))
-
+    
     return
 
 
@@ -282,7 +284,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     lnprior_total = priors.calculate_lnprior(
         lnprior, theta, prior_types, parameters, jfree)
     if not isfinite(lnprior_total):
-        return -inf, fail_value
+        return (-inf, *fail_value)
 
     p = update_parameters(theta, parameters, nparams, join, jfree, repeat)
     # run model!
@@ -294,21 +296,18 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
     if not isfinite(chi2):
-        chi2 = -inf
-        #return -inf, fail_value
+        return (-inf, *fail_value)
     lnlike = -chi2/2. + likenorm
     if args.demo:
         model.extend([lnprior_total, chi2, lnlike])
         return lnlike + lnprior_total, model
     else:
+        for i,m in enumerate(model[0]):
+            model[0][i] = m.astype(np.float64)
         model.extend([[lnprior_total], [chi2], [lnlike]])
         flat = [m for inner_list in model for m in inner_list]
-        out = [lnlike + lnprior_total]
-        out.extend([lnprior_total, chi2, lnlike])#flat)
-        out = np.array(out)#, dtype=object)
-        #print(out)
-        return out #(lnlike + lnprior_total, *flat)
-
+        post = lnlike + lnprior_total
+        return (post, *flat)
 
 
 def print_opening_msg(args, options):

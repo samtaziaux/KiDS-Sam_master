@@ -180,8 +180,8 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
         re-shaped covariance matrix, for plotting or other uses
     """
     cov2d = np.loadtxt(covfile)
-    #cov2d = np.delete(cov2d, -1, axis=0) # remove this after testing!
-    #cov2d = np.delete(cov2d, -1, axis=1) # remove this after testing!
+    cov2d = np.delete(cov2d, -1, axis=0) # remove this after testing!
+    cov2d = np.delete(cov2d, -1, axis=1) # remove this after testing!
     if exclude is None:
         nexcl = 0
     else:

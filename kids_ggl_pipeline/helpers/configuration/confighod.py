@@ -15,7 +15,7 @@ from ...sampling.priors import (
 
 
 def add_default_ingredients(ingredients):
-    options = ('gm', 'gg', 'mm', 'centrals', 'pointmass', 'miscentring', 'satellites',
+    options = ('centrals', 'pointmass', 'miscentring', 'satellites',
                'twohalo', 'haloexclusion', 'nzlens')
     default = {key: False for key in options}
     for key in ingredients:
@@ -212,9 +212,20 @@ def ingredients(ingr, words):
 
 
 def observables(words):
-    binning = np.array(words[1].split(','), dtype=float)
-    means = np.array(words[2].split(','), dtype=float)
-    return Observable(words[0], binning, means)
+    print(words)
+    options = ('gm', 'gg', 'mm', 'func')
+    default = {key: False for key in options}
+    for key in words[1]:
+        print(key)
+        if key not in options:
+            ingr = 'gm'
+            binning = np.array(words[1].split(','), dtype=float)
+            means = np.array(words[2].split(','), dtype=float)
+        else:
+            ingr = words[1]
+            binning = np.array(words[2].split(','), dtype=float)
+            means = np.array(words[3].split(','), dtype=float)
+    return Observable(words[0], ingr, binning, means)
 
 
 def prior_is_valid(line):

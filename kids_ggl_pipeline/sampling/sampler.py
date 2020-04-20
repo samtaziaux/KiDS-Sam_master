@@ -81,16 +81,9 @@ def run(hm_options, options, args):
     # initialize
     lnprior = np.zeros(ndim)
 
-    # are we just running a demo?
-    if args.demo:
-        demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
-             prior_types, parameters, join, starting, jfree, repeat, nparams,
-             names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
-             array, dot, inf, outer, pi, zip)
-        return
-    
     names_extend = ['lnprior','chi2','lnlike']
     meta_names.extend(names_extend)
+    # this needs to be slightly more flexible!
     formats = [np.dtype((np.float64, esd[i].shape)) for i in rng_obsbins] + \
               [np.float64 for i in rng_obsbins] + [np.float64, np.float64, np.float64]
     dtype = np.dtype({'names':meta_names, 'formats':formats})
@@ -98,6 +91,14 @@ def run(hm_options, options, args):
     for n in names_extend:
         fail_value[n] = 9999
     fail_value = list(fail_value[0])
+
+    # are we just running a demo?
+    if args.demo:
+        demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
+             prior_types, parameters, join, starting, jfree, repeat, nparams,
+             names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
+             array, dot, inf, outer, pi, zip)
+        return
     
     # write header file
     hdrfile = io.write_hdr(options, function, parameters, names, prior_types)
@@ -193,7 +194,7 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     print('-------------')
     im = 0
     ip = 0
-    for i, name in enumerate(meta_names):
+    for i, name in enumerate(meta_names[:-3]):
         print('{0:<20s}  {1}'.format(name, model[im][ip]))
         ip += 1
         if ip == len(model[im]):

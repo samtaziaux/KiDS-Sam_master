@@ -10,12 +10,13 @@ class Observable(object):
 
     """
 
-    def __init__(self, name, binlows, binhighs, notes='', sampling_size=100):
+    def __init__(self, name, ingredient, binlows, binhighs, notes='', sampling_size=100):
         """Construct an observable object from the information in the
         configuration file
 
         """
         self.name = name
+        self.ingredient = ingredient
         #self._binning = binning
         #self.means = means
         self._binlows = binlows
@@ -70,6 +71,14 @@ class Observable(object):
     @name.setter
     def name(self, name):
         self._name = name
+        
+    @property
+    def ingredient(self):
+        return self._ingredient
+
+    @ingredient.setter
+    def ingredient(self, ingredient):
+        self._ingredient = ingredient
 
     @property
     def nbins(self):

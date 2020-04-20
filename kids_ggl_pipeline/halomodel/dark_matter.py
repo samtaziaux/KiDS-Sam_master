@@ -207,11 +207,11 @@ def bias_tinker10_func(hmf):
     """
     nu = hmf.nu**0.5
     y = np.log10(hmf.delta_halo)
-    A = 1.0 + 0.24 * y * np.exp(-(4 / y) ** 4)
+    A = 1.0 + 0.24 * y * np.exp(-(4. / y) ** 4.)
     a = 0.44 * y - 0.88
     B = 0.183
     b = 1.5
-    C = 0.019 + 0.107 * y + 0.19 * np.exp(-(4 / y) ** 4)
+    C = 0.019 + 0.107 * y + 0.19 * np.exp(-(4. / y) ** 4.)
     c = 2.4
     #print y, A, a, B, b, C, c
     return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
@@ -222,6 +222,10 @@ def bias_tinker10(hmf):
     Tinker 2010 bias - empirical
         
     """
+    nu0 = hmf.nu**0.5
+    min, max, step = hmf.Mmin, hmf.Mmax, hmf.dlog10m
+    min_0 = 2.
+    hmf.update(Mmin = min_0, Mmax = max, dlog10m = (max-min_0)/500.0)
     nu = hmf.nu**0.5
     
     f_nu = hmf.fsigma / nu
@@ -229,6 +233,9 @@ def bias_tinker10(hmf):
     norm = trapz(f_nu * b_nu, nu)
     
     func = bias_tinker10_func(hmf)
+    func_i = interp1d(nu, func, bounds_error=False, fill_value='extrapolate')
+    func = func_i(nu0)
+    hmf.update(Mmin = min, Mmax = max, dlog10m = step)
     return func / norm
 
 
@@ -248,7 +255,7 @@ def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
     #print('m_x =', m_x.shape)
     #print('integrand =', (hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x).shape)
     b_g = trapz(
-        hmf.dndlnm * population * bias_tinker10(hmf) / m_x,
+        hmf.dndm * population * bias_tinker10(hmf),
         m_x, **kwargs) / ngal
     #print('b_g =', b_g.shape)#, b_g[:,None].shape)
     #try:
@@ -265,9 +272,8 @@ def two_halo_gg(hmf, ngal, population, m_x, **kwargs):
     Note that I removed the argument k_x which was required but not
     used
     """
-
     b_g = trapz(
-        hmf.dndlnm * population * bias_tinker10(hmf) / m_x,
+        hmf.dndm * population * bias_tinker10(hmf),
         m_x, **kwargs) / ngal
 
     return (hmf.power * b_g**2.0), b_g**2.0

@@ -115,42 +115,62 @@ def model(theta, R, calculate_covariance=False):
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
-
-    if setup['return'] in ('wp', 'esd_wp') and not ingredients['gg']:
-        raise ValueError(
-        'If return=wp or return=esd_wp then you must toggle the' \
-        ' clustering as an ingredient. Similarly, if return=esd' \
-        ' or return=esd_wp then you must toggle the lensing' \
-        ' as an ingredient as well.')
-    if setup['return'] in ('esd', 'esd_wp') and not ingredients['gm']:
-        raise ValueError(
-        'If return=wp or return=esd_wp then you must toggle the' \
-        ' clustering as an ingredient. Similarly, if return=esd' \
-        ' or return=esd_wp then you must toggle the lensing' \
-        ' as an ingredient as well.')
-
-    assert len(observables) == 1, \
-        'working with more than one observable is not yet supported.' \
-        ' If you would like this feature added please raise an issue.'
-    observable = observables[0]
-    hod_observable = observable.sampling
     
+    #assert len(observables) == 1, \
+    #    'working with more than one observable is not yet supported.' \
+    #    ' If you would like this feature added please raise an issue.'
+    nbins = 0
+    ingredient_gm, ingredient_gg, ingredient_mm, ingredient_func = False, False, False, False
+    for i, observable in enumerate(observables):
+        if observable.ingredient == 'gm':
+            ingredient_gm = True
+            observable_gm = observable
+            hod_observable_gm = observable.sampling
+            nbins_gm = observable.nbins
+            idx_gm = np.s_[nbins:nbins+nbins_gm]
+            nbins += nbins_gm
+        if observable.ingredient == 'gg':
+            ingredient_gg = True
+            observable_gg = observable
+            hod_observable_gg = observable.sampling
+            nbins_gg = observable.nbins
+            idx_gg = np.s_[nbins:nbins+nbins_gg]
+            nbins += nbins_gg
+        if observable.ingredient == 'mm':
+            ingredient_mm = True
+            observable_mm = observable
+            nbins_mm = observable.nbins
+            idx_mm = np.s_[nbins:nbins+nbins_mm]
+            nbins += nbins_mm
+        if observable.ingredient == 'func': # This to be used for output of stellar mass/lum function, not yet implemented
+            ingredient_func = True
+            observable_func = observable
+            hod_observable_func = observable.sampling
+            nbins_func = observable.nbins
+            idx_func= np.s_[nbins:nbins+nbins_func]
+            nbins += nbins_func
+    
+    if setup['return'] in ('wp', 'esd_wp') and not ingredient_gg:
+        raise ValueError(
+        'If return=wp or return=esd_wp then you must toggle the' \
+        ' clustering as an ingredient. Similarly, if return=esd' \
+        ' or return=esd_wp then you must toggle the lensing' \
+        ' as an ingredient as well.')
+    if setup['return'] in ('esd', 'esd_wp') and not ingredient_gm:
+        raise ValueError(
+        'If return=wp or return=esd_wp then you must toggle the' \
+        ' clustering as an ingredient. Similarly, if return=esd' \
+        ' or return=esd_wp then you must toggle the lensing' \
+        ' as an ingredient as well.')
+        
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
-
+    
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
     
-    output = []
-    
-    bins_per_obs = np.array(setup['bins_per_obs'].split(','), dtype=int)
-    nbins = observable.nbins
-    if ingredients['gm']:
-        idx_gm = np.s_[:bins_per_obs[0]]
-    if ingredients['gg']:
-        idx_gg = np.s_[bins_per_obs[0]:bins_per_obs[0]+bins_per_obs[1]]
-    if ingredients['mm']:
-        idx_mm = np.s_[bins_per_obs[0]+bins_per_obs[1]:bins_per_obs[0]+bins_per_obs[1]++bins_per_obs[2]]
+    #output = []
+    output = np.empty(nbins, dtype=object)
     
     if ingredients['nzlens']:
         nz = cosmo[9].T
@@ -186,13 +206,19 @@ def model(theta, R, calculate_covariance=False):
     # value to all bins
     #if not np.iterable(z):
     #    z = np.array([z])
+    #if z.ndim > 1:
+    #    z = z.reshape(1,-1).squeeze()
     if z.size == 1 and nbins > 1:
         z = z*np.ones(nbins)
     # this is in case redshift is used in the concentration or
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
     #z = expand_dims(z, -1)
-
+    
+    if z.size != nbins:
+        raise ValueError(
+            'Number of redshift bins should be equal to the number of observable bins!')
+    
     cosmo_model = Flatw0waCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
         Neff=Neff, w0=w0, wa=wa)
@@ -208,7 +234,7 @@ def model(theta, R, calculate_covariance=False):
         else rho_mean / omegam
     # same as with redshift
     rho_bg = expand_dims(rho_bg, -1)
-
+    
     concentration = c_concentration[0](mass_range, *c_concentration[1:])
     if ingredients['satellites']:
         concentration_sat = s_concentration[0](
@@ -227,13 +253,13 @@ def model(theta, R, calculate_covariance=False):
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
-    if ingredients['gm']:
+    if ingredient_gm:
         #rvir_range_2d_i_gm = R[idx_gm][1:]
         rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-    if ingredients['gg']:
+    if ingredient_gg:
         #rvir_range_2d_i_gg = R[idx_gg][1:]
         rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-    if ingredients['mm']:
+    if ingredient_mm:
         #rvir_range_2d_i_mm = R[idx_mm][1:]
         rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]]
     # We might want to move this in the configuration part of the code!
@@ -247,71 +273,92 @@ def model(theta, R, calculate_covariance=False):
     # observable to be used in trapz
     if selection.filename == 'None':
         if integrate_zlens:
-            completeness = np.ones((z.size,nbins,hod_observable.shape[1]))
+            completeness = np.ones((z.size,nbins,hod_observable_gm.shape[1]))
         else:
-            completeness = np.ones(hod_observable.shape)
+            completeness = np.ones(hod_observable_gm.shape)
     elif integrate_zlens:
         completeness = np.array(
             [[selection.interpolate([zi]*obs.size, obs, method='linear')
-              for obs in hod_observable] for zi in z[:,0]])
+              for obs in hod_observable_gm] for zi in z[:,0]])
     else:
         completeness = np.array(
             [selection.interpolate([zi]*obs.size, obs, method='linear')
-             for zi, obs in zip(z[:,0], hod_observable)])
+             for zi, obs in zip(z[:,0], hod_observable_gm)])
 
-    if ingredients['centrals']:
-        pop_c, prob_c = hod.number(
-            hod_observable, mass_range, c_mor[0], c_scatter[0],
-            c_mor[1:], c_scatter[1:], completeness,
-            obs_is_log=observable.is_log)
-    else:
-        pop_c = np.zeros((nbins,mass_range.size))
-        prob_c = np.zeros((nbins,hod_observable.shape[1],mass_range.size))
+    pop_c = np.zeros((nbins,mass_range.size))
+    pop_s = np.zeros((nbins,mass_range.size))
+    if ingredient_gm:
+        if ingredients['centrals']:
+            pop_c[idx_gm,:], prob_c_gm = hod.number(
+                hod_observable_gm, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:], completeness,
+                obs_is_log=observable_gm.is_log)
 
-    if ingredients['satellites']:
-        pop_s, prob_s = hod.number(
-            hod_observable, mass_range, s_mor[0], s_scatter[0],
-            s_mor[1:], s_scatter[1:], completeness,
-            obs_is_log=observable.is_log)
-    else:
-        pop_s = np.zeros(pop_c.shape)
-        prob_s = np.zeros(prob_c.shape)
+        if ingredients['satellites']:
+            pop_s[idx_gm,:], prob_s_gm = hod.number(
+                hod_observable_gm, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:], completeness,
+                obs_is_log=observable_gm.is_log)
+        
+    if ingredient_gg:
+        if ingredients['centrals']:
+            pop_c[idx_gg,:], prob_c_gg = hod.number(
+                hod_observable_gg, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:], completeness,
+                obs_is_log=observable_gg.is_log)
 
+        if ingredients['satellites']:
+            pop_s[idx_gg,:], prob_s_gg = hod.number(
+                hod_observable_gg, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:], completeness,
+                obs_is_log=observable_gg.is_log)
+        
     pop_g = pop_c + pop_s
-    prob_g = prob_c + prob_s
     
     # TODO: add luminosity or mass function as an output!
-    if setup['return'] in ('prob', 'all'):
-        output.append([prob_c, prob_s, prob_g])
+    """
     if setup['return'] in ('hod', 'all'):
         output.append([pop_c, pop_s, pop_g])
-    if setup['return'] in ('prob', 'hod'):
+    if setup['return'] == 'hod':
         return output
     elif setup['return'] == 'all':
         output.append([hod_observable, mass_range]) #??
     else:
         output = []
+    """
     
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
-    ngal = hod.nbar(dndm, pop_g, mass_range)
-    meff = hod.Mh_effective(
-        dndm, pop_g, mass_range, return_log=observable.is_log)
+    ngal = np.empty(nbins)
+    meff = np.empty(nbins)
+    if ingredient_gm:
+        ngal[idx_gm] = hod.nbar(dndm[idx_gm], pop_g[idx_gm], mass_range)
+        meff[idx_gm] = hod.Mh_effective(
+            dndm[idx_gm], pop_g[idx_gm], mass_range, return_log=observable_gm.is_log)
+    if ingredient_gg:
+        ngal[idx_gg] = hod.nbar(dndm[idx_gg], pop_g[idx_gg], mass_range)
+        meff[idx_gg] = hod.Mh_effective(
+            dndm[idx_gg], pop_g[idx_gg], mass_range, return_log=observable_gg.is_log)
+    if ingredient_mm:
+        ngal[idx_mm] = np.zeros_like(nbins_mm)
+        meff[idx_mm] = np.zeros_like(nbins_mm)
     
-    # ngal is the mass or luminosity or observable function! See van Uitert+16 that that is the case.
-    if setup['return'] == 'ngal':
-        output.append(ngal)
-        return output
-    if setup['return'] == 'all':
-        output.append(ngal)
-    else:
-        output = []
+    """
+    for i in range(5):
+        np.savetxt('/home/dvornik/test_pipeline2/mc/hod_%s.txt'%(i+1), np.vstack([mass_range, pop_c[i], pop_s[i], pop_g[i]]).T, delimiter='\t', comments='#', header='M_h central satellites  total')
+    np.savetxt('/home/dvornik/test_pipeline2/mc/number.txt', ngal[:5], delimiter='\t', comments='#', header='ngal')
+    for i in range(5):
+        np.savetxt('/home/dvornik/test_pipeline2/mc/dndm_%s.txt'%(i+1), np.vstack([mass_range, dndm[i]]).T, delimiter='\t', comments='#', header='M_h dn/dM')
+    #"""
     
     """Power spectra"""
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(k_range_lin/0.1)
     F_k2 = np.ones_like(k_range_lin)
+    #F_k2 = sp.erfc(k_range_lin/10.0)
+    #F_k1 = 1.-np.exp(-(k_range_lin/0.1)**2.)
+    #F_k2 = 0.5*(1.0+(sp.erf(-(k_range_lin-2.0))))
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
@@ -334,12 +381,13 @@ def model(theta, R, calculate_covariance=False):
         uk_s = np.ones((nbins,mass_range.size,k_range_lin.size))
 
     # If there is miscentring to be accounted for
+    # Only for galaxy-galaxy lensing!
     if ingredients['miscentring']:
         p_off, r_off = c_miscent#[1:]
-        uk_c = uk_c * nfw.miscenter(
+        uk_c[idx_gm] = uk_c[idx_gm] * nfw.miscenter(
             p_off, r_off, expand_dims(mass_range, -1),
             expand_dims(rvir_range_lin, -1), k_range_lin,
-            expand_dims(concentration, -1), uk_c.shape)
+            expand_dims(concentration, -1), uk_c[idx_gm].shape)
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
     
@@ -350,7 +398,7 @@ def model(theta, R, calculate_covariance=False):
     if not integrate_zlens:
         rho_bg = rho_bg[...,0]
     
-    if ingredients['gm']:
+    if ingredient_gm:
         if ingredients['twohalo']:
             """
             # unused but not removing as we might want to use it later
@@ -369,15 +417,15 @@ def model(theta, R, calculate_covariance=False):
         #elif integrate_zlens:
             #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
         else:
-            Pgm_2h = np.zeros((bins_per_obs[0],setup['lnk_bins']))
+            Pgm_2h = np.zeros((nbins_gm,setup['lnk_bins']))
 
         if ingredients['centrals']:
             Pgm_c = F_k1 * gm_cen_analy(
                 dndm[idx_gm], uk_c[idx_gm], rho_bg[idx_gm], pop_c[idx_gm], ngal[idx_gm], mass_range)
         elif integrate_zlens:
-            Pgm_c = np.zeros((z.size,bins_per_obs[0],setup['lnk_bins']))
+            Pgm_c = np.zeros((z.size,nbins_gm,setup['lnk_bins']))
         else:
-            Pgm_c = F_k1 * np.zeros((bins_per_obs[0],setup['lnk_bins']))
+            Pgm_c = F_k1 * np.zeros((nbins_gm,setup['lnk_bins']))
 
 
         if ingredients['satellites']:
@@ -387,18 +435,21 @@ def model(theta, R, calculate_covariance=False):
             Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
         
         if ingredients['haloexclusion'] and setup['return'] != 'power':
-            Pgm_k = Pgm_c + Pgm_s
+            Pgm_k_t = Pgm_c + Pgm_s
+            Pgm_k = Pgm_c + Pgm_s + Pgm_2h
         else:
             Pgm_k = Pgm_c + Pgm_s + Pgm_2h
     
         # finally integrate over (weight by, really) lens redshift
         if integrate_zlens:
             intnorm = np.sum(nz, axis=0)
-            meff = np.sum(nz*meff, axis=0) / intnorm
-    
-    
+            meff[idx_gm] = np.sum(nz*meff[idx_gm], axis=0) / intnorm
+    """
+    for i in range(5):
+        np.savetxt('/home/dvornik/test_pipeline2/mc/Pgm_%s.txt'%(i+1), np.vstack([k_range_lin, Pgm_c[i], Pgm_s[i], Pgm_2h[i], Pgm_k[i]]).T, delimiter='\t', comments='#', header='k central satellites 2h total')
+    #"""
     # Galaxy - galaxy spectra (for clustering)
-    if ingredients['gg']:
+    if ingredient_gg:
         if ingredients['twohalo']:
             Pgg_2h = F_k2 * bias * array(
             [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
@@ -406,19 +457,18 @@ def model(theta, R, calculate_covariance=False):
             in zip(hmf[idx_gg], expand_dims(ngal[idx_gg], -1),
                     expand_dims(pop_g[idx_gg], -2))])
         else:
-            Pgg_2h = F_k1 * np.zeros((bins_per_obs[1],setup['lnk_bins']))
+            Pgg_2h = F_k2 * np.zeros((nbins_gg,setup['lnk_bins']))
             
         ncen = hod.nbar(dndm[idx_gg], pop_c[idx_gg], mass_range)
         nsat = hod.nbar(dndm[idx_gg], pop_s[idx_gg], mass_range)
-
     
         if ingredients['centrals']:
             """
             Pgg_c = F_k1 * gg_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
             """
-            Pgg_c = F_k1 * np.zeros((bins_per_obs[1],setup['lnk_bins']))
+            Pgg_c = F_k1 * np.zeros((nbins_gg,setup['lnk_bins']))
         else:
-            Pgg_c = F_k1 * np.zeros((bins_per_obs[1],setup['lnk_bins']))
+            Pgg_c = F_k1 * np.zeros((nbins_gg,setup['lnk_bins']))
     
         if ingredients['satellites']:
             beta = s_beta
@@ -432,32 +482,40 @@ def model(theta, R, calculate_covariance=False):
             Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
         
         if ingredients['haloexclusion'] and setup['return'] != 'power':
-            Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s
+            Pgg_k_t = Pgg_c + (2.0 * Pgg_cs) + Pgg_s
+            Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
         else:
             Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
-                    
-                            
+    """
+    for i in range(5):
+        np.savetxt('/home/dvornik/test_pipeline2/mc/Pgg_%s.txt'%(i+1), np.vstack([k_range_lin, Pgg_c[i], Pgg_s[i], Pgg_cs[i], Pgg_2h[i], Pgg_k[i]]).T, delimiter='\t', comments='#', header='k central satellites central-satellite 2h total')
+    #"""
     # Matter - matter spectra
-    if ingredients['mm']:
+    if ingredient_mm:
         if ingredients['twohalo']:
-            Pmm_2h = F_k2 * array([hmf_i[idx_mm].power for hmf_i in hmf])
+            Pmm_2h = F_k2 * array([hmf_i.power for hmf_i in hmf[idx_mm]])
         else:
-            Pmm_2h = np.zeros((bins_per_obs[2],setup['lnk_bins']))
+            Pmm_2h = np.zeros((nbins_mm,setup['lnk_bins']))
             
         if ingredients['centrals']:
             Pmm_1h = F_k1 * mm_analy(dndm[idx_mm], uk_c[idx_mm], rho_bg[idx_mm], mass_range)
         else:
-            Pmm_1h = np.zeros((bins_per_obs[2],setup['lnk_bins']))
+            Pmm_1h = np.zeros((nbins_mm,setup['lnk_bins']))
           
-        if ingredients['haloexclusion'] and setup['return'] != 'power':
-            Pmm_k = Pmm_1h
-        else:
-            Pmm_k = Pmm_1h + Pmm_2h
-            
-                
+        #if ingredients['haloexclusion'] and setup['return'] != 'power':
+        #    Pmm_k_t = Pmm_1h
+        #    Pmm_k = Pmm_1h + Pmm_2h
+        #else:
+        Pmm_k = Pmm_1h + Pmm_2h
+    """
+    for i in range(5):
+        np.savetxt('/home/dvornik/test_pipeline2/mc/Pmm_%s.txt'%(i+1), np.vstack([k_range_lin, Pmm_1h[i], Pmm_2h[i], Pmm_k[i]]).T, delimiter='\t', comments='#', header='k 1h 2h total')
+    for i in range(5):
+        np.savetxt('/home/dvornik/test_pipeline2/mc/Plin_%s.txt'%(i+1), np.vstack([k_range_lin, hmf[i].power]).T, delimiter='\t', comments='#', header='k Plin')
+    #"""
     # Outputs
            
-    if ingredients['gm']:
+    if ingredient_gm:
         # note this doesn't include the point mass! also, we probably
         # need to return k
         if setup['return'] == 'power':
@@ -469,7 +527,7 @@ def model(theta, R, calculate_covariance=False):
             if integrate_zlens:
                 if ingredients['haloexclusion'] and setup['return'] != 'power':
                     P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
+                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k_t)]
                     P_inter_2h = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
                         for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_2h)]
                 else:
@@ -478,63 +536,64 @@ def model(theta, R, calculate_covariance=False):
             else:
                 if ingredients['haloexclusion'] and setup['return'] != 'power':
                     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                        for Pg_k_i in Pgm_k]
+                        for Pg_k_i in Pgm_k_t]
                     P_inter_2h = [UnivariateSpline(k_range, np.log(Pg_2h_i), s=0, ext=0)
                         for Pg_2h_i in Pgm_2h]
                 else:
                     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                         for Pg_k_i in Pgm_k]
                    
-    if ingredients['gg']:
+    if ingredient_gg:
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
-                    for Pgg_k_i in Pgg_k]
+                    for Pgg_k_i in Pgg_k_t]
             P_inter_2_2h = [UnivariateSpline(k_range, np.log(Pgg_2h_i), s=0, ext=0)
                     for Pgg_2h_i in Pgg_2h]
         else:
             P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
                     for Pgg_k_i in Pgg_k]
                     
-    if ingredients['mm']:
-        if ingredients['haloexclusion'] and setup['return'] != 'power':
-            P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
-                    for Pmm_k_i in Pmm_k]
-            P_inter_3_2h = [UnivariateSpline(k_range, np.log(Pmm_2h_i), s=0, ext=0)
-                    for Pmm_2h_i in Pmm_2h]
-        else:
-            P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
-                    for Pmm_k_i in Pmm_k]
+    if ingredient_mm:
+        #if ingredients['haloexclusion'] and setup['return'] != 'power':
+        #    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+        #            for Pmm_k_i in Pmm_k_t]
+        #    P_inter_3_2h = [UnivariateSpline(k_range, np.log(Pmm_2h_i), s=0, ext=0)
+        #            for Pmm_2h_i in Pmm_2h]
+        #else:
+        P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+                for Pmm_k_i in Pmm_k]
     
     
-    if ingredients['gm']:
+    if ingredient_gm:
         if setup['return'] == 'all':
-            output.append(Pgm_k)
+            output[idx_gm] = Pgm_k
         if setup['return'] == 'power':
             Pgm_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter, rvir_range_2d_i_gm)]
-            output.append(Pgm_out)
-    if ingredients['gg']:
+            output[idx_gm] = Pgm_out
+    if ingredient_gg:
         if setup['return'] == 'all':
-            output.append(Pgg_k)
+            output[idx_gg] = Pgg_k
         if setup['return'] == 'power':
             Pgg_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter_2, rvir_range_2d_i_gg)]
-            output.append(Pgg_out)
-    if ingredients['mm']:
+            output[idx_gg] = Pgg_out
+    if ingredient_mm:
         if setup['return'] == 'all':
-            output.append(Pmm_k)
+            output[idx_mm] = Pmm_k
         if setup['return'] == 'power':
             Pmm_out = [exp(P_i(np.log(r_i))) for P_i, r_i in zip(P_inter_3, rvir_range_2d_i_mm)]
-            output.append(Pmm_out)
+            output[idx_mm] = Pmm_out
     if setup['return'] == 'power':
-        output.append(meff)
+        output = list(output)
+        output = [output, meff]
         return output
     elif setup['return'] == 'all':
         output.append(k_range_lin)
     else:
-        output = []
+        output = np.empty(nbins, dtype=object)
     
-    
+    #quit()
     # correlation functions
-    if ingredients['gm']:
+    if ingredient_gm:
         if integrate_zlens:
             if ingredients['haloexclusion']:
                 xi2 = np.array(
@@ -567,13 +626,13 @@ def model(theta, R, calculate_covariance=False):
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
             xi_out_i = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2)])
             xi_out = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i, rvir_range_2d_i_gm)])
-            output.append(xi_out)
+            output[idx_gm] = xi_out
         if setup['return'] == 'all':
             if integrate_zlens:
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
             output.append(xi2)
     
-    if ingredients['gg']:
+    if ingredient_gg:
         if ingredients['haloexclusion']:
             xi2_2 = np.array(
                 [power_to_corr_ogata(P_inter_i, rvir_range_3d)
@@ -589,37 +648,38 @@ def model(theta, R, calculate_covariance=False):
         if setup['return'] == 'xi':
             xi_out_i_2 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_2)])
             xi_out_2 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_2, rvir_range_2d_i_gg)])
-            output.append(xi_out_2)
+            output[idx_gg] = xi_out_2
         if setup['return'] == 'all':
             output.append(xi2_2)
         
-    if ingredients['mm']:
-        if ingredients['haloexclusion']:
-            xi2_3 = np.array(
-                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                for P_inter_i in P_inter_3])
-            xi2_3_2h = np.array(
-                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                for P_inter_i in P_inter_3_2h])
-            xi2_3 = xi2_3 + halo_exclusion(xi2_3_2h, rvir_range_3d, meff[idx_mm], rho_bg[idx_mm], setup['delta'])
-        else:
-            xi2_3 = np.array(
-                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                for P_inter_i in P_inter_3])
+    if ingredient_mm:
+        #if ingredients['haloexclusion']:
+        #    xi2_3 = np.array(
+        #        [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+        #        for P_inter_i in P_inter_3])
+        #    xi2_3_2h = np.array(
+        #        [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+        #        for P_inter_i in P_inter_3_2h])
+        #    xi2_3 = xi2_3 + halo_exclusion(xi2_3_2h, rvir_range_3d, meff[idx_mm], rho_bg[idx_mm], setup['delta'])
+        #else:
+        xi2_3 = np.array(
+            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
+            for P_inter_i in P_inter_3])
         if setup['return'] == 'xi':
             xi_out_i_3 = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2_3)])
             xi_out_3 = np.array([x_i(r_i) for x_i, r_i in zip(xi_out_i_3, rvir_range_2d_i_mm)])
-            output.append(xi_out_3)
+            output[idx_mm] = xi_out_3
         if setup['return'] == 'all':
             output.append(xi2_3)
             
     if setup['return'] == 'xi':
-        output.append(meff)
+        output = list(output)
+        output = [output, meff]
         return output
     elif setup['return'] == 'all':
         output.append(rvir_range_3d)
     else:
-        output = []
+        output = np.empty(nbins, dtype=object)
     
     # projected surface density
     # this is the slowest part of the model
@@ -633,7 +693,7 @@ def model(theta, R, calculate_covariance=False):
     #rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
     #    else rvir_range_3d_i
 
-    if ingredients['gm']:
+    if ingredient_gm:
         if integrate_zlens:
             surf_dens2 = array(
                 [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_range_3d_i)
@@ -680,7 +740,7 @@ def model(theta, R, calculate_covariance=False):
     
         # fill/interpolate nans
         surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
-        for i in range(bins_per_obs[0]):
+        for i in range(nbins_gm):
             surf_dens2[i] = fill_nan(surf_dens2[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_r = array(
@@ -688,11 +748,11 @@ def model(theta, R, calculate_covariance=False):
                 for si in surf_dens2])
             surf_dens2 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i_gm)])
             #return [surf_dens2, meff]
-            output.append(surf_dens2)
+            output[idx_gm] = surf_dens2
         if setup['return'] == 'all':
             output.append(surf_dens2)
             
-    if ingredients['gg']:
+    if ingredient_gg:
         surf_dens2_2 = array(
             [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
             for xi2_i, rho_i in zip(xi2_2, rho_bg)])
@@ -706,7 +766,7 @@ def model(theta, R, calculate_covariance=False):
         
         # fill/interpolate nans
         surf_dens2_2[(surf_dens2_2 <= 0) | (surf_dens2_2 >= 1e20)] = np.nan
-        for i in range(bins_per_obs[1]):
+        for i in range(nbins_gg):
             surf_dens2_2[i] = fill_nan(surf_dens2_2[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_2_r = array(
@@ -714,7 +774,7 @@ def model(theta, R, calculate_covariance=False):
                 for si in surf_dens2_2])
             surf_dens2_2 = np.array([s_r(r_i) for s_r, r_i in zip(surf_dens2_2_r, rvir_range_2d_i_gg)])
         if setup['return'] in ('kappa', 'sigma'):
-            output.append(surf_dens2_2)
+            output[idx_gg] = surf_dens2_2
         if setup['return'] in ('wp', 'esd_wp'):
             wp_out_i = array([UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i), s=0)
                         for wi, rho_i in zip(surf_dens2_2, rho_bg)])
@@ -725,7 +785,7 @@ def model(theta, R, calculate_covariance=False):
             output.append([surf_dens2_2, wp_out])
     
     
-    if ingredients['mm']:
+    if ingredient_mm:
         surf_dens2_3 = array([sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
             for xi2_i, rho_i in zip(xi2_3, rho_bg)])
         
@@ -738,7 +798,7 @@ def model(theta, R, calculate_covariance=False):
         
         # fill/interpolate nans
         surf_dens2_3[(surf_dens2_3 <= 0) | (surf_dens2_3 >= 1e20)] = np.nan
-        for i in range(bins_per_obs[2]):
+        for i in range(nbins_mm):
             surf_dens2_3[i] = fill_nan(surf_dens2_3[i])
         if setup['return'] in ('kappa', 'sigma'):
             surf_dens2_3_r = array(
@@ -746,19 +806,23 @@ def model(theta, R, calculate_covariance=False):
                 for si in surf_dens2_3])
             surf_dens2_3 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_3_r, rvir_range_2d_i_mm)])
             #return [surf_dens2_3, meff]
-            output.append(surf_dens2_3)
+            output[idx_mm] = surf_dens2_3
         if setup['return'] == 'all':
             output.append(surf_dens2_3)
         
-    if setup['return'] in ('kappa', 'sigma', 'wp'):
-        output.append(meff)
+    if setup['return'] in ('kappa', 'sigma'):
+        output = list(output)
+        output = [output, meff]
+        return output
+    if setup['return'] == ('wp'):
+        output = [wp_out, meff]
         return output
     elif setup['return'] == 'all':
         output.append(rvir_range_3d_i)
     elif setup['return'] == 'esd_wp':
         pass
     else:
-        output = []
+        output = np.empty(nbins, dtype=object)
     
     
     # excess surface density
@@ -777,7 +841,7 @@ def model(theta, R, calculate_covariance=False):
         #out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i_mm[0].size))
         #for i in range(nbins):
         #    out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i_mm[i])
-        out_esd_tot_inter_3 = [out_esd_tot_3[i](rvir_range_2d_i_mm[i]) for i in range(bins_per_obs[2])]
+        out_esd_tot_inter_3 = [out_esd_tot_3[i](rvir_range_2d_i_mm[i]) for i in range(nbins_mm)]
         output.insert(0, out_esd_tot_inter_3) # This insert makes sure that the ESD's are on the fist place.
     
 
@@ -794,11 +858,11 @@ def model(theta, R, calculate_covariance=False):
         #out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i_gg.size))
         #for i in range(nbins):
         #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i_gg[i])
-        out_esd_tot_inter_2 = [out_esd_tot_2[i](rvir_range_2d_i_gg[i]) for i in range(bins_per_obs[1])]
+        out_esd_tot_inter_2 = [out_esd_tot_2[i](rvir_range_2d_i_gg[i]) for i in range(nbins_gg)]
         output.insert(0, out_esd_tot_inter_2)
     """
         
-    if ingredients['gm']:
+    if ingredient_gm:
         d_surf_dens2 = array(
             [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
@@ -811,21 +875,22 @@ def model(theta, R, calculate_covariance=False):
         #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
         #for i in range(nbins):
         #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter = [out_esd_tot[i](rvir_range_2d_i_gm[i]) for i in range(bins_per_obs[0])]
+        out_esd_tot_inter = [out_esd_tot[i](rvir_range_2d_i_gm[i]) for i in range(nbins_gm)]
         # this should be moved to the power spectrum calculation
         if ingredients['pointmass']:
             # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
             pointmass = c_pm[1]/(np.pi*1e12) * array(
                 [10**m_pm / (r_i**2) for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i_gm)])
-            out_esd_tot_inter = [out_esd_tot_inter[i] + pointmass[i] for i in range(bins_per_obs[0])]
+            out_esd_tot_inter = [out_esd_tot_inter[i] + pointmass[i] for i in range(nbins_gm)]
         if setup['return'] == 'esd_wp':
-            #output = np.concatenate([out_esd_tot_inter, wp_out])
-            output = out_esd_tot_inter + wp_out
+            output[idx_gm] = out_esd_tot_inter
+            output[idx_gg] = wp_out
+            output = list(output)
             output = [output, meff]
+            print(output)
         else:
-            output.insert(0, out_esd_tot_inter)
-            output.append(meff)
-            
+            output = [out_esd_tot_inter, meff]
+    
     #output.append(meff) # Should output Sigma_crit as well
     # Add other outputs as needed. Total ESD should always be first!
     return output#[out_esd_tot_inter, meff]

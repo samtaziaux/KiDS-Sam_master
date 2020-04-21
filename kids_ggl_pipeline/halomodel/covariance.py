@@ -793,29 +793,41 @@ def covariance(theta, R, calculate_covariance=False):
             for name in ('observables', 'selection', 'ingredients',
                     'parameters', 'setup')]
 
-    assert len(observables) == 1, \
-        'working with more than one observable is not yet supported.' \
-        ' If you would like this feature added please raise an issue.'
-    observable = observables[0]
-    hod_observable = observable.sampling
+    #assert len(observables) == 1, \
+    #    'working with more than one observable is not yet supported.' \
+    #    ' If you would like this feature added please raise an issue.'
+    nbins = 0
+    ingredient_gm, ingredient_gg, ingredient_mm, ingredient_func = False, False, False, False
+    hod_observable = None
+    for i, observable in enumerate(observables):
+        if observable.ingredient == 'gm':
+            ingredient_gm = True
+            observable_gm = observable
+            hod_observable_gm = observable.sampling
+            if hod_observable is None:
+                hod_observable = hod_observable_gm
+            else:
+                hod_observable = np.concatenate([hod_observable, hod_observable_gm], axis=0)
+            nbins_gm = observable.nbins
+            idx_gm = np.s_[nbins:nbins+nbins_gm]
+            nbins += nbins_gm
+        if observable.ingredient == 'gg':
+            ingredient_gg = True
+            observable_gg = observable
+            hod_observable_gg = observable.sampling
+            if hod_observable is None:
+                hod_observable = hod_observable_gg
+            else:
+                hod_observable = np.concatenate([hod_observable, hod_observable_gg], axis=0)
+            nbins_gg = observable.nbins
+            idx_gg = np.s_[nbins:nbins+nbins_gg]
+            nbins += nbins_gg
 
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
-
-    bins_per_obs = np.array(setup['bins_per_obs'].split(','), dtype=int)
-    nbins = observable.nbins
-    if ingredients['gm']:
-        idx_gm = np.s_[:bins_per_obs[0]]
-    if ingredients['gg']:
-        idx_gg = np.s_[bins_per_obs[0]:bins_per_obs[0]+bins_per_obs[1]]
-    if ingredients['mm']: # mm not used in this code!
-        idx_mm = np.s_[bins_per_obs[0]+bins_per_obs[1]:bins_per_obs[0]+bins_per_obs[1]++bins_per_obs[2]]
-    # This indexing is needed, but not for individual power spectra,
-    # but in getting the right terms together in the covariances!
-    
 
     if ingredients['nzlens']:
         nz = cosmo[9].T
@@ -847,7 +859,6 @@ def covariance(theta, R, calculate_covariance=False):
     setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
                     / setup['logM_bins']
 
-    nbins = observable.nbins
     # if a single value is given for more than one bin, assign same
     # value to all bins
     #if not np.iterable(z):
@@ -858,6 +869,9 @@ def covariance(theta, R, calculate_covariance=False):
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
     #z = expand_dims(z, -1)
+    if z.size != nbins:
+        raise ValueError(
+            'Number of redshift bins should be equal to the number of observable bins!')
 
     cosmo_model = Flatw0waCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
@@ -893,17 +907,17 @@ def covariance(theta, R, calculate_covariance=False):
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
-    if ingredients['gm']:
+    if ingredient_gm:
         #rvir_range_2d_i_gm = R[idx_gm][1:]
         rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
         size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])#.sum()
-    if ingredients['gg']:
+    if ingredient_gg:
         #rvir_range_2d_i_gg = R[idx_gg][1:]
         rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
         size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])#.sum()
-    if ingredients['mm']:
+    #if ingredients['mm']:
         #rvir_range_2d_i_mm = R[idx_mm][1:]
-        rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
+        #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
         
     
     # We might want to move this in the configuration part of the code!
@@ -919,7 +933,7 @@ def covariance(theta, R, calculate_covariance=False):
         pop_c, prob_c = hod.number(
             hod_observable, mass_range, c_mor[0], c_scatter[0],
             c_mor[1:], c_scatter[1:], completeness,
-            obs_is_log=observable.is_log)
+            obs_is_log=observable_gm.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
         prob_c = np.zeros((nbins,hod_observable.shape[1],mass_range.size))
@@ -928,7 +942,7 @@ def covariance(theta, R, calculate_covariance=False):
         pop_s, prob_s = hod.number(
             hod_observable, mass_range, s_mor[0], s_scatter[0],
             s_mor[1:], s_scatter[1:], completeness,
-            obs_is_log=observable.is_log)
+            obs_is_log=observable_gm.is_log)
     else:
         pop_s = np.zeros(pop_c.shape)
         prob_s = np.zeros(prob_c.shape)
@@ -940,7 +954,7 @@ def covariance(theta, R, calculate_covariance=False):
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal = hod.nbar(dndm, pop_g, mass_range)
     meff = hod.Mh_effective(
-        dndm, pop_g, mass_range, return_log=observable.is_log)
+        dndm, pop_g, mass_range, return_log=observable_gm.is_log)
                    
     """
     # Power spectrum
@@ -1171,13 +1185,13 @@ def covariance(theta, R, calculate_covariance=False):
         print('Trispectra done.')
    
 
-    if ingredients['gm']:
+    if ingredient_gm:
         cov_esd = np.zeros((size_r_gm.sum(), size_r_gm.sum()), dtype=np.float64)
         cov_esd_tot = cov_esd.copy()
-    if ingredients['gg']:
+    if ingredient_gg:
         cov_wp = np.zeros((size_r_gg.sum(), size_r_gg.sum()), dtype=np.float64)
         cov_wp_tot = cov_wp.copy()
-    if ingredients['gm'] and ingredients['gg']:
+    if ingredient_gm and ingredient_gg:
         cov_cross = np.zeros((size_r_gg.sum(), size_r_gm.sum()), dtype=np.float64)
         cov_cross_tot = cov_cross.copy()
     
@@ -1294,13 +1308,13 @@ def covariance(theta, R, calculate_covariance=False):
     #"""
     
     if gauss == True:
-        if ingredients['gm']:
+        if ingredient_gm:
             cov_esd_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_esd.copy(), nproc, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
             cov_esd_tot += cov_esd_gauss
-        if ingredients['gg']:
+        if ingredient_gg:
             cov_wp_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), nproc, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_gauss
-        if ingredients['gm'] and ingredients['gg'] and cross:
+        if ingredient_gm and ingredient_gg and cross:
             cov_cross_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
             cov_cross_tot += cov_cross_gauss
     else:
@@ -1308,37 +1322,37 @@ def covariance(theta, R, calculate_covariance=False):
         
 
     if ssc == True:
-        if ingredients['gm']:
+        if ingredient_gm:
             cov_esd_ssc = cov_ssc(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_esd.copy(), nproc, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
             cov_esd_tot += cov_esd_ssc
-        if ingredients['gg']:
+        if ingredient_gg:
             cov_wp_ssc = cov_ssc(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_wp.copy(), nproc, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_ssc
-        if ingredients['gm'] and ingredients['gg'] and cross:
+        if ingredient_gm and ingredient_gg and cross:
             cov_cross_ssc = cov_ssc(rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
             cov_cross_tot += cov_cross_ssc
     else:
         pass
 
     if ng == True:
-        if ingredients['gm']:
+        if ingredient_gm:
             cov_esd_non_gauss = cov_non_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, Tgmgm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_esd.copy(), nproc, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
             cov_esd_tot += cov_esd_non_gauss
-        if ingredients['gg']:
+        if ingredient_gg:
             cov_wp_non_gauss = cov_non_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, Tgggg, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_wp.copy(), nproc, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_non_gauss
-        if ingredients['gm'] and ingredients['gg'] and cross:
+        if ingredient_gm and ingredient_gg and cross:
             cov_cross_non_gauss = cov_non_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gm, Tgggm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
             cov_cross_tot += cov_cross_non_gauss
     else:
         pass
         
     """
-    if ingredients['gm']:
+    if ingredient_gm:
         return  cov_esd_tot
-    if ingredients['gg']:
+    if ingredient_gg:
         return cov_wp_tot
-    if ingredients['gm'] and ingredients['gg']:
+    if ingredient_gm and ingredient_gg:
         return np.block([[cov_esd_tot, cov_cross_tot.T], [cov_cross_tot, cov_wp_tot]])
     """
         

@@ -121,11 +121,16 @@ def model(theta, R, calculate_covariance=False):
     #    ' If you would like this feature added please raise an issue.'
     nbins = 0
     ingredient_gm, ingredient_gg, ingredient_mm, ingredient_func = False, False, False, False
+    hod_observable = None
     for i, observable in enumerate(observables):
         if observable.ingredient == 'gm':
             ingredient_gm = True
             observable_gm = observable
             hod_observable_gm = observable.sampling
+            if hod_observable is None:
+                hod_observable = hod_observable_gm
+            else:
+                hod_observable = np.concatenate([hod_observable, hod_observable_gm], axis=0)
             nbins_gm = observable.nbins
             idx_gm = np.s_[nbins:nbins+nbins_gm]
             nbins += nbins_gm
@@ -133,6 +138,10 @@ def model(theta, R, calculate_covariance=False):
             ingredient_gg = True
             observable_gg = observable
             hod_observable_gg = observable.sampling
+            if hod_observable is None:
+                hod_observable = hod_observable_gg
+            else:
+                hod_observable = np.concatenate([hod_observable, hod_observable_gg], axis=0)
             nbins_gg = observable.nbins
             idx_gg = np.s_[nbins:nbins+nbins_gg]
             nbins += nbins_gg
@@ -149,7 +158,7 @@ def model(theta, R, calculate_covariance=False):
             nbins_func = observable.nbins
             idx_func= np.s_[nbins:nbins+nbins_func]
             nbins += nbins_func
-    
+    """
     if setup['return'] in ('wp', 'esd_wp') and not ingredient_gg:
         raise ValueError(
         'If return=wp or return=esd_wp then you must toggle the' \
@@ -162,7 +171,7 @@ def model(theta, R, calculate_covariance=False):
         ' clustering as an ingredient. Similarly, if return=esd' \
         ' or return=esd_wp then you must toggle the lensing' \
         ' as an ingredient as well.')
-        
+    """
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
@@ -214,7 +223,6 @@ def model(theta, R, calculate_covariance=False):
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
     #z = expand_dims(z, -1)
-    
     if z.size != nbins:
         raise ValueError(
             'Number of redshift bins should be equal to the number of observable bins!')
@@ -262,6 +270,9 @@ def model(theta, R, calculate_covariance=False):
     if ingredient_mm:
         #rvir_range_2d_i_mm = R[idx_mm][1:]
         rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]]
+    if ingredient_func:
+        #rvir_range_2d_i_mm = R[idx_mm][1:]
+        rvir_range_2d_i_func = [r[1:].astype('float64') for r in R[idx_func]]
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
     
@@ -304,29 +315,16 @@ def model(theta, R, calculate_covariance=False):
         if ingredients['centrals']:
             pop_c[idx_gg,:], prob_c_gg = hod.number(
                 hod_observable_gg, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:], completeness,
+                c_mor[1:], c_scatter[1:],
                 obs_is_log=observable_gg.is_log)
 
         if ingredients['satellites']:
             pop_s[idx_gg,:], prob_s_gg = hod.number(
                 hod_observable_gg, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:], completeness,
+                s_mor[1:], s_scatter[1:],
                 obs_is_log=observable_gg.is_log)
         
     pop_g = pop_c + pop_s
-    
-    # TODO: add luminosity or mass function as an output!
-    """
-    if setup['return'] in ('hod', 'all'):
-        output.append([pop_c, pop_s, pop_g])
-    if setup['return'] == 'hod':
-        return output
-    elif setup['return'] == 'all':
-        output.append([hod_observable, mass_range]) #??
-    else:
-        output = []
-    """
-    
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal = np.empty(nbins)
@@ -342,7 +340,46 @@ def model(theta, R, calculate_covariance=False):
     if ingredient_mm:
         ngal[idx_mm] = np.zeros_like(nbins_mm)
         meff[idx_mm] = np.zeros_like(nbins_mm)
-    
+        
+    # Luminosity or mass function as an output:
+    if ingredient_func:
+        # Needs independent redshift input!
+        z_func = z[idx_func]
+        if z_func.size == 1 and nbins_func > 1:
+            z_func = z_func*np.ones(nbins_func)
+        if z_func.size != nbins_func:
+            raise ValueError(
+                'Number of redshift bins should be equal to the number of observable bins!')
+        hmf_func, _rho_mean = load_hmf(z_func, setup, cosmo_model, transfer_params)
+        dndm_func = array([hmf_i.dndm for hmf_i in hmf_func])
+        if ingredients['centrals']:
+            pop_c_func = hod.mlf(
+                hod_observable_func, dndm_func, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:],
+                obs_is_log=observable_func.is_log)
+
+        if ingredients['satellites']:
+            pop_s_func = hod.mlf(
+                hod_observable_func, dndm_func, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:],
+                obs_is_log=observable_func.is_log)
+        pop_g_func = pop_c_func + pop_s_func
+        """
+        import matplotlib.pyplot as pl
+        pl.plot(hod_observable_func[2], pop_g_func[2]*10.0**hod_observable_func[2])
+        pl.plot(hod_observable_func[2], pop_c_func[2]*10.0**hod_observable_func[2])
+        pl.plot(hod_observable_func[2], pop_s_func[2]*10.0**hod_observable_func[2])
+        #pl.xscale('log')
+        pl.yscale('log')
+        pl.savefig('/home/dvornik/test_pipeline2/mlf.png', bbox_inches='tight')
+        pl.show()
+        pl.clf()
+        """
+        mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
+                    for hod_i, ngal_i in zip(hod_observable_func, pop_g_func)]
+        mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
+                    in zip(mlf_inter, rvir_range_2d_i_func)]
+        output[idx_func] = mlf_out
     """
     for i in range(5):
         np.savetxt('/home/dvornik/test_pipeline2/mc/hod_%s.txt'%(i+1), np.vstack([mass_range, pop_c[i], pop_s[i], pop_g[i]]).T, delimiter='\t', comments='#', header='M_h central satellites  total')
@@ -589,7 +626,7 @@ def model(theta, R, calculate_covariance=False):
     elif setup['return'] == 'all':
         output.append(k_range_lin)
     else:
-        output = np.empty(nbins, dtype=object)
+        pass
     
     #quit()
     # correlation functions
@@ -679,7 +716,7 @@ def model(theta, R, calculate_covariance=False):
     elif setup['return'] == 'all':
         output.append(rvir_range_3d)
     else:
-        output = np.empty(nbins, dtype=object)
+        pass
     
     # projected surface density
     # this is the slowest part of the model
@@ -822,7 +859,7 @@ def model(theta, R, calculate_covariance=False):
     elif setup['return'] == 'esd_wp':
         pass
     else:
-        output = np.empty(nbins, dtype=object)
+        pass
     
     
     # excess surface density

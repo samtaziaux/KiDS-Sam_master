@@ -120,7 +120,7 @@ def model(theta, R, calculate_covariance=False):
     #    'working with more than one observable is not yet supported.' \
     #    ' If you would like this feature added please raise an issue.'
     nbins = 0
-    ingredient_gm, ingredient_gg, ingredient_mm, ingredient_func = False, False, False, False
+    ingredient_gm, ingredient_gg, ingredient_mm, ingredient_mlf = False, False, False, False
     hod_observable = None
     for i, observable in enumerate(observables):
         if observable.ingredient == 'gm':
@@ -151,13 +151,13 @@ def model(theta, R, calculate_covariance=False):
             nbins_mm = observable.nbins
             idx_mm = np.s_[nbins:nbins+nbins_mm]
             nbins += nbins_mm
-        if observable.ingredient == 'func':
-            ingredient_func = True
-            observable_func = observable
-            hod_observable_func = observable.sampling
-            nbins_func = observable.nbins
-            idx_func= np.s_[nbins:nbins+nbins_func]
-            nbins += nbins_func
+        if observable.ingredient == 'mlf':
+            ingredient_mlf = True
+            observable_mlf = observable
+            hod_observable_mlf = observable.sampling
+            nbins_mlf = observable.nbins
+            idx_mlf = np.s_[nbins:nbins+nbins_mlf]
+            nbins += nbins_mlf
 
     if setup['return'] in ('wp', 'esd_wp') and not ingredient_gg:
         raise ValueError(
@@ -270,9 +270,9 @@ def model(theta, R, calculate_covariance=False):
     if ingredient_mm:
         #rvir_range_2d_i_mm = R[idx_mm][1:]
         rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]]
-    if ingredient_func:
+    if ingredient_mlf:
         #rvir_range_2d_i_mm = R[idx_mm][1:]
-        rvir_range_2d_i_func = [r[1:].astype('float64') for r in R[idx_func]]
+        rvir_range_2d_i_mlf = [r[1:].astype('float64') for r in R[idx_mlf]]
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
     
@@ -342,33 +342,33 @@ def model(theta, R, calculate_covariance=False):
         meff[idx_mm] = np.zeros_like(nbins_mm)
         
     # Luminosity or mass function as an output:
-    if ingredient_func:
+    if ingredient_mlf:
         # Needs independent redshift input!
-        z_func = z[idx_func]
-        if z_func.size == 1 and nbins_func > 1:
-            z_func = z_func*np.ones(nbins_func)
-        if z_func.size != nbins_func:
+        z_mlf = z[idx_mlf]
+        if z_mlf.size == 1 and nbins_mlf > 1:
+            z_mlf = z_mlf*np.ones(nbins_mlf)
+        if z_mlf.size != nbins_mlf:
             raise ValueError(
                 'Number of redshift bins should be equal to the number of observable bins!')
-        hmf_func, _rho_mean = load_hmf(z_func, setup, cosmo_model, transfer_params)
-        dndm_func = array([hmf_i.dndm for hmf_i in hmf_func])
+        hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
+        dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
         if ingredients['centrals']:
-            pop_c_func = hod.mlf(
-                hod_observable_func, dndm_func, mass_range, c_mor[0], c_scatter[0],
+            pop_c_mlf = hod.mlf(
+                hod_observable_mlf, dndm_mlf, mass_range, c_mor[0], c_scatter[0],
                 c_mor[1:], c_scatter[1:],
-                obs_is_log=observable_func.is_log)
+                obs_is_log=observable_mlf.is_log)
 
         if ingredients['satellites']:
-            pop_s_func = hod.mlf(
-                hod_observable_func, dndm_func, mass_range, s_mor[0], s_scatter[0],
+            pop_s_mlf = hod.mlf(
+                hod_observable_mlf, dndm_mlf, mass_range, s_mor[0], s_scatter[0],
                 s_mor[1:], s_scatter[1:],
-                obs_is_log=observable_func.is_log)
-        pop_g_func = pop_c_func + pop_s_func
+                obs_is_log=observable_mlf.is_log)
+        pop_g_mlf = pop_c_mlf + pop_s_mlf
         """
         import matplotlib.pyplot as pl
-        pl.plot(hod_observable_func[2], pop_g_func[2]*10.0**hod_observable_func[2])
-        pl.plot(hod_observable_func[2], pop_c_func[2]*10.0**hod_observable_func[2])
-        pl.plot(hod_observable_func[2], pop_s_func[2]*10.0**hod_observable_func[2])
+        pl.plot(hod_observable_mlf[2], pop_g_mlf[2]*10.0**hod_observable_mlf[2])
+        pl.plot(hod_observable_mlf[2], pop_c_mlf[2]*10.0**hod_observable_mlf[2])
+        pl.plot(hod_observable_mlf[2], pop_s_mlf[2]*10.0**hod_observable_mlf[2])
         #pl.xscale('log')
         pl.yscale('log')
         pl.savefig('/home/dvornik/test_pipeline2/mlf.png', bbox_inches='tight')
@@ -376,10 +376,10 @@ def model(theta, R, calculate_covariance=False):
         pl.clf()
         """
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
-                    for hod_i, ngal_i in zip(hod_observable_func, pop_g_func)]
+                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf)]
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
-                    in zip(mlf_inter, rvir_range_2d_i_func)]
-        output[idx_func] = mlf_out
+                    in zip(mlf_inter, rvir_range_2d_i_mlf)]
+        output[idx_mlf] = mlf_out
     """
     for i in range(5):
         np.savetxt('/home/dvornik/test_pipeline2/mc/hod_%s.txt'%(i+1), np.vstack([mass_range, pop_c[i], pop_s[i], pop_g[i]]).T, delimiter='\t', comments='#', header='M_h central satellites  total')

@@ -213,7 +213,7 @@ def ingredients(ingr, words):
 
 def observables(words):
     print(words)
-    options = ('gm', 'gg', 'mm', 'func')
+    options = ('gm', 'gg', 'mm', 'mlf')
     default = {key: False for key in options}
     for key in words[1]:
         print(key)

@@ -151,14 +151,14 @@ def model(theta, R, calculate_covariance=False):
             nbins_mm = observable.nbins
             idx_mm = np.s_[nbins:nbins+nbins_mm]
             nbins += nbins_mm
-        if observable.ingredient == 'func': # This to be used for output of stellar mass/lum function, not yet implemented
+        if observable.ingredient == 'func':
             ingredient_func = True
             observable_func = observable
             hod_observable_func = observable.sampling
             nbins_func = observable.nbins
             idx_func= np.s_[nbins:nbins+nbins_func]
             nbins += nbins_func
-    """
+
     if setup['return'] in ('wp', 'esd_wp') and not ingredient_gg:
         raise ValueError(
         'If return=wp or return=esd_wp then you must toggle the' \
@@ -171,7 +171,7 @@ def model(theta, R, calculate_covariance=False):
         ' clustering as an ingredient. Similarly, if return=esd' \
         ' or return=esd_wp then you must toggle the lensing' \
         ' as an ingredient as well.')
-    """
+    
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta

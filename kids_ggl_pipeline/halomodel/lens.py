@@ -141,7 +141,7 @@ def power_to_corr(power_func, R):
         lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
         P = power_func(lnk)
         integ = np.exp(P) * (np.exp(lnk) ** 2.0) * np.sin(np.exp(lnk) * r) / r
-        corr[i] = (0.5 / (np.pi ** 2.0)) * intg.simps(integ, dx=dlnk)
+        corr[i] = (0.5 / (np.pi ** 2.0)) * simps(integ, dx=dlnk)
 
     return corr
 
@@ -311,6 +311,74 @@ def sigma_crit(cosmo, zl, zs):
         / cosmo.angular_diameter_distance(zs)
     # the first factor is c^2/(4*pi*G) in Msun/Mpc
     return 1.6629165e18 / beta.to(u.Mpc).value
+
+
+def power_to_sigma(power_func, R, order, rho_mean):
+    """
+    Calculate the projected correlation function given a power spectrum
+    using the properties of FAH cycle
+
+    Parameters
+    ----------
+    power_func : callable
+        A callable function which returns the natural log of power given lnk
+
+    R : array_like
+        The values of separation/scale to calculate the correlation at.
+    
+    order : int
+        Bessel function order: 0 for clustering, 2 for galaxy-galaxy lensing
+    
+    rho_mean : float
+        Mean density of the universe
+
+    """
+
+    #print ('Calculating correlation function.')
+
+    if not np.iterable(R):
+        R = [R]
+
+    sigma = np.zeros_like(R)
+
+    # the number of steps to fit into a half-period at high-k.
+    # 6 is better than 1e-4.
+    minsteps = 8
+
+    # set min_k, 1e-6 should be good enough
+    mink = 1e-6
+
+    temp_min_k = 1.0
+
+    for i, r in enumerate(R):
+        # getting maxk here is the important part. It must be a half multiple of
+        # pi/r to be at a "zero", it must be >1 AND it must have a number of half
+        # cycles > 38 (for 1E-5 precision).
+
+        min_k = (2.0 * np.ceil((temp_min_k * r / np.pi - 1.0) / 2.0) + 0.5) * np.pi / r
+        maxk = max(501.5 * np.pi / r, min_k)
+
+        # Now we calculate the requisite number of steps to have a good dk at hi-k.
+        nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r))))
+        #nk = 10000
+
+        lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+        P = power_func(lnk)
+        integ = np.exp(lnk)**2.0 * sp.jv(order, np.exp(lnk) * r) * np.exp(P)
+        
+        sigma[i] = (rho_mean / (2.0*np.pi)) * simps(integ, dx=dlnk)
+
+    return sigma
+    
+
+def power_to_sigma_ogata(power_func, R, order, rho_mean):
+    result = np.zeros(R.shape)
+    h = hankel.HankelTransform(order,10000,0.00001)
+    for i in range(result.size):
+        integ = lambda x: exp(power_func(log(x/R[i]))) * x
+        result[i] = h.transform(integ)[0]
+        
+    return (rho_mean * result) / (2.0 * pi * R**2)
 
 
 if __name__ == '__main__':

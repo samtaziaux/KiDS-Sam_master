@@ -61,7 +61,7 @@ from .tools import (
     fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
-    power_to_corr_ogata, wp, wp_beta_correction)
+    power_to_corr_ogata, wp, wp_beta_correction, power_to_sigma, power_to_sigma_ogata)
 from .dark_matter import (
     mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
     gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion)
@@ -904,7 +904,7 @@ def model(theta, R, calculate_covariance=False):
             [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
             for surf_dens2_i, r_i in zip(surf_dens2, rvir_range_2d_i_gm)])
-    
+            
         out_esd_tot = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
             for d_surf_dens2_i, r_i in zip(d_surf_dens2, rvir_range_2d_i_gm)])

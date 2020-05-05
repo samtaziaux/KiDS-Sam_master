@@ -688,7 +688,7 @@ def cov_ssc(radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm,
 
 def calc_cov_gauss(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, idx_1, idx_2, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2 = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     shape_noise_i = shape_noise[idx_1]
@@ -736,29 +736,45 @@ def calc_cov_gauss(params):
     # wp
     if ingredient == 'gg':
         integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j])*(P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j])
-        integ2 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
-        val = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ1, dx=dlnk) + ((4.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ2, dx=dlnk)
+        val1 = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ1, dx=dlnk)
+        if not subtract_randoms:
+            integ2 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
+            val2 = (4.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ2, dx=dlnk)
+        else:
+            val2 = 0.0
+        val = val1 + val2
     
                     
     # ESD
     if ingredient == 'gm':
         integ3 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (np.sqrt(P_mm_i + shape_noise_i[b_i]* delta[b_i, b_j])*np.sqrt(P_mm_j + shape_noise_j[b_j]* delta[b_i, b_j])) * (np.sqrt(P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j])*np.sqrt(P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j])) + (P_gm_i*P_gm_j) )
-        integ4 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * (np.sqrt(P_mm_i + shape_noise_i[b_i]* delta[b_i, b_j])*np.sqrt(P_mm_j + shape_noise_j[b_j]* delta[b_i, b_j]))
-        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ3, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ4, dx=dlnk) * rho_i[b_i]*rho_j[b_j] / 1e24
+        val1 = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ3, dx=dlnk)
+        if not subtract_randoms:
+            integ4 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * (np.sqrt(P_mm_i + shape_noise_i[b_i]* delta[b_i, b_j])*np.sqrt(P_mm_j + shape_noise_j[b_j]* delta[b_i, b_j]))
+            val2 = ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ4, dx=dlnk)
+        else:
+            val2 = 0.0
+        val = (val1 + val2) * rho_i[b_i]*rho_j[b_j] / 1e24
     
     
     # cross
     if ingredient == 'cross':
         integ5 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * ( (P_gm_i * (P_gg_i + 1.0/ngal_i[b_i]*delta[b_i, b_j])) + (P_gm_j  * (P_gg_j + 1.0/ngal_j[b_j]*delta[b_i, b_j])) )
-        integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
-        integ7 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt(P_gm_i*P_gm_j)
-        val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk) + ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ7, dx=dlnk) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
+        val1 = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk)
+        if not subtract_randoms:
+            integ6 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
+            val2 = (2.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk)
+        else:
+            val2 = 0.0
+            #integ7 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(2, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt(P_gm_i*P_gm_j)
+            #val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + (2.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk) + (2.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ7, dx=dlnk) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
+        val = (val1 + val2) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
     
     
     return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
 
 
-def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_out, nproc, rho_bg, ingredient, idx_1, idx_2, size_1, size_2):
+def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_out, nproc, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2):
 
     print('Calculating the Gaussian part of the covariance ...')
 
@@ -770,7 +786,7 @@ def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, sh
                     paramlist.append([a, b, c, d])
     
     for i in paramlist:
-        i.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, idx_1, idx_2, size_1, size_2])
+        i.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_gauss, paramlist):
@@ -1119,7 +1135,9 @@ def covariance(theta, R, calculate_covariance=False):
     # Start covariance calculations (and for now set survey details)
 
     # These need to be inputs!!!!!
-    #Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, gauss, ssc, ng, spec_z_path, nproc
+    #Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, gauss, ssc, ng, cross, spec_z_path, nproc, subtract_randoms
+    
+    # Check Benjamin's code how the realistic survey geometry is accounted for!
     
     Pi_max = 100.0
     kids_area = 180.0*3600.0
@@ -1130,6 +1148,7 @@ def covariance(theta, R, calculate_covariance=False):
     ssc = False
     ng = False
     cross = True
+    subtract_randoms = False # if randoms are not subtracted, this will increase the error bars
     nproc = 4
 
     #sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
@@ -1149,7 +1168,7 @@ def covariance(theta, R, calculate_covariance=False):
     print(shape_noise)
     print(1.0/ngal)
     
-    
+    # Check survey variance, and W_p (will depend on survey geometry what kind of values are needed)!
     W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
     #survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
@@ -1306,13 +1325,13 @@ def covariance(theta, R, calculate_covariance=False):
     
     if gauss == True:
         if ingredient_gm:
-            cov_esd_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_esd.copy(), nproc, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
+            cov_esd_gauss = cov_gauss(rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_esd.copy(), nproc, rho_bg, 'gm', subtract_randoms, idx_gm, idx_gm, size_r_gm, size_r_gm)
             cov_esd_tot += cov_esd_gauss
         if ingredient_gg:
-            cov_wp_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), nproc, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
+            cov_wp_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_wp.copy(), nproc, rho_bg, 'gg', subtract_randoms, idx_gg, idx_gg, size_r_gg, size_r_gg)
             cov_wp_tot += cov_wp_gauss
         if ingredient_gm and ingredient_gg and cross:
-            cov_cross_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
+            cov_cross_gauss = cov_gauss(rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, cov_cross.copy(), nproc, rho_bg, 'cross', subtract_randoms, idx_gg, idx_gm, size_r_gg, size_r_gm)
             cov_cross_tot += cov_cross_gauss
     else:
         pass

@@ -119,6 +119,8 @@ def model(theta, R, calculate_covariance=False):
     #assert len(observables) == 1, \
     #    'working with more than one observable is not yet supported.' \
     #    ' If you would like this feature added please raise an issue.'
+    
+    # We might want to move this outside of the model code, but I am not sure where.
     nbins = 0
     ingredient_gm, ingredient_gg, ingredient_mm, ingredient_mlf = False, False, False, False
     hod_observable = None
@@ -262,16 +264,12 @@ def model(theta, R, calculate_covariance=False):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     if ingredient_gm:
-        #rvir_range_2d_i_gm = R[idx_gm][1:]
         rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
     if ingredient_gg:
-        #rvir_range_2d_i_gg = R[idx_gg][1:]
         rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
     if ingredient_mm:
-        #rvir_range_2d_i_mm = R[idx_mm][1:]
         rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]]
     if ingredient_mlf:
-        #rvir_range_2d_i_mm = R[idx_mm][1:]
         rvir_range_2d_i_mlf = [r[1:].astype('float64') for r in R[idx_mlf]]
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
@@ -364,38 +362,20 @@ def model(theta, R, calculate_covariance=False):
                 s_mor[1:], s_scatter[1:],
                 obs_is_log=observable_mlf.is_log)
         pop_g_mlf = pop_c_mlf + pop_s_mlf
-        """
-        import matplotlib.pyplot as pl
-        pl.plot(hod_observable_mlf[2], pop_g_mlf[2]*10.0**hod_observable_mlf[2])
-        pl.plot(hod_observable_mlf[2], pop_c_mlf[2]*10.0**hod_observable_mlf[2])
-        pl.plot(hod_observable_mlf[2], pop_s_mlf[2]*10.0**hod_observable_mlf[2])
-        #pl.xscale('log')
-        pl.yscale('log')
-        pl.savefig('/home/dvornik/test_pipeline2/mlf.png', bbox_inches='tight')
-        pl.show()
-        pl.clf()
-        """
+        
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
                     for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf)]
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
                     in zip(mlf_inter, rvir_range_2d_i_mlf)]
         output[idx_mlf] = mlf_out
-    """
-    for i in range(5):
-        np.savetxt('/home/dvornik/test_pipeline2/mc/hod_%s.txt'%(i+1), np.vstack([mass_range, pop_c[i], pop_s[i], pop_g[i]]).T, delimiter='\t', comments='#', header='M_h central satellites  total')
-    np.savetxt('/home/dvornik/test_pipeline2/mc/number.txt', ngal[:5], delimiter='\t', comments='#', header='ngal')
-    for i in range(5):
-        np.savetxt('/home/dvornik/test_pipeline2/mc/dndm_%s.txt'%(i+1), np.vstack([mass_range, dndm[i]]).T, delimiter='\t', comments='#', header='M_h dn/dM')
-    #"""
     
+
     """Power spectra"""
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(k_range_lin/0.1)
     F_k2 = np.ones_like(k_range_lin)
     #F_k2 = sp.erfc(k_range_lin/10.0)
-    #F_k1 = 1.-np.exp(-(k_range_lin/0.1)**2.)
-    #F_k2 = 0.5*(1.0+(sp.erf(-(k_range_lin-2.0))))
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
@@ -481,10 +461,7 @@ def model(theta, R, calculate_covariance=False):
         if integrate_zlens:
             intnorm = np.sum(nz, axis=0)
             meff[idx_gm] = np.sum(nz*meff[idx_gm], axis=0) / intnorm
-    """
-    for i in range(5):
-        np.savetxt('/home/dvornik/test_pipeline2/mc/Pgm_%s.txt'%(i+1), np.vstack([k_range_lin, Pgm_c[i], Pgm_s[i], Pgm_2h[i], Pgm_k[i]]).T, delimiter='\t', comments='#', header='k central satellites 2h total')
-    #"""
+    
     # Galaxy - galaxy spectra (for clustering)
     if ingredient_gg:
         if ingredients['twohalo']:
@@ -523,10 +500,7 @@ def model(theta, R, calculate_covariance=False):
             Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
         else:
             Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
-    """
-    for i in range(5):
-        np.savetxt('/home/dvornik/test_pipeline2/mc/Pgg_%s.txt'%(i+1), np.vstack([k_range_lin, Pgg_c[i], Pgg_s[i], Pgg_cs[i], Pgg_2h[i], Pgg_k[i]]).T, delimiter='\t', comments='#', header='k central satellites central-satellite 2h total')
-    #"""
+    
     # Matter - matter spectra
     if ingredient_mm:
         if ingredients['twohalo']:
@@ -544,12 +518,7 @@ def model(theta, R, calculate_covariance=False):
         #    Pmm_k = Pmm_1h + Pmm_2h
         #else:
         Pmm_k = Pmm_1h + Pmm_2h
-    """
-    for i in range(5):
-        np.savetxt('/home/dvornik/test_pipeline2/mc/Pmm_%s.txt'%(i+1), np.vstack([k_range_lin, Pmm_1h[i], Pmm_2h[i], Pmm_k[i]]).T, delimiter='\t', comments='#', header='k 1h 2h total')
-    for i in range(5):
-        np.savetxt('/home/dvornik/test_pipeline2/mc/Plin_%s.txt'%(i+1), np.vstack([k_range_lin, hmf[i].power]).T, delimiter='\t', comments='#', header='k Plin')
-    #"""
+    
     # Outputs
            
     if ingredient_gm:
@@ -628,7 +597,6 @@ def model(theta, R, calculate_covariance=False):
     else:
         pass
     
-    #quit()
     # correlation functions
     if ingredient_gm:
         if integrate_zlens:
@@ -865,6 +833,7 @@ def model(theta, R, calculate_covariance=False):
     # excess surface density
     """
     # These two options are not really used for any observable! Keeping in for now.
+    
     if ingredients['mm']:
         d_surf_dens2_3 = array(
             [np.nan_to_num(
@@ -928,9 +897,7 @@ def model(theta, R, calculate_covariance=False):
         else:
             output = [out_esd_tot_inter, meff]
     
-    #output.append(meff) # Should output Sigma_crit as well
-    # Add other outputs as needed. Total ESD should always be first!
-    return output#[out_esd_tot_inter, meff]
+    return output
     
 
 if __name__ == '__main__':

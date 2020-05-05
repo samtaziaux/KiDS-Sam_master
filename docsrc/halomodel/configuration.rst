@@ -31,7 +31,7 @@ Model definition
 
 The configuration file starts with a single line specifying the model to be used: ::
 
-    model            halo.model
+    model            halo_2.model
 
 which is fixed for now.
 
@@ -45,9 +45,11 @@ HOD observables
 The first section defines the observables: ::
 
     [observables]
-    logmstar    10,11   11,12.5     log
+    logmstar    gm  10,11   11,12.5     log
 
-The first column here is an arbitrary (and dummy) name for the observable in question; the second and third columns are the lower 
+The first column here is an arbitrary (and dummy) name for the observable in question; the second colum specifies the type of
+observable being passed: it is ``gm`` for galaxy-galaxy lensing, ``gg`` for galaxy clustering, ``mm`` for matter-matter correlation
+and ``mlf`` for the stellar mass or luminosity function. The third and fourth columns are the lower
 and upper bin limits used in the stacking (comma-separated). In this case, we use two bins in the ranges :math:`10 \leq \log_{10} 
 m_\star \leq 11` and :math:`11 \leq \log_{10} m_\star \leq 12.5`; note that the bins need not be adjacent nor exclusive.
 
@@ -59,9 +61,17 @@ space. Any value different than ``log`` will raise an ``AssertionError``.
 Note that the HOD itself does not care what observable it receives so long as everything is passed consistently. It is possible, for 
 instance, to define an observable :math:`m_\star^{12} \equiv m_\star/10^{12}`: ::
 
-    mstar12        0.01,0.1,1       0.1,1,10
+    mstar12        mlf  0.01,0.1,1       0.1,1,10
 
 Note here that :math:`m_\star^{12}` is not in log space and we therefore omit the fourth column.
+
+One can pass multiple observables. In that case it is important that the order follows the order in which the data one is passing
+is structured in the same way. Remember that the number of bins will be determined by the number of bins specified in the
+third and fourth column: ::
+    
+    logmstar    gm  10,11   11,12.5     log
+    logmstar    gg  10,11   11,12.5     log
+    logmstar    mlf  6   18     log
 
 
 Selection function
@@ -111,12 +121,14 @@ Here we define which ingredients will be included in the halo model: ::
     satellites      False
     miscentring     False
     twohalo         True
+    haloexclusion    False
     nzlens          False
 
 The names of the ingredients cannot be changed, and any missing ingredients will be set to ``False``. If any provided ingredient 
 does not match those listed above, a ``ValueError`` will be raised. All of these accept values of ``True`` or ``False``. In the 
 example above, ```kids_ggl`` will calculate a model of central galaxies only, including a point mass component to account for the 
-stellar mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass.
+stellar mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass. In this case
+will not account for the fact that haloes cannot overlap.
 
 The parameter ``nzlens`` enables a model in which the final signal is the weighted average of signals calculated following a 
 user-provided lens redshift distribution (see below). *WARNING*: setting ``nzlens`` to ``True`` significantly slows down the halo 
@@ -209,14 +221,15 @@ parameters: ::
     w0              fixed     -1.0
     wa              fixed     0.0
     Neff            fixed     3.046
-    z               array     0.188,0.195
+    z               array     0.188,0.195,0.188,0.195,0.19
 
 
 Both the list of parameters and their order in ``cosmo`` are mandatory (and therefore the names are just for the user's reference). 
 The first 8 parameters define the ``Flatw0waCDM`` cosmology within which the model is evaluated. The default values for ``w0``, 
 ``wa``, and ``Neff`` make the default model a flat ``LambdaCDM`` cosmology. They need not all be fixed, but in this example they are 
 (note, however, that at the moment the ``kids_ggl`` halo model can only handle physical distances, which require a cosmology to be 
-calculated). The last parameter above is a list of point estimates for the redshifts of each bin.
+calculated). The last parameter above is a list of point estimates for the redshifts of each bin. List of redshifts should reflect
+the total number of bins given by the observable(s). In this case, it should have 5 entries.
 
 
 Optional cosmological parameters
@@ -276,6 +289,12 @@ not write their own full-fledged model to do this): ::
     name            fiducial
     p_off           uniform        0       1
     R_off           uniform        0       1.5
+    
+    [hod/twohalo]
+    bias            uniform     0.2     5
+    
+    [hod/satellites/beta]
+    beta            fixed    1
 
 The idea behind this structure is that the HOD may be fully specified by the user, including for instance the complexity of the 
 mass-observable scaling relation (see `Customizing the Halo Model <custom.html>`_). Note that the HOD may also contain a model for 
@@ -301,7 +320,7 @@ There is an additional section, ``setup``, which includes deatiles on, well, the
 parameters in this section: ::
 
     [setup]
-    return          esd        # one of {'esd', 'kappa', 'sigma'}
+    return          esd        # one of {'esd', 'kappa', 'sigma', 'esd_wp', 'wp', 'power'}
     delta           200        # adopted overdensity
     delta_ref       mean       # reference background density. Can be one of {'mean','crit'}
     distances       comoving     # whether to work with 'comoving' or 'proper' distances
@@ -324,6 +343,12 @@ In your own model, the ``setup`` section should include any parameter in the hal
 even a nuisance parameter); for instance, binning schemes or any precision-setting values. Note that ``setup`` is a dictionary in 
 ``kids_ggl`` and therefore the order of its entries is irrelevant.
 
+One should also provide the units in which the data is given, so that it is correctly converted to the default units used in the model: ::
+
+    R_unit          kpc
+    esd_unit        Msun/pc^2
+    cov_unit        Msun^2/pc^4
+
 Finally, there are three additional parameters only used when running ``kids_ggl`` in ``mock`` mode: ::
 
     logR_bins       12
@@ -335,6 +360,9 @@ which define the radial binning (in Mpc) used to generate the mock data.
 
 Model output
 ************
+
+*NOTE*: As the pipeline now uses the emcee version 3.0, the specification of ``FITS`` data format and dimensions is not
+needed anymore. The pipeline will use the built-in backend HDF5 data handling. See more information at: http://emcee.readthedocs.io
 
 In addition, the configuration file should include a section ``output``, containing any outputs produced by the model in addition to 
 the free parameters. These are given as a name and the data format to be used in the ``FITS`` file, in addition to the number of 
@@ -392,7 +420,9 @@ correction has already been applied). The column numbers used above correspond t
 The ``sampler`` section then continues with a few more settings: ::
 
     exclude              11,12              # bins excluded from the analysis (count from 0)
-    sampler_output       output/model.fits  # output filename (must be .fits)
+    cov_format           2d                 # shape of covariance matrix (2d if a file with data in matrix shape,
+                                            #       skip entry if the covariance is in the shape of this pipeline output
+    sampler_output       output/model.h5  # output filename (must be .h5)
     sampler              emcee              # MCMC sampler (fixed)
     nwalkers             100                # number of walkers used by emcee
     nsteps               2000               # number of steps per walker
@@ -400,7 +430,9 @@ The ``sampler`` section then continues with a few more settings: ::
     thin                 1                  # thinning (every n-th sample will be saved, but values !=1 not fully tested)
     threads              3                  # number of threads (i.e., cores)
     sampler_type         ensemble           # emcee sampler type (fixed)
-    update               20000              # frequency with which the output file is written
+    # update               20000            # frequency with which the output file is written (not used anymore)
+    stop_when_converged  True               # stops the emcee when convergence has been reached
+    restart              False              # restars the chain from the last position, requires previous chain to be present
 
 where only ``exclude``, which should list the numbers of columns excluded from the likelihood evaluation (counting from 0), is 
 optional. The total number of MCMC samples will be equal to :math:`n_\mathrm{walkers}\cdot n_\mathrm{steps}`, after which the 

@@ -796,6 +796,8 @@ def covariance(theta, R, calculate_covariance=False):
     #assert len(observables) == 1, \
     #    'working with more than one observable is not yet supported.' \
     #    ' If you would like this feature added please raise an issue.'
+    
+    # We might want to move this outside of the model code, but I am not sure where.
     nbins = 0
     ingredient_gm, ingredient_gg, ingredient_mm, ingredient_func = False, False, False, False
     hod_observable = None
@@ -908,18 +910,13 @@ def covariance(theta, R, calculate_covariance=False):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     if ingredient_gm:
-        #rvir_range_2d_i_gm = R[idx_gm][1:]
         rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-        size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])#.sum()
+        size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])
     if ingredient_gg:
-        #rvir_range_2d_i_gg = R[idx_gg][1:]
         rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-        size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])#.sum()
+        size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])
     #if ingredients['mm']:
-        #rvir_range_2d_i_mm = R[idx_mm][1:]
         #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
-        
-    
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
     

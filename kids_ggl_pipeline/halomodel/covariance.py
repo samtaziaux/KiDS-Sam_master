@@ -920,12 +920,12 @@ def covariance(theta, R, calculate_covariance=False):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     if ingredient_gm:
-        rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-        #rvir_range_2d_i_gm = [logspace(-2, 2, 25, endpoint=True) for r in R[idx_gm]]
+        #rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
+        rvir_range_2d_i_gm = [logspace(-2, 2, 25, endpoint=True) for r in R[idx_gm]]
         size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])
     if ingredient_gg:
-        rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-        #rvir_range_2d_i_gg = [logspace(-2, 2, 25, endpoint=True) for r in R[idx_gg]]
+        #rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
+        rvir_range_2d_i_gg = [logspace(-2, 2, 25, endpoint=True) for r in R[idx_gg]]
         size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])
     #if ingredients['mm']:
         #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
@@ -1127,58 +1127,49 @@ def covariance(theta, R, calculate_covariance=False):
                 
     dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
 
+    print('Halo integrals done.')
     
     # Start covariance calculations (and for now set survey details)
 
     # These need to be inputs!!!!!
     #Pi_max, kids_area, eff_density, kids_variance_squared, z_kids, gauss, ssc, ng, cross, spec_z_path, nproc, subtract_randoms
     
-    # Check Benjamin's code how the realistic survey geometry is accounted for!
+    # Check Benjamin's code how the realistic survey geometry is accounted for! (healpix, or something)
     
-    Pi_max = 100.0
-    kids_area = 140*3600.0#180.0*3600.0
-    eff_density = 8.53
-    kids_variance_squared = 0.082
+    Pi_max = 100.0 # in Mpc/h
+    kids_area = 180 # in deg^2
+    kids_area = kids_area * 3600.0 # to arcmin^2
+    eff_density = 8.53 # as defined in KiDS (gal / arcmin^2)
+    kids_variance_squared = 0.082 # as defined in KiDS papers
     z_kids = 0.6
     gauss = True
-    ssc = False
-    ng = False
+    ssc = True
+    ng = True
     cross = True
     subtract_randoms = False # if randoms are not subtracted, this will increase the error bars
     nproc = 4
 
-    #sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0
-    sigma_crit = sigma_crit_func(cosmo_model, z, 1.2)
-    print(sigma_crit)
+    #sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0 # KiDS specific sigma_crit, accounting for n(z)!
+    sigma_crit = sigma_crit_func(cosmo_model, z, z_kids)
     
-    eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0
-    eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0
-    #shape_noise = ((sigma_crit / rho_bg)**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance_z1z2(0,z_kids).value)
-    shape_noise = ((sigma_crit / rho_bg)**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance(z_kids).value)
-
+    #eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0 # not used
+    eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0 # convert to radians
+    
+    shape_noise = ((sigma_crit / rho_bg)**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance(z_kids).value) # With lensing the projected distance is the distance between the observer and effective survey redshift.
     
 
-    radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h
+    radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
     
-    print(radius)
-    print(eff_density_in_mpc)
-    
-    #shape_noise = np.zeros_like(shape_noise)
-    #ngal = 1e50 * np.ones_like(ngal)
-    
-    print(shape_noise)
-    print(1.0/ngal)
-    
-    
-    # Check survey variance, and W_p (will depend on survey geometry what kind of values are needed)!
     W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
     W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    #survey_var = [survey_variance(hmf_i, W_p, k_range, np.pi*radius**2.0*Pi_max) for hmf_i in hmf]
     survey_var = [survey_variance(hmf_i, W_p, k_range, radius) for hmf_i in hmf]
     
         
-    print('Halo integrals done.')
-    lnk_min, lnk_max = np.log(0.001), np.log(100.0)
+    print('Survey and observational details set.')
+    
+    
+    # Setting limited k-range for covariance matrix estimation.
+    lnk_min, lnk_max = np.log(0.01), np.log(1000.0)
     k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
     k_temp_lin = np.exp(k_temp)
   
@@ -1388,26 +1379,26 @@ def covariance(theta, R, calculate_covariance=False):
     pl.show()
     pl.clf()
     
-    """
+    #"""
     cov_esd_gauss = cov_esd_gauss**0.5
-    #cov_esd_non_gauss = cov_esd_non_gauss**0.5
-    #cov_esd_ssc = cov_esd_ssc**0.5
+    cov_esd_non_gauss = cov_esd_non_gauss**0.5
+    cov_esd_ssc = cov_esd_ssc**0.5
     
     cov_wp_gauss = cov_wp_gauss**0.5
-    #cov_wp_non_gauss = cov_wp_non_gauss**0.5
-    #cov_wp_ssc = cov_wp_ssc**0.5
+    cov_wp_non_gauss = cov_wp_non_gauss**0.5
+    cov_wp_ssc = cov_wp_ssc**0.5
     
     pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_gauss)[:size_r_gm[0]], ls='-', color='black', label='Gauss')
     pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_gauss)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='black')
     pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_gauss)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='black')
     
-    #pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_non_gauss)[:size_r_gm[0]], ls='-', color='red', label='non-Gauss')
-    #pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_non_gauss)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='red')
-    #pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_non_gauss)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='red')
+    pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_non_gauss)[:size_r_gm[0]], ls='-', color='red', label='non-Gauss')
+    pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_non_gauss)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='red')
+    pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_non_gauss)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='red')
     
-    #pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_ssc)[:size_r_gm[0]], ls='-', color='blue', label='SSC')
-    #pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_ssc)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='blue')
-    #pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_ssc)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='blue')
+    pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_ssc)[:size_r_gm[0]], ls='-', color='blue', label='SSC')
+    pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_ssc)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='blue')
+    pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_ssc)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='blue')
     
     pl.xscale('log')
     pl.yscale('log')
@@ -1422,13 +1413,13 @@ def covariance(theta, R, calculate_covariance=False):
     pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_gauss)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='black')
     pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_gauss)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='black')
     
-    #pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_non_gauss)[:size_r_gg[0]], ls='-', color='red', label='non-Gauss')
-    #pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_non_gauss)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='red')
-    #pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_non_gauss)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='red')
+    pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_non_gauss)[:size_r_gg[0]], ls='-', color='red', label='non-Gauss')
+    pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_non_gauss)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='red')
+    pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_non_gauss)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='red')
     
-    #pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_ssc)[:size_r_gg[0]], ls='-', color='blue', label='SSC')
-    #pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_ssc)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='blue')
-    #pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_ssc)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='blue')
+    pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_ssc)[:size_r_gg[0]], ls='-', color='blue', label='SSC')
+    pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_ssc)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='blue')
+    pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_ssc)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='blue')
     
     pl.xscale('log')
     pl.yscale('log')

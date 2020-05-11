@@ -790,6 +790,67 @@ def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, sh
     return cov_out
 
 
+def aw_func(params):
+    
+    ######################################################
+    ###### To be removed, only for testing purposes ######
+    ######################################################
+
+    b_i, b_j, i, j, radius_1, radius_2, W_p, size_1, size_2 = params
+    
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
+
+    # the number of steps to fit into a half-period at high-k.
+    # 6 is better than 1e-4.
+    minsteps = 8
+    
+    # set min_k, 1e-6 should be good enough
+    mink = 1e-6
+    
+    temp_min_k = 1.0
+    
+    # getting maxk here is the important part. It must be a half multiple of
+    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
+    # cycles > 38 (for 1E-5 precision).
+    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
+    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
+    # Now we calculate the requisite number of steps to have a good dk at hi-k.
+    nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
+    #nk = 10000
+                
+    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+        
+    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, np.array([Awr_i, Awr_j, Aw_rr])
+    
+    
+def calc_aw(radius_1, radius_2, W_p, size_1, size_2, out, nproc):
+
+    ######################################################
+    ###### To be removed, only for testing purposes ######
+    ######################################################
+
+    paramlist = []
+    for a in range(len(radius_1)):
+        for b in range(len(radius_2)):
+            for c in range(len(radius_1[a])):
+                for d in range(len(radius_2[b])):
+                    paramlist.append([a, b, c, d])
+
+    for i in paramlist:
+        i.extend([radius_1, radius_2, W_p, size_1, size_2])
+        
+    pool = multi.Pool(processes=nproc)
+    for i, j, val in pool.map(aw_func, paramlist):
+        #print(i, j, val)
+        out[i,j,:] = val
+
+    return out
+
+
 def covariance(theta, R, calculate_covariance=False):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
@@ -921,11 +982,11 @@ def covariance(theta, R, calculate_covariance=False):
     #rvir_range_2d_i = R[:,1:]
     if ingredient_gm:
         #rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-        rvir_range_2d_i_gm = [logspace(-2, 2, 25, endpoint=True) for r in R[idx_gm]]
+        rvir_range_2d_i_gm = [logspace(-2, 2, 15, endpoint=True) for r in R[idx_gm]]
         size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])
     if ingredient_gg:
         #rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-        rvir_range_2d_i_gg = [logspace(-2, 2, 25, endpoint=True) for r in R[idx_gg]]
+        rvir_range_2d_i_gg = [logspace(-2, 2, 15, endpoint=True) for r in R[idx_gg]]
         size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])
     #if ingredients['mm']:
         #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
@@ -1205,6 +1266,9 @@ def covariance(theta, R, calculate_covariance=False):
         cov_cross_tot = cov_cross.copy()
     
     """
+    ######################################################
+    ###### To be removed, only for testing purposes ######
+    ######################################################
     
     # For simulation cube as in Mohammed et al. 2017!
     W = 500.0**3.0 * sp.jv(1, k_range_lin*500.0) / (k_range_lin*500.0)
@@ -1359,7 +1423,18 @@ def covariance(theta, R, calculate_covariance=False):
             cov_cross_tot += cov_cross_non_gauss
     else:
         pass
-        
+    
+    # To be removed, only for testing purposes
+    aw_values = np.zeros((size_r_gm.sum(), size_r_gm.sum(), 3), dtype=np.float64)
+    aw_values = calc_aw(rvir_range_2d_i_gm, rvir_range_2d_i_gm, W_p, size_r_gm, size_r_gm, aw_values, nproc)
+    
+    cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
+                        [cov_cross_tot, cov_wp_tot]])
+    
+    all = np.array([size_r_gm, size_r_gg, rvir_range_2d_i_gm, rvir_range_2d_i_gg, cov_esd_gauss, cov_esd_non_gauss, cov_esd_ssc, cov_wp_gauss, cov_wp_non_gauss, cov_wp_ssc, cov_esd_tot, cov_wp_tot, cov_cross_tot, cov_block, aw_values, radius**2.0], dtype=object)
+    
+    np.save('/home/dvornik/test_pipeline2/covariance/cov_all.npy', all)
+    
     """
     if ingredient_gm:
         return  cov_esd_tot
@@ -1368,113 +1443,7 @@ def covariance(theta, R, calculate_covariance=False):
     if ingredient_gm and ingredient_gg:
         return np.block([[cov_esd_tot, cov_cross_tot.T], [cov_cross_tot, cov_wp_tot]])
     """
-    import matplotlib.pyplot as pl
-    pl.imshow(cov_esd_tot/np.sqrt(np.outer(np.diag(cov_esd_tot), np.diag(cov_esd_tot.T))))
-    pl.savefig('/home/dvornik/test_pipeline2/covariance/esd_tot.png', bbox_inches='tight')
-    pl.show()
-    pl.clf()
     
-    pl.imshow(cov_wp_tot/np.sqrt(np.outer(np.diag(cov_wp_tot), np.diag(cov_wp_tot.T))))
-    pl.savefig('/home/dvornik/test_pipeline2/covariance/wp_tot.png', bbox_inches='tight')
-    pl.show()
-    pl.clf()
-    
-    #"""
-    cov_esd_gauss = cov_esd_gauss**0.5
-    cov_esd_non_gauss = cov_esd_non_gauss**0.5
-    cov_esd_ssc = cov_esd_ssc**0.5
-    
-    cov_wp_gauss = cov_wp_gauss**0.5
-    cov_wp_non_gauss = cov_wp_non_gauss**0.5
-    cov_wp_ssc = cov_wp_ssc**0.5
-    
-    pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_gauss)[:size_r_gm[0]], ls='-', color='black', label='Gauss')
-    pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_gauss)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='black')
-    pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_gauss)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='black')
-    
-    pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_non_gauss)[:size_r_gm[0]], ls='-', color='red', label='non-Gauss')
-    pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_non_gauss)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='red')
-    pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_non_gauss)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='red')
-    
-    pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_ssc)[:size_r_gm[0]], ls='-', color='blue', label='SSC')
-    pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_ssc)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='blue')
-    pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_ssc)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='blue')
-    
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.legend()
-    pl.xlabel(r'$r_{\mathrm{p}}\, (\mathrm{Mpc}/h)$')
-    pl.ylabel(r'$\sigma_{\Delta \Sigma_{\mathrm{gm}}}(r_{\mathrm{p}})$')
-    pl.savefig('/home/dvornik/test_pipeline2/covariance/cov_esd_gauss.png', bbox_inches='tight')
-    pl.show()
-    pl.clf()
-    
-    pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_gauss)[:size_r_gg[0]], ls='-', color='black', label='Gauss')
-    pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_gauss)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='black')
-    pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_gauss)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='black')
-    
-    pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_non_gauss)[:size_r_gg[0]], ls='-', color='red', label='non-Gauss')
-    pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_non_gauss)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='red')
-    pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_non_gauss)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='red')
-    
-    pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_ssc)[:size_r_gg[0]], ls='-', color='blue', label='SSC')
-    pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_ssc)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='blue')
-    pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_ssc)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='blue')
-    
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.legend()
-    pl.xlabel(r'$r_{\mathrm{p}}\, (\mathrm{Mpc}/h)$')
-    pl.ylabel(r'$\sigma_{w_{\mathrm{p}}}(r_{\mathrm{p}})$')
-    pl.savefig('/home/dvornik/test_pipeline2/covariance/cov_wp_gauss.png', bbox_inches='tight')
-    pl.show()
-    pl.clf()
-    
-    
-    pl.plot(rvir_range_2d_i_gm[0], rvir_range_2d_i_gm[0]*np.diag(cov_esd_gauss)[:size_r_gm[0]], ls='-', color='black', label='Gauss')
-    pl.plot(rvir_range_2d_i_gm[1], rvir_range_2d_i_gm[1]*np.diag(cov_esd_gauss)[size_r_gm[0]:size_r_gm[0]+size_r_gm[1]], ls='--', color='black')
-    pl.plot(rvir_range_2d_i_gm[2], rvir_range_2d_i_gm[2]*np.diag(cov_esd_gauss)[size_r_gm[0]+size_r_gm[1]:], ls='-.', color='black')
-    
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.xlim(1, 100)
-    pl.legend()
-    pl.xlabel(r'$r_{\mathrm{p}}\, (\mathrm{Mpc}/h)$')
-    pl.ylabel(r'$r_{\mathrm{p}}\, \sigma_{\Delta \Sigma_{\mathrm{gm}}}(r_{\mathrm{p}})$')
-    pl.savefig('/home/dvornik/test_pipeline2/covariance/cov_esd_gauss_zoom.png', bbox_inches='tight')
-    pl.show()
-    pl.clf()
-    
-    pl.plot(rvir_range_2d_i_gg[0], rvir_range_2d_i_gg[0]*np.diag(cov_wp_gauss)[:size_r_gg[0]], ls='-', color='black', label='Gauss')
-    pl.plot(rvir_range_2d_i_gg[1], rvir_range_2d_i_gg[1]*np.diag(cov_wp_gauss)[size_r_gg[0]:size_r_gg[0]+size_r_gg[1]], ls='--', color='black')
-    pl.plot(rvir_range_2d_i_gg[2], rvir_range_2d_i_gg[2]*np.diag(cov_wp_gauss)[size_r_gg[0]+size_r_gg[1]:], ls='-.', color='black')
-    
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.xlim(1, 100)
-    pl.legend()
-    pl.xlabel(r'$r_{\mathrm{p}}\, (\mathrm{Mpc}/h)$')
-    pl.ylabel(r'$r_{\mathrm{p}}\, \sigma_{w_{\mathrm{p}}}(r_{\mathrm{p}})$')
-    pl.savefig('/home/dvornik/test_pipeline2/covariance/cov_wp_gauss_zoom.png', bbox_inches='tight')
-    pl.show()
-    pl.clf()
-    
-    #"""
-    
-    
-    cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
-                        [cov_cross_tot, cov_wp_tot]])
-    if not subtract_randoms:
-        np.save('/home/dvornik/test_pipeline2/covariance/cov_no_sub_rand.npy', cov_block)
-    else:
-        np.save('/home/dvornik/test_pipeline2/covariance/cov_sub_rand.npy', cov_block)
-    pl.rcParams["figure.figsize"] = (10,10)
-    pl.imshow(cov_block/np.sqrt(np.outer(np.diag(cov_block), np.diag(cov_block.T))))
-    #[pl.axhline(_x, lw=1, color='white') for _x in [7.5, 15.5, 21.5, 29.5]]
-    #[pl.axvline(_x, lw=1, color='white') for _x in [7.5, 15.5, 21.5, 29.5]]
-    pl.savefig('/home/dvornik/test_pipeline2/covariance/comb_tot.png', bbox_inches='tight', dpi=360)
-    pl.show()
-    pl.clf()
     
     return 0
     

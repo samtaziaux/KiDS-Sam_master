@@ -53,14 +53,12 @@ def run(hm_options, options, args):
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
 
-    if args.cov or args.mock:
+    if args.mock:
         #mock_options = parameters[1][parameters[0].index('mock')]
         mock(
             args, function, options, setup,# mock_options,
             parameters, join, starting, jfree, repeat, nparams)
         return
-
-    print('Starting values =', starting)
 
     # load data files
     Ndatafiles = len(options['data'][0])
@@ -91,6 +89,15 @@ def run(hm_options, options, args):
     for n in names_extend:
         fail_value[n] = 9999
     fail_value = list(fail_value[0])
+    
+    if args.cov:
+        # We need to make sure one can also read in the mock data to calculate the covariance for!
+        cov_calc(
+            args, function, R, options, setup,
+            parameters, join, starting, jfree, repeat, nparams)
+        return
+
+    print('Starting values =', starting)
 
     # are we just running a demo?
     if args.demo:
@@ -223,9 +230,6 @@ def mock(args, function, options, setup, parameters, join, starting, jfree,
     """Generate mock observations given a set of cosmological and
     astrophysical parameters, as well as the observational setup
 
-    Perhaps this function can be used to generate the covariance
-    including astrophysical terms through the --cov cmd line option
-
     steps:
     * call halo.model just like in lnprob
     * call covariance module, and pass mock_options to it (it
@@ -249,6 +253,31 @@ def mock(args, function, options, setup, parameters, join, starting, jfree,
     else:
         outputs = io.write_signal(R, model[0], options, setup)
         print('Saved mock signal to {0}'.format(outputs))
+    return
+    
+    
+def cov_calc(args, function, R, options, setup, parameters, join, starting, jfree,
+            repeat, nparams):
+    
+    """Generate  the covariance
+    including astrophysical terms through the --cov cmd line option
+
+    steps:
+    * call covariance.covariance just like in halo.model in lnprob
+    * saves covariance as 2D matrix to a text file as specified in the config file
+    """
+    
+    to = time()
+    p = update_parameters(starting, parameters, nparams, join, jfree, repeat)
+    # run model!
+    covariance = function(p, R, calculate_covariance=args.cov)
+    print('\nCovariance calculation took {0:.2e} seconds'.format(time()-to))
+    
+    # save
+    output = parameters[1][parameters[0].index('covariance')]['output']
+    
+    np.savetxt(output, covariance, header='2D analytical covariance matrix', comments='# ')
+    print('Saved covariance to {0}'.format(output))
     return
 
 

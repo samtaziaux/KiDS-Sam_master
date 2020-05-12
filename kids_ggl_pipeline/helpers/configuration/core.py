@@ -6,8 +6,8 @@ import numpy as np
 from six import string_types
 import sys
 
-from . import confighod, configsampler, configsetup
-from ...halomodel import nfw, nfw_stack, halo, halo_2
+from . import confighod, configsampler, configsetup, configcovar
+from ...halomodel import nfw, nfw_stack, halo, halo_2, covariance
 from ...halomodel.observables import Observable
 from ...halomodel.selection import Selection
 
@@ -180,7 +180,7 @@ class ConfigFile(object):
         if self._valid_modules is None:
             _modules = {
                 'nfw': nfw, 'nfw_stack': nfw_stack, 'halo': halo,
-                'halo_2': halo_2}
+                'halo_2': halo_2, 'covariance': covariance}
             try:
                 _modules['models'] = models
             except NameError:
@@ -247,10 +247,7 @@ class ConfigFile(object):
                     starting, join)
                 these_names, these_params, these_priors, starting, join = new
             elif section == 'covariance':
-                # using configsampler just because it provides the
-                # required functionality
-                #covar = section.append_entry_output(line, covar)
-                covar = configsampler.sampling_dict(line, covar)
+                covar = configcovar.append_entry(line, covar)
             elif section == 'output':
                 output = section.append_entry_output(line, output)
             elif section == 'setup':
@@ -264,6 +261,7 @@ class ConfigFile(object):
         # add defaults and check types
         ingredients = confighod.add_default_ingredients(ingredients)
         setup = configsetup.check_setup(setup)
+        covar = configcovar.check_covar(covar)
         hod_param_names = ['observables', 'selection', 'ingredients',
                            'parameters', 'setup', 'covariance']
         hod_params = [

@@ -24,7 +24,7 @@ def main():
 
     # not doing elif in case someone wants to run both the ESD and
     # sampler in one call, although this is discouraged
-    if args.sampler or args.demo or args.mock:
+    if args.sampler or args.demo or args.mock or args.cov:
         # set up halo model and sampler
         cfg = configuration.ConfigFile(args.config_file)
         hm_options, sampling_options = cfg.read()

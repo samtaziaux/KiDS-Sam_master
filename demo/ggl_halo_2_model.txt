@@ -81,10 +81,10 @@ cosmo.h         repeat
 
 [hod/satellites/mor]
 name            double_powerlaw
-hod.centrals.mor.logM0
-hod.centrals.mor.logM1
-hod.centrals.mor.a
-hod.centrals.mor.b
+hod.centrals.mor.logM0      repeat
+hod.centrals.mor.logM1      repeat
+hod.centrals.mor.a          repeat
+hod.centrals.mor.b          repeat
 norm            fixed       0.56
 
 [hod/satellites/scatter]

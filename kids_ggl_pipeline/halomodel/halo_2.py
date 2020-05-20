@@ -891,7 +891,6 @@ def model(theta, R, calculate_covariance=False):
             output[idx_gg] = wp_out
             output = list(output)
             output = [output, meff]
-            print(output)
         else:
             output = [out_esd_tot_inter, meff]
     

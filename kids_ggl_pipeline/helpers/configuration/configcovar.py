@@ -9,6 +9,12 @@ _default_entries = {
     'cross': 'calculate the cross terms between observables? [bool]',
     'subtract_randoms': 'is the signal from random points subtracted from the data? [bool]',
     'threads': 'number of threads to use to calculate the covariance matrix',
+    'pi_max': 'integration length of the 3D clustering correlation function used to obtain w_p(r_p) [Mpc/h]',
+    'area': 'area of the survey [deg^2]',
+    'eff_density': 'effective galaxy density as defined in KiDS papers [gal/arcmin^2]',
+    'variance_squared': 'variance of the galaxy ellipticity (as defined in KiDS papers)',
+    'mean_survey_redshift': 'mean survey redshift (about 0.6 for KiDS as an example)',
+    'output': 'output file name [ASCII document]',
     }
 
 _default_values = {
@@ -27,12 +33,6 @@ _default_values = {
     }
 
 _necessary_entries = {
-    'pi_max': 'integration length of the 3D clustering correlation function used to obtain w_p(r_p) [Mpc/h]',
-    'area': 'area of the survey [deg^2]',
-    'eff_density': 'effective galaxy density as defined in KiDS papers [gal/arcmin^2]',
-    'variance_squared': 'variance of the galaxy ellipticity (as defined in KiDS papers)',
-    'mean_survey_redshift': 'mean survey redshift (about 0.6 for KiDS as an example)',
-    'output': 'output file name [ASCII document]',
     }
 
 _valid_entries = {

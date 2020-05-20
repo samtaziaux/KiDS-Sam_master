@@ -316,7 +316,7 @@ Should anyone require more flexibility please raise an issue and we will make th
 General setup
 *************
 
-There is an additional section, ``setup``, which includes deatiles on, well, the setup of the model. There are four mandatory 
+There is an additional section, ``setup``, which includes details on, well, the setup of the model. There are four mandatory
 parameters in this section: ::
 
     [setup]
@@ -439,6 +439,29 @@ optional. The total number of MCMC samples will be equal to :math:`n_\mathrm{wal
 pipeline will stop running. The autocorrelation times are stored in the header file for reference.
 
 
+Analytical covariance estimation
+*************
+
+There is an additional section, ``covariance``, which includes the input parameters needed for the calculation of the anayltical covariance
+using the ``covariance.covariance`` module. It uses the covariance matrix calculation as described in the Appendix A. of Dvornik et al. 2018
+paper. The required parameters in this section are: ::
+
+    [covariance]
+    pi_max              100.0               # maximal projection length as used in clutering measurements to obtain wp
+    area                180.0               # area of a survey in deg^2, assumes square geometry
+    eff_density         8.53                # effective density in gal/arcmin^2
+    variance_squared    0.082               # variance of the galaxy ellipticity (as defined in KiDS papers)
+    mean_survey_redshift    0.6             # mean survey redshift
+    gauss               True                # calculate the gaussian part of the covariance? [bool]
+    non_gauss           True                # calculate the non-gaussian part of the covariance? [bool]
+    ssc                 True                # calculate the super-sample part of the covariance? [bool]
+    cross               True                # calculate the cross terms between observables? [bool]
+    subtract_randoms    False               # is the signal from random points subtracted from the data? [bool]
+    threads             4                   # number of threads to use to calculate the covariance matrix (independt from sampler, uses different paralellisation method)
+    output              covariance_test.txt # output filename
+
+*NOTE*: All other sections for the halo model have to be specified as well to run the covariance code succesfully!
+Currently the sampler setup is also required, but only the required parameters have to be specified, and won't be actually used.
 
 Future improvements
 *******************

@@ -106,18 +106,21 @@ def run(hm_options, options, args):
              names, lnprior, rng_obsbins, fail_value, Ndatafiles, meta_names,
              array, dot, inf, outer, pi, zip)
         return
-    
+
     # write header file
     hdrfile = io.write_hdr(options, function, parameters, names, prior_types)
 
     # initialize sampler
-    if options['restart']:
+    if options['resume']:
         backend = emcee.backends.HDFBackend(options['output'])
-        print('Initial size: {0}'.format(backend.iteration))
+        if os.path.isfile(options['output']):
+            print('Initial size: {0}'.format(backend.iteration))
     else:
         backend = emcee.backends.HDFBackend(options['output'])
         backend.reset(options['nwalkers'], ndim)
-    
+    if not os.path.isfile(options['output']:
+        print('Running a new model. Good luck!\n')
+
     # set up starting point for all walkers
     po = sample_ball(
         names, prior_types, jfree, starting, parameters,
@@ -127,11 +130,11 @@ def run(hm_options, options, args):
     if options['nburn'] > 0:
         with Pool(processes=options['threads']) as pool:
             sampler = emcee.EnsembleSampler(
-                                            options['nwalkers'], ndim, lnprob,
-                                            args=(R,esd,icov,function,names,prior_types[jfree],
-                                            parameters,nparams,join,jfree,repeat,lnprior,likenorm,
-                                            rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-                                            pool=pool, blobs_dtype=dtype)
+                 options['nwalkers'], ndim, lnprob,
+                 args=(R,esd,icov,function,names,prior_types[jfree],
+                       parameters,nparams,join,jfree,repeat,lnprior,likenorm,
+                       rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
+                 pool=pool, blobs_dtype=dtype)
             pos = sampler.run_mcmc(po, options['nburn'], progress=True)
         sampler.reset()
         print('{1}: {0} Burn-in steps finished'.format(
@@ -146,11 +149,11 @@ def run(hm_options, options, args):
     old_tau = np.inf
     with Pool(processes=options['threads']) as pool:
         sampler = emcee.EnsembleSampler(
-                                    options['nwalkers'], ndim, lnprob,
-                                    args=(R,esd,icov,function,names,prior_types[jfree],
-                                    parameters,nparams,join,jfree,repeat,lnprior,likenorm,
-                                    rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-                                    pool=pool, backend=backend, blobs_dtype=dtype)
+             options['nwalkers'], ndim, lnprob,
+             args=(R,esd,icov,function,names,prior_types[jfree],
+                   parameters,nparams,join,jfree,repeat,lnprior,likenorm,
+                   rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
+             pool=pool, backend=backend, blobs_dtype=dtype)
         #result = sampler.run_mcmc(pos, options['nsteps'], thin_by=options['thin'], progress=True, store=True)
         for sample in sampler.sample(pos, iterations=options['nsteps'],
                                      thin_by=options['thin'], progress=True, store=True):
@@ -165,15 +168,16 @@ def run(hm_options, options, args):
                 autocorr[index] = np.mean(tau)
                 index += 1
                 # Check convergence
+                # should we offer more flexibility here?
                 converged = np.all(tau * 100 < sampler.iteration)
                 converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
                 if converged:
                     break
                 old_tau = tau
-    
+
     io.finalize_hdr(sampler, hdrfile)
     print('Everything saved to {0}!'.format(options['output']))
-    
+
     return
 
 
@@ -360,9 +364,10 @@ def print_opening_msg(args, options):
         print(' ** Running demo only **')
     elif args.mock:
         print(' ** Generating mock observations **')
-    elif options['restart']:
-        print('** Restarting sampler from last sample **')
-    elif isfile(options['output']) and not args.force_overwrite:
+    elif options['resume']:
+        print('** Resuming sampler from last sample **')
+    elif isfile(options['output']) and not args.force_overwrite \
+            and not options['resume']:
         msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
             options['output'])
         answer = input(msg)

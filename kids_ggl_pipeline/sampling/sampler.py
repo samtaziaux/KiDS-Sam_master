@@ -210,10 +210,17 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     print()
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
     print()
-    # make plots
+
     output = '{0}_demo_{1}.{2}'.format(
         '.'.join(options['output'].split('.')[:-1]), setup['return'],
         plot_ext)
+    # if necessary, create a demo folder within the output path
+    path, output = os.path.split(output)
+    if 'demo' not in os.path.split(path)[1]:
+        path = os.path.join(path, 'demo')
+    os.makedirs(path, exist_ok=True)
+    output = os.path.join(path, output)
+    # make plots
     plotting.signal(
         R, esd, esd_err, rng_obsbins, model=model[0], observable=setup['return'],
         output=output)

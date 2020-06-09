@@ -34,10 +34,9 @@ def sampling_dict(line, sampling):
                 break
             except ValueError:
                 pass
+    elif words[1] in ('True', 'False'):
+        sampling[words[0]] = (words[1] == 'True')
     else:
-        assert len(words) >= 2, \
-            'line {0} must have at least two entries ({1} instead)'.format(
-                line.line, len(line.line))
         for dtype in (int, float, str):
             try:
                 sampling[words[0]] = dtype(words[1])
@@ -67,6 +66,7 @@ def add_defaults(sampling):
         if not hasattr(sampling['exclude'], '__iter__'):
             sampling['exclude'] = np.array([sampling['exclude']])
 
+    # used for offset central component in the single NFW fit
     if 'precision' not in sampling:
         sampling['precision'] = 7
 

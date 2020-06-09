@@ -118,7 +118,7 @@ def run(hm_options, options, args):
     else:
         backend = emcee.backends.HDFBackend(options['output'])
         backend.reset(options['nwalkers'], ndim)
-    if not os.path.isfile(options['output']:
+    if not os.path.isfile(options['output']):
         print('Running a new model. Good luck!\n')
 
     # set up starting point for all walkers

@@ -1424,7 +1424,7 @@ def covariance(theta, R, calculate_covariance=True):
         pass
     
     # To be removed, only for testing purposes
-    #"""
+    """
     aw_values = np.zeros((size_r_gm.sum(), size_r_gm.sum(), 3), dtype=np.float64)
     aw_values = calc_aw(rvir_range_2d_i_gm, rvir_range_2d_i_gm, W_p, size_r_gm, size_r_gm, aw_values, nproc)
     

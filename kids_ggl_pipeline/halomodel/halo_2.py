@@ -182,8 +182,14 @@ def model(theta, R, calculate_covariance=False):
     output = np.empty(nbins, dtype=object)
     
     if ingredients['nzlens']:
+        assert len(cosmo) >= 10, \
+            'When integrating nzlens, must provide an additional parameter' \
+            '"nz", corresponding to the histogram of lens redshifts. See' \
+            'demo for an example.'
         nz = cosmo[9].T
         size_cosmo = 10
+        print('z =', z, z.shape)
+        print('nz =', nz, nz.shape)
     else:
         size_cosmo = 9
     # cheap hack. I'll use this for CMB lensing, but we can
@@ -199,7 +205,7 @@ def model(theta, R, calculate_covariance=False):
             ' choice for the zlens parameter')
 
     integrate_zlens = ingredients['nzlens']
-    
+
     # HMF set up parameters
     k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
     k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
@@ -223,7 +229,11 @@ def model(theta, R, calculate_covariance=False):
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
     #z = expand_dims(z, -1)
-    if z.size != nbins:
+    if integrate_zlens:
+        z_shape_test = (nz.shape[1] == nbins)
+    else:
+        z_shape_test = (z.size == nbins)
+    if not z_shape_test:
         raise ValueError(
             'Number of redshift bins should be equal to the number of observable bins!')
     
@@ -280,17 +290,22 @@ def model(theta, R, calculate_covariance=False):
     # observable to be used in trapz
     if selection.filename == 'None':
         if integrate_zlens:
-            completeness = np.ones((z.size,nbins,hod_observable_gm.shape[1]))
+            completeness = np.ones((z.size,nbins,hod_observable.shape[1]))
         else:
-            completeness = np.ones(hod_observable_gm.shape)
+            completeness = np.ones(hod_observable.shape)
     elif integrate_zlens:
         completeness = np.array(
             [[selection.interpolate([zi]*obs.size, obs, method='linear')
-              for obs in hod_observable_gm] for zi in z[:,0]])
+              for obs in hod_observable] for zi in z])
     else:
         completeness = np.array(
             [selection.interpolate([zi]*obs.size, obs, method='linear')
-             for zi, obs in zip(z[:,0], hod_observable_gm)])
+             for zi, obs in zip(z, hod_observable)])
+    # shape ([z.size,]nbins,sampling)
+    if integrate_zlens:
+        assert completeness.shape == (z.size,nbins,hod_observable.shape[1])
+    else:
+        assert completeness.shape == hod_observable.shape
 
     pop_c = np.zeros((nbins,mass_range.size))
     pop_s = np.zeros((nbins,mass_range.size))
@@ -298,29 +313,30 @@ def model(theta, R, calculate_covariance=False):
         if ingredients['centrals']:
             pop_c[idx_gm,:], prob_c_gm = hod.number(
                 hod_observable_gm, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:], completeness,
+                c_mor[1:], c_scatter[1:], completeness[idx_gm],
                 obs_is_log=observable_gm.is_log)
 
         if ingredients['satellites']:
             pop_s[idx_gm,:], prob_s_gm = hod.number(
                 hod_observable_gm, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:], completeness,
+                s_mor[1:], s_scatter[1:], completeness[idx_gm],
                 obs_is_log=observable_gm.is_log)
-        
+
     if ingredient_gg:
         if ingredients['centrals']:
             pop_c[idx_gg,:], prob_c_gg = hod.number(
                 hod_observable_gg, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:],
+                c_mor[1:], c_scatter[1:], completeness[idx_gg],
                 obs_is_log=observable_gg.is_log)
 
         if ingredients['satellites']:
             pop_s[idx_gg,:], prob_s_gg = hod.number(
                 hod_observable_gg, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:],
+                s_mor[1:], s_scatter[1:], completeness[idx_gg],
                 obs_is_log=observable_gg.is_log)
-        
+
     pop_g = pop_c + pop_s
+
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal = np.empty(nbins)

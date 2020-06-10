@@ -212,11 +212,9 @@ def ingredients(ingr, words):
 
 
 def observables(words):
-    print(words)
     options = ('gm', 'gg', 'mm', 'mlf')
     default = {key: False for key in options}
     for key in words[1]:
-        print(key)
         if key not in options:
             ingr = 'gm'
             binning = np.array(words[1].split(','), dtype=float)

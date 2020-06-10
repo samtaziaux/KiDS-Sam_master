@@ -138,5 +138,6 @@ threads              2
 sampler_type         ensemble
 update               100
 stop_when_converged     True
-restart                 False
+autocorr_factor         100
+resume                 False
 

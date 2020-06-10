@@ -169,8 +169,8 @@ def run(hm_options, options, args):
                 index += 1
                 # Check convergence
                 # should we offer more flexibility here?
-                converged = np.all(tau * 100 < sampler.iteration)
-                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
+                converged = np.all(tau * options['autocorr_factor'] < sampler.iteration) # n-times autocorrelation time as a measure of convergence
+                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01) # and chains change less than 1%
                 if converged:
                     break
                 old_tau = tau

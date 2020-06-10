@@ -433,7 +433,8 @@ The ``sampler`` section then continues with a few more settings: ::
     sampler_type         ensemble           # emcee sampler type (fixed)
     # update               20000            # frequency with which the output file is written (not used anymore)
     stop_when_converged  True               # stops the emcee when convergence has been reached
-    restart              False              # restars the chain from the last position, requires previous chain to be present
+    autocorr_factor     100                 # 'autocorr_factor' times the estimated autocorrelation time. If this estimate is changed by less than 1%, we’ll consider things converged
+    resume              False               # resumes the chain from the last position, requires previous chain to be present
 
 where only ``exclude``, which should list the numbers of columns excluded from the likelihood evaluation (counting from 0), is 
 optional. The total number of MCMC samples will be equal to :math:`n_\mathrm{walkers}\cdot n_\mathrm{steps}`, after which the 

@@ -95,6 +95,7 @@ b               fixed   -1.15      join:b
 b               fixed   0.59       join:b
 b               fixed   0.0        join:b
 
+# Poisson parameter, beta = <N_s (N_s - 1)|M>/<N_s|M>^2 (Eq. 42 in Dvornik et al. 2018)
 [hod/satellites/beta]
 beta            fixed    1
 

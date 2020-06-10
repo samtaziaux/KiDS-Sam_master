@@ -312,6 +312,7 @@ information see the `Priors <sampler.html#Priors>`_ section.
 for now (but still must be defined and given a value). No matter the value given, miscentring will be modelled as in |ref:viola15|_
 Should anyone require more flexibility please raise an issue and we will make this a more urgent update.
 
+**Note:** beta is a Poisson parameter, beta = <N_s (N_s - 1)|M>/<N_s|M>^2 (Eq. 42 in Dvornik et al. 2018)
 
 General setup
 *************

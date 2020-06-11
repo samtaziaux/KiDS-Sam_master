@@ -20,7 +20,8 @@ logmstar    gm    10.3,10.6,10.9    10.6,10.9,18.0    log
 logmstar    gg    10.3,10.6,10.9    10.6,10.9,18.0    log
 
 [selection]
-None
+#None
+selection_logmstar.txt  z,logmstar,completeness     fixed_width
 
 [ingredients]
 centrals        True
@@ -41,6 +42,15 @@ w0              fixed     -1.0
 wa              fixed     0.0
 Neff            fixed     3.046
 z               array     0.244809,0.284467,0.318127,0.244809,0.284467,0.318127
+#z               read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   0
+#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
+#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
+#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
+#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
+#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
+#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
+
+
 
 [hod/pointmass]
 logmstar        array      10.4601,10.743,11.1313
@@ -77,7 +87,7 @@ bias            uniform     0.2     5       1
 name            duffy08_mean
 cosmo.z         repeat
 f_c_s           array       1.0
-cosmo.h         repeat
+cosmo.h
 
 [hod/satellites/mor]
 name            double_powerlaw
@@ -129,13 +139,14 @@ covariance           cov_2d.txt   0
 cov_format           2d
 output               halo_model_results/model_2.h5
 sampler              emcee                    # MCMC sampler
-nwalkers             20
-nsteps               10
+nwalkers             10
+nsteps               2
 nburn                0
 thin                 1
-threads              2
+threads              4
 sampler_type         ensemble
 update               100
 stop_when_converged     True
-restart                 False
+resume                 True
+
 

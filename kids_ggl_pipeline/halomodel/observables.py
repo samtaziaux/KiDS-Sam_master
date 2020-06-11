@@ -10,15 +10,13 @@ class Observable(object):
 
     """
 
-    def __init__(self, name, ingredient, binlows, binhighs, notes='', sampling_size=100):
+    def __init__(self, name, obstype, binlows, binhighs, notes='', sampling_size=100):
         """Construct an observable object from the information in the
         configuration file
 
         """
         self.name = name
-        self.ingredient = ingredient
-        #self._binning = binning
-        #self.means = means
+        self.obstype = obstype
         self._binlows = binlows
         self._binhighs = binhighs
         assert self.binlows.size == self.binhighs.size, \
@@ -33,6 +31,10 @@ class Observable(object):
         self.is_log = (self.notes == 'log')
         self.sampling_size = sampling_size
         self._sampling = self.sample()
+
+    @property
+    def _valid_obstypes(self):
+        return ('gg', 'gm', 'mlf', 'mm')
 
     @property
     def binlows(self):
@@ -71,14 +73,19 @@ class Observable(object):
     @name.setter
     def name(self, name):
         self._name = name
-        
-    @property
-    def ingredient(self):
-        return self._ingredient
 
-    @ingredient.setter
-    def ingredient(self, ingredient):
-        self._ingredient = ingredient
+    @property
+    def obstype(self):
+        return self._obstype
+
+    @obstype.setter
+    def obstype(self, obstype):
+        assert obstype in self._valid_obstypes, \
+            f'type "{obstype}" for observable {self.name} not valid.' \
+            ' Remember that starting in v2.0.0 you must specify the' \
+            ' type of observable you are modelling. Valid observables' \
+            f'are {self._valid_obstypes}.'
+        self._obstype = obstype
 
     @property
     def nbins(self):

@@ -20,8 +20,7 @@ logmstar    gm    10.3,10.6,10.9    10.6,10.9,18.0    log
 logmstar    gg    10.3,10.6,10.9    10.6,10.9,18.0    log
 
 [selection]
-#None
-selection_logmstar.txt  z,logmstar,completeness     fixed_width
+None
 
 [ingredients]
 centrals        True
@@ -42,14 +41,6 @@ w0              fixed     -1.0
 wa              fixed     0.0
 Neff            fixed     3.046
 z               array     0.244809,0.284467,0.318127,0.244809,0.284467,0.318127
-#z               read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   0
-#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
-#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
-#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
-#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
-#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
-#nz              read      lensing_clustering_halomodel_covariance/nzlens_fake.txt   1   join:nz
-
 
 
 [hod/pointmass]
@@ -105,11 +96,12 @@ b               fixed   -1.15      join:b
 b               fixed   0.59       join:b
 b               fixed   0.0        join:b
 
+# Poisson parameter, beta = <N_s (N_s - 1)|M>/<N_s|M>^2 (Eq. 42 in Dvornik et al. 2018)
 [hod/satellites/beta]
 beta            fixed    1
 
 [setup]
-return          esd_wp
+return          esd
 delta           200
 delta_ref       mean
 distances       comoving
@@ -127,8 +119,8 @@ logM_max        18
 logM_bins       200
 
 [output]
-esd_total         6,8E
-Mavg              6,E
+esd_total         3,8E
+Mavg              3,E
 
 [sampler]
 path_data            lensing_clustering_halomodel_covariance
@@ -147,6 +139,5 @@ threads              4
 sampler_type         ensemble
 update               100
 stop_when_converged     True
+autocorr_factor         100
 resume                 True
-
-

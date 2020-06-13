@@ -27,7 +27,7 @@ def covariance(R, cov, cor, output=None):
     # with a label i.e., this function should probably take `setup`
     # as an (optional) argument
     fig, axes = plt.subplots(
-        figsize=(10,8), nrows=cov.shape[0], ncols=cov.shape[0])
+        figsize=(10,8), nrows=len(cov), ncols=len(cov))
     #vmin, vmax = np.percentile(cov, [1,99])
     vmin, vmax = -1.0, 1.0
     if len(R) == 1:

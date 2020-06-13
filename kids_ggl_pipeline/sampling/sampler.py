@@ -68,9 +68,7 @@ def run(hm_options, options, args):
     #val1 = np.append(val1, [Rrange, angles])
     cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
-    #Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
-    #rng_rbins = range(Nrbins) #not used
 
     metadata, meta_names, fits_format = \
         sampling_utils.initialize_metadata(options, output, esd.shape)

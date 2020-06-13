@@ -147,8 +147,8 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     # Hartlap correction
     #icov = (45.0 - Nrbins - 2.0)/(45.0 - 1.0)*icov
     return cov, icov, likenorm, esd_err, cov2d, cor
-    
-    
+
+
 def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     """Load covariance from a 2d matrix like covariance file, like analytical covariance
 
@@ -188,45 +188,46 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
         if not hasattr(exclude, '__iter__'):
             exclude = [exclude]
         nexcl = len(exclude)
-    
+
     #assert cov2d.shape == (Nrbins.sum(), Nrbins.sum()), \
     #    '2d covariance must have the correct number of entries that' \
     #    ' correspond to the number of data points.'
-    
+
     # are there any bins excluded?
     if exclude is not None:
         idx = np.array([[Nrbins[:a].sum()+b for b in exclude] for a in range(Nobsbins)])
         cov2d = np.delete(cov2d, idx, axis=0)
         cov2d = np.delete(cov2d, idx, axis=1)
-    
+
         for i,n in enumerate(Nrbins):
             if len(exclude[exclude >= n]) != 0:
                 Nrbins[i] = n - len(exclude[exclude < n])
             else:
                 Nrbins[i] = n - nexcl
-    
+
     icov_in = np.linalg.inv(cov2d)
     cor_in = cov2d/np.sqrt(np.outer(np.diag(cov2d), np.diag(cov2d.T)))
-    icov = np.empty((Nobsbins, Nobsbins), dtype=object)
-    cov = np.empty((Nobsbins, Nobsbins), dtype=object)
-    cor = np.empty((Nobsbins, Nobsbins), dtype=object)
-    esd_err = np.empty(Nobsbins, dtype=object)
-    
+    cov = []
+    icov = []
+    cor = []
     for i in range(Nobsbins):
+        cov.append([])
+        icov.append([])
+        cor.append([])
         for j in range(Nobsbins):
-            indeces_i = Nrbins[:i].sum()
-            indeces_j = Nrbins[:j].sum()
-            cov[i,j] = cov2d[indeces_i:indeces_i+Nrbins[i], indeces_j:indeces_j+Nrbins[j]]
-            icov[i,j] = icov_in[indeces_i:indeces_i+Nrbins[i], indeces_j:indeces_j+Nrbins[j]]
-            cor[i,j] = cor_in[indeces_i:indeces_i+Nrbins[i], indeces_j:indeces_j+Nrbins[j]]
-            if i==j:
-                esd_err[i] = np.sqrt(np.diag(cov2d[indeces_i:indeces_i+Nrbins[i], indeces_j:indeces_j+Nrbins[j]]))
-            
+            indices_i = Nrbins[:i].sum()
+            indices_j = Nrbins[:j].sum()
+            s_ = np.s_[indices_i:indices_i+Nrbins[i], indices_j:indices_j+Nrbins[j]]
+            cov[-1].append(cov2d[s_])
+            icov[-1].append(icov_in[s_])
+            cor[-1].append(cor_in[s_])
+    esd_err = np.diag(cov2d)**0.5
+
     # product of the determinants
     prod_detC = np.linalg.det(cov2d)
     # likelihood normalization
     likenorm = -(Nobsbins**2*np.log(2*np.pi) + np.log(prod_detC)) / 2
-    
+
     # Hartlap correction
     #icov = (45.0 - Nrbins - 2.0)/(45.0 - 1.0)*icov
     return cov, icov, likenorm, esd_err, cov2d, cor
@@ -242,13 +243,13 @@ def load_data(options, setup):
         #        options['exclude'][options['exclude'] < esd.shape[1]]
         R, esd, Nobsbins = load_datapoints_2d(
             options['data'][0], options['data'][1], options['exclude'])
-        
+
         cov = load_covariance_2d(
             options['covariance'][0], options['covariance'][1],
             Nobsbins, Nrbins, options['exclude'])
-            
+
         Nrbins = np.array([sh.size for sh in esd])
-        
+
         # convert units if necessary
         if setup['return'] in ('esd', 'sigma', 'wp', 'esd_wp'):
             if setup['R_unit'] != _default_values['R_unit']:

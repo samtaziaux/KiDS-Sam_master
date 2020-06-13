@@ -767,7 +767,10 @@ def model(theta, R, calculate_covariance=False):
                 for si in surf_dens2])
             surf_dens2 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i_gm)])
             #return [surf_dens2, meff]
-            output[idx_gm] = surf_dens2
+            if nbins_gm == 1:
+                output[idx_gm.start] = surf_dens2[0]
+            else:
+                output[idx_gm] = surf_dens2
         if setup['return'] == 'all':
             output.append(surf_dens2)
             
@@ -793,7 +796,10 @@ def model(theta, R, calculate_covariance=False):
                 for si in surf_dens2_2])
             surf_dens2_2 = np.array([s_r(r_i) for s_r, r_i in zip(surf_dens2_2_r, rvir_range_2d_i_gg)])
         if setup['return'] in ('kappa', 'sigma'):
-            output[idx_gg] = surf_dens2_2
+            if nbins_gg == 1:
+                output[idx_gg.start] = surf_dens2_2[0]
+            else:
+                output[idx_gg] = surf_dens2_2
         if setup['return'] in ('wp', 'esd_wp'):
             wp_out_i = array([UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i), s=0)
                         for wi, rho_i in zip(surf_dens2_2, rho_bg)])
@@ -825,12 +831,15 @@ def model(theta, R, calculate_covariance=False):
                 for si in surf_dens2_3])
             surf_dens2_3 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_3_r, rvir_range_2d_i_mm)])
             #return [surf_dens2_3, meff]
-            output[idx_mm] = surf_dens2_3
+            if nbins_mm == 1:
+                output[idx_mm.start] = surf_dens2_3[0]
+            else:
+                output[idx_mm] = surf_dens2_3
         if setup['return'] == 'all':
             output.append(surf_dens2_3)
         
     if setup['return'] in ('kappa', 'sigma'):
-        output = list(output)
+        #output = list(output)
         output = [output, meff]
         return output
     if setup['return'] == ('wp'):

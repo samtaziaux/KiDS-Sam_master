@@ -123,7 +123,7 @@ def model(theta, R, calculate_covariance=False):
     ingredient_gm, ingredient_gg, ingredient_mm, ingredient_mlf = False, False, False, False
     hod_observable = None
     for i, observable in enumerate(observables):
-        if observable.ingredient == 'gm':
+        if observable.obstype == 'gm':
             ingredient_gm = True
             observable_gm = observable
             hod_observable_gm = observable.sampling
@@ -134,7 +134,7 @@ def model(theta, R, calculate_covariance=False):
             nbins_gm = observable.nbins
             idx_gm = np.s_[nbins:nbins+nbins_gm]
             nbins += nbins_gm
-        if observable.ingredient == 'gg':
+        if observable.obstype == 'gg':
             ingredient_gg = True
             observable_gg = observable
             hod_observable_gg = observable.sampling
@@ -145,13 +145,13 @@ def model(theta, R, calculate_covariance=False):
             nbins_gg = observable.nbins
             idx_gg = np.s_[nbins:nbins+nbins_gg]
             nbins += nbins_gg
-        if observable.ingredient == 'mm':
+        if observable.obstype == 'mm':
             ingredient_mm = True
             observable_mm = observable
             nbins_mm = observable.nbins
             idx_mm = np.s_[nbins:nbins+nbins_mm]
             nbins += nbins_mm
-        if observable.ingredient == 'mlf':
+        if observable.obstype == 'mlf':
             ingredient_mlf = True
             observable_mlf = observable
             hod_observable_mlf = observable.sampling

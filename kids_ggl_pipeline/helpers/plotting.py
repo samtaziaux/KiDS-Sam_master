@@ -17,7 +17,7 @@ def axlabel(return_value):
               'sigma': r'\Sigma',
               'xi': r'\xi',
               'wp': r'w_{p}',
-              'esd_wp': r'unit'}
+              'esd_wp': r'\Delta\Sigma\, /\, w_{p}'}
     return labels[return_value]
 
 

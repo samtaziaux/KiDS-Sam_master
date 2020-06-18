@@ -49,7 +49,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
     path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file, O_matter, O_lambda, Ok, h, \
         z_epsilon, path_output, filename_addition, purpose, \
         path_Rbins, Runit, Ncores, lensid_file, lens_weights, lens_binning, \
-        lens_selection, src_selection, cat_version, n_boot, cross_cov, com, \
+        lens_selection, src_selection, cat_version, n_boot, cross_cov, com, lens_photoz, galSigma, lens_pz_redshift, \
         blindcats = \
             esd_utils.read_config(config_file)
 
@@ -155,7 +155,7 @@ def input_variables(Nsplit, Nsplits, binnum, blindcat, config_file):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file, \
-        z_epsilon, n_boot, cross_cov, com
+        z_epsilon, n_boot, cross_cov, com, lens_photoz, galSigma, lens_pz_redshift
 
 
 # Defining the lensID lens selection/binning
@@ -1147,22 +1147,21 @@ def calc_gaussian(x, mu, sigma):
 
 
 # Calculate Sigma_crit (=1/k) and the weight mask for every lens-source pair
-def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_version, Dc_epsilon, galZlist, com):
+def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, srcPZ, cat_version, Dc_epsilon, galZlist, com):
     
     #print('galZlist:', galZlist)
     
     # If the lens redshift are photometric, implement the photo-z uncertainty sigma
-    if 'sigma' in com:
+    if lens_photoz == True:
         
         # Calculate the lens angular distance bins
         Dalbins = Dclbins/(1+zlensbins)
         dZl = np.diff(zlensbins)[0]
         
         # Lens redshift PDFs
-        galSigma = float(com.rsplit('_', 1)[1])
-        if 'z' in com:
+        if lens_pz_redshift == True:
             galSigma = galSigma*(1+galZlist)
-        else:
+        if lens_pz_redshift == False:
             galSigma = np.array([galSigma])
     
         galPZ = np.array([calc_gaussian(zlensbins, galZlist[z], galSigma[z]) for z in range(len(galZlist))])
@@ -1184,9 +1183,9 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_version, 
         #print('Lens P(zl):', np.shape(galPZ))
 
         # Matrix multiplication that sums over P(zl), to calculate <Da*Dls/Ds> for each lens
-        if 'com' in com: # Comoving
-            DaDlsoDs = np.dot(galPZ*dZl, Dclbins*DlsoDs)
-        else: # Physical
+        if com == True:
+            DaDlsoDs = np.dot(galPZ*dZl, Dalbins*DlsoDs/((1.0+galZlist)**2.0))
+        if com == False:
             DaDlsoDs = np.dot(galPZ*dZl, Dalbins*DlsoDs)
         
         #print('Integrated Da*DlsoDs:', np.shape(DaDlsoDs))
@@ -1209,10 +1208,12 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_version, 
         # Calculate the values of k (=1/Sigmacrit)
         Dals = np.reshape(Dals,[len(Dals),1])
         
-        if 'com' in com: # Comoving:
-            k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dcls*DlsoDs)) # k = 1/Sigmacrit
-        else: # Physical:
+        # Physical:
+        if com == False:
             k = 1 / ((c.value**2)/(4*np.pi*G.value) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
+        # Comoving:
+        if com == True:
+            k = 1 / ((c.value**2)/(4*np.pi*G.value * ((1.0+galZlist)**2.0)) * 1/(Dals*DlsoDs)) # k = 1/Sigmacrit
     
     # Create the mask that removes all sources with k not between 0 and infinity
     kmask = np.logical_not((0. < k) & (k < inf))
@@ -1222,19 +1223,18 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_version, 
 
 
 # Weigth for average m correction in KiDS-450
-def calc_mcorr_weight(Dcls, Dals, Dcsbins, zlensbins, Dclbins, srcPZ, cat_version, Dc_epsilon, galZlist, com):
+def calc_mcorr_weight(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, srcPZ, cat_version, Dc_epsilon, galZlist, com):
     
     # If the lens redshift are photometric, implement the photo-z uncertainty sigma
-    if 'sigma' in com:
+    if lens_photoz == True:
         
         # Calculate the lens angular distance bins
         Dalbins = Dclbins/(1+zlensbins)
         
         # Lens redshift PDFs
-        galSigma = float(com.rsplit('_', 1)[1])
-        if 'z' in com:
+        if lens_pz_redshift == True:
             galSigma = galSigma*(1+galZlist)
-        else:
+        if lens_pz_redshift == False:
             galSigma = np.array([galSigma])
             
         galPZ = np.array([calc_gaussian(zlensbins, galZlist[z], galSigma[z]) for z in range(len(galZlist))])

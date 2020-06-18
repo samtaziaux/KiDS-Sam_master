@@ -336,7 +336,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file,\
-        z_epsilon, n_boot, cross_cov, com = \
+        z_epsilon, n_boot, cross_cov, com, lens_photoz, galSigma, lens_pz_redshift = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 
@@ -515,7 +515,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                 weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                            Dcsbins, zlensbins, Dclbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
+                            Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, \
+                            srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -545,7 +546,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                             weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                                                        Dcsbins, zlensbins, Dclbins, srcPZ_k, cat_version, Dc_epsilon, com)
+                                                        Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, \
+                                                        srcPZ_k, cat_version, Dc_epsilon, com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -583,7 +585,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
             dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
-                                Dcsbins, zlensbins, Dclbins, srcPZ_m, cat_version, Dc_epsilon, galZlist, com))
+                                Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, \
+                                srcPZ_m, cat_version, Dc_epsilon, galZlist, com))
             m_selection = {}
 
         srcm_varlist = np.average(m_corr[:,2], weights=dlsods)

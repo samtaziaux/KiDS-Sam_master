@@ -38,7 +38,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file,\
-        z_epsilon, n_boot, cross_cov, com = \
+        z_epsilon, n_boot, cross_cov, com, lens_photoz, galSigma, lens_pz_redshift = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 

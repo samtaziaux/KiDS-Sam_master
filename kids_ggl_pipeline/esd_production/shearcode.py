@@ -136,7 +136,7 @@ def run_esd(config_file):
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
         lens_selection, src_selection, cat_version, n_boot, \
-        cross_cov, com, blindcats = \
+        cross_cov, com, lens_photoz, galSigma, lens_pz_redshift, blindcats = \
             esd_utils.read_config(config_file)
 
     if cat_version == 2:

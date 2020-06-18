@@ -1155,6 +1155,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
     if lens_photoz == True:
         
         # Calculate the lens angular distance bins
+        Dalbins = Dclbins/(1+zlensbins)
         dZl = np.diff(zlensbins)[0]
         
         # Lens redshift PDFs
@@ -1183,8 +1184,8 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
 
         # Matrix multiplication that sums over P(zl), to calculate <Da*Dls/Ds> for each lens
         if com = True:
-            Dclbins = Dclbins*(1+zlensbins)**2.0
-        DaDlsoDs = np.dot(galPZ*dZl, Dclbins*DlsoDs)
+            Dalbins = Dalbins*(1+zlensbins)**2.0
+        DaDlsoDs = np.dot(galPZ*dZl, Dalbins*DlsoDs)
         
         #print('Integrated Da*DlsoDs:', np.shape(DaDlsoDs))
         

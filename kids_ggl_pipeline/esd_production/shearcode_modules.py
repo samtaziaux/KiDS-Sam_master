@@ -1155,7 +1155,6 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
     if lens_photoz == True:
         
         # Calculate the lens angular distance bins
-        Dalbins = Dclbins/(1+zlensbins)
         dZl = np.diff(zlensbins)[0]
         
         # Lens redshift PDFs
@@ -1183,10 +1182,9 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
         #print('Lens P(zl):', np.shape(galPZ))
 
         # Matrix multiplication that sums over P(zl), to calculate <Da*Dls/Ds> for each lens
-        if com == True:
-            DaDlsoDs = np.dot(galPZ*dZl, Dalbins*DlsoDs/((1.0+galZlist)**2.0))
-        if com == False:
-            DaDlsoDs = np.dot(galPZ*dZl, Dalbins*DlsoDs)
+        if com = True:
+            Dclbins = Dclbins*(1+zlensbins)**2.0
+        DaDlsoDs = np.dot(galPZ*dZl, Dclbins*DlsoDs)
         
         #print('Integrated Da*DlsoDs:', np.shape(DaDlsoDs))
         
@@ -1227,9 +1225,6 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galS
     
     # If the lens redshift are photometric, implement the photo-z uncertainty sigma
     if lens_photoz == True:
-        
-        # Calculate the lens angular distance bins
-        Dalbins = Dclbins/(1+zlensbins)
         
         # Lens redshift PDFs
         if lens_pz_redshift == True:

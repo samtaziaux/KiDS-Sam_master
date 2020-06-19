@@ -29,7 +29,7 @@ def read_config(config_file):
     z_epsilon = 0.2
     n_boot = 1
     cross_cov = bool(1)
-    com = bool(0)
+    com = bool(1)
     lens_photoz = bool(0)
     galSigma = 0.0
     lens_pz_redshift = bool(0)
@@ -105,7 +105,7 @@ def read_config(config_file):
             cross_cov = bool(int(line[1]))
         elif line[0] == 'comoving':
             com = bool(int(line[1]))
-        elif line[0] == 'lens_pz_sigma'
+        elif line[0] == 'lens_pz_sigma':
             lens_photoz = bool(1)
             galSigma = float(line[1])
             lens_pz_redshift = bool(int(line[2]))

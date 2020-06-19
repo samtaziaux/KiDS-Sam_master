@@ -1153,7 +1153,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
     
     # If the lens redshift are photometric, implement the photo-z uncertainty sigma
     if lens_photoz == True:
-        
+    
         # Calculate the lens angular distance bins
         Dalbins = Dclbins/(1+zlensbins)
         dZl = np.diff(zlensbins)[0]
@@ -1183,7 +1183,7 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
         #print('Lens P(zl):', np.shape(galPZ))
 
         # Matrix multiplication that sums over P(zl), to calculate <Da*Dls/Ds> for each lens
-        if com = True:
+        if com == True:
             Dalbins = Dalbins*(1+zlensbins)**2.0
         DaDlsoDs = np.dot(galPZ*dZl, Dalbins*DlsoDs)
         
@@ -1414,9 +1414,9 @@ def calc_covariance_output(incosphilist, insinphilist, klist, Rsrc, galweights):
 
     # For each radial bin of each lens we calculate
     # the weighted sum of the tangential and cross shear
-    Cs_tot = np.sum(galweights*klist * -incosphilist, axis=0)
-    Ss_tot = np.sum(-galweights*klist * insinphilist, axis=0)
-    Zs_tot = np.sum(galweights*klist**2, axis=0)
+    Cs_tot = np.sum(-incosphilist*klist*galweights, axis=0)
+    Ss_tot = np.sum(-insinphilist*klist*galweights, axis=0)
+    Zs_tot = np.sum(klist**2*galweights, axis=0)
     
     Rsrc_tot = np.sum(galweights*klist**2 * Rsrc, axis=0)
     
@@ -1642,15 +1642,15 @@ def define_plot(filename, plotlabel, plottitle, plotstyle, \
     # Load the text file containing the stacked profile
     data = np.loadtxt(filename).T
 
-    bias = data[4]
+    bias = data[5]
     bias[bias==-999] = 1
 
     data_x = data[0]
-    data_y = data[1]/bias
+    data_y = data[2]/bias
     data_y[data_y==-999] = np.nan
 
-    errorh = (data[3])/bias # covariance error
-    errorl = (data[3])/bias # covariance error
+    errorh = (data[4])/bias # covariance error
+    errorl = (data[4])/bias # covariance error
     errorh[errorh==-999] = np.nan
     errorl[errorl==-999] = np.nan
 

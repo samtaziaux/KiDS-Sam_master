@@ -491,7 +491,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
     
     if cat_version == 3:
-        print('\nCalculating the lensing efficiency ...')
+        print('\nCalculating the lensing efficiency')
+        if lens_photoz == True:
+            print('using the photometric lenses ...')
+        else:
+            print('using the spectroscopic lenses ...')
 
         srclims = src_selection['Z_B'][1]
         sigma_selection = {}
@@ -596,8 +600,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Printing the made choices
 
     print()
-    print('Using {} cores to create split catalogues'.format(Nsplits), \
-          ', - Center definition = {}'.format(centering))
+    print('Using {} cores to create split catalogues'.format(Nsplits))
     print()
 
     output = 0

@@ -874,7 +874,7 @@ def covariance(theta, R, calculate_covariance=True):
     ingredient_gm, ingredient_gg, ingredient_mm, ingredient_func = False, False, False, False
     hod_observable = None
     for i, observable in enumerate(observables):
-        if observable.ingredient == 'gm':
+        if observable.obstype == 'gm':
             ingredient_gm = True
             observable_gm = observable
             hod_observable_gm = observable.sampling
@@ -885,7 +885,7 @@ def covariance(theta, R, calculate_covariance=True):
             nbins_gm = observable.nbins
             idx_gm = np.s_[nbins:nbins+nbins_gm]
             nbins += nbins_gm
-        if observable.ingredient == 'gg':
+        if observable.obstype == 'gg':
             ingredient_gg = True
             observable_gg = observable
             hod_observable_gg = observable.sampling
@@ -982,12 +982,12 @@ def covariance(theta, R, calculate_covariance=True):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     if ingredient_gm:
-        #rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-        rvir_range_2d_i_gm = [logspace(-2, 2, 15, endpoint=True) for r in R[idx_gm]]
+        rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
+        #rvir_range_2d_i_gm = [logspace(-2, 2, 15, endpoint=True) for r in R[idx_gm]] # for testing
         size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])
     if ingredient_gg:
-        #rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-        rvir_range_2d_i_gg = [logspace(-2, 2, 15, endpoint=True) for r in R[idx_gg]]
+        rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
+        #rvir_range_2d_i_gg = [logspace(-2, 2, 15, endpoint=True) for r in R[idx_gg]] # for testing
         size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])
     #if ingredients['mm']:
         #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!

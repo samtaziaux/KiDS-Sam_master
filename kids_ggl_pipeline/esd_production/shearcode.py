@@ -72,7 +72,6 @@ def run_shearcodes(purpose, nruns, nsplit, nsplits, nobsbin, nobsbins,
     out = shearcov.main(nsplit, nsplits, nobsbin, blindcat, config_file, 0)
     
     # Combine the splits according to the purpose
-    
 
     # Combining the catalog splits to a single output
     if ('bootstrap' in purpose) or ('catalog' in purpose):
@@ -137,7 +136,7 @@ def run_esd(config_file):
         folder, filename, purpose, Rbins, \
         Runit, ncores, lensid_file, lens_weights, lens_binning, \
         lens_selection, src_selection, cat_version, n_boot, \
-        cross_cov, com, blindcats = \
+        cross_cov, com, lens_photoz, galSigma, lens_pz_redshift, blindcats = \
             esd_utils.read_config(config_file)
 
     if cat_version == 2:

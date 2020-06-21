@@ -210,6 +210,7 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     cov = []
     icov = []
     cor = []
+    esd_err = []
     for i in range(Nobsbins):
         cov.append([])
         icov.append([])
@@ -221,7 +222,8 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
             cov[-1].append(cov2d[s_])
             icov[-1].append(icov_in[s_])
             cor[-1].append(cor_in[s_])
-    esd_err = np.diag(cov2d)**0.5
+            if i==j:
+                esd_err.append(np.diag(cov2d[s_])**0.5) # This needs to be in shape (nbins,)
 
     # product of the determinants
     prod_detC = np.linalg.det(cov2d)

@@ -329,6 +329,8 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     lnprior_total = priors.calculate_lnprior(
         lnprior, theta, prior_types, parameters, jfree)
     if not isfinite(lnprior_total):
+        if args.demo:
+            return -inf, fail_value
         return (-inf, *fail_value)
 
     p = update_parameters(theta, parameters, nparams, join, jfree, repeat)
@@ -341,6 +343,8 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
     if not isfinite(chi2):
+        if args.demo:
+            return -inf, fail_value
         return (-inf, *fail_value)
     lnlike = -chi2/2. + likenorm
     if args.demo:

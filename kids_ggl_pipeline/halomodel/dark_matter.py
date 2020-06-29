@@ -206,7 +206,7 @@ def bias_tinker10_func(hmf):
         
     """
     nu = hmf.nu**0.5
-    y = np.log10(hmf.delta_halo)
+    y = np.log10(hmf.mdef_params['overdensity'])
     A = 1.0 + 0.24 * y * np.exp(-(4. / y) ** 4.)
     a = 0.44 * y - 0.88
     B = 0.183

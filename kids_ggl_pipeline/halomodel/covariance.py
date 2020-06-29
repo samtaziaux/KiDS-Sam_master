@@ -48,8 +48,8 @@ from time import time
 from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
 
 from hmf import MassFunction
-from hmf import fitting_functions as ff
-from hmf import transfer_models as tf
+import hmf.mass_function.fitting_functions as ff
+import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance

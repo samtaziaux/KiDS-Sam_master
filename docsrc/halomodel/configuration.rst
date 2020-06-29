@@ -323,7 +323,7 @@ parameters in this section: ::
     [setup]
     return          esd        # one of {'esd', 'kappa', 'sigma', 'esd_wp', 'wp', 'power'}
     delta           200        # adopted overdensity
-    delta_ref       mean       # reference background density. Can be one of {'mean','crit'}
+    delta_ref       SOMean       # reference background density. Can be one of {'FOF', 'SOCritical', 'SOMean', 'SOVirial'}, see `hmf` documentation for details.
     distances       comoving     # whether to work with 'comoving' or 'proper' distances
 
 and other parameters that, if omitted, are assigned their default values. For the time being, these are the :math:`\ln k` and 

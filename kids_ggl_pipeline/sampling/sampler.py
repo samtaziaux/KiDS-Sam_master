@@ -113,16 +113,17 @@ def run(hm_options, options, args):
         backend = emcee.backends.HDFBackend(options['output'])
         if os.path.isfile(options['output']):
             print('Initial size: {0}'.format(backend.iteration))
+        po = backend.get_last_sample()
     else:
         backend = emcee.backends.HDFBackend(options['output'])
         backend.reset(options['nwalkers'], ndim)
+        # set up starting point for all walkers
+        po = sample_ball(
+            names, prior_types, jfree, starting, parameters,
+            options['nwalkers'], ndim)
+            
     if not os.path.isfile(options['output']):
         print('Running a new model. Good luck!\n')
-
-    # set up starting point for all walkers
-    po = sample_ball(
-        names, prior_types, jfree, starting, parameters,
-        options['nwalkers'], ndim)
 
     # burn-in
     if options['nburn'] > 0:

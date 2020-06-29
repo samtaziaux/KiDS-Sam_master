@@ -333,7 +333,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
     # Writing and showing the plot
     #try:
-    shear.write_plot(stackname.replace('_bin_%s'%(binnum), ''), plotstyle)
+    #shear.write_plot(stackname.replace('_bin_%s'%(binnum), ''), plotstyle)
     #except:
         #print 'Failed to write ESD plot for:', stackname 
     

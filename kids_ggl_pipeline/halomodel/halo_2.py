@@ -49,6 +49,7 @@ if sys.version_info[0] == 2:
     range = xrange
 from time import time
 from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
+from astropy.units import Quantity
 
 from hmf import MassFunction
 import hmf.mass_function.fitting_functions as ff
@@ -378,7 +379,10 @@ def model(theta, R, calculate_covariance=False):
         pop_g_mlf = pop_c_mlf + pop_s_mlf
         
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
-                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf)]
+                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf*10.0**hod_observable_mlf)]
+        for i,Ri in enumerate(rvir_range_2d_i_mlf):
+            Ri = Quantity(Ri, unit='Mpc')
+            rvir_range_2d_i_mlf[i] = Ri.to(setup['R_unit']).value
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
                     in zip(mlf_inter, rvir_range_2d_i_mlf)]
         output[idx_mlf] = mlf_out

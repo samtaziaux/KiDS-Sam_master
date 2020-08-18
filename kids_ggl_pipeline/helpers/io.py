@@ -205,7 +205,11 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
             else:
                 Nrbins[i] = n - nexcl
 
-    icov_in = np.linalg.inv(cov2d)
+    try:
+        icov_in = np.linalg.inv(cov2d)
+    except:
+        icov_in = np.linalg.pinv(cov2d)
+        print('\nStandard matrix inversion failed, using the Moore-Penrose pseudo-inverse.\n')
     cor_in = cov2d/np.sqrt(np.outer(np.diag(cov2d), np.diag(cov2d.T)))
     cov = []
     icov = []

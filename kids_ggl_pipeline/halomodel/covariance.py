@@ -91,6 +91,15 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 
 
 def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
+    """
+    This uses the sigma_crit calculation from ESD extraction part of the code,
+        that is accounting for KiDS specific setup.
+
+    Parameters
+    ----------
+    Check the relevant files in esd_production!
+
+    """
     
     from kids_ggl_pipeline.esd_production.shearcode_modules import calc_Sigmacrit
     import astropy.io.fits as fits
@@ -108,7 +117,7 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
 
     sigma_selection = {}
     # 10 lens redshifts for calculation of Sigma_crit
-    lens_redshifts = np.linspace(0.0, 0.5, 10, endpoint=True)
+    lens_redshifts = np.arange(0.001, srclim-z_epsilon, 0.05)
     lens_comoving = np.array((hmf[0].cosmo.comoving_distance(lens_redshifts).to('pc')).value)
             
             
@@ -121,7 +130,10 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
                     
         srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, weights=spec_weight_k, density=1)
         srcPZ_k = srcPZ_k/srcPZ_k.sum()
-        k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), Dcsbins, srcPZ_k, 3, Dc_epsilon)
+        #k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), Dcsbins, srcPZ_k, 3, Dc_epsilon) #old!
+        k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
+                        Dcsbins, 0.0, 0.0, False, 0.0, False, \
+                        srcPZ_k, 3, Dc_epsilon, np.array([lens_redshifts[i]]), True)
             
     k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -519,7 +531,7 @@ def calc_cov_non_gauss(params):
     min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
     maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
     # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
+    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
     if nk > 1000:
         nk = 1000
     
@@ -562,8 +574,8 @@ def cov_non_gauss(radius_1, radius_2, T1h, T234h, b_g, W_p, volume, cov_out, npr
                 for d in range(len(radius_2[b])):
                     paramlist.append([a, b, c, d])
                     
-    for i in paramlist:
-        i.extend([radius_1, radius_2, T1h, T234h, b_g, W_p, volume, rho_bg, ingredient, idx_1, idx_2, size_1, size_2])
+    for p in paramlist:
+        p.extend([radius_1, radius_2, T1h, T234h, b_g, W_p, volume, rho_bg, ingredient, idx_1, idx_2, size_1, size_2])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.imap(calc_cov_non_gauss, paramlist):
@@ -603,7 +615,7 @@ def calc_cov_ssc(params):
     min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
     maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
     # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
+    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
     #nk = 10000
     
     lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
@@ -671,8 +683,8 @@ def cov_ssc(radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm,
                 for d in range(len(radius_2[b])):
                     paramlist.append([a, b, c, d])
                     
-    for i in paramlist:
-        i.extend([radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2])
+    for p in paramlist:
+        p.extend([radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2])
 
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_ssc, paramlist):
@@ -710,7 +722,7 @@ def calc_cov_gauss(params):
     min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
     maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
     # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
+    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
     #nk = 10000
                 
     lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
@@ -778,9 +790,9 @@ def cov_gauss(radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, sh
             for c in range(len(radius_1[a])):
                 for d in range(len(radius_2[b])):
                     paramlist.append([a, b, c, d])
-    
-    for i in paramlist:
-        i.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2])
+
+    for p in paramlist:
+        p.extend([radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2])
     
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(calc_cov_gauss, paramlist):
@@ -815,7 +827,7 @@ def aw_func(params):
     min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
     maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
     # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j)))))
+    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
     #nk = 10000
                 
     lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
@@ -840,8 +852,8 @@ def calc_aw(radius_1, radius_2, W_p, size_1, size_2, out, nproc):
                 for d in range(len(radius_2[b])):
                     paramlist.append([a, b, c, d])
 
-    for i in paramlist:
-        i.extend([radius_1, radius_2, W_p, size_1, size_2])
+    for p in paramlist:
+        p.extend([radius_1, radius_2, W_p, size_1, size_2])
         
     pool = multi.Pool(processes=nproc)
     for i, j, val in pool.map(aw_func, paramlist):
@@ -1010,9 +1022,16 @@ def covariance(theta, R, calculate_covariance=True):
     cross = covar['cross']
     subtract_randoms = covar['subtract_randoms'] #False # if randoms are not subtracted, this will increase the error bars
     nproc = covar['threads'] #4
+    
+    z_epsilon = covar['z_epsilon']
+    z_max = covar['z_max']
+    spec_z_path = covar['specz_file']
 
-    #sigma_crit = sigma_crit_kids(hmf, z, 0.2, 0.9, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0 / (1.0+z)**2.0 # KiDS specific sigma_crit, accounting for n(z)!
-    sigma_crit = sigma_crit_func(cosmo_model, z, z_kids)
+    if covar['kids_sigma_crit']:
+        # KiDS specific sigma_crit, accounting for n(z)!
+        sigma_crit = sigma_crit_kids(hmf, z, z_epsilon, z_max, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0
+    else:
+        sigma_crit = sigma_crit_func(cosmo_model, z, z_kids)
     
     #eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0 # not used
     eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0 # convert to radians
@@ -1027,6 +1046,8 @@ def covariance(theta, R, calculate_covariance=True):
     
         
     print('Survey and observational details set.')
+    if covar['kids_sigma_crit']:
+        print('Using KiDS specific sigma_crit setup.')
     
     
     # Calculating halo model
@@ -1433,7 +1454,7 @@ def covariance(theta, R, calculate_covariance=True):
     
     all = np.array([size_r_gm, size_r_gg, rvir_range_2d_i_gm, rvir_range_2d_i_gg, cov_esd_gauss, cov_esd_non_gauss, cov_esd_ssc, cov_wp_gauss, cov_wp_non_gauss, cov_wp_ssc, cov_esd_tot, cov_wp_tot, cov_cross_tot, cov_block, aw_values, radius**2.0], dtype=object)
     
-    np.save('/home/dvornik/test_pipeline2/covariance/cov_all.npy', all)
+    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/cov_all.npy', all)
     #"""
     
     if ingredient_gm:

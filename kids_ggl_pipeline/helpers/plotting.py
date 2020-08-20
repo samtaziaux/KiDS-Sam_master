@@ -90,7 +90,7 @@ def signal(R, y, yerr, Nobsbins, model=None, observable='', fig=None, axes=None,
         # from within the model
         if Ri[0] == 0 and len(Ri) == len(yi) + 1:
             Ri = Ri[1:]
-        ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10)
+        ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10, fillstyle='none')
         if len(fi) == len(Ri):
             ax.plot(Ri, fi, 'r-', lw=3)
         ax.set_xscale('log')

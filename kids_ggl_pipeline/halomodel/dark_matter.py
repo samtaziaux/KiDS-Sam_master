@@ -196,7 +196,6 @@ def bias_ps(hmf, r_x):
         
     """
     bias = 1.0+(hmf.nu-1.0)/(hmf.growth*hmf.delta_c)
-    #print ("Bias OK.")
     return bias
 
 

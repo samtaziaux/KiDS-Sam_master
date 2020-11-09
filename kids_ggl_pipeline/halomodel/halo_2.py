@@ -249,7 +249,7 @@ def model(theta, R, calculate_covariance=False):
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
 
     mass_range = hmf[0].m
-    rho_bg = rho_mean if setup['delta_ref'] == 'mean' \
+    rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
         else rho_mean / omegam
     # same as with redshift
     rho_bg = expand_dims(rho_bg, -1)

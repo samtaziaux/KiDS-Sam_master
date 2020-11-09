@@ -17,9 +17,9 @@ from .decorators import logfunc
 
 @logfunc
 def double_powerlaw(M, logM0, logM1, a, b, norm=1.0, return_log=True):
-    m = M / 10**logM1
+    m = M / 10.0**logM1
     norm = log10(norm)
-    return norm + logM0 + a*log10(m) - (a-b)*log10(1+m)
+    return norm + logM0 + a*log10(m) - (a-b)*log10(1.0+m)
 
 
 @logfunc
@@ -38,6 +38,6 @@ def powerlaw_mz(M, z, logM0, z0, a, b, c, norm=1.0, return_log=True):
     norm = log10(norm)
     if iterable(z):
         z = expand_dims(z, -1)
-    return  norm + (a + b*(log10(M)-logM0)) + c*log10((1+z)/(1+z0))
+    return  norm + (a + b*(log10(M)-logM0)) + c*log10((1.0+z)/(1.0+z0))
 
 

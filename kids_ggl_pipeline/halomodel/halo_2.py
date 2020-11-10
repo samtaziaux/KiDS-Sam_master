@@ -365,6 +365,10 @@ def model(theta, R, calculate_covariance=False):
                 'Number of redshift bins should be equal to the number of observable bins!')
         hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
+        
+        pop_c_mlf = np.zeros((nbins_mlf,mass_range.size))
+        pop_s_mlf = np.zeros((nbins_mlf,mass_range.size))
+        
         if ingredients['centrals']:
             pop_c_mlf = hod.mlf(
                 hod_observable_mlf, dndm_mlf, mass_range, c_mor[0], c_scatter[0],

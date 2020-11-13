@@ -15,23 +15,28 @@ def axlabel(return_value):
               'kappa': r'\kappa',
               'power': r'\P(k)',
               'sigma': r'\Sigma',
-              'xi': r'\xi'}
+              'xi': r'\xi',
+              'wp': r'w_{p}',
+              'esd_wp': r'\Delta\Sigma\, /\, w_{p}'}
     return labels[return_value]
 
 
-def covariance(R, cov, output=None):
+def covariance(R, cov, cor, output=None):
     # still need to add axes labels (complicated by the fact that
     # bins aree usually in log space), and also add a colorbar
     # with a label i.e., this function should probably take `setup`
     # as an (optional) argument
     fig, axes = plt.subplots(
-        figsize=(10,8), nrows=cov.shape[0], ncols=cov.shape[0])
-    vmin, vmax = np.percentile(cov, [1,99])
+        figsize=(10,8), nrows=len(cov), ncols=len(cov))
+    #vmin, vmax = np.percentile(cov, [1,99])
+    vmin, vmax = -1.0, 1.0
     if len(R) == 1:
         axes = [[axes]]
     for m, axm in enumerate(axes):
         for n, axmn in enumerate(axm):
-            axmn.imshow(cov[m][-n-1], origin='lower', interpolation='nearest',
+            #axmn.imshow(cov[m][-n-1], origin='lower', interpolation='nearest',
+            #            vmin=vmin, vmax=vmax)
+            axmn.imshow(cor[m][-n-1], origin='lower', interpolation='nearest',
                         vmin=vmin, vmax=vmax)
     fig.tight_layout(pad=0.4)
     if output:
@@ -57,7 +62,7 @@ def save(output, fig=None, name='', tight=True, close=True,
     return
 
 
-def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
+def signal(R, y, yerr, Nobsbins, model=None, observable='', fig=None, axes=None,
            output=None, **save_kwargs):
     """
     observable should be the name of the thing on the y axis
@@ -65,11 +70,9 @@ def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
     how exactly should we decide when the y axis should be
     log scale?
     """
-    if len(R.shape) == 1:
+    if Nobsbins == 1:
         R = [R]
-    if len(y.shape) == 1:
         y = [y]
-    if len(yerr.shape) == 1:
         yerr = [yerr]
     n = len(R)
     if axes is None:
@@ -87,7 +90,7 @@ def signal(R, y, yerr, model=None, observable='', fig=None, axes=None,
         # from within the model
         if Ri[0] == 0 and len(Ri) == len(yi) + 1:
             Ri = Ri[1:]
-        ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10)
+        ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10, fillstyle='none')
         if len(fi) == len(Ri):
             ax.plot(Ri, fi, 'r-', lw=3)
         ax.set_xscale('log')

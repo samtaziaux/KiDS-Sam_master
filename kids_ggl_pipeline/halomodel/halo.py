@@ -47,22 +47,20 @@ from time import time
 from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
 
 from hmf import MassFunction
-from hmf import fitting_functions as ff
-from hmf import transfer_models as tf
+import hmf.mass_function.fitting_functions as ff
+import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
 from . import profiles
 from .tools import (
-    Integrate, Integrate1, extrap1d, extrap2d, f_k, fill_nan, gas_concentration,
-    load_hmf, star_concentration, virial_mass, virial_radius)
+    fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
-    DM_mm_spectrum, GM_cen_spectrum, GM_sat_spectrum,
-    delta_NFW, MM_analy, GM_cen_analy, GM_sat_analy, GG_cen_analy,
-    GG_sat_analy, GG_cen_sat_analy, miscenter, TwoHalo)
+    mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm)
 from .. import hod
 
 
@@ -236,7 +234,7 @@ def model(theta, R, calculate_covariance=False):
         pop_s = np.zeros(pop_c.shape)
 
     pop_g = pop_c + pop_s
-
+    
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal = hod.nbar(dndm, pop_g, mass_range)
@@ -246,8 +244,10 @@ def model(theta, R, calculate_covariance=False):
     """Power spectra"""
 
     # damping of the 1h power spectra at small k
-    F_k1 = f_k(k_range_lin)
-    #F_k1 = 1
+    F_k1 = sp.erf(k_range_lin/0.1)
+    #F_k2 = sp.erfc(k_range_lin/1500.0) # This should be replaced with halo exclusion.
+    # i.e. no 2h term on scales smaller than average halo viriral radius
+    F_k2 = np.ones_like(k_range_lin)
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         uk_c = nfw.uk(
@@ -262,7 +262,7 @@ def model(theta, R, calculate_covariance=False):
         uk_s = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin, concentration_sat, rho_bg,
             setup['delta'])
-        uk_s = uk_s/uk_s[:,0][:,None]
+        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
     elif integrate_zlens:
         uk_s = np.ones((nbins,z.size//nbins,mass_range.size,k_range_lin.size))
     else:
@@ -271,13 +271,13 @@ def model(theta, R, calculate_covariance=False):
     # If there is miscentring to be accounted for
     if ingredients['miscentring']:
         #ti = time()
-        p_off, r_off = c_miscent[1:]
+        p_off, r_off = c_miscent#[1:]
         # these should be implemented as iterables
         #if not iterable(p_off):
             #p_off = array([p_off]*nbins)
         #if not iterable(r_off):
             #r_off = array([r_off]*nbins)
-        uk_c = uk_c * miscenter(
+        uk_c = uk_c * nfw.miscenter(
             p_off, r_off, expand_dims(mass_range, -1),
             expand_dims(rvir_range_lin, -1), k_range_lin,
             expand_dims(concentration, -1), uk_c.shape)
@@ -296,17 +296,16 @@ def model(theta, R, calculate_covariance=False):
              #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
              #in zip(rvir_range_lin, hmf, ngal, pop_g)])
         """
-        Pg_2h = bias * array(
-            [TwoHalo(hmf_i, ngal_i, pop_g_i,
-                     rvir_range_lin_i, mass_range)[0]
-             for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-             in zip(rvir_range_lin, hmf, expand_dims(ngal, -1),
+        Pgm_2h = F_k2 * bias * array(
+            [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+             for hmf_i, ngal_i, pop_g_i
+             in zip(hmf, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
         #print('Pg_2h in {0:.2e} s'.format(time()-ti))
     #elif integrate_zlens:
         #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
     else:
-        Pg_2h = np.zeros((nbins,setup['lnk_bins']))
+        Pgm_2h = np.zeros((nbins,setup['lnk_bins']))
         #if integrate_zlens:
             #Pg_2h = Pg_2h[:,None]
     #print('Pg_2h =', Pg_2h.shape)
@@ -316,29 +315,29 @@ def model(theta, R, calculate_covariance=False):
 
     if ingredients['centrals']:
         #ti = time()
-        Pg_c = F_k1 * GM_cen_analy(
+        Pgm_c = F_k1 * gm_cen_analy(
             dndm, uk_c, rho_bg, pop_c, ngal, mass_range)
         #print('Pg_c in {0:.2e} s'.format(time()-ti))
     elif integrate_zlens:
-        Pg_c = np.zeros((z.size,nbins,setup['lnk_bins']))
+        Pgm_c = np.zeros((z.size,nbins,setup['lnk_bins']))
     else:
-        Pg_c = np.zeros((nbins,setup['lnk_bins']))
+        Pgm_c = np.zeros((nbins,setup['lnk_bins']))
     #else:
         #Pg_c = np.zeros(Pg_2h.shape)
     #print('Pg_c =', Pg_c.shape)
 
     if ingredients['satellites']:
         #ti = time()
-        Pg_s = F_k1 * GM_sat_analy(
+        Pgm_s = F_k1 * gm_sat_analy(
             dndm, uk_c, uk_s, rho_bg, pop_s, ngal, mass_range)
         #print('Pg_s in {0:.2e} s'.format(time()-ti))
     else:
-        Pg_s = np.zeros(Pg_c.shape)
+        Pgm_s = np.zeros(Pgm_c.shape)
 
     #print('Pg_i =', Pg_c.shape, Pg_s.shape, Pg_2h.shape)
     #print('nan(Pg_i) =', np.isnan(Pg_c).sum(), np.isnan(Pg_s).sum(),
           #np.isnan(Pg_2h).sum())
-    Pg_k = Pg_c + Pg_s + Pg_2h
+    Pgm_k = Pgm_c + Pgm_s + Pgm_2h
     #print('Pg_k =', Pg_k.shape, '- nan:', np.isnan(Pg_k).sum())
 
     # finally integrate over (weight by, really) lens redshift
@@ -353,14 +352,19 @@ def model(theta, R, calculate_covariance=False):
         # note this doesn't include the point mass! also, we probably
         # need to return k
         if integrate_zlens:
-            Pg_k = np.sum(z*Pg_k, axis=1) / intnorm
-        return [Pg_k, meff]
-    if integrate_zlens:
-        P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                    for logPg_ij in logPg_i] for logPg_i in np.log(Pg_k)]
-    else:
+            Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
         P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                   for Pg_k_i in Pg_k]
+            for Pg_k_i in Pgm_k]
+    else:
+        if integrate_zlens:
+            P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
+                    for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
+        else:
+            P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
+                   for Pg_k_i in Pgm_k]
+    if setup['return'] == 'power':
+        Pgm_out = [exp(P_i(np.log(rvir_range_2d_i))) for P_i in P_inter]
+        return [Pgm_out, meff]
 
     """
     for i, Pk in enumerate(Pg_k):
@@ -399,7 +403,9 @@ def model(theta, R, calculate_covariance=False):
     if setup['return'] == 'xi':
         if integrate_zlens:
             xi2 = np.sum(z*xi2, axis=1) / intnorm
-        return [xi2, meff]
+        xi_out_i = array([UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0) for si in zip(xi2)])
+        xi_out = np.array([x_i(rvir_range_2d_i) for x_i in xi_out_i])
+        return [xi_out, meff]
 
     debug = False
     if debug:
@@ -459,7 +465,7 @@ def model(theta, R, calculate_covariance=False):
              #for xi2_i, rho_i in zip(xi2, rho_bg)])
             [sigma(xi2_i, rho_i, rvir_range_3d, rvir_sigma)
              for xi2_i, rho_i in zip(xi2, rho_bg)])
-
+    
     #print('surf_dens2 in {0:.2e} s'.format(time()-ti))
     #if setup['return'] == 'kappa':
         #print('sigma_crit =', sigma_crit(cosmo_model, z, zs).T)
@@ -502,11 +508,11 @@ def model(theta, R, calculate_covariance=False):
             if setup['return'] == 'kappa' else nz
         zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
         #print('zeff =', zeff)
-
+        
     # in Msun/pc^2
     if not setup['return'] == 'kappa':
         surf_dens2 /= 1e12
-
+    
     #print('surf_dens2 =', surf_dens2.shape)
     # fill/interpolate nans
     surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan

@@ -22,7 +22,6 @@ from os.path import isfile
 from scipy import stats
 from six import string_types
 from time import ctime, time
-from multiprocessing import Pool
 
 # Python 2/3 compatibility
 if sys.version_info[0] == 2:
@@ -53,12 +52,14 @@ def run(hm_options, options, args):
     assert len(starting) == ndim, \
         'ERROR: Not all starting points defined for free parameters.'
 
-    if args.mock:
+    if args.cov or args.mock:
         #mock_options = parameters[1][parameters[0].index('mock')]
         mock(
             args, function, options, setup,# mock_options,
             parameters, join, starting, jfree, repeat, nparams)
         return
+
+    print('Starting values =', starting)
 
     # load data files
     Ndatafiles = len(options['data'][0])
@@ -68,35 +69,16 @@ def run(hm_options, options, args):
     #val1 = np.append(val1, [Rrange, angles])
     cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
+    #Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
+    #rng_rbins = range(Nrbins) #not used
 
     metadata, meta_names, fits_format = \
         sampling_utils.initialize_metadata(options, output, esd.shape)
     # some additional requirements of lnprob
-    #fail_value = sampling_utils.initialize_fail_value(metadata)
+    fail_value = sampling_utils.initialize_fail_value(metadata)
     # initialize
     lnprior = np.zeros(ndim)
-
-    names_extend = ['lnprior','chi2','lnlike']
-    meta_names.extend(names_extend)
-    # this needs to be slightly more flexible!
-    formats = [np.dtype((np.float64, esd[i].shape)) for i in rng_obsbins] + \
-              [np.float64 for i in rng_obsbins] + [np.float64, np.float64, np.float64]
-    dtype = np.dtype({'names':meta_names, 'formats':formats})
-    fail_value = np.zeros(1, dtype=dtype)
-    for n in names_extend:
-        fail_value[n] = 9999
-    fail_value = list(fail_value[0])
-    
-    if args.cov:
-        # We need to make sure one can also read in the mock data to calculate the covariance for!
-        cov_calc(
-            args, function, R, options, setup,
-            parameters, join, starting, jfree, repeat, nparams)
-        return
-        
-    if not options['resume']:
-        print('Starting values =', starting)
 
     # are we just running a demo?
     if args.demo:
@@ -110,71 +92,55 @@ def run(hm_options, options, args):
     hdrfile = io.write_hdr(options, function, parameters, names, prior_types)
 
     # initialize sampler
-    if options['resume']:
-        backend = emcee.backends.HDFBackend(options['output'])
-        if os.path.isfile(options['output']):
-            print('Initial size: {0}'.format(backend.iteration))
-        po = backend.get_chain(discard=backend.iteration - 1)[0]
-    else:
-        backend = emcee.backends.HDFBackend(options['output'])
-        backend.reset(options['nwalkers'], ndim)
-        # set up starting point for all walkers
-        po = sample_ball(
-            names, prior_types, jfree, starting, parameters,
-            options['nwalkers'], ndim)
-            
-    if not os.path.isfile(options['output']):
-        print('Running a new model. Good luck!\n')
+    sampler = emcee.EnsembleSampler(
+        options['nwalkers'], ndim, lnprob, threads=options['threads'],
+        args=(R,esd,icov,function,names,prior_types[jfree],
+              parameters,nparams,join,jfree,repeat,lnprior,likenorm,
+              rng_obsbins,fail_value,array,dot,inf,zip,outer,pi))
+
+    # set up starting point for all walkers
+    po = sample_ball(
+        names, prior_types, jfree, starting, parameters,
+        options['nwalkers'], ndim)
 
     # burn-in
-    if (options['nburn'] > 0) and not (options['resume']):
-        with Pool(processes=options['threads']) as pool:
-            sampler = emcee.EnsembleSampler(
-                 options['nwalkers'], ndim, lnprob,
-                 args=(R,esd,icov,function,names,prior_types[jfree],
-                       parameters,nparams,join,jfree,repeat,lnprior,likenorm,
-                       rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-                 pool=pool, blobs_dtype=dtype)
-            pos = sampler.run_mcmc(po, options['nburn'], progress=True)
+    if options['nburn'] > 0:
+        pos, prob, state, blobs = sampler.run_mcmc(po, options['nburn'])
         sampler.reset()
         print('{1}: {0} Burn-in steps finished'.format(
             options['nburn'], ctime()))
     else:
         pos = po
 
-    index = 0
-    autocorr = np.empty(options['nsteps'])
-    # This will be useful to testing convergence
-    old_tau = np.inf
-    with Pool(processes=options['threads']) as pool:
-        sampler = emcee.EnsembleSampler(
-             options['nwalkers'], ndim, lnprob,
-             args=(R,esd,icov,function,names,prior_types[jfree],
-                   parameters,nparams,join,jfree,repeat,lnprior,likenorm,
-                   rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-             pool=pool, backend=backend, blobs_dtype=dtype)
-        #result = sampler.run_mcmc(pos, options['nsteps'], thin_by=options['thin'], progress=True, store=True)
-        for sample in sampler.sample(pos, iterations=options['nsteps'],
-                                     thin_by=options['thin'], progress=True, store=True):
-            if options['stop_when_converged']:
-                # Only check convergence every 100 steps
-                if sampler.iteration % 100:
-                    continue
-                # Compute the autocorrelation time so far
-                # Using tol=0 means that we'll always get an estimate even
-                # if it isn't trustworthy
-                tau = sampler.get_autocorr_time(tol=0)
-                autocorr[index] = np.mean(tau)
-                index += 1
-                # Check convergence
-                # should we offer more flexibility here?
-                converged = np.all(tau * options['autocorr_factor'] < sampler.iteration) # n-times autocorrelation time as a measure of convergence
-                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01) # and chains change less than 1%
-                if converged:
-                    break
-                old_tau = tau
+    # incrementally save output
+    # this array contains lnprior, chi2, lnlike
+    chi2 = [zeros(options['nwalkers']*options['nsteps']//options['thin'])
+            for i in range(3)]
+    nwritten = 0
+    for i, result in enumerate(
+            sampler.sample(pos, iterations=options['nsteps'],
+                           thin=options['thin'])):
+        if i > 0 and ((i+1)*options['nwalkers'] \
+                      > options['nwalkers']*nwritten + options['update']):
+            out = io.write_chain(
+                sampler, options, chi2, names, jfree, output, metadata, i,
+                nwritten, Nobsbins, fail_value)
+            metadata, nwritten = out
 
     io.finalize_hdr(sampler, hdrfile)
+
+    tmp = options['output'].replace('.fits', '.temp.fits')
+    if os.path.isfile(options['output']):
+        cmd = 'mv {0} {1}'.format(options['output'], tmp)
+        print(cmd)
+        os.system(cmd)
+    print('Saving everything to {0}...'.format(options['output']))
+    #write_to_fits(
+    io.write_chain(
+        sampler, options, chi2, names, jfree, output, metadata, i+1,
+        nwritten, Nobsbins, fail_value)
+    if os.path.isfile(tmp):
+        os.remove(tmp)
     print('Everything saved to {0}!'.format(options['output']))
 
     return
@@ -188,7 +154,7 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     lnlike, model = lnprob(
         starting, R, esd, icov, function, names, prior_types[jfree],
         parameters, nparams, join, jfree, repeat, lnprior, 0,
-        rng_obsbins, fail_value, array, dot, inf, zip, outer, pi, args)
+        rng_obsbins, fail_value, array, dot, inf, zip, outer, pi)
     print('\nDemo run took {0:.2e} seconds'.format(time()-to))
     chi2 = model[-2]
     if chi2 == fail_value[-2]:
@@ -204,7 +170,7 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     print('-------------')
     im = 0
     ip = 0
-    for i, name in enumerate(meta_names[:-3]):
+    for i, name in enumerate(meta_names):
         print('{0:<20s}  {1}'.format(name, model[im][ip]))
         ip += 1
         if ip == len(model[im]):
@@ -213,17 +179,10 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     print()
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
     print()
-
+    # make plots
     output = '{0}_demo_{1}.{2}'.format(
         '.'.join(options['output'].split('.')[:-1]), setup['return'],
         plot_ext)
-    # if necessary, create a demo folder within the output path
-    path, output = os.path.split(output)
-    if 'demo' not in os.path.split(path)[1]:
-        path = os.path.join(path, 'demo')
-    os.makedirs(path, exist_ok=True)
-    output = os.path.join(path, output)
-    # make plots
     plotting.signal(
         R, esd, esd_err, rng_obsbins, model=model[0], observable=setup['return'],
         output=output)
@@ -239,6 +198,9 @@ def mock(args, function, options, setup, parameters, join, starting, jfree,
          repeat, nparams):
     """Generate mock observations given a set of cosmological and
     astrophysical parameters, as well as the observational setup
+
+    Perhaps this function can be used to generate the covariance
+    including astrophysical terms through the --cov cmd line option
 
     steps:
     * call halo.model just like in lnprob
@@ -264,36 +226,11 @@ def mock(args, function, options, setup, parameters, join, starting, jfree,
         outputs = io.write_signal(R, model[0], options, setup)
         print('Saved mock signal to {0}'.format(outputs))
     return
-    
-    
-def cov_calc(args, function, R, options, setup, parameters, join, starting, jfree,
-            repeat, nparams):
-    
-    """Generate  the covariance
-    including astrophysical terms through the --cov cmd line option
-
-    steps:
-    * call covariance.covariance just like in halo.model in lnprob
-    * saves covariance as 2D matrix to a text file as specified in the config file
-    """
-    
-    to = time()
-    p = update_parameters(starting, parameters, nparams, join, jfree, repeat)
-    # run model!
-    covariance = function(p, R, calculate_covariance=args.cov)
-    print('\nCovariance calculation took {0:.2e} seconds'.format(time()-to))
-    
-    # save
-    output = parameters[1][parameters[0].index('covariance')]['output']
-    
-    np.savetxt(output, covariance, header='2D analytical covariance matrix', comments='# ')
-    print('Saved covariance to {0}'.format(output))
-    return
 
 
 def lnprob(theta, R, esd, icov, function, names, prior_types,
            parameters, nparams, join, jfree, repeat, lnprior, likenorm,
-           rng_obsbins, fail_value, array, dot, inf, zip, outer, pi, args):
+           rng_obsbins, fail_value, array, dot, inf, zip, outer, pi):
     """
     Probability of a model given the data, i.e., log-likelihood of the data
     given a model, times the prior on the model parameters.
@@ -328,7 +265,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     lnprior_total = priors.calculate_lnprior(
         lnprior, theta, prior_types, parameters, jfree)
     if not isfinite(lnprior_total):
-        return (-inf, *fail_value)
+        return -inf, fail_value
 
     p = update_parameters(theta, parameters, nparams, join, jfree, repeat)
     # run model!
@@ -340,18 +277,13 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
     if not isfinite(chi2):
-        return (-inf, *fail_value)
+        return -inf, fail_value
     lnlike = -chi2/2. + likenorm
-    if args.demo:
-        model.extend([lnprior_total, chi2, lnlike])
-        return lnlike + lnprior_total, model
-    else:
-        for i,m in enumerate(model[0]):
-            model[0][i] = m.astype(np.float64)
-        model.extend([[lnprior_total], [chi2], [lnlike]])
-        flat = [m for inner_list in model for m in inner_list]
-        post = lnlike + lnprior_total
-        return (post, *flat)
+    model.append(lnprior_total)
+    model.append(chi2)
+    model.append(lnlike)
+    return lnlike + lnprior_total, model
+
 
 
 def print_opening_msg(args, options):
@@ -363,10 +295,7 @@ def print_opening_msg(args, options):
         print(' ** Running demo only **')
     elif args.mock:
         print(' ** Generating mock observations **')
-    elif options['resume']:
-        print('** Resuming sampler from last sample **')
-    elif isfile(options['output']) and not args.force_overwrite \
-            and not options['resume']:
+    elif isfile(options['output']) and not args.force_overwrite:
         msg = 'Warning: output file {0} exists. Overwrite? [y/N] '.format(
             options['output'])
         answer = input(msg)

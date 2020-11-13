@@ -135,13 +135,13 @@ def power_to_corr(power_func, R):
         maxk = max(501.5 * np.pi / r, min_k)
 
         # Now we calculate the requisite number of steps to have a good dk at hi-k.
-        nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r))))
+        nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r)))))
         #nk = 10000
 
         lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
         P = power_func(lnk)
         integ = np.exp(P) * (np.exp(lnk) ** 2.0) * np.sin(np.exp(lnk) * r) / r
-        corr[i] = (0.5 / (np.pi ** 2.0)) * intg.simps(integ, dx=dlnk)
+        corr[i] = (0.5 / (np.pi ** 2.0)) * simps(integ, dx=dlnk)
 
     return corr
 
@@ -189,6 +189,8 @@ def sigma(corr, rho_mean, r_i, r_x):
         print('interpolated in {0:.2e} s'.format(time()-to))
     integ = lambda x, rxi: (10**c(log10(rxi/x))-1) / \
                            (x*x * (1-x*x)**0.5)
+    #integ = lambda x, rxi: 10**c(log10(rxi/x)) / \
+    #                        (x*x * (1-x*x)**0.5)
     #@jit(float64(float64, float64, float64, float64), nopython=False)#, cache=True)
     #def integ(x, rxi, r_i, corr):
         #c = UnivariateSpline(_log10(r_i), _log10(1+corr), s=0, ext=0)
@@ -199,7 +201,7 @@ def sigma(corr, rho_mean, r_i, r_x):
     #def integ(x, rxi):
         #return 10**c(_log10(rxi/x)) / (x**2*(1-x**2)**0.5)
     to = time()
-    s = np.array([quad(integ, 0, 1, args=(rxi,))[0] for rxi in r_x])
+    s = np.array([quad(integ, 0, 1, args=(rxi,), full_output=1)[0] for rxi in r_x])
     if debug:
         print('integrated in {0:.2e} s'.format(time()-to))
         print('s =', s)
@@ -237,17 +239,20 @@ def d_sigma(sigma, r_i, r_x):
         s[i] = cumtrapz(np.nan_to_num(integ(x_int)), x_int, initial=None)[-1]
     # Not subtracting sigma because the range is different!
     # Subtracting interpolated function!
-    d_sig = ((2.0)*s - 10.0**(c(np.log10(r_x))))
+    d_sig = (2.0*s - 10.0**(c(np.log10(r_x))))
     return d_sig
 
 
 def wp(corr, r_i, r_x):
     _log10 = log10
-    c = UnivariateSpline(_log10(r_i), _log10(1+corr), s=0, ext=0)
+    #c = UnivariateSpline(_log10(r_i), _log10(1+corr), s=0, ext=0)
+    #integ = lambda x, rxi: 10.0**c(_log10(rxi/x)) / (x**2 * (1-x**2)**0.5)
     
-    integ = lambda x, rxi: 10.0**c(_log10(rxi/x)) / (x**2 * (1-x**2)**0.5)
+    c = UnivariateSpline(log10(r_i), log10(1+corr), s=0, ext=0)
+    integ = lambda x, rxi: (10**c(log10(rxi/x))-1) / \
+                           (x*x * (1-x*x)**0.5)
+    
     s = np.array([quad(integ, 0, 1, args=(rxi,), full_output=1)[0] for rxi in r_x])
-        
     return 2.0 * s * r_x
 
 
@@ -255,10 +260,7 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
     # See Cacciato et al. 2012, equations 21 - 28
     # Gives the same resutls as wp above. :/
     
-    #import scipy.integrate as intg
-    
-    _log10 = log10
-    c = UnivariateSpline(_log10(r_i), corr, s=0, ext=1)
+    c = UnivariateSpline(log10(r_i), corr, s=0, ext=1)
     
     beta = omegam**0.6 / bias
     
@@ -272,18 +274,18 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
         
         x_int = np.linspace(0.0, r_i[i], 10000, endpoint=True)
         
-        int_j3 = lambda x: c(_log10(x))*x**2.0
-        int_j5 = lambda x: c(_log10(x))*x**4.0
+        int_j3 = lambda x: c(log10(x))*x**2.0
+        int_j5 = lambda x: c(log10(x))*x**4.0
     
         J_3[i] = (1.0/r_i[i]**3.0) * intg.cumtrapz((int_j3(x_int)), x_int, initial=None)[-1]
         J_5[i] = (1.0/r_i[i]**5.0) * intg.cumtrapz((int_j5(x_int)), x_int, initial=None)[-1]
     
-    J_3_interpolated = UnivariateSpline(_log10(r_i), J_3, s=0, ext=1)
-    J_5_interpolated = UnivariateSpline(_log10(r_i), J_5, s=0, ext=1)
+    J_3_interpolated = UnivariateSpline(log10(r_i), J_3, s=0, ext=1)
+    J_5_interpolated = UnivariateSpline(log10(r_i), J_5, s=0, ext=1)
     
-    xi_0 = lambda x: (1.0 + (2.0/3.0) * beta + (1.0/5.0) * beta**2.0) * c(_log10(x))
-    xi_2 = lambda x: ((4.0/3.0) * beta + (4.0/7.0) * beta**2.0) * (c(_log10(x)) - 3.0*J_3_interpolated(_log10(x)))
-    xi_4 = lambda x: ((8.0/35.0) * beta**2.0) * (c(_log10(x)) + (15.0/2.0)*J_3_interpolated(_log10(x)) - (35.0/2.0)*J_5_interpolated(_log10(x)))
+    xi_0 = lambda x: (1.0 + (2.0/3.0) * beta + (1.0/5.0) * beta**2.0) * c(log10(x))
+    xi_2 = lambda x: ((4.0/3.0) * beta + (4.0/7.0) * beta**2.0) * (c(log10(x)) - 3.0*J_3_interpolated(log10(x)))
+    xi_4 = lambda x: ((8.0/35.0) * beta**2.0) * (c(log10(x)) + (15.0/2.0)*J_3_interpolated(log10(x)) - (35.0/2.0)*J_5_interpolated(log10(x)))
     
     int_1 = np.zeros(len(r_x))
     int_2 = np.zeros(len(r_x))
@@ -303,11 +305,80 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
 
 def sigma_crit(cosmo, zl, zs):
     """Critical surface density in Msun/pc^2"""
-    beta = cosmo.angular_diameter_distance_z1z2(zl, zs) \
+    # To be consistent in halo model, this needs to be in comoving, thus (1+zl)^2
+    beta = (1+zl)**2.0 * cosmo.angular_diameter_distance_z1z2(zl, zs) \
         * cosmo.angular_diameter_distance(zl) \
         / cosmo.angular_diameter_distance(zs)
     # the first factor is c^2/(4*pi*G) in Msun/Mpc
     return 1.6629165e18 / beta.to(u.Mpc).value
+
+
+def power_to_sigma(power_func, R, order, rho_mean):
+    """
+    Calculate the projected correlation function given a power spectrum
+    using the properties of FAH cycle
+
+    Parameters
+    ----------
+    power_func : callable
+        A callable function which returns the natural log of power given lnk
+
+    R : array_like
+        The values of separation/scale to calculate the correlation at.
+    
+    order : int
+        Bessel function order: 0 for clustering, 2 for galaxy-galaxy lensing
+    
+    rho_mean : float
+        Mean density of the universe
+
+    """
+
+    #print ('Calculating correlation function.')
+
+    if not np.iterable(R):
+        R = [R]
+
+    sigma = np.zeros_like(R)
+
+    # the number of steps to fit into a half-period at high-k.
+    # 6 is better than 1e-4.
+    minsteps = 8
+
+    # set min_k, 1e-6 should be good enough
+    mink = 1e-6
+
+    temp_min_k = 1.0
+
+    for i, r in enumerate(R):
+        # getting maxk here is the important part. It must be a half multiple of
+        # pi/r to be at a "zero", it must be >1 AND it must have a number of half
+        # cycles > 38 (for 1E-5 precision).
+
+        min_k = (2.0 * np.ceil((temp_min_k * r / np.pi - 1.0) / 2.0) + 0.5) * np.pi / r
+        maxk = max(501.5 * np.pi / r, min_k)
+
+        # Now we calculate the requisite number of steps to have a good dk at hi-k.
+        nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r)))))
+        #nk = 10000
+
+        lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+        P = power_func(lnk)
+        integ = np.exp(lnk)**2.0 * sp.jv(order, np.exp(lnk) * r) * np.exp(P)
+        
+        sigma[i] = (rho_mean / (2.0*np.pi)) * simps(integ, dx=dlnk)
+
+    return sigma
+    
+
+def power_to_sigma_ogata(power_func, R, order, rho_mean):
+    result = np.zeros(R.shape)
+    h = hankel.HankelTransform(order,10000,0.00001)
+    for i in range(result.size):
+        integ = lambda x: exp(power_func(log(x/R[i]))) * x
+        result[i] = h.transform(integ)[0]
+        
+    return (rho_mean * result) / (2.0 * pi * R**2)
 
 
 if __name__ == '__main__':

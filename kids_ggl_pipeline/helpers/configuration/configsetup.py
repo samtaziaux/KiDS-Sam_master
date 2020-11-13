@@ -35,7 +35,7 @@ _default_values = {
 
 _necessary_entries = {
     'delta': 'overdensity for mass definition (typically 200 or 500)',
-    'delta_ref': 'background density reference: {"mean","crit"}',
+    'delta_ref': 'background density reference: {"FOF", "SOCritical", "SOMean", "SOVirial"}',
     'distances': 'whether to use "proper" or "comoving" distances',
     'return': 'which quantity should the halo model return',
     'R_unit': 'units of the radial bins',
@@ -47,7 +47,7 @@ _necessary_entries = {
 
 _valid_entries = {
     'delta': float,
-    'delta_ref': ('mean', 'crit', 'critical'),
+    'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial'),
     'distances': ('comoving', 'proper', 'angular'),
     'lnk_bins': int,
     'lnk_min': float,
@@ -58,11 +58,12 @@ _valid_entries = {
     'logR_bins': int,
     'logR_min': float,
     'logR_max': float,
-    'transfer': ('CAMB', 'EH'),
+    'transfer': ('CAMB', 'EH', 'EH_NoBAO', 'BBKS', 'BondEfs'),
     #'return': ('esd', 'kappa', 'power', 'sigma', 'xi')
     # will implement others in the future, require handling different
     # x-values
-    'return': ('esd', 'kappa', 'sigma'),
+    'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp'),
+    #'return': ('esd', 'wp', 'esd_wp'),
     'R_unit': str,
     'esd_unit': str,
     'cov_unit': str,

@@ -52,8 +52,8 @@ def lognormal(obs, Mo, Mh, sigma, obs_is_log=False):
     if np.iterable(sigma):
         sigma = expand_dims(expand_dims(sigma, -1), -1)
     obs = expand_dims(obs, -1)
-    return exp(-((log10(obs/Mo)**2) / (2*sigma**2))) \
-        / ((2*pi)**0.5 * sigma * obs * log(10))
+    return exp(-((log10(obs/Mo)**2.0) / (2.0*sigma**2.0))) \
+        / ((2.0*pi)**0.5 * sigma * obs * log(10.0))
 
 
 @logdist
@@ -96,6 +96,6 @@ def modschechter(obs, Mo, Mh, logMref, alpha, b, obs_is_log=False):
     obs = expand_dims(obs, -1)
     logMphi = log10(Mh)-logMref
     # this has the same shape as Mh
-    phi_s = 10**np.sum([bi * logMphi**i for i, bi in enumerate(b)], axis=0)
-    return ((phi_s/Mo) * (obs/Mo)**alpha * exp(-(obs/Mo)**2))
+    phi_s = 10.0**np.sum([bi * logMphi**i for i, bi in enumerate(b)], axis=0)
+    return ((phi_s/Mo) * (obs/Mo)**alpha * exp(-(obs/Mo)**2.0))
 

@@ -39,7 +39,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
                binname, binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                Runit, nRbins, Rconst, com, filename_var,
                filename, cat_version, blindcat, blindcats, srclists, path_splits,
-               splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
+               splitkidscats, catmatch, Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition,
                variance, h, path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection):
     
     q1 = mp.Queue()
@@ -54,7 +54,7 @@ def loop_multi(purpose, Nsplits, Nsplit, output, outputnames, gamacat,
             centering, gallists, lens_selection, lens_binning, binname,
             binnum, binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit,
             nRbins, Rconst, com, filename_var, filename, cat_version, blindcat, blindcats,
-            srclists, path_splits, splitkidscats, catmatch, Dcsbins,
+            srclists, path_splits, splitkidscats, catmatch, Dcsbins, zlensbins, Dclbins,
             Dc_epsilon, filename_addition, variance, h, path_kidscats,
              kidscatname, kidscolnames, kidscat_end, src_selection, q1))
         procs.append(work)
@@ -81,7 +81,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
          binmin, binmax, Rbins, Rcenters, Rmin, Rmax, Runit, nRbins, Rconst, com,
          filename_var,
          filename, cat_version, blindcat, blindcats, srclists, path_splits,
-         splitkidscats, catmatch, Dcsbins, Dc_epsilon, filename_addition,
+         splitkidscats, catmatch, Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition,
          variance, h, path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection, q1):
 
     # galaxy information
@@ -121,7 +121,7 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
             """
             memfrac = memory.test() # Check which fraction of the memory is full
             while memfrac > 90: # If it is too high...
-                print 'Waiting: More memory required'
+                print('Waiting: More memory required')
                 time.sleep(30) # wait before continuing the calculation
             """
             kidscatN = kidscatN+1
@@ -336,7 +336,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         path_splits, path_results, purpose, O_matter, O_lambda, Ok, h, \
         filename_addition, Ncat, splitslist, blindcats, blindcat, \
         blindcatnum, path_kidscats, path_gamacat, colnames, kidscolnames, specz_file, m_corr_file,\
-        z_epsilon, n_boot, cross_cov, com = \
+        z_epsilon, n_boot, cross_cov, com, lens_photoz, galSigma, lens_pz_redshift = \
             shear.input_variables(
                 nsplit, nsplits, nobsbin, blindcat, config_file)
 
@@ -474,9 +474,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                              Dcllist, galZlist)
 
 
-    # We translate the range in source redshifts
-    # to a range in source distances Ds (in pc/h)
-    zsrcbins = np.arange(0.025,3.5,0.05)
+    # We translate the range in source and lens redshifts
+    # to ranges in distances Ds (in pc/h)
+    zsrcbins = np.arange(0.025,3.5,0.05) # Source redshift bins
+    zlensbins =  np.linspace(0.025, 0.7, 100) # Lens redshift bins. This is ok for now, but needs to be more general!
+        
     #Dcsbins = np.array([distance.comoving(y, O_matter, O_lambda, h) \
     #                    for y in zsrcbins])
     #Dc_epsilon = distance.comoving(z_epsilon, O_matter, O_lambda, h)
@@ -484,10 +486,16 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # New method
     cosmo = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
     Dcsbins = np.array((cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    Dclbins = np.array((cosmo.comoving_distance(zlensbins).to('pc')).value)
+    
     Dc_epsilon = (cosmo.comoving_distance(z_epsilon).to('pc')).value
-
+    
     if cat_version == 3:
-        print('\nCalculating the lensing efficiency ...')
+        print('\nCalculating the lensing efficiency')
+        if lens_photoz == True:
+            print('using the photometric lenses ...')
+        else:
+            print('using the spectroscopic lenses ...')
 
         srclims = src_selection['Z_B'][1]
         sigma_selection = {}
@@ -511,7 +519,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                 weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                            Dcsbins, srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
+                            Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, \
+                            srcPZ_k, cat_version, Dc_epsilon, np.array([lens_redshifts[i]]), com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -541,7 +550,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                                             weights=spec_weight_k, density=1)
             srcPZ_k = srcPZ_k/srcPZ_k.sum()
             k[i], kmask = shear.calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                                                        Dcsbins, srcPZ_k, cat_version, Dc_epsilon, com)
+                                                        Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, \
+                                                        srcPZ_k, cat_version, Dc_epsilon, com)
             
         k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
 
@@ -579,7 +589,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
 
             srcPZ_m = srcPZ_m/srcPZ_m.sum()
             dlsods[i] = np.mean(shear.calc_mcorr_weight(Dcllist, Dallist, \
-                                Dcsbins, srcPZ_m, cat_version, Dc_epsilon))
+                                Dcsbins, zlensbins, Dclbins, lens_photoz, galSigma, lens_pz_redshift, \
+                                srcPZ_m, cat_version, Dc_epsilon, galZlist, com))
             m_selection = {}
 
         srcm_varlist = np.average(m_corr[:,2], weights=dlsods)
@@ -589,8 +600,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
     # Printing the made choices
 
     print()
-    print('Using {} cores to create split catalogues'.format(Nsplits), \
-          ', - Center definition = {}'.format(centering))
+    print('Using {} cores to create split catalogues'.format(Nsplits))
     print()
 
     output = 0
@@ -620,7 +630,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                  binname, Nobsbins, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                  Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                  blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
-                 Dcsbins, Dc_epsilon, filename_addition, variance, h,
+                 Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition, variance, h,
                 path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection)
 
     if 'covariance' in purpose:
@@ -640,7 +650,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                              binname, i, binmin, binmax, Rbins, Rcenters, Rmin, Rmax,
                              Runit, nRbins, Rconst, com, filename_var, filename, cat_version,
                              blindcat, blindcats, srclists, path_splits, splitkidscats, catmatch,
-                             Dcsbins, Dc_epsilon, filename_addition, variance, h,
+                             Dcsbins, zlensbins, Dclbins, Dc_epsilon, filename_addition, variance, h,
                              path_kidscats, kidscatname, kidscolnames, kidscat_end, src_selection)
 
     if out == 0:

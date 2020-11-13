@@ -57,6 +57,8 @@ from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
 # CMB specific utilities
 import pixell.enmap
 import pixell.utils
+# my own crap
+from profiley.filtering import Filter
 
 from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
@@ -73,9 +75,9 @@ from .covariance import covariance
 from .. import hod
 
 # local to working dir
-wisepath = '/home/cristobal/Documents/actpol/madcows/wisepan'
-sys.path.append(wisepath)
-import utils as wise_utils
+#wisepath = '/home/cristobal/Documents/actpol/madcows/wisepan'
+#sys.path.append(wisepath)
+#import utils as wise_utils
 
 """
 # Mass function from HMFcalc.
@@ -827,7 +829,9 @@ def model(theta, R, calculate_covariance=False):
         #print('4 surf_dens2 =', surf_dens2, surf_dens2.shape)
 
         # fill/interpolate nans
+        #print('surf_dens2 =', surf_dens2)
         surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
+        #print('surf_dens2 =', surf_dens2)
         #print('5 surf_dens2 =', surf_dens2, surf_dens2.shape)
         for i in range(nbins_gm):
             surf_dens2[i] = fill_nan(surf_dens2[i])
@@ -838,10 +842,12 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2 = array([s_r(r_i) for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i_gm)])
             #return [surf_dens2, meff]
 
-            #print('surf_dens2 =', surf_dens2, surf_dens2.shape)
+            #print('surf_dens2 =', surf_dens2.shape)
             #print('z =', z, z.shape)
-            #print('R =', R.shape)
+            #print('R =', R, R.shape)
+            #print('rvir_range_2d_i_gm =', rvir_range_2d_i_gm, len(rvir_range_2d_i_gm))
             #print('rvir_range_2d_i_gm =', [i.shape for i in rvir_range_2d_i_gm])
+            """
             # "brute force" filtering for Madcows -- should have a "postprocessing" option in the sampler
             # as I had thought before
             kmask = '/home/cristobal/Documents/actpol/madcows/wisepan/wisepan_kmask.fits'
@@ -850,26 +856,58 @@ def model(theta, R, calculate_covariance=False):
             for i in range(nbins):
                 r = np.linspace(rvir_range_3d_i[0], rvir_range_3d_i[-1], 10000) # in Mpc
                 kappa_r = surf_dens2_r[i](r)
-                #print('r =', r[0], r[-1], r.shape)
-                #print('kappa_r =', kappa_r, kappa_r.shape)
-                # should be in arcmin
-                d = cosmo_model.angular_diameter_distance(z).value
+                #d = cosmo_model.angular_diameter_distance(z).value
+                d = cosmo_model.kpc_comoving_per_arcmin(z).value / 1e3 # in (comoving Mpc)/arcmin
+                # artificially removing scale shift for testing
+                #d = d * 0.1
                 #print('d =', d.shape)
-                theta = r / d #* pixell.utils.arcmin
-                #print('theta =', theta, theta.shape)
+                # this is in arcmin, converted to radians below (after test plots)
+                theta = r / d
+                #print('theta =', theta, 'arcmin', theta.shape)
+                # convert to radians
+                theta = theta * pixell.utils.arcmin
                 kmask = pixell.enmap.read_map(kmask)
                 modrmap = kmask.modrmap()
                 th_kappa_2d = pixell.enmap.enmap(wise_utils.interp(theta,kappa_r)(modrmap),kmask.wcs) # attach WCS to interpolated array
                 #print('th_kappa_2d =', th_kappa_2d)
                 filt_kappa_2d = wise_utils.filter_map(th_kappa_2d,kmask)
-                bin_edges = np.loadtxt('{0}/wisepan_bin_edges.txt'.format(wisepath))
-                binner = wise_utils.bin2D(modrmap,bin_edges * pixell.utils.arcmin)
+                #print('bin_edges =', bin_edges, bin_edges.shape)
+                #binner = wise_utils.bin2D(modrmap,bin_edges * pixell.utils.arcmin)
+                #fcents,th_binned_i = binner.bin(filt_kappa_2d)
+                # shifting scale by hand
+                bin_edges = bin_edges - 2
+                binner = wise_utils.bin2D(modrmap, bin_edges[2:] * pixell.utils.arcmin)
                 fcents,th_binned_i = binner.bin(filt_kappa_2d)
                 #print('th_binned_i =', th_binned_i, th_binned_i.shape)
-                th_binned.append(th_binned_i)
+                th_binned.append(np.append([0.085, 0.062], th_binned_i))
+                #th_binned.append(th_binned_i)
             #print('th_binned =', th_binned.shape)
             surf_dens2 = array(th_binned)
             #print('surf_dens2 =', surf_dens2.shape)
+            """
+            kmask = '/home/cristobal/Documents/actpol/madcows/wisepan/wisepan_kmask.fits'
+            bin_edges = np.loadtxt('{0}/wisepan_bin_edges.txt'.format(wisepath)) * pixell.utils.arcmin
+            #print('bin_edges =', bin_edges)
+            filt = Filter(kmask)
+            theta_filtered = []
+            s_filtered = []
+            for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i_gm):
+                r_fine = np.linspace(rvir_range_3d_i[0], rvir_range_3d_i[-1], 1000)
+                d_conversion = cosmo_model.kpc_comoving_per_arcmin(z).value / 1e3 # in (comoving Mpc)/arcmin
+                # in arcmin
+                theta_fine = r_fine / d_conversion
+                # in rad
+                theta_fine = theta_fine * pixell.utils.arcmin
+                #print('theta_fine =', theta_fine[0], theta_fine[-1])
+                s_fine = s_r(r_fine)
+                # this is for linear binning, which I'm using in the ACT+Madcows project
+                out = filt.filter(theta_fine, s_fine, bin_edges)
+                theta_filtered.append(out[0])
+                s_filtered.append(out[1])
+            #print('surf_dens2 =')
+            #print(surf_dens2)
+            surf_dens2 = s_filtered
+            #print(surf_dens2)
 
             if nbins_gm == 1:
                 output[idx_gm.start] = surf_dens2[0]

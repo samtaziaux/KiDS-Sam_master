@@ -29,15 +29,19 @@ def covariance(R, cov, cor, output=None):
     fig, axes = plt.subplots(
         figsize=(10,8), nrows=cov.shape[0], ncols=cov.shape[0])
     #vmin, vmax = np.percentile(cov, [1,99])
-    vmin, vmax = -1.0, 1.0
+    #vmin, vmax = -1.0, 1.0
+    vmin, vmax = 0, 1
     if len(R) == 1:
         axes = [[axes]]
     for m, axm in enumerate(axes):
         for n, axmn in enumerate(axm):
             #axmn.imshow(cov[m][-n-1], origin='lower', interpolation='nearest',
             #            vmin=vmin, vmax=vmax)
-            axmn.imshow(cor[m][-n-1], origin='lower', interpolation='nearest',
-                        vmin=vmin, vmax=vmax)
+            im = axmn.imshow(
+                cor[m][-n-1], origin='lower', interpolation='nearest',
+                vmin=vmin, vmax=vmax)
+    if len(R) == 1:
+        plt.colorbar(im, ax=axmn, label='Cov_ij', fraction=0.045)
     fig.tight_layout(pad=0.4)
     if output:
         save(output, fig, 'covariance')
@@ -93,10 +97,11 @@ def signal(R, y, yerr, Nobsbins, model=None, observable='', fig=None, axes=None,
         ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10)
         if len(fi) == len(Ri):
             ax.plot(Ri, fi, 'r-', lw=3)
-        ax.set_xscale('log')
+        #ax.set_xscale('log')
         # do something fancier later
-        ax.set_xlabel('$k$' if observable == 'power' else '$R$')
-        ax.set_yscale('log')
+        #ax.set_xlabel('$k$' if observable == 'power' else '$R$')
+        ax.set_xlabel(r'$\theta$ (arcmin)')
+        #ax.set_yscale('log')
     if observable:
         axes[0].set_ylabel(r'${0}$'.format(ylabel))
     #if np.all(y-yerr > 0):

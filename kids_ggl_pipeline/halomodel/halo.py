@@ -176,6 +176,7 @@ def model(theta, R, calculate_covariance=False):
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
 
     mass_range = hmf[0].m
+    # don't we need to multiply omegam by (1+z) here for rho_crit?
     rho_bg = rho_mean if setup['delta_ref'] == 'mean' \
         else rho_mean / omegam
     # same as with redshift

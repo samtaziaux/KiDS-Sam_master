@@ -94,8 +94,9 @@ def run(hm_options, options, args):
             args, function, R, options, setup,
             parameters, join, starting, jfree, repeat, nparams)
         return
-
-    print('Starting values =', starting)
+        
+    if not options['resume']:
+        print('Starting values =', starting)
 
     # are we just running a demo?
     if args.demo:
@@ -113,19 +114,20 @@ def run(hm_options, options, args):
         backend = emcee.backends.HDFBackend(options['output'])
         if os.path.isfile(options['output']):
             print('Initial size: {0}'.format(backend.iteration))
+        po = backend.get_chain(discard=backend.iteration - 1)[0]
     else:
         backend = emcee.backends.HDFBackend(options['output'])
         backend.reset(options['nwalkers'], ndim)
+        # set up starting point for all walkers
+        po = sample_ball(
+            names, prior_types, jfree, starting, parameters,
+            options['nwalkers'], ndim)
+            
     if not os.path.isfile(options['output']):
         print('Running a new model. Good luck!\n')
 
-    # set up starting point for all walkers
-    po = sample_ball(
-        names, prior_types, jfree, starting, parameters,
-        options['nwalkers'], ndim)
-
     # burn-in
-    if options['nburn'] > 0:
+    if (options['nburn'] > 0) and not (options['resume']):
         with Pool(processes=options['threads']) as pool:
             sampler = emcee.EnsembleSampler(
                  options['nwalkers'], ndim, lnprob,
@@ -139,7 +141,6 @@ def run(hm_options, options, args):
             options['nburn'], ctime()))
     else:
         pos = po
-
 
     index = 0
     autocorr = np.empty(options['nsteps'])

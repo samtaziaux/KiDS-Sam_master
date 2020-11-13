@@ -25,7 +25,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import time
-from hmf import MassFunction, fitting_functions as ff
+from hmf import MassFunction
+import hmf.mass_function.fitting_functions as ff
 import numpy as np
 import matplotlib.pyplot as pl
 import scipy
@@ -172,8 +173,8 @@ def load_hmf(z, setup, cosmo_model, transfer_params):
         hmf.append(MassFunction(
             Mmin=setup['logM_min'], Mmax=setup['logM_max'],
             dlog10m=setup['mstep'],
-            hmf_model=ff.Tinker10, delta_h=setup['delta'],
-            delta_wrt=setup['delta_ref'], delta_c=1.686,
+            hmf_model=ff.Tinker10, mdef_model=setup['delta_ref'],
+            mdef_params={'overdensity':setup['delta']}, disable_mass_conversion=True, delta_c=1.686,
             cosmo_model=cosmo_model, z=zi,
             transfer_model=setup['transfer'], **transfer_params)
             )

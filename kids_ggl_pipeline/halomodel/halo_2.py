@@ -49,10 +49,11 @@ if sys.version_info[0] == 2:
     range = xrange
 from time import time
 from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
+from astropy.units import Quantity
 
 from hmf import MassFunction
-from hmf import fitting_functions as ff
-from hmf import transfer_models as tf
+import hmf.mass_function.fitting_functions as ff
+import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
@@ -248,7 +249,7 @@ def model(theta, R, calculate_covariance=False):
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
 
     mass_range = hmf[0].m
-    rho_bg = rho_mean if setup['delta_ref'] == 'mean' \
+    rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
         else rho_mean / omegam
     # same as with redshift
     rho_bg = expand_dims(rho_bg, -1)
@@ -364,6 +365,10 @@ def model(theta, R, calculate_covariance=False):
                 'Number of redshift bins should be equal to the number of observable bins!')
         hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
+        
+        pop_c_mlf = np.zeros((nbins_mlf,mass_range.size))
+        pop_s_mlf = np.zeros((nbins_mlf,mass_range.size))
+        
         if ingredients['centrals']:
             pop_c_mlf = hod.mlf(
                 hod_observable_mlf, dndm_mlf, mass_range, c_mor[0], c_scatter[0],
@@ -378,7 +383,10 @@ def model(theta, R, calculate_covariance=False):
         pop_g_mlf = pop_c_mlf + pop_s_mlf
         
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
-                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf)]
+                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf*10.0**hod_observable_mlf)]
+        for i,Ri in enumerate(rvir_range_2d_i_mlf):
+            Ri = Quantity(Ri, unit='Mpc')
+            rvir_range_2d_i_mlf[i] = Ri.to(setup['R_unit']).value
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
                     in zip(mlf_inter, rvir_range_2d_i_mlf)]
         output[idx_mlf] = mlf_out

@@ -135,7 +135,7 @@ def power_to_corr(power_func, R):
         maxk = max(501.5 * np.pi / r, min_k)
 
         # Now we calculate the requisite number of steps to have a good dk at hi-k.
-        nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r))))
+        nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r)))))
         #nk = 10000
 
         lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
@@ -359,7 +359,7 @@ def power_to_sigma(power_func, R, order, rho_mean):
         maxk = max(501.5 * np.pi / r, min_k)
 
         # Now we calculate the requisite number of steps to have a good dk at hi-k.
-        nk = np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r))))
+        nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * r)))))
         #nk = 10000
 
         lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)

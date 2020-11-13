@@ -15,6 +15,10 @@ _default_entries = {
     'variance_squared': 'variance of the galaxy ellipticity (as defined in KiDS papers)',
     'mean_survey_redshift': 'mean survey redshift (about 0.6 for KiDS as an example)',
     'output': 'output file name [ASCII document]',
+    'kids_sigma_crit': 'if KiDS specific sigma_crit is to be used',
+    'z_epsilon': 'offset redshift between lenses and sources',
+    'z_max': 'max redshift used in photo-z calibration',
+    'specz_file': 'file containing weights for photo-z calibration',
     }
 
 _default_values = {
@@ -28,6 +32,10 @@ _default_values = {
     'ssc': 'False',
     'cross': 'True',
     'subtract_randoms': 'False',
+    'kids_sigma_crit': 'False',
+    'z_epsilon': 0.0,
+    'z_max': 1.2,
+    'specz_file': 'None',
     'threads': 1,
     'output': 'analytical_covariance.txt',
     }
@@ -46,9 +54,12 @@ _valid_entries = {
     'ssc': str,
     'cross': str,
     'subtract_randoms': str,
+    'kids_sigma_crit': str,
+    'z_epsilon': float,
+    'z_max': float,
+    'specz_file': str,
     'threads': int,
     'output': str,
-    #'spec_cat': str, # Not yet implemented
     }
 
 

@@ -506,26 +506,7 @@ def calc_cov_non_gauss(params):
     
     #delta = np.eye(b_g.size)
     
-    # the number of steps to fit into a half-period at high-k.
-    # 6 is better than 1e-4.
-    minsteps = 8
-    
-    # set min_k, 1e-6 should be good enough
-    mink = 1e-6
-    
-    temp_min_k = 1.0
-    
-    # getting maxk here is the important part. It must be a half multiple of
-    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
-    # cycles > 38 (for 1E-5 precision).
-    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
-    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
-    # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
-    if nk > 1000:
-        nk = 1000
-    
-    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+    lnk, dlnk = k_adaptive(r_i, r_j, limit=1000)
     
     Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
     Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
@@ -569,25 +550,7 @@ def calc_cov_ssc(params):
     
     #delta = np.eye(b_g.size)
     
-    # the number of steps to fit into a half-period at high-k.
-    # 6 is better than 1e-4.
-    minsteps = 8
-    
-    # set min_k, 1e-6 should be good enough
-    mink = 1e-6
-    
-    temp_min_k = 1.0
-    
-    # getting maxk here is the important part. It must be a half multiple of
-    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
-    # cycles > 38 (for 1E-5 precision).
-    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
-    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
-    # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
-    #nk = 10000
-    
-    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+    lnk, dlnk = k_adaptive(r_i, r_j)
     
     Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
     Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
@@ -656,25 +619,7 @@ def calc_cov_gauss(params):
     rho_j = rho_bg[idx_2]
     delta = np.eye(len(radius_1), len(radius_2))
     
-    # the number of steps to fit into a half-period at high-k.
-    # 6 is better than 1e-4.
-    minsteps = 8
-    
-    # set min_k, 1e-6 should be good enough
-    mink = 1e-6
-    
-    temp_min_k = 1.0
-    
-    # getting maxk here is the important part. It must be a half multiple of
-    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
-    # cycles > 38 (for 1E-5 precision).
-    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
-    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
-    # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
-    #nk = 10000
-                
-    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+    lnk, dlnk = k_adaptive(r_i, r_j)
         
     Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
     Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
@@ -809,6 +754,33 @@ def parallelise(func, nproc, cov_out, radius_1, radius_2, *args):
         cov_out[i,j] = val
 
     return cov_out
+    
+    
+def k_adaptive(r_i, r_j, limit=None):
+
+    # the number of steps to fit into a half-period at high-k.
+    # 6 is better than 1e-4.
+    minsteps = 8
+    
+    # set min_k, 1e-6 should be good enough
+    mink = 1e-6
+    
+    temp_min_k = 1.0
+    
+    # getting maxk here is the important part. It must be a half multiple of
+    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
+    # cycles > 38 (for 1E-5 precision).
+    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
+    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
+    # Now we calculate the requisite number of steps to have a good dk at hi-k.
+    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
+    if limit is not None:
+        if nk > limit:
+            nk = limit
+    
+    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
+    
+    return lnk, dlnk
     
 
 
@@ -998,7 +970,7 @@ def covariance(theta, R, calculate_covariance=True):
     eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0 # convert to radians
     
     shape_noise = ((sigma_crit / rho_bg[...,0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance(z_kids).value) # With lensing the projected distance is the distance between the observer and effective survey redshift.
-    #shape_noise = np.zeros_like(shape_noise)
+    shape_noise = np.zeros_like(shape_noise)
 
     radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
     
@@ -1245,13 +1217,12 @@ def covariance(theta, R, calculate_covariance=True):
     # Start covariance calculations
     
     # Setting limited k-range for covariance matrix estimation.
-    lnk_min, lnk_max = np.log(0.01), np.log(1000.0)
+    #lnk_min, lnk_max = np.log(0.01), np.log(1000.0)
+    lnk_min, lnk_max = np.log(1e-4), np.log(1e4)
     k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
     k_temp_lin = np.exp(k_temp)
   
     if non_gauss == 'True':
-        #global Tgggg, Tgggm, Tgmgm, T234h
-        
         Tgggg = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggg')
                     for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
                     zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
@@ -1460,7 +1431,6 @@ def covariance(theta, R, calculate_covariance=True):
     
     quit()
     #"""
-    
     if gauss == 'True':
         print('Calculating the Gaussian part of the covariance ...')
         if ingredient_gm:
@@ -1512,6 +1482,8 @@ def covariance(theta, R, calculate_covariance=True):
     
     cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
                         [cov_cross_tot, cov_wp_tot]])
+    
+    cov_esd_non_gauss, cov_wp_non_gauss, cov_cross_non_gauss = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
     
     all = np.array([size_r_gm, size_r_gg, rvir_range_2d_i_gm, rvir_range_2d_i_gg, cov_esd_gauss, cov_esd_non_gauss, cov_esd_ssc, cov_wp_gauss, cov_wp_non_gauss, cov_wp_ssc, cov_esd_tot, cov_wp_tot, cov_cross_tot, cov_block, aw_values, radius**2.0], dtype=object)
     

@@ -16,7 +16,7 @@
 model             halo.model
 
 [observables]
-logmstar        10,10.5,11   10.5,11,12     log
+logmstar        gm  10,10.5,11   10.5,11,12     log
 
 [selection]
 logmstar_selection.txt      z,logmstar,completeness      fixed_width

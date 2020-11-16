@@ -25,8 +25,8 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 from astropy import units as u
-from quadpy.line_segment import integrate_adaptive
-from numba import float64, jit
+#from quadpy.line_segment import integrate_adaptive
+#from numba import float64, jit
 #from progressbar import *
 import numpy as np
 from numpy import exp, log, log10, pi

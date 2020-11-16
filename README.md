@@ -50,7 +50,7 @@ or the following in your `~/.cshrc` or `~/.tcshrc` if your shell is set to `csh`
 
         setenv PATH ${PATH}:<path_to_kids_ggl_folder>
 
-where, in my case, `<path_to_kids_ggl_folder>=/Library/Frameworks/Python.framework/Versions/2.7/bin`.
+where, in my case, `<path_to_kids_ggl_folder>=/Library/Frameworks/Python.framework/Versions/3.6/bin`.
 
 **e)** You can run an example by typing (see below for details)
 
@@ -65,7 +65,7 @@ At this point you are also able to import any component of the KiDS-GGL pipeline
 
 #### 2. Set up your configuration file.
     
-See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_model_demo.txt` for guidance. The former is intended for a simple average NFW modelling of the signal and only works with `kids_ggl<2.0.0`, while the latter is a full halo model and requires `kids_ggl>=2.0.0`.
+See `demo/ggl_halomodel.config` and `demo/ggl_covariance_demo.config` for guidance. The full halo model requires `kids_ggl>=2.0.0`.
 
 
 #### 3. Run! 

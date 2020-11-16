@@ -239,6 +239,33 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     return cov, icov, likenorm, esd_err, cov2d, cor
 
 
+def load_data_esd_only(options, setup):
+    
+    R, esd, Nobsbins = load_datapoints_2d(*options['data'])
+    #Nobsbins = esd.size
+    Nrbins = np.array([sh.size for sh in esd])
+    #if options['exclude'] is not None:
+    #    options['exclude'] = \
+    #        options['exclude'][options['exclude'] < esd.shape[1]]
+    R, esd, Nobsbins = load_datapoints_2d(
+        options['data'][0], options['data'][1], options['exclude'])
+
+    Nrbins = np.array([sh.size for sh in esd])
+
+    # convert units if necessary
+    if setup['return'] in ('esd', 'sigma', 'wp', 'esd_wp'):
+        if setup['R_unit'] != _default_values['R_unit']:
+            for i,Ri in enumerate(R):
+                Ri = Quantity(Ri, unit=setup['R_unit'])
+                R[i] = Ri.to(_default_values['R_unit']).value
+    # needed for offset central profile
+    # only used in nfw_stack, not in the halo model proper
+    # need to adapt or remove
+    R, Rrange = sampling_utils.setup_integrand(
+        R, 7)
+    return R
+    
+
 def load_data(options, setup):
     if options['format'] == '2d':
         R, esd, Nobsbins = load_datapoints_2d(*options['data'])

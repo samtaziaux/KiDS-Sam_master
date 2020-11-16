@@ -31,7 +31,7 @@ Model definition
 
 The configuration file starts with a single line specifying the model to be used: ::
 
-    model            halo_2.model
+    model            halo.model
 
 which is fixed for now.
 
@@ -366,32 +366,15 @@ Model output
 needed anymore. The pipeline will use the built-in backend HDF5 data handling. See more information at: http://emcee.readthedocs.io
 
 In addition, the configuration file should include a section ``output``, containing any outputs produced by the model in addition to 
-the free parameters. These are given as a name and the data format to be used in the ``FITS`` file, in addition to the number of 
-dimensions, if applicable. The typical ``FITS`` format would be ``E``, corresponding to single-precision floating point. See the 
-`astropy help <http://docs.astropy.org/en/stable/io/fits/usage/table.html#column-creation>`_) for more details.
+the free parameters. These are given as a name of choice for easier bookkeeping in the output HDF5 file.
 
-You will usually want to have each ESD component here at the very least. ``halo.model`` outputs the total ESD and the effective halo 
-mass per bin (yes, we will fix this soon). In our 2-bin example, we would write ::
+You will usually want to have each ESD component here at the very least. ``halo.model`` outputs the total signal (can be any of {'esd', 'kappa', 'sigma', 'esd_wp', 'wp', 'power'}) and the effective halo
+mass per bin. In our example, we would write ::
 
     [output]
-    esd            2,8E
-    Mavg           2,E
+    esd
+    Mavg
 
-where the second column in the first line means to register two separate columns, each with elements corresponding to arrays of 
-length 8 (the 8 R-measurements that make up the ESD profile in the demo data); and the second line means to create two other columns 
-each containing scalars corresponding to the effective halo masses (this is given by the output of ``halo.model``, *not* by the name 
-given in the first column above, i.e., changing the name in ``output`` does not change which parameters are returned!). The first 
-column corresponds to the names given to the columns in the output ``FITS`` file. When there is more than one "dimension" (the 
-number before the comma), columns are labelled e.g., ``esd1,esd2,...``.
-
-There is one alternative to the example above: ::
-
-    [output]
-    esd       2,8E
-    Mavg        2E
-
-which, consistent with the description above, will produce a single column ``Mavg``, as opposed to two columns ``Mavg1,Mavg2`` 
-above, where each entry contains both masses, rather than making separate columns.
 
 
 Sampler configuration
@@ -431,7 +414,6 @@ The ``sampler`` section then continues with a few more settings: ::
     thin                 1                  # thinning (every n-th sample will be saved, but values !=1 not fully tested)
     threads              3                  # number of threads (i.e., cores)
     sampler_type         ensemble           # emcee sampler type (fixed)
-    # update               20000            # frequency with which the output file is written (not used anymore)
     stop_when_converged  True               # stops the emcee when convergence has been reached
     autocorr_factor     100                 # 'autocorr_factor' times the estimated autocorrelation time. If this estimate is changed by less than 1%, we’ll consider things converged
     resume              False               # resumes the chain from the last position, requires previous chain to be present
@@ -463,7 +445,7 @@ paper. The required parameters in this section are: ::
     output              covariance_test.txt # output filename
 
 *NOTE*: All other sections for the halo model have to be specified as well to run the covariance code succesfully!
-Currently the sampler setup is also required, but only the required parameters have to be specified, and won't be actually used.
+Currently the sampler setup is also required, but only the data input without the covariance or setup parameters has to be specified. The current setup requires input data files to for which the covariance will be calculated, and handling of that is done throught the sampler interface.
 
 Future improvements
 *******************

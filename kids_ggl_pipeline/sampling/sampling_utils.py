@@ -52,6 +52,17 @@ def initialize_metadata(options, output, shape):
     metadata = [np.array(m) for m in metadata]
     metadata = [m[0] if m.shape[0] == 1 else m for m in metadata]
     return metadata, meta_names, fits_format
+    
+    
+def initialize_metanames(options, output, shape):
+    meta_names = output
+    # this assumes that all parameters are floats -- can't imagine a
+    # different scenario
+    output = []
+    for m in meta_names:
+        for i in range(1, shape+1):
+            output.append('{0}{1}'.format(m, i))
+    return output
 
 
 def read_function(function):

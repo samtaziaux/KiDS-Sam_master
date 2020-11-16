@@ -98,18 +98,7 @@ class ConfigSection(str):
         """
         `line` should be a `ConfigLine` object
         """
-        fmt = line.words[1].split(',')
-        n = int(fmt[0]) if len(fmt) == 2 else 0
-        fmt = fmt[-1]
-        # a scalar or 1d array
-        if n == 0:
-            output[0].append(line.words[0])
-            output[1].append(line.words[1])
-        # a nd array
-        else:
-            for i in range(1, n+1):
-                output[0].append('{0}{1}'.format(line.words[0], i))
-                output[1].append(fmt)
+        output.append(line.words[0])
         return output
 
     def append_parameters(
@@ -214,7 +203,7 @@ class ConfigFile(object):
         covar = {}
         setup = {}
         # dictionaries don't preserve order
-        output = [[], []]
+        output = []
         sampling = {}
         path = ''
         for line in self.data:

@@ -59,6 +59,16 @@ def run(hm_options, options, args):
             args, function, options, setup,# mock_options,
             parameters, join, starting, jfree, repeat, nparams)
         return
+        
+    if args.cov:
+        Ndatafiles = len(options['data'][0])
+        assert Ndatafiles > 0, 'No data files found'
+        R = io.load_data_esd_only(options, setup)
+        # We need to make sure one can also read in the mock data to calculate the covariance for!
+        cov_calc(
+            args, function, R, options, setup,
+            parameters, join, starting, jfree, repeat, nparams)
+        return
 
     # load data files
     Ndatafiles = len(options['data'][0])
@@ -70,10 +80,7 @@ def run(hm_options, options, args):
     # utility variables
     rng_obsbins = range(Nobsbins)
 
-    metadata, meta_names, fits_format = \
-        sampling_utils.initialize_metadata(options, output, esd.shape)
-    # some additional requirements of lnprob
-    #fail_value = sampling_utils.initialize_fail_value(metadata)
+    meta_names = sampling_utils.initialize_metanames(options, output, len(esd))
     # initialize
     lnprior = np.zeros(ndim)
 
@@ -87,13 +94,6 @@ def run(hm_options, options, args):
     for n in names_extend:
         fail_value[n] = 9999
     fail_value = list(fail_value[0])
-    
-    if args.cov:
-        # We need to make sure one can also read in the mock data to calculate the covariance for!
-        cov_calc(
-            args, function, R, options, setup,
-            parameters, join, starting, jfree, repeat, nparams)
-        return
         
     if not options['resume']:
         print('Starting values =', starting)

@@ -38,7 +38,7 @@ setup(name='kids_ggl_pipeline',
                         'mpmath>=0.19',
                         'numpy>=1.5.0',
                         'scipy>=0.16.0',
-                        'psutil==3.2.1'],
+                        'psutil>=3.2.1'],
       zip_safe=False
       )
 

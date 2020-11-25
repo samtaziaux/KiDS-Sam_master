@@ -923,12 +923,12 @@ def covariance(theta, R, calculate_covariance=True):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     if ingredient_gm:
-        #rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-        rvir_range_2d_i_gm = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gm]] # for testing
+        rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
+        #rvir_range_2d_i_gm = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gm]] # for testing
         size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])
     if ingredient_gg:
-        #rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-        rvir_range_2d_i_gg = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gg]] # for testing
+        rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
+        #rvir_range_2d_i_gg = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gg]] # for testing
         size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])
     #if ingredients['mm']:
         #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
@@ -970,7 +970,7 @@ def covariance(theta, R, calculate_covariance=True):
     eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0 # convert to radians
     
     shape_noise = ((sigma_crit / rho_bg[...,0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance(z_kids).value) # With lensing the projected distance is the distance between the observer and effective survey redshift.
-    shape_noise = np.zeros_like(shape_noise)
+    #shape_noise = np.zeros_like(shape_noise)
 
     radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
     
@@ -1476,7 +1476,7 @@ def covariance(theta, R, calculate_covariance=True):
         pass
     
     # To be removed, only for testing purposes
-    #"""
+    """
     aw_values = np.zeros((size_r_gm.sum(), size_r_gm.sum(), 3), dtype=np.float64)
     aw_values = calc_aw(nproc, aw_values, rvir_range_2d_i_gm, rvir_range_2d_i_gm, W_p, size_r_gm, size_r_gm)
     

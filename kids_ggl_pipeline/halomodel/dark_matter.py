@@ -238,6 +238,15 @@ def bias_tinker10(hmf):
     return func / norm
 
 
+def mlf_tilde(hmf, mlf, m_x, **kwargs):
+
+    mlf_til = trapz(
+        hmf.dndm * mlf * bias_tinker10(hmf),
+        m_x, **kwargs)
+        
+    return mlf_til
+    
+
 def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
     """
     Note that I removed the argument k_x which was required but not

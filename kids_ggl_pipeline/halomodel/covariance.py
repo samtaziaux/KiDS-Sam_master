@@ -61,7 +61,7 @@ from .lens import (
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
     bias_tinker10, mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
-    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg)
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, mlf_tilde)
 from .. import hod
 
 
@@ -674,6 +674,27 @@ def calc_cov_gauss(params):
     
     
     return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    
+    
+def calc_cov_mlf_sn(params):
+    
+    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, mlf_func, size_1, size_2 = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
+    
+    delta_bin = np.eye(len(radius_1), len(radius_2))
+    delta_r = np.eye(len(radius_1[b_i]), len(radius_2[b_j]))
+
+    val = delta_bin[b_i,b_j] * delta_r[i,j] * mlf_func[b_i][i] / (m_bin[b_i] * vmax[b_i][i])
+    
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    
+    
+def calc_cov_mlf_ssc(params):
+    return 0
+    
+    
+def calc_cov_mlf_cross(params):
+    return 0
 
 
 def aw_func(params):
@@ -1048,7 +1069,15 @@ def covariance(theta, R, calculate_covariance=True):
         
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
                     for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf*10.0**hod_observable_mlf)]
-        # This needs to be added to the final covariance calculation for the mlf/lmf!
+        for i,Ri in enumerate(rvir_range_2d_i_mlf):
+            Ri = Quantity(Ri, unit='Mpc')
+            rvir_range_2d_i_mlf[i] = Ri.to(setup['R_unit']).value
+        mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
+                    in zip(mlf_inter, rvir_range_2d_i_mlf)]
+        mlf_til = [mlf_tilde(hmf_i, mlf_i, mass_range) for hmf_i, mlf_i in zip(hmf_mlf, mlf_out)]
+        m_bin = [np.diff(i)[0] for i in rvir_range_2d_i_mlf]
+        
+        
      
      
     """

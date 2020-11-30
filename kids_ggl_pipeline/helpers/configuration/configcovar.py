@@ -11,6 +11,8 @@ _default_entries = {
     'threads': 'number of threads to use to calculate the covariance matrix',
     'pi_max': 'integration length of the 3D clustering correlation function used to obtain w_p(r_p) [Mpc/h]',
     'area': 'area of the survey [deg^2]',
+    'healpy': 'if healpix mask map is to be used to determine survey variance and area',
+    'healpy_data': 'healpix map',
     'eff_density': 'effective galaxy density as defined in KiDS papers [gal/arcmin^2]',
     'variance_squared': 'variance of the galaxy ellipticity (as defined in KiDS papers)',
     'mean_survey_redshift': 'mean survey redshift (about 0.6 for KiDS as an example)',
@@ -24,6 +26,7 @@ _default_entries = {
 _default_values = {
     'pi_max': 100,
     'area': 180,
+    'healpy': 'False',
     'eff_density': 8.53,
     'variance_squared': 0.082,
     'mean_survey_redshift': 0.6,
@@ -46,6 +49,8 @@ _necessary_entries = {
 _valid_entries = {
     'pi_max': float,
     'area': float,
+    'healpy': str,
+    'healpy_data': str,
     'eff_density': float,
     'variance_squared': float,
     'mean_survey_redshift': float,

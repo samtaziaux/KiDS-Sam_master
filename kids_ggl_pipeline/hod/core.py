@@ -174,6 +174,63 @@ def mlf(obs, mass_function, Mh, mor, scatter_func, mor_args, scatter_args, selec
     mfunc = Integrate(
         prob*mass_function*expand_dims(selection, -1), Mh, axis=-1)
     return mfunc
+    
+    
+def mlf_tilde(obs, mass_function, bias_function, Mh, mor, scatter_func, mor_args, scatter_args, selection=None,
+       obs_is_log=False):
+    """Mass or luminosity function,
+    Phi(L) or Phi(M)
+
+    Parameters
+    ----------
+    obs : array, shape (nbins,N)
+        locations at which the observable is evaluated for the
+        trapezoidal rule integration
+    mass_function : array of floats, shape (nbins,P)
+        mass function, dn/dMh. Here, ``nbins`` represents the number
+        of observable bins
+    bias_function : array of floats, shape (nbins,P)
+        bias function, b(Mh). Here, ``nbins`` represents the number
+        of observable bins
+    Mh : array, shape (P,)
+        mean halo mass of interest
+    mor : callable
+        Mass-observable relation function
+    scatter_func : callable
+        (Intrinsic) scatter function
+    mor_args : array-like
+        arguments passed to `mor`
+    scatter_args : array-like
+        arguments passed to `scatter_func`
+    selection : array of floats, shape (nbins,N), optional
+        completeness as a function of observable value
+    obs_is_log : bool, optional
+        whether the observable provided is in log-space
+
+    Returns
+    -------
+    mfunc : array, shape (nbins,N)
+        number density of galaxies for each value of L or M, luminosity or mass function
+
+    Notes
+    -----
+        There may be additional dimensions before the ones mentioned
+        above, such as one for redshift distributions. These will be
+        carried through and will remain at their location.
+    """
+    if selection is None:
+        selection = ones(obs.shape)
+    prob = probability(
+        obs, Mh, mor, scatter_func, mor_args, scatter_args,
+        obs_is_log=obs_is_log)
+    if len(prob.shape) >= 3:
+        mass_function = expand_dims(mass_function, -2)
+        bias_function = expand_dims(bias_function, -2)
+    if obs_is_log:
+        obs = 10**obs
+    mfunc = Integrate(
+        prob*mass_function*bias*expand_dims(selection, -1), Mh, axis=-1)
+    return mfunc
 
 
 def obs_effective(obs, Mh, mor, scatter_func, mor_args, scatter_args,

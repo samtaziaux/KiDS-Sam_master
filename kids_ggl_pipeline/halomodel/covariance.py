@@ -46,6 +46,8 @@ if sys.version_info[0] == 2:
     range = xrange
 from time import time
 from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
+import astropy.io.fits as fits
+import healpy as hp
 
 from hmf import MassFunction
 import hmf.mass_function.fitting_functions as ff
@@ -61,7 +63,7 @@ from .lens import (
     power_to_corr_ogata, wp, wp_beta_correction)
 from .dark_matter import (
     bias_tinker10, mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
-    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, mlf_tilde)
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg)
 from .. import hod
 
 
@@ -94,7 +96,6 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     """
     
     from kids_ggl_pipeline.esd_production.shearcode_modules import calc_Sigmacrit
-    import astropy.io.fits as fits
     
     zsrcbins = np.arange(0.025,3.5,0.05)
     
@@ -132,10 +133,10 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     return 1.0/k_interpolated(z_in)
 
 
-def survey_variance_test(mass_func, W_p, k_range, radius):
+def survey_variance_test(hmf, W_p, k_range, radius):
 
     # Seems to be about right! To be checked again!.
-    P_lin = mass_func.power
+    P_lin = hmf.power
 
     # This works when testing against Mohammed et al. 2017. Survey variance for a simulation cube!
     v_w = radius
@@ -145,17 +146,48 @@ def survey_variance_test(mass_func, W_p, k_range, radius):
     return sigma
 
 
-def survey_variance(mass_func, W_p, k_range, radius):
+def survey_variance(hmf, W_p, k_range, radius):
     
     # Seems to be about right! To be checked again!.
     
-    P_lin = mass_func.power
+    P_lin = hmf.power
 
     Awr = simps(np.exp(k_range) * sp.jv(0, np.exp(k_range) * radius)/(2.0*np.pi) * W_p(np.exp(k_range))**2.0, k_range)
     integ2 = W_p(np.exp(k_range))**2.0 * np.exp(k_range)**2.0 * P_lin
     sigma = (1.0 / (2.0*np.pi**2.0 * Awr)) * simps(integ2, np.exp(k_range))
     
     return sigma
+    
+    
+def survey_variance_from_healpy(maskfile, hmf, k_range, z, binary):
+    # functions borrowed from Benjamin's code
+    
+    P_lin_inter = UnivariateSpline(k_range, np.log(hmf.power), s=0, ext=0)
+
+    data = fits.getdata(maskfile, 1).field(0).flatten()
+    nside = hp.npix2nside(len(data))
+
+    if (binary == 1):
+        data_final = np.where(data<1.0,0,1)
+    else:
+        data_final = data
+
+    survey_area = np.count_nonzero(data_final)*hp.nside2pixarea(nside,degrees=True)
+    
+    lmax = 3*nside-1  # default range suggested by healpy
+    Cl = hp.anafast(data_final, use_weights=True)
+
+    window_power = np.zeros((2,lmax))
+    window_power[0,:] = np.arange(lmax)
+    window_power[1,:] = (2*np.arange(lmax)+1)*Cl[:lmax]
+    
+    fk = hmf.cosmo.angular_diameter_distance(z).value
+    k = window_power[0,:]/fk
+    ps = np.exp(P_lin_inter(np.log(k))) / fk**2.0
+    
+    sigma = np.sum(ps * window_power[1,:])
+    
+    return sigma, survey_area
 
 
 # Routines for T_xxxx - connected (non-Gaussian) part of the covariance
@@ -496,7 +528,7 @@ def halo_model_integrals(dndm, uk_c, uk_s, bias, rho_bg, ngal, population_cen, p
 
 def calc_cov_non_gauss(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, T1h, T234h, b_g, W_p, volume, rho_bg, ingredient, idx_1, idx_2, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, T1h, T234h, b_g, area_norm_term, volume, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     bg_i = b_g[idx_1][b_i][0]
@@ -508,9 +540,14 @@ def calc_cov_non_gauss(params):
     
     lnk, dlnk = k_adaptive(r_i, r_j, limit=1000)
     
-    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+        Awr_j = area_norm_term
+        Aw_rr = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
     
     T234_i = T234h[idx_1][b_i](np.exp(lnk), np.exp(lnk))
     T234_j = T234h[idx_2][b_j](np.exp(lnk), np.exp(lnk))
@@ -538,7 +575,7 @@ def calc_cov_non_gauss(params):
 
 def calc_cov_ssc(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, area_norm_term, Pi_max, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     bg_i = b_g[idx_1][b_i][0]
@@ -552,9 +589,14 @@ def calc_cov_ssc(params):
     
     lnk, dlnk = k_adaptive(r_i, r_j)
     
-    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+        Awr_j = area_norm_term
+        Aw_rr = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
     
     P_gm_i = Pgm[idx_1][b_i](lnk)
     P_gm_j = Pgm[idx_2][b_j](lnk)
@@ -608,7 +650,7 @@ def calc_cov_ssc(params):
 
 def calc_cov_gauss(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     shape_noise_i = shape_noise[idx_1]
@@ -620,10 +662,15 @@ def calc_cov_gauss(params):
     delta = np.eye(len(radius_1), len(radius_2))
     
     lnk, dlnk = k_adaptive(r_i, r_j)
-        
-    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+        Awr_j = area_norm_term
+        Aw_rr = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
                 
     P_gm_i = np.exp(P_inter[idx_1][b_i](lnk))
     P_gm_j = np.exp(P_inter[idx_2][b_j](lnk))
@@ -690,10 +737,22 @@ def calc_cov_mlf_sn(params):
     
     
 def calc_cov_mlf_ssc(params):
+
+    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, A, mlf_til, survey_var, size_1, size_2 = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
+
+    survey_var_i = survey_var[idx_1]
+    survey_var_j = survey_var[idx_2]
+
+    val = A**2.0 / (vmax[b_i][i], vmax[b_j][j]) * (np.sqrt(survey_var_i[b_i])*np.sqrt(survey_var_j[b_j])) * mlf_til[b_i][i] * mlf_til[b_j][j]
+
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    
+    
+def calc_cov_mlf_cross_sn(params):
     return 0
     
-    
-def calc_cov_mlf_cross(params):
+def calc_cov_mlf_cross_ssc(params):
     return 0
 
 
@@ -965,8 +1024,6 @@ def covariance(theta, R, calculate_covariance=True):
     # Check Benjamin's code how the realistic survey geometry is accounted for! (healpix, or something)
 
     Pi_max = covar['pi_max'] #100.0 # in Mpc/h
-    kids_area = covar['area'] #180 # in deg^2
-    kids_area = kids_area * 3600.0 # to arcmin^2
     eff_density = covar['eff_density'] #8.53 # as defined in KiDS (gal / arcmin^2)
     kids_variance_squared = covar['variance_squared'] #0.082 # as defined in KiDS papers
     z_kids = covar['mean_survey_redshift'] #0.6
@@ -979,10 +1036,10 @@ def covariance(theta, R, calculate_covariance=True):
     
     z_epsilon = covar['z_epsilon']
     z_max = covar['z_max']
-    spec_z_path = covar['specz_file']
 
     if covar['kids_sigma_crit'] == 'True':
         # KiDS specific sigma_crit, accounting for n(z)!
+        spec_z_path = covar['specz_file']
         sigma_crit = sigma_crit_kids(hmf, z, z_epsilon, z_max, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0
     else:
         sigma_crit = sigma_crit_func(cosmo_model, z, z_kids)
@@ -992,12 +1049,24 @@ def covariance(theta, R, calculate_covariance=True):
     
     shape_noise = ((sigma_crit / rho_bg[...,0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance(z_kids).value) # With lensing the projected distance is the distance between the observer and effective survey redshift.
     #shape_noise = np.zeros_like(shape_noise)
-
-    radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
     
-    W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
-    W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    survey_var = [survey_variance(hmf_i, W_p, k_range, radius) for hmf_i in hmf]
+    if covar['healpy'] == 'True':
+        healpy_data = covar['healpy_data']
+        print('Using healpy map to determine survey variance and area.')
+        survey_var = [survey_variance_from_healpy(healpy_data, hmf_i, k_range, z_kids, 1)[0] for hmf_i in hmf]
+        kids_area = survey_variance_from_healpy(healpy_data, hmf[0], k_range, z_kids, 1)[1] * 3600.0 # Assumed to be in degrees!
+        radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
+        area_norm_term = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
+        W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
+        W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
+    else:
+        kids_area = covar['area'] #180 # in deg^2
+        kids_area = kids_area * 3600.0 # to arcmin^2
+        radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
+        W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
+        W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
+        survey_var = [survey_variance(hmf_i, W_p, k_range, radius) for hmf_i in hmf]
+        area_norm_term = W_p
     
         
     print('Survey and observational details set.')
@@ -1050,13 +1119,20 @@ def covariance(theta, R, calculate_covariance=True):
                 'Number of redshift bins should be equal to the number of observable bins!')
         hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
+        bias_mlf = array([bias_tinker10(hmf_i) for hmf_i in hmf_mlf])
         
         pop_c_mlf = np.zeros((nbins_mlf,mass_range.size))
         pop_s_mlf = np.zeros((nbins_mlf,mass_range.size))
+        pop_c_mlf_til = np.zeros((nbins_mlf,mass_range.size))
+        pop_s_mlf_til = np.zeros((nbins_mlf,mass_range.size))
         
         if ingredients['centrals']:
             pop_c_mlf = hod.mlf(
                 hod_observable_mlf, dndm_mlf, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:],
+                obs_is_log=observable_mlf.is_log)
+            pop_c_mlf_til = hod.mlf_tilde(
+                hod_observable_mlf, dndm_mlf, bias_mlf, mass_range, c_mor[0], c_scatter[0],
                 c_mor[1:], c_scatter[1:],
                 obs_is_log=observable_mlf.is_log)
 
@@ -1065,16 +1141,24 @@ def covariance(theta, R, calculate_covariance=True):
                 hod_observable_mlf, dndm_mlf, mass_range, s_mor[0], s_scatter[0],
                 s_mor[1:], s_scatter[1:],
                 obs_is_log=observable_mlf.is_log)
+            pop_s_mlf_til = hod.mlf_tilde(
+                hod_observable_mlf, dndm_mlf, bias_mlf, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:],
+                obs_is_log=observable_mlf.is_log)
         pop_g_mlf = pop_c_mlf + pop_s_mlf
+        pop_g_mlf_til = pop_c_mlf_til + pop_s_mlf_til
         
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
                     for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf*10.0**hod_observable_mlf)]
+        mlf_tilde_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
+                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf_til)]
         for i,Ri in enumerate(rvir_range_2d_i_mlf):
             Ri = Quantity(Ri, unit='Mpc')
             rvir_range_2d_i_mlf[i] = Ri.to(setup['R_unit']).value
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
                     in zip(mlf_inter, rvir_range_2d_i_mlf)]
-        mlf_til = [mlf_tilde(hmf_i, mlf_i, mass_range) for hmf_i, mlf_i in zip(hmf_mlf, mlf_out)]
+        mlf_til = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
+                    in zip(mlf_tilde_inter, rvir_range_2d_i_mlf)]
         m_bin = [np.diff(i)[0] for i in rvir_range_2d_i_mlf]
         
         
@@ -1279,6 +1363,15 @@ def covariance(theta, R, calculate_covariance=True):
     if ingredient_gm and ingredient_gg:
         cov_cross = np.zeros((size_r_gg.sum(), size_r_gm.sum()), dtype=np.float64)
         cov_cross_tot = cov_cross.copy()
+    if ingredient_mlf:
+        cov_mlf = np.zeros((size_r_mlf.sum(), size_r_mlf.sum()), dtype=np.float64)
+        cov_mlf_tot = cov_mlf.copy()
+    if ingredient_mlf and ingredient_gm:
+        cov_mlf_cross_gm = np.zeros((size_r_gm.sum(), size_r_mlf.sum()), dtype=np.float64)
+        cov_mlf_cross_gm_tot = cov_mlf_cross_gm.copy()
+    if ingredient_mlf and ingredient_gg:
+        cov_mlf_cross_gg = np.zeros((size_r_gg.sum(), size_r_mlf.sum()), dtype=np.float64)
+        cov_mlf_cross_gg_tot = cov_mlf_cross_gg.copy()
     
     """
     ######################################################
@@ -1463,49 +1556,70 @@ def covariance(theta, R, calculate_covariance=True):
     if gauss == 'True':
         print('Calculating the Gaussian part of the covariance ...')
         if ingredient_gm:
-            cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, idx_gm, idx_gm, size_r_gm, size_r_gm)
+            cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, idx_gm, idx_gm, size_r_gm, size_r_gm, covar)
             cov_esd_tot += cov_esd_gauss
         if ingredient_gg:
-            cov_wp_gauss = parallelise(calc_cov_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gg', subtract_randoms, idx_gg, idx_gg, size_r_gg, size_r_gg)
+            cov_wp_gauss = parallelise(calc_cov_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gg', subtract_randoms, idx_gg, idx_gg, size_r_gg, size_r_gg, covar)
             cov_wp_tot += cov_wp_gauss
         if ingredient_gm and ingredient_gg and (cross == 'True'):
-            cov_cross_gauss = parallelise(calc_cov_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, 'cross', subtract_randoms, idx_gg, idx_gm, size_r_gg, size_r_gm)
+            cov_cross_gauss = parallelise(calc_cov_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'cross', subtract_randoms, idx_gg, idx_gm, size_r_gg, size_r_gm, covar)
             cov_cross_tot += cov_cross_gauss
-    else:
-        pass
         
 
     if ssc == 'True':
         print('Calculating the super-sample covariance ...')
         if ingredient_gm:
-            cov_esd_ssc = parallelise(calc_cov_ssc, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
+            cov_esd_ssc = parallelise(calc_cov_ssc, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, area_norm_term, Pi_max, bias_num, survey_var, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm, covar)
             cov_esd_tot += cov_esd_ssc
         if ingredient_gg:
-            cov_wp_ssc = parallelise(calc_cov_ssc, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
+            cov_wp_ssc = parallelise(calc_cov_ssc, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, area_norm_term, Pi_max, bias_num, survey_var, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg, covar)
             cov_wp_tot += cov_wp_ssc
         if ingredient_gm and ingredient_gg and (cross == 'True'):
-            cov_cross_ssc = parallelise(calc_cov_ssc, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
+            cov_cross_ssc = parallelise(calc_cov_ssc, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, area_norm_term, Pi_max, bias_num, survey_var, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm, covar)
             cov_cross_tot += cov_cross_ssc
-    else:
-        pass
-
+    
 
     if non_gauss == 'True':
         print('Calculating the connected (non-Gaussian) part of the covariance ...')
         if ingredient_gm:
-            cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, Tgmgm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
+            cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, Tgmgm, T234h, bias_num, area_norm_term, np.pi*radius**2.0*Pi_max, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm, covar)
             cov_esd_tot += cov_esd_non_gauss
         if ingredient_gg:
-            cov_wp_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, Tgggg, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
+            cov_wp_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, Tgggg, T234h, bias_num, area_norm_term, np.pi*radius**2.0*Pi_max, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg, covar)
             cov_wp_tot += cov_wp_non_gauss
         if ingredient_gm and ingredient_gg and (cross == 'True'):
-            cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, Tgggm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
+            cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, Tgggm, T234h, bias_num, area_norm_term, np.pi*radius**2.0*Pi_max, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm, covar)
             cov_cross_tot += cov_cross_non_gauss
-    else:
-        pass
+            
+    if gauss == 'True':
+        print('Calculating the Gaussian part of the SMF/LF covariance ...')
+        if ingredient_mlf:
+            cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), rvir_range_2d_i_mlf, rvir_range_2d_i_mlf)
+            cov_mlf_tot += cov_mlf_gauss
+        if ingredient_mlf and ingredient_gm and (cross == 'True'):
+            cov_mlf_cross_gauss = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gm.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_mlf)
+            cov_mlf_cross_gm_tot += cov_mlf_cross_gauss
+        if ingredient_mlf and ingredient_gg and (cross == 'True'):
+            cov_mlf_cross_gauss = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_mlf)
+            cov_mlf_cross_gg_tot += cov_mlf_cross_gauss
+            
+    if ssc == 'True':
+        print('Calculating the SMF/LF super-sample covariance ...')
+        if ingredient_mlf:
+            cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), rvir_range_2d_i_mlf, rvir_range_2d_i_mlf)
+            cov_mlf_tot += cov_mlf_ssc
+        if ingredient_mlf and ingredient_gm and (cross == 'True'):
+            cov_mlf_cross_ssc = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gm.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_mlf)
+            cov_mlf_cross_gm_tot += cov_mlf_cross_ssc
+        if ingredient_mlf and ingredient_gg and (cross == 'True'):
+            cov_mlf_cross_ssc = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_mlf)
+            cov_mlf_cross_gg_tot += cov_mlf_cross_ssc
+    
+    
+
     
     # To be removed, only for testing purposes
-    """
+    #"""
     aw_values = np.zeros((size_r_gm.sum(), size_r_gm.sum(), 3), dtype=np.float64)
     aw_values = calc_aw(nproc, aw_values, rvir_range_2d_i_gm, rvir_range_2d_i_gm, W_p, size_r_gm, size_r_gm)
     

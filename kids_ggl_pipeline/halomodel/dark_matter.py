@@ -236,15 +236,6 @@ def bias_tinker10(hmf):
     func = func_i(nu0)
     hmf.update(Mmin = min, Mmax = max, dlog10m = step)
     return func / norm
-
-
-def mlf_tilde(hmf, mlf, m_x, **kwargs):
-
-    mlf_til = trapz(
-        hmf.dndm * mlf * bias_tinker10(hmf),
-        m_x, **kwargs)
-        
-    return mlf_til
     
 
 def two_halo_gm(hmf, ngal, population, m_x, **kwargs):

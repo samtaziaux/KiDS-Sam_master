@@ -1,4 +1,4 @@
-#!/usr/bin/python
+##!/usr/bin/python
 """
 # This contains all the modules that are needed to
 # calculate the shear profile catalog and the covariance.

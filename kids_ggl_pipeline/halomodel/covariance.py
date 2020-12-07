@@ -159,10 +159,8 @@ def survey_variance(hmf, W_p, k_range, radius):
     return sigma
     
     
-def survey_variance_from_healpy(maskfile, hmf, k_range, z, binary):
+def calculate_alms(maskfile, binary):
     # functions borrowed from Benjamin's code
-    
-    P_lin_inter = UnivariateSpline(k_range, np.log(hmf.power), s=0, ext=0)
 
     data = fits.getdata(maskfile, 1).field(0).flatten()
     nside = hp.npix2nside(len(data))
@@ -177,17 +175,24 @@ def survey_variance_from_healpy(maskfile, hmf, k_range, z, binary):
     lmax = 3*nside-1  # default range suggested by healpy
     Cl = hp.anafast(data_final, use_weights=True)
 
-    window_power = np.zeros((2,lmax))
-    window_power[0,:] = np.arange(lmax)
-    window_power[1,:] = (2*np.arange(lmax)+1)*Cl[:lmax]
+    l_range = np.arange(lmax)
+    alms = (2*l_range+1)*Cl[:lmax]
     
+    return l_range, alms, survey_area
+    
+    
+def survey_variance_from_healpy(hmf, k_range, z, l_range, alms, survey_area):
+    # functions borrowed from Benjamin's code
+
+    P_lin_inter = UnivariateSpline(k_range, np.log(hmf.power), s=0, ext=0)
+
     fk = hmf.cosmo.angular_diameter_distance(z).value
-    k = window_power[0,:]/fk
-    ps = np.exp(P_lin_inter(np.log(k))) / fk**2.0
+    k = l_range/fk
+    ps = np.exp(P_lin_inter(np.log(k)))
     
-    sigma = np.sum(ps * window_power[1,:])
+    sigma = np.nansum(ps * alms)/survey_area**2.0
     
-    return sigma, survey_area
+    return sigma
 
 
 # Routines for T_xxxx - connected (non-Gaussian) part of the covariance
@@ -685,10 +690,10 @@ def calc_cov_gauss(params):
     # wp
     if ingredient == 'gg':
         integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j])*(P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j])
-        val1 = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ1, dx=dlnk)
+        val1 = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * 2.0 * simps(integ1, dx=dlnk)
         if subtract_randoms == 'False':
             integ2 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
-            val2 = (4.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ2, dx=dlnk)
+            val2 = ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * 4.0 * simps(integ2, dx=dlnk)
         else:
             val2 = 0.0
         val = val1 + val2
@@ -1003,12 +1008,12 @@ def covariance(theta, R, calculate_covariance=True):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     if ingredient_gm:
-        rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-        #rvir_range_2d_i_gm = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gm]] # for testing
+        #rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
+        rvir_range_2d_i_gm = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gm]] # for testing
         size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])
     if ingredient_gg:
-        rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-        #rvir_range_2d_i_gg = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gg]] # for testing
+        #rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
+        rvir_range_2d_i_gg = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gg]] # for testing
         size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])
     #if ingredients['mm']:
         #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
@@ -1020,17 +1025,16 @@ def covariance(theta, R, calculate_covariance=True):
     # Same goes for the bins above
     
     
-    
-    # Check Benjamin's code how the realistic survey geometry is accounted for! (healpix, or something)
-
-    Pi_max = covar['pi_max'] #100.0 # in Mpc/h
-    eff_density = covar['eff_density'] #8.53 # as defined in KiDS (gal / arcmin^2)
-    kids_variance_squared = covar['variance_squared'] #0.082 # as defined in KiDS papers
-    z_kids = covar['mean_survey_redshift'] #0.6
+    Pi_max = covar['pi_max'] # in Mpc/h
+    eff_density = covar['eff_density'] # as defined in KiDS (gal / arcmin^2)
+    kids_variance_squared = covar['variance_squared'] # as defined in KiDS papers
+    z_kids = covar['mean_survey_redshift']
     gauss = covar['gauss']
     non_gauss = covar['non_gauss']
     ssc = covar['ssc']
     cross = covar['cross']
+    mlf_gauss = 'False'#covar['mlf_gauss']
+    mlf_ssc = 'False'#covar['mlf_ssc']
     subtract_randoms = covar['subtract_randoms'] #False # if randoms are not subtracted, this will increase the error bars
     nproc = covar['threads'] #4
     
@@ -1044,35 +1048,42 @@ def covariance(theta, R, calculate_covariance=True):
     else:
         sigma_crit = sigma_crit_func(cosmo_model, z, z_kids)
     
-    #eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0 # not used
     eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0 # convert to radians
     
-    shape_noise = ((sigma_crit / rho_bg[...,0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance(z_kids).value) # With lensing the projected distance is the distance between the observer and effective survey redshift.
+    Pi_max_lens = hmf[0].cosmo.angular_diameter_distance(z_kids).value
+    shape_noise = ((sigma_crit / rho_bg[...,0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / Pi_max_lens) # With lensing the projected distance is the distance between the observer and effective survey redshift.
     #shape_noise = np.zeros_like(shape_noise)
     
     if covar['healpy'] == 'True':
         healpy_data = covar['healpy_data']
         print('Using healpy map to determine survey variance and area.')
-        survey_var = [survey_variance_from_healpy(healpy_data, hmf_i, k_range, z_kids, 1)[0] for hmf_i in hmf]
-        kids_area = survey_variance_from_healpy(healpy_data, hmf[0], k_range, z_kids, 1)[1] * 3600.0 # Assumed to be in degrees!
-        radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
+        l_range, alms, survey_area = calculate_alms(healpy_data, 1)
+        survey_var = [survey_variance_from_healpy(hmf_i, k_range, z_kids, l_range, alms, survey_area) for hmf_i in hmf]
+        kids_area = survey_area * 3600.0 # to arcmin^2
+        print(kids_area)
+        print(survey_var)
         area_norm_term = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
+        radius = np.sqrt(area_norm_term / np.pi)
+        vol = radius**2.0 * Pi_max
         W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
         W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
+    #if covar['healpy'] == 'True':
     else:
-        kids_area = covar['area'] #180 # in deg^2
+        kids_area = covar['area'] # in deg^2
         kids_area = kids_area * 3600.0 # to arcmin^2
-        radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
+        print(kids_area)
+        radius = np.sqrt(kids_area / np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h
+        vol = radius**2.0 * Pi_max
         W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
         W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
         survey_var = [survey_variance(hmf_i, W_p, k_range, radius) for hmf_i in hmf]
+        print(survey_var)
         area_norm_term = W_p
     
-        
+
     print('Survey and observational details set.')
     if covar['kids_sigma_crit'] == 'True':
         print('Using KiDS specific sigma_crit setup.')
-    
     
     # Calculating halo model
     
@@ -1556,7 +1567,7 @@ def covariance(theta, R, calculate_covariance=True):
     if gauss == 'True':
         print('Calculating the Gaussian part of the covariance ...')
         if ingredient_gm:
-            cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, idx_gm, idx_gm, size_r_gm, size_r_gm, covar)
+            cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max_lens, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, idx_gm, idx_gm, size_r_gm, size_r_gm, covar)
             cov_esd_tot += cov_esd_gauss
         if ingredient_gg:
             cov_wp_gauss = parallelise(calc_cov_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gg', subtract_randoms, idx_gg, idx_gg, size_r_gg, size_r_gg, covar)
@@ -1582,16 +1593,17 @@ def covariance(theta, R, calculate_covariance=True):
     if non_gauss == 'True':
         print('Calculating the connected (non-Gaussian) part of the covariance ...')
         if ingredient_gm:
-            cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, Tgmgm, T234h, bias_num, area_norm_term, np.pi*radius**2.0*Pi_max, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm, covar)
+            cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, Tgmgm, T234h, bias_num, area_norm_term, vol, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm, covar)
             cov_esd_tot += cov_esd_non_gauss
         if ingredient_gg:
-            cov_wp_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, Tgggg, T234h, bias_num, area_norm_term, np.pi*radius**2.0*Pi_max, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg, covar)
+            cov_wp_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, Tgggg, T234h, bias_num, area_norm_term, vol, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg, covar)
             cov_wp_tot += cov_wp_non_gauss
         if ingredient_gm and ingredient_gg and (cross == 'True'):
-            cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, Tgggm, T234h, bias_num, area_norm_term, np.pi*radius**2.0*Pi_max, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm, covar)
+            cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, Tgggm, T234h, bias_num, area_norm_term, vol, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm, covar)
             cov_cross_tot += cov_cross_non_gauss
             
-    if gauss == 'True':
+            
+    if mlf_gauss == 'True':
         print('Calculating the Gaussian part of the SMF/LF covariance ...')
         if ingredient_mlf:
             cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), rvir_range_2d_i_mlf, rvir_range_2d_i_mlf)
@@ -1603,7 +1615,8 @@ def covariance(theta, R, calculate_covariance=True):
             cov_mlf_cross_gauss = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_mlf)
             cov_mlf_cross_gg_tot += cov_mlf_cross_gauss
             
-    if ssc == 'True':
+            
+    if mlf_ssc == 'True':
         print('Calculating the SMF/LF super-sample covariance ...')
         if ingredient_mlf:
             cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), rvir_range_2d_i_mlf, rvir_range_2d_i_mlf)
@@ -1620,6 +1633,7 @@ def covariance(theta, R, calculate_covariance=True):
     
     # To be removed, only for testing purposes
     #"""
+    rescale = covar['area']/survey_area
     aw_values = np.zeros((size_r_gm.sum(), size_r_gm.sum(), 3), dtype=np.float64)
     aw_values = calc_aw(nproc, aw_values, rvir_range_2d_i_gm, rvir_range_2d_i_gm, W_p, size_r_gm, size_r_gm)
     
@@ -1628,11 +1642,12 @@ def covariance(theta, R, calculate_covariance=True):
     
     cov_esd_non_gauss, cov_wp_non_gauss, cov_cross_non_gauss = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
     
-    all = np.array([size_r_gm, size_r_gg, rvir_range_2d_i_gm, rvir_range_2d_i_gg, cov_esd_gauss, cov_esd_non_gauss, cov_esd_ssc, cov_wp_gauss, cov_wp_non_gauss, cov_wp_ssc, cov_esd_tot, cov_wp_tot, cov_cross_tot, cov_block, aw_values, radius**2.0], dtype=object)
+    all = np.array([size_r_gm, size_r_gg, rvir_range_2d_i_gm, rvir_range_2d_i_gg, cov_esd_gauss/rescale, cov_esd_non_gauss/rescale, cov_esd_ssc/rescale, cov_wp_gauss/rescale, cov_wp_non_gauss/rescale, cov_wp_ssc/rescale, cov_esd_tot/rescale, cov_wp_tot/rescale, cov_cross_tot/rescale, cov_block/rescale, aw_values, radius**2.0], dtype=object)
     
     np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/cov_all.npy', all)
     #"""
     
+    # REWRITE, this is stupid!
     if ingredient_gm:
         return  cov_esd_tot
     if ingredient_gg:

@@ -65,7 +65,7 @@ from .lens import (
     power_to_corr_ogata, wp, wp_beta_correction, power_to_sigma, power_to_sigma_ogata)
 from .dark_matter import (
     mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
-    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion)
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion, beta_nl)
 from .covariance import covariance
 from .. import hod
 
@@ -429,6 +429,17 @@ def model(theta, R, calculate_covariance=False):
             expand_dims(concentration, -1), uk_c[idx_gm].shape)
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
+    
+    # read in Alex Mead BNL table:
+    print('Importing BNL pickle...')
+    import dill as pickle
+    with open('/net/home/fohlen12/dvornik/interpolator_BNL.npy', 'rb') as dill_file:
+        beta_interp = pickle.load(dill_file)
+    print(beta_interp([0.5, 12.3, 12.8, 1e-1]))
+    Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm], rho_bg[idx_gm], z[idx_gm])])
+    #Igg =
+    
+    quit()
     
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo

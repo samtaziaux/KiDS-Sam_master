@@ -792,7 +792,7 @@ def calc_cov_mlf_cross_sn(params):
     
     # ESD
     if ingredient == 'gm':
-        integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * * np.sqrt(count_b_i*count_b_j)
+        integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * np.sqrt(count_b_i*count_b_j)
         val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * trapz(integ2, dx=dlnk) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
     
     # AREA TERMS NOT CLEAR HERE!

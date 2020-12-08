@@ -310,6 +310,53 @@ def halo_exclusion(xi, r, meff, rho_dm, delta):
     return xi_exc
 
 
+def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, z):
+    """ Non-linear halo bias correction from Meat et al. 2020 (https://arxiv.org/abs/2011.08858)
+        Equation 17, that gets added to the usual 2h term from Cacciato.
+    
+    Parameters
+    ----------
+    dndm : float array, shape (P,)
+        differential mass function
+    population_1 : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    population_2 : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    norm_1 : float array, shape (nbins,)
+        normalisation constant 1
+    norm_2 : float array, shape (nbins,)
+        normalisation constant 2
+    bias : float array, shape (P,)
+        halo bias function
+    meff : float array, shape (nbins,)
+        average halo mass in observable bin
+    beta_interp : interpolator instance, callable function
+        interpolated beta_nl function provided from Alex Mead files
+        (https://github.com/alexander-mead/BNL)
+    k : float array, shape (P,)
+        k vector array
+    z : float,
+        redshift
+
+    Returns
+    -------
+    beta : float array, shape (K,)
+        non-linear bias term
+    """
+    bias = bias_tinker10(hmf)
+    beta_i = np.zeros((Mh.size, Mh.size, k.size))
+    for i,m1 in enumerate(np.log10(Mh)):
+        for j,m2 in enumerate(np.log10(Mh)):
+            for l,kval in enumerate(k):
+                beta_i[i,j,l] = beta_interp([z, m1, m2, kval]) - 1.0
+                print(beta_i[i,j,l])
+    intg1 = beta_i * population_1 * hmf.dndm * bias
+    intg2 = population_2 * hmf.dndm * bias * trapz(intg1, Mh, axis=1)
+    beta = trapz(intg2, Mh, axis=1) / (norm1*norm2)
+    print(beta)
+    return beta
+
+
 """
 # Spectrum 1-halo components for dark matter.
 """

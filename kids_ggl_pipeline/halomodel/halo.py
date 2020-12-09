@@ -436,10 +436,9 @@ def model(theta, R, calculate_covariance=False):
     with open('/net/home/fohlen12/dvornik/interpolator_BNL.npy', 'rb') as dill_file:
         beta_interp = pickle.load(dill_file)
     print(beta_interp([0.5, 12.3, 12.8, 1e-1]))
-    Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm], rho_bg[idx_gm], z[idx_gm])])
-    #Igg =
     
-    quit()
+    Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm], rho_bg[idx_gm], z[idx_gm])])
+    #Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, z_i in zip(hmf[idx_gg], pop_g[idx_gg], ngal[idx_gg], z[idx_gg])])
     
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
@@ -553,6 +552,34 @@ def model(theta, R, calculate_covariance=False):
         Pmm_k = Pmm_1h + Pmm_2h
     
     # Outputs
+    
+    import matplotlib.pyplot as pl
+    
+    pl.plot(k_range_lin, Pgm_k[0], label='Total')
+    pl.plot(k_range_lin, Pgm_2h[0], label='2h')
+    pl.plot(k_range_lin, Pgm_2h[0] + hmf[idx_gm][0].power*Igm[0], label='BNL')
+    pl.xscale('log')
+    pl.yscale('log')
+    pl.ylim([1e-1,1e5])
+    pl.legend()
+    pl.show()
+    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm.png')
+    pl.clf()
+    pl.close()
+    
+    pl.plot(k_range_lin, Pgm_k[0]/Pgm_2h[0], label='Total')
+    #pl.plot(k_range_lin, Pgm_2h[0], label='2h')
+    pl.plot(k_range_lin, (Pgm_2h[0] + hmf[idx_gm][0].power*Igm[0])/Pgm_2h[0], label='BNL')
+    pl.xscale('log')
+    #pl.yscale('log')
+    pl.ylim([-1,1])
+    pl.legend()
+    pl.show()
+    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm_ratio.png')
+    pl.clf()
+    pl.close()
+    
+    quit()
            
     if ingredient_gm:
         # note this doesn't include the point mass! also, we probably

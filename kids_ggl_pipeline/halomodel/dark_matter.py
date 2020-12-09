@@ -310,7 +310,7 @@ def halo_exclusion(xi, r, meff, rho_dm, delta):
     return xi_exc
 
 
-def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, z):
+def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, redshift):
     """ Non-linear halo bias correction from Meat et al. 2020 (https://arxiv.org/abs/2011.08858)
         Equation 17, that gets added to the usual 2h term from Cacciato.
     
@@ -344,16 +344,28 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
         non-linear bias term
     """
     bias = bias_tinker10(hmf)
+    
     beta_i = np.zeros((Mh.size, Mh.size, k.size))
-    for i,m1 in enumerate(np.log10(Mh)):
-        for j,m2 in enumerate(np.log10(Mh)):
-            for l,kval in enumerate(k):
-                beta_i[i,j,l] = beta_interp([z, m1, m2, kval]) - 1.0
-                print(beta_i[i,j,l])
-    intg1 = beta_i * population_1 * hmf.dndm * bias
-    intg2 = population_2 * hmf.dndm * bias * trapz(intg1, Mh, axis=1)
-    beta = trapz(intg2, Mh, axis=1) / (norm1*norm2)
-    print(beta)
+    #print(beta_i.shape)
+    #marr = np.linspace(np.log10(Mh.min()), np.log10(Mh.max()), 50)
+    #karr = np.linspace(np.log10(k), np.log10(k), 50)
+    #indices = np.vstack(np.meshgrid(np.arange(50),np.arange(50),np.arange(50))).reshape(3,-1).T
+    #values = np.vstack(np.meshgrid(marr, marr, karr)).reshape(3,-1).T
+    indices = np.vstack(np.meshgrid(np.arange(Mh.size),np.arange(Mh.size),np.arange(k.size))).reshape(3,-1).T
+    values = np.vstack(np.meshgrid(np.log10(Mh), np.log10(Mh), k)).reshape(3,-1).T
+    #print(values.shape)
+    for i,val in enumerate(values):
+        beta_i[indices[i,0], indices[i,1], indices[i,2]] = beta_interp(np.insert(val, 0, redshift)) - 1.0
+    
+    #print(beta_i)
+    #print(beta_i.shape)
+    
+    intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
+    #print(intg1.shape)
+    intg2 = expand_dims(population_2 * hmf.dndm * bias, -1) * trapz(intg1, Mh, axis=1)
+    #print(intg2.shape)
+    beta = trapz(intg2, Mh, axis=0) / (norm_1*norm_2)
+    #print(beta)
     return beta
 
 

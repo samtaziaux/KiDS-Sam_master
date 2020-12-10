@@ -346,7 +346,7 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     bias = bias_tinker10(hmf)
     
     beta_i = np.zeros((Mh.size, Mh.size, k.size))
-    #print(beta_i.shape)
+    print(beta_i.shape)
     #marr = np.linspace(np.log10(Mh.min()), np.log10(Mh.max()), 50)
     #karr = np.linspace(np.log10(k), np.log10(k), 50)
     #indices = np.vstack(np.meshgrid(np.arange(50),np.arange(50),np.arange(50))).reshape(3,-1).T
@@ -358,7 +358,7 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
         beta_i[indices[i,0], indices[i,1], indices[i,2]] = beta_interp(np.insert(val, 0, redshift)) - 1.0
     
     #print(beta_i)
-    #print(beta_i.shape)
+    print(beta_i.shape)
     
     intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
     #print(intg1.shape)

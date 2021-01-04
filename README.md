@@ -103,7 +103,7 @@ the `--no-cov` option is ignored if `--demo` is not present.
 - Always check how many cores are available in your machine before running in parallel.
 - **Contribute!**
  
-If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristóbal Sifón (sifon@astro.princeton.edu).
+If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristóbal Sifón (cristobal.sifon@pucv.cl).
 
 
 Update log:

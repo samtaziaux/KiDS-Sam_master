@@ -12,7 +12,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
 #### 1. Installation
     
     
-**a)** Contact Cristóbal Sifón (sifon@astro.princeton.edu) to become a member
+**a)** Contact Cristóbal Sifón (cristobal.sifon@pucv.cl) to become a member
        of the KiDS-WL repository and join the KiDS-GGL team
 
 **b)** Download [the latest stable version of the KiDS-GGL pipeline](https://github.com/KiDS-WL/KiDS-GGL/releases/latest) and unpack,

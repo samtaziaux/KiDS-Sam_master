@@ -241,7 +241,7 @@ def model(theta, R, calculate_covariance=False):
     cosmo_model = Flatw0waCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
         Neff=Neff, w0=w0, wa=wa)
-
+    
     # Tinker10 should also be read from theta!
     transfer_params = \
         {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
@@ -396,8 +396,8 @@ def model(theta, R, calculate_covariance=False):
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(k_range_lin/0.1)
-    F_k2 = np.ones_like(k_range_lin)
-    #F_k2 = sp.erfc(k_range_lin/10.0)
+    #F_k2 = np.ones_like(k_range_lin)
+    F_k2 = sp.erfc(k_range_lin/2.0)
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
@@ -561,22 +561,22 @@ def model(theta, R, calculate_covariance=False):
     pl.plot(k_range_lin, Pgm_2h[0] + hmf[idx_gm][0].power*Igm[0], label='2h BNL')
     pl.xscale('log')
     pl.yscale('log')
-    pl.ylim([1e-1,1e5])
-    pl.xlim([1e-3,1e1])
+    pl.ylim([1e1,1e5])
+    pl.xlim([1e-2,1e1])
     pl.legend()
     pl.show()
     pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm.png')
     pl.clf()
     pl.close()
     
-    pl.plot(k_range_lin, Pgm_k[0]/Pgm_2h[0], label='Total')
-    pl.plot(k_range_lin, (Pgm_k[0] + hmf[idx_gm][0].power*Igm[0])/Pgm_2h[0], label='Total+BNL')
+    pl.plot(k_range_lin, Pgm_k[0]/Pgm_k[0], label='Total')
+    pl.plot(k_range_lin, (Pgm_k[0] + hmf[idx_gm][0].power*Igm[0])/Pgm_k[0], label='Total+BNL')
     pl.plot(k_range_lin, Pgm_2h[0]/Pgm_2h[0], label='2h')
     pl.plot(k_range_lin, (Pgm_2h[0] + hmf[idx_gm][0].power*Igm[0])/Pgm_2h[0], label='2h BNL')
     pl.xscale('log')
     #pl.yscale('log')
     pl.ylim([0,2])
-    pl.xlim([1e-3,1e1])
+    pl.xlim([1e-2,1e1])
     pl.legend()
     pl.show()
     pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm_ratio.png')
@@ -590,30 +590,36 @@ def model(theta, R, calculate_covariance=False):
     pl.plot(k_range_lin, Pgg_2h[0] + hmf[idx_gg][0].power*Igg[0], label='2h BNL')
     pl.xscale('log')
     pl.yscale('log')
-    pl.ylim([1e-1,1e5])
-    pl.xlim([1e-3,1e1])
+    pl.ylim([1e1,1e5])
+    pl.xlim([1e-2,1e1])
     pl.legend()
     pl.show()
     pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gg.png')
     pl.clf()
     pl.close()
     
-    pl.plot(k_range_lin, Pgg_k[0]/Pgg_2h[0], label='Total')
-    pl.plot(k_range_lin, (Pgg_k[0] + hmf[idx_gg][0].power*Igg[0])/Pgg_2h[0], label='Total+BNL')
+    pl.plot(k_range_lin, Pgg_k[0]/Pgg_k[0], label='Total')
+    pl.plot(k_range_lin, (Pgg_k[0] + hmf[idx_gg][0].power*Igg[0])/Pgg_k[0], label='Total+BNL')
     pl.plot(k_range_lin, Pgg_2h[0]/Pgg_2h[0], label='2h')
     pl.plot(k_range_lin, (Pgg_2h[0] + hmf[idx_gg][0].power*Igg[0])/Pgg_2h[0], label='BNL')
     pl.xscale('log')
     #pl.yscale('log')
     pl.ylim([0,2])
-    pl.xlim([1e-3,1e1])
+    pl.xlim([1e-2,1e1])
     pl.legend()
     pl.show()
     pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gg_ratio.png')
     pl.clf()
     pl.close()
     
-    Pgg_k = Pgg_k + array([hmf_i.power for hmf_i in hmf[idx_gg]])*Igg
-    Pgm_k = Pgm_k + array([hmf_i.power for hmf_i in hmf[idx_gm]])*Igm
+    #Pgg_k = Pgg_k + array([hmf_i.power for hmf_i in hmf[idx_gg]])*Igg
+    #Pgm_k = Pgm_k + array([hmf_i.power for hmf_i in hmf[idx_gm]])*Igm
+    
+    Pgg_2h = (Pgg_2h + array([hmf_i.power for hmf_i in hmf[idx_gg]])*Igg)
+    Pgm_2h = (Pgm_2h + array([hmf_i.power for hmf_i in hmf[idx_gm]])*Igm)
+    
+    Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
+    Pgm_k = Pgm_c + Pgm_s + Pgm_2h
     
     #quit()
     #"""

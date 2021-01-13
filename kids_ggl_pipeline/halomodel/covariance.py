@@ -742,7 +742,7 @@ def calc_cov_gauss(params):
     
 def calc_cov_mlf_sn(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, mlf_func, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, mlf_func, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     delta_bin = np.eye(len(radius_1), len(radius_2))
@@ -755,20 +755,20 @@ def calc_cov_mlf_sn(params):
     
 def calc_cov_mlf_ssc(params):
 
-    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, A, mlf_til, survey_var, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, area, mlf_til, survey_var, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
 
     survey_var_i = survey_var[idx_1]
     survey_var_j = survey_var[idx_2]
 
-    val = A**2.0 / (vmax[b_i][i], vmax[b_j][j]) * (np.sqrt(survey_var_i[b_i])*np.sqrt(survey_var_j[b_j])) * mlf_til[b_i][i] * mlf_til[b_j][j]
+    val = area**2.0 / (vmax[b_i][i], vmax[b_j][j]) * (np.sqrt(survey_var_i[b_i])*np.sqrt(survey_var_j[b_j])) * mlf_til[b_i][i] * mlf_til[b_j][j]
 
     return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
     
     
 def calc_cov_mlf_cross_sn(params):
 
-    #b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, mlf_til, area_norm_term, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
+    b_i, b_j, i, j, radius_1, radius_2, area_norm_term, count_b, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
 
     lnk, dlnk = k_adaptive(r_i, r_j)
@@ -784,7 +784,9 @@ def calc_cov_mlf_cross_sn(params):
 
     count_b_i = count_b[b_i](lnk)
     count_b_j = count_b[b_j](lnk)
-
+    rho_i = rho_bg[idx_1]
+    rho_j = rho_bg[idx_2]
+    
     # wp
     if ingredient == 'gg':
         integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * np.sqrt(count_b_i*count_b_j)
@@ -1741,7 +1743,13 @@ def covariance(theta, R, calculate_covariance=True):
             cov_mlf_cross_ssc = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_mlf)
             cov_mlf_cross_gg_tot += cov_mlf_cross_ssc
     
+    #gauss
+    #b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, mlf_func, size_1, size_2, covar = params #sn
+    #b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, area, mlf_til, survey_var, size_1, size_2, covar = params #ssc
     
+    #cross
+    #b_i, b_j, i, j, radius_1, radius_2, area_norm_term, count_b, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params #sn
+    #b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, mlf_til, area_norm_term, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params #ssc
 
     
     # To be removed, only for testing purposes
@@ -1754,6 +1762,7 @@ def covariance(theta, R, calculate_covariance=True):
                         [cov_cross_tot, cov_wp_tot]])
     
     cov_esd_non_gauss, cov_wp_non_gauss, cov_cross_non_gauss = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
+    #cov_esd_ssc, cov_wp_ssc, cov_cross_ssc = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
     
     all = np.array([size_r_gm, size_r_gg, rvir_range_2d_i_gm, rvir_range_2d_i_gg, cov_esd_gauss/rescale, cov_esd_non_gauss/rescale, cov_esd_ssc/rescale, cov_wp_gauss/rescale, cov_wp_non_gauss/rescale, cov_wp_ssc/rescale, cov_esd_tot/rescale, cov_wp_tot/rescale, cov_cross_tot/rescale, cov_block/rescale, aw_values, radius**2.0], dtype=object)
     

@@ -183,7 +183,7 @@ def model(theta, R, calculate_covariance=False):
     output = np.empty(nbins, dtype=object)
     
     if ingredients['nzlens']:
-        assert len(cosmo) >= 10, \
+        assert len(cosmo) >= 11, \
             'When integrating nzlens, must provide an additional parameter' \
             '"nz", corresponding to the histogram of lens redshifts. See' \
             'demo for an example.'
@@ -193,6 +193,15 @@ def model(theta, R, calculate_covariance=False):
         print('nz =', nz, nz.shape)
     else:
         size_cosmo = 9
+    
+    if observable.obstype == 'mlf':
+        if len(cosmo) == size_cosmo+1:
+            assert len(cosmo) >= len(cosmo), \
+                'When using SMF/LF, must provide an additional parameter' \
+                '"z_mlf", corresponding to mean redshift values for SMF/LF. See' \
+                'demo for an example.'
+        z_mlf = cosmo[-1]
+        size_cosmo += 1
     # cheap hack. I'll use this for CMB lensing, but we can
     # also use this to account for difference between shear
     # and reduced shear
@@ -357,7 +366,7 @@ def model(theta, R, calculate_covariance=False):
     # Luminosity or mass function as an output:
     if ingredient_mlf:
         # Needs independent redshift input!
-        z_mlf = z[idx_mlf]
+        #z_mlf = z[idx_mlf]
         if z_mlf.size == 1 and nbins_mlf > 1:
             z_mlf = z_mlf*np.ones(nbins_mlf)
         if z_mlf.size != nbins_mlf:

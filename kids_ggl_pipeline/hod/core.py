@@ -229,7 +229,7 @@ def mlf_tilde(obs, mass_function, bias_function, Mh, mor, scatter_func, mor_args
     if obs_is_log:
         obs = 10**obs
     mfunc = Integrate(
-        prob*mass_function*bias*expand_dims(selection, -1), Mh, axis=-1)
+        prob*mass_function*bias_function*expand_dims(selection, -1), Mh, axis=-1)
     return mfunc
 
 

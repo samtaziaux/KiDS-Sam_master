@@ -50,7 +50,7 @@ or the following in your ``~/.cshrc`` or ``~/.tcshrc`` if your shell is set to `
 
 You can run a quick example by typing ::
 
-    kids_ggl -c demo/ggl_demo_nfw_stack.txt --sampler --demo
+    kids_ggl -c demo/ggl_halomodel.config --sampler --demo
 
 This should show three panels with data points and lines resembling the Early Science satellite galaxy-galaxy lensing results of 
 Sifon et al. (2015) and, after closing it, show the 3x3x14x14 covariance matrix.

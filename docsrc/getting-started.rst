@@ -21,7 +21,7 @@ where, for instance, ``<version>=2.0.0``.
 
 Enter the folder where the pipeline is located and run ::
 
-    python setup.py install
+    pip install .
 
 If you are not using Anaconda, you may have to add a ``--user`` flag to the above if you do not have root privileges (though we 
 absolutely recommend using Anaconda).

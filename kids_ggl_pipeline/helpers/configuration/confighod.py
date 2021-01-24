@@ -250,38 +250,3 @@ def starting_values(starting, parameters, line):
         starting.append(draw(prior, args, bounds, size=None))
     return starting
 
-
-class HODParams(object):
-    """Class to manage list of HOD parameters
-
-    Attributes
-    ----------
-    names : list of str
-        list of parameter names
-    values : list
-        list of parameters or set of parameters
-
-    Methods
-    -------
-    read_section
-        Given a section name, return the data
-
-    """
-
-    def __init__(self, names, values):
-        self.names = names
-        self.values = values
-
-    @property
-    def values(self):
-        return self._values
-
-    @values.setter
-    def values(self, values):
-        self._values = values
-
-    def read_section(self, name):
-        return self.values[self.section_index(name)]
-
-    def section_index(self, name):
-        return self.names.index(name)

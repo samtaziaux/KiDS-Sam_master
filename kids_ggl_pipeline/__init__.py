@@ -3,6 +3,6 @@ KiDS Galaxy-Galaxy Lensing Pipeline
 
 """
 
-__version__ = '2.0.0b20'
+__version__ = '2.0.0b20.dev1'
 
 

@@ -57,7 +57,6 @@ import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
-from . import profiles
 from .tools import (
     fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
@@ -114,12 +113,10 @@ def model(theta, R, calculate_covariance=False):
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
-    
-    #assert len(observables) == 1, \
-    #    'working with more than one observable is not yet supported.' \
-    #    ' If you would like this feature added please raise an issue.'
-    
+
     # We might want to move this outside of the model code, but I am not sure where.
+    # this can probably be output by the configuration setup, maybe as a dictionary
+    # or a custom object
     nbins = 0
     ingredient_gm, ingredient_gg, ingredient_mm, ingredient_mlf = False, False, False, False
     hod_observable = None
@@ -189,9 +186,8 @@ def model(theta, R, calculate_covariance=False):
             'demo for an example.'
         nz = cosmo[9].T
         size_cosmo = 10
-        print('z =', z, z.shape)
-        print('nz =', nz, nz.shape)
     else:
+        # hard-coded
         size_cosmo = 9
     # cheap hack. I'll use this for CMB lensing, but we can
     # also use this to account for difference between shear
@@ -282,59 +278,62 @@ def model(theta, R, calculate_covariance=False):
         rvir_range_2d_i_mlf = [r[1:].astype('float64') for r in R[idx_mlf]]
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
-    
-    # Calculating halo model
-    
+
     """Calculating halo model"""
 
     # interpolate selection function to the same grid as redshift and
     # observable to be used in trapz
     if selection.filename == 'None':
         if integrate_zlens:
-            completeness = np.ones((z.size,nbins,hod_observable.shape[1]))
+            completeness = np.ones(
+                (z.size,nbins,observables.sampling.shape[1]))
         else:
-            completeness = np.ones(hod_observable.shape)
+            completeness = np.ones(observables.sampling.shape)
     elif integrate_zlens:
         completeness = np.array(
             [[selection.interpolate([zi]*obs.size, obs, method='linear')
-              for obs in hod_observable] for zi in z])
+              for obs in observables.sampling] for zi in z])
     else:
         completeness = np.array(
             [selection.interpolate([zi]*obs.size, obs, method='linear')
-             for zi, obs in zip(z, hod_observable)])
+             for zi, obs in zip(z, observables.sampling)])
     # shape ([z.size,]nbins,sampling)
     if integrate_zlens:
-        assert completeness.shape == (z.size,nbins,hod_observable.shape[1])
+        assert completeness.shape \
+            == (z.size,nbins,observables.sampling.shape[1])
     else:
-        assert completeness.shape == hod_observable.shape
+        assert completeness.shape == observables.sampling.shape
+
+    #pop_c, pop_s = hod.hod(
+        #ingredients, nbins, nbins_gm, nbins_gg, observable_gm, observable_gg,
+        #hod_observable_gm, hod_observable_gg, mass_range, c_mor, c_scatter,
+        #s_mor, s_scatter,
 
     pop_c = np.zeros((nbins,mass_range.size))
     pop_s = np.zeros((nbins,mass_range.size))
-    if ingredient_gm:
+    if observables.gm:
         if ingredients['centrals']:
             pop_c[idx_gm,:], prob_c_gm = hod.number(
-                hod_observable_gm, mass_range, c_mor[0], c_scatter[0],
+                observables.gm.sampling, mass_range, c_mor[0], c_scatter[0],
                 c_mor[1:], c_scatter[1:], completeness[idx_gm],
-                obs_is_log=observable_gm.is_log)
-
+                obs_is_log=observables.gm.is_log)
         if ingredients['satellites']:
             pop_s[idx_gm,:], prob_s_gm = hod.number(
-                hod_observable_gm, mass_range, s_mor[0], s_scatter[0],
+                observables.gm.sampling, mass_range, s_mor[0], s_scatter[0],
                 s_mor[1:], s_scatter[1:], completeness[idx_gm],
-                obs_is_log=observable_gm.is_log)
+                obs_is_log=observables.gm.is_log)
 
-    if ingredient_gg:
+    if observables.gg:
         if ingredients['centrals']:
             pop_c[idx_gg,:], prob_c_gg = hod.number(
-                hod_observable_gg, mass_range, c_mor[0], c_scatter[0],
+                observables.gg.sampling, mass_range, c_mor[0], c_scatter[0],
                 c_mor[1:], c_scatter[1:], completeness[idx_gg],
-                obs_is_log=observable_gg.is_log)
-
+                obs_is_log=observables.gg.is_log)
         if ingredients['satellites']:
             pop_s[idx_gg,:], prob_s_gg = hod.number(
-                hod_observable_gg, mass_range, s_mor[0], s_scatter[0],
+                observables.gg.sampling, mass_range, s_mor[0], s_scatter[0],
                 s_mor[1:], s_scatter[1:], completeness[idx_gg],
-                obs_is_log=observable_gg.is_log)
+                obs_is_log=observables.gg.is_log)
 
     pop_g = pop_c + pop_s
 
@@ -345,15 +344,19 @@ def model(theta, R, calculate_covariance=False):
     if ingredient_gm:
         ngal[idx_gm] = hod.nbar(dndm[idx_gm], pop_g[idx_gm], mass_range)
         meff[idx_gm] = hod.Mh_effective(
-            dndm[idx_gm], pop_g[idx_gm], mass_range, return_log=observable_gm.is_log)
+            dndm[idx_gm], pop_g[idx_gm], mass_range,
+            return_log=observables.gm.is_log)
     if ingredient_gg:
         ngal[idx_gg] = hod.nbar(dndm[idx_gg], pop_g[idx_gg], mass_range)
         meff[idx_gg] = hod.Mh_effective(
-            dndm[idx_gg], pop_g[idx_gg], mass_range, return_log=observable_gg.is_log)
+            dndm[idx_gg], pop_g[idx_gg], mass_range,
+            return_log=observables.gg.is_log)
     if ingredient_mm:
         ngal[idx_mm] = np.zeros_like(nbins_mm)
         meff[idx_mm] = np.zeros_like(nbins_mm)
-        
+
+    #sys.exit()
+
     # Luminosity or mass function as an output:
     if ingredient_mlf:
         # Needs independent redshift input!
@@ -365,10 +368,10 @@ def model(theta, R, calculate_covariance=False):
                 'Number of redshift bins should be equal to the number of observable bins!')
         hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
-        
+
         pop_c_mlf = np.zeros((nbins_mlf,mass_range.size))
         pop_s_mlf = np.zeros((nbins_mlf,mass_range.size))
-        
+
         if ingredients['centrals']:
             pop_c_mlf = hod.mlf(
                 hod_observable_mlf, dndm_mlf, mass_range, c_mor[0], c_scatter[0],
@@ -381,7 +384,7 @@ def model(theta, R, calculate_covariance=False):
                 s_mor[1:], s_scatter[1:],
                 obs_is_log=observable_mlf.is_log)
         pop_g_mlf = pop_c_mlf + pop_s_mlf
-        
+
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
                     for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf*10.0**hod_observable_mlf)]
         for i,Ri in enumerate(rvir_range_2d_i_mlf):
@@ -390,7 +393,6 @@ def model(theta, R, calculate_covariance=False):
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
                     in zip(mlf_inter, rvir_range_2d_i_mlf)]
         output[idx_mlf] = mlf_out
-    
 
     """Power spectra"""
 
@@ -399,7 +401,6 @@ def model(theta, R, calculate_covariance=False):
     F_k2 = np.ones_like(k_range_lin)
     #F_k2 = sp.erfc(k_range_lin/10.0)
     # Fourier Transform of the NFW profile
-    
     if ingredients['centrals']:
         uk_c = nfw.uk(
             k_range_lin, mass_range, rvir_range_lin, concentration, rho_bg,
@@ -483,7 +484,7 @@ def model(theta, R, calculate_covariance=False):
         if integrate_zlens:
             intnorm = np.sum(nz, axis=0)
             meff[idx_gm] = np.sum(nz*meff[idx_gm], axis=0) / intnorm
-    
+
     # Galaxy - galaxy spectra (for clustering)
     if ingredient_gg:
         if ingredients['twohalo']:
@@ -494,55 +495,61 @@ def model(theta, R, calculate_covariance=False):
                     expand_dims(pop_g[idx_gg], -2))])
         else:
             Pgg_2h = F_k2 * np.zeros((nbins_gg,setup['lnk_bins']))
-            
+
         ncen = hod.nbar(dndm[idx_gg], pop_c[idx_gg], mass_range)
         nsat = hod.nbar(dndm[idx_gg], pop_s[idx_gg], mass_range)
-    
+
         if ingredients['centrals']:
             """
-            Pgg_c = F_k1 * gg_cen_analy(dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
+            Pgg_c = F_k1 * gg_cen_analy(
+                dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
             """
             Pgg_c = F_k1 * np.zeros((nbins_gg,setup['lnk_bins']))
         else:
             Pgg_c = F_k1 * np.zeros((nbins_gg,setup['lnk_bins']))
-    
+
         if ingredients['satellites']:
             beta = s_beta
-            Pgg_s = F_k1 * gg_sat_analy(dndm[idx_gg], uk_s[idx_gg], pop_s[idx_gg], ngal[idx_gg], beta, mass_range)
+            Pgg_s = F_k1 * gg_sat_analy(
+                dndm[idx_gg], uk_s[idx_gg], pop_s[idx_gg], ngal[idx_gg], beta,
+                mass_range)
         else:
             Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
-        
+
         if ingredients['centrals'] and ingredients['satellites']:
-            Pgg_cs = F_k1 * gg_cen_sat_analy(dndm[idx_gg], uk_s[idx_gg], pop_c[idx_gg], pop_s[idx_gg], ngal[idx_gg], mass_range)
+            Pgg_cs = F_k1 * gg_cen_sat_analy(
+                dndm[idx_gg], uk_s[idx_gg], pop_c[idx_gg], pop_s[idx_gg],
+                ngal[idx_gg], mass_range)
         else:
             Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
-        
+
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgg_k_t = Pgg_c + (2.0 * Pgg_cs) + Pgg_s
             Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
         else:
             Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
-    
+
     # Matter - matter spectra
     if ingredient_mm:
         if ingredients['twohalo']:
             Pmm_2h = F_k2 * array([hmf_i.power for hmf_i in hmf[idx_mm]])
         else:
             Pmm_2h = np.zeros((nbins_mm,setup['lnk_bins']))
-            
+
         if ingredients['centrals']:
-            Pmm_1h = F_k1 * mm_analy(dndm[idx_mm], uk_c[idx_mm], rho_bg[idx_mm], mass_range)
+            Pmm_1h = F_k1 * mm_analy(
+                dndm[idx_mm], uk_c[idx_mm], rho_bg[idx_mm], mass_range)
         else:
             Pmm_1h = np.zeros((nbins_mm,setup['lnk_bins']))
-          
+
         #if ingredients['haloexclusion'] and setup['return'] != 'power':
         #    Pmm_k_t = Pmm_1h
         #    Pmm_k = Pmm_1h + Pmm_2h
         #else:
         Pmm_k = Pmm_1h + Pmm_2h
-    
+
     # Outputs
-           
+
     if ingredient_gm:
         # note this doesn't include the point mass! also, we probably
         # need to return k
@@ -570,7 +577,7 @@ def model(theta, R, calculate_covariance=False):
                 else:
                     P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
                         for Pg_k_i in Pgm_k]
-                   
+
     if ingredient_gg:
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
@@ -580,7 +587,7 @@ def model(theta, R, calculate_covariance=False):
         else:
             P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
                     for Pgg_k_i in Pgg_k]
-                    
+
     if ingredient_mm:
         #if ingredients['haloexclusion'] and setup['return'] != 'power':
         #    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)

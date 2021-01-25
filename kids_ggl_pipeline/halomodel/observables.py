@@ -134,15 +134,15 @@ class Observable(object):
 
 class ModelObservables:
 
-    def __init__(self, observable_list):
-        self.observable_list = observable_list
-        self.obstypes = [obs.obstype for obs in self.observable_list]
+    def __init__(self, observables):
+        self.observables = observables
+        self.obstypes = [obs.obstype for obs in self.observables]
         # note that this is a list with number of bins per observable
-        self._nbins = [obs.nbins for obs in self.observable_list]
+        self._nbins = [obs.nbins for obs in self.observables]
         # and this the total number of bins
         self.nbins = sum(self._nbins)
         self.sampling = np.concatenate(
-            [obs.sampling for obs in self.observable_list], axis=0)
+            [obs.sampling for obs in self.observables], axis=0)
         # lazy initialize
         self._gg = None
         self._gm = None
@@ -150,15 +150,15 @@ class ModelObservables:
         self._mm = None
 
     def __getitem__(self, i):
-        return self.observable_list[i]
+        return self.observables[i]
 
     def __iter__(self):
         self._i = 0
         return self
 
     def __next__(self):
-        if self._i < len(self.observable_list):
-            next = self.observable_list[self._i]
+        if self._i < len(self.observables):
+            next = self.observables[self._i]
             self._i += 1
             return next
         else: raise StopIteration
@@ -199,11 +199,19 @@ class ModelObservables:
                 self._mm = False
         return self._mm
 
+    ### hidden methods ###
+
+    def _add_R(self, R):
+        for obs in self.observables:
+            obs.R = [r[1:].astype('float64') for r in R[obs.idx]]
+
     def _obs_attribute(self, i):
-        obs = self.observable_list[i]
+        obs = self.observables[i]
         obs.idx = self._obs_idx(i)
         return obs
 
     def _obs_idx(self, i):
         prior = sum(self._nbins[:i])
         return np.s_[prior:prior+self._nbins[i]]
+
+

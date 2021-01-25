@@ -87,6 +87,13 @@ def add_mass_range(setup):
         / setup['logM_bins']
     return setup
 
+
+def add_rvir_range(setup):
+    setup['rvir_range_3d'] = np.logspace(-3.2, 4, 250, endpoint=True)
+    setup['rvir_range_3d_interp'] = np.logspace(-2.5, 1.2, 25, endpoint=True)
+    return setup
+
+
 def add_wavenumber(setup):
     setup['k_step'] = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
     setup['k_range'] = np.arange(
@@ -143,6 +150,7 @@ def check_setup(setup):
     setup = add_defaults(setup)
     check_entry_types(setup)
     setup = add_mass_range(setup)
+    setup = add_rvir_range(setup)
     setup = add_wavenumber(setup)
     return setup
 

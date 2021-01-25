@@ -160,17 +160,6 @@ def model(theta, R): #, calculate_covariance=False):
 
     integrate_zlens = ingredients['nzlens']
 
-    # HMF set up parameters
-    #k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
-    #k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
-    #k_range_lin = exp(k_range)
-    # endpoint must be False for mass_range to be equal to hmf.m
-    #mass_range = 10**linspace(
-        #setup['logM_min'], setup['logM_max'], setup['logM_bins'],
-        #endpoint=False)
-    #setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
-                     #/ setup['logM_bins']
-
     # if a single value is given for more than one bin, assign same
     # value to all bins
     #if not np.iterable(z):
@@ -202,8 +191,8 @@ def model(theta, R): #, calculate_covariance=False):
          'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
 
-    #mass_range = hmf[0].m
     assert np.allclose(setup['mass_range'], hmf[0].m)
+    # aliasing for now
     mass_range = setup['mass_range']
 
     rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
@@ -218,20 +207,24 @@ def model(theta, R): #, calculate_covariance=False):
 
     rvir_range_lin = virial_radius(
         mass_range, rho_bg, setup['delta'])
-    rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
+    #rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
+    rvir_range_3d = setup['rvir_range_3d']
     # these are not very informative names but the "i" stands for
     # interpolated
-    rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
+    #rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
     #rvir_range_3d_i = logspace(-4, 2, 60, endpoint=True)
+    rvir_range_3d_i = setup['rvir_range_3d_interp']
     # integrate over redshift later on
     # assuming this means arcmin for now -- implement a way to check later!
     #if setup['distances'] == 'angular':
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
+    """
     if observables.gm:
         rvir_range_2d_i_gm = [r[1:].astype('float64')
                               for r in R[observables.gm.idx]]
+        rx = observables.gm.R
     if observables.gg:
         rvir_range_2d_i_gg = [r[1:].astype('float64')
                               for r in R[observables.gg.idx]]
@@ -241,6 +234,7 @@ def model(theta, R): #, calculate_covariance=False):
     if observables.mlf:
         rvir_range_2d_i_mlf = [r[1:].astype('float64')
                                for r in R[observables.mlf.idx]]
+    """
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
 
@@ -356,11 +350,11 @@ def model(theta, R): #, calculate_covariance=False):
                      for hod_i, ngal_i
                      in zip(observables.mlf.sampling,
                             pop_g_mlf*10.0**observables.mlf.sampling)]
-        for i,Ri in enumerate(rvir_range_2d_i_mlf):
+        for i, Ri in enumerate(observables.mlf.R):
             Ri = Quantity(Ri, unit='Mpc')
-            rvir_range_2d_i_mlf[i] = Ri.to(setup['R_unit']).value
+            observables.mlf.R[i] = Ri.to(setup['R_unit']).value
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
-                   in zip(mlf_inter, rvir_range_2d_i_mlf)]
+                   in zip(mlf_inter, observables.mlf.R)]
         output[observables.mlf.idx] = mlf_out
 
     """Power spectra"""
@@ -595,21 +589,21 @@ def model(theta, R): #, calculate_covariance=False):
             output[observables.gm.idx] = Pgm_k
         if setup['return'] == 'power':
             Pgm_out = [exp(P_i(np.log(r_i)))
-                       for P_i, r_i in zip(P_inter, rvir_range_2d_i_gm)]
+                       for P_i, r_i in zip(P_inter, observables.gm.R)]
             output[observables.gm.idx] = Pgm_out
     if observables.gg:
         if setup['return'] == 'all':
             output[observables.gg.idx] = Pgg_k
         if setup['return'] == 'power':
             Pgg_out = [exp(P_i(np.log(r_i)))
-                       for P_i, r_i in zip(P_inter_2, rvir_range_2d_i_gg)]
+                       for P_i, r_i in zip(P_inter_2, observables.gg.R)]
             output[observables.gg.idx] = Pgg_out
     if observables.mm:
         if setup['return'] == 'all':
             output[observables.mm.idx] = Pmm_k
         if setup['return'] == 'power':
             Pmm_out = [exp(P_i(np.log(r_i)))
-                       for P_i, r_i in zip(P_inter_3, rvir_range_2d_i_mm)]
+                       for P_i, r_i in zip(P_inter_3, observables.mm.R)]
             output[observables.mm.idx] = Pmm_out
     if setup['return'] == 'power':
         output = list(output)
@@ -660,7 +654,7 @@ def model(theta, R): #, calculate_covariance=False):
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)
                  for si in zip(xi2)])
             xi_out = np.array(
-                [x_i(r_i) for x_i, r_i in zip(xi_out_i, rvir_range_2d_i_gm)])
+                [x_i(r_i) for x_i, r_i in zip(xi_out_i, observables.gm.R)])
             output[observables.gm.idx] = xi_out
         if setup['return'] == 'all':
             if integrate_zlens:
@@ -687,7 +681,7 @@ def model(theta, R): #, calculate_covariance=False):
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)
                  for si in zip(xi2_2)])
             xi_out_2 = np.array(
-                [x_i(r_i) for x_i, r_i in zip(xi_out_i_2, rvir_range_2d_i_gg)])
+                [x_i(r_i) for x_i, r_i in zip(xi_out_i_2, observables.gg.R)])
             output[observables.gg.idx] = xi_out_2
         if setup['return'] == 'all':
             output.append(xi2_2)
@@ -712,7 +706,7 @@ def model(theta, R): #, calculate_covariance=False):
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)
                  for si in zip(xi2_3)])
             xi_out_3 = np.array(
-                [x_i(r_i) for x_i, r_i in zip(xi_out_i_3, rvir_range_2d_i_mm)])
+                [x_i(r_i) for x_i, r_i in zip(xi_out_i_3, observables.mm.R)])
             output[observables.mm.idx] = xi_out_3
         if setup['return'] == 'all':
             output.append(xi2_3)
@@ -760,7 +754,7 @@ def model(theta, R): #, calculate_covariance=False):
         if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
             pointmass = c_pm[1]/(2*np.pi) * array(
                 [10**m_pm / r_i**2
-                 for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i_gm)])
+                 for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
             surf_dens2 = surf_dens2 + pointmass
 
         zo = expand_dims(z, -1) if integrate_zlens else z
@@ -794,7 +788,7 @@ def model(theta, R): #, calculate_covariance=False):
                 for si in surf_dens2])
             surf_dens2 = np.array(
                 [s_r(r_i)
-                 for s_r, r_i in zip(surf_dens2_r, rvir_range_2d_i_gm)])
+                 for s_r, r_i in zip(surf_dens2_r, observables.gm.R)])
             #return [surf_dens2, meff]
             if observables.gm.nbins == 1:
                 output[observables.gm.idx.start] = surf_dens2[0]
@@ -825,7 +819,7 @@ def model(theta, R): #, calculate_covariance=False):
                 for si in surf_dens2_2])
             surf_dens2_2 = np.array(
                 [s_r(r_i) for s_r, r_i
-                 in zip(surf_dens2_2_r, rvir_range_2d_i_gg)])
+                 in zip(surf_dens2_2_r, observables.gg.R)])
         if setup['return'] in ('kappa', 'sigma'):
             if observables.gg.nbins == 1:
                 output[observables.gg.idx.start] = surf_dens2_2[0]
@@ -837,7 +831,7 @@ def model(theta, R): #, calculate_covariance=False):
                                   s=0)
                  for wi, rho_i in zip(surf_dens2_2, rho_bg)])
             wp_out = [wp_i(r_i) for wp_i, r_i
-                      in zip(wp_out_i, rvir_range_2d_i_gg)]
+                      in zip(wp_out_i, observables.gg.R)]
             #output.append(wp_out)
         if setup['return'] == 'all':
             wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
@@ -866,7 +860,7 @@ def model(theta, R): #, calculate_covariance=False):
                 for si in surf_dens2_3])
             surf_dens2_3 = array(
                 [s_r(r_i) for s_r, r_i
-                 in zip(surf_dens2_3_r, rvir_range_2d_i_mm)])
+                 in zip(surf_dens2_3_r, observables.mm.R)])
             #return [surf_dens2_3, meff]
             if observables.mm.nbins == 1:
                 output[observables.mm.idx.start] = surf_dens2_3[0]
@@ -897,16 +891,16 @@ def model(theta, R): #, calculate_covariance=False):
         d_surf_dens2_3 = array(
             [np.nan_to_num(
             d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-            for surf_dens2_i, r_i in zip(surf_dens2_3, rvir_range_2d_i_mm)])
+            for surf_dens2_i, r_i in zip(surf_dens2_3, observables.mm.R)])
 
         out_esd_tot_3 = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
             for d_surf_dens2_i, r_i in zip(d_surf_dens2_3, r_i)])
 
-        #out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i_mm[0].size))
+        #out_esd_tot_inter_3 = np.zeros((nbins, observables.mm.R[0].size))
         #for i in range(nbins):
-        #    out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i_mm[i])
-        out_esd_tot_inter_3 = [out_esd_tot_3[i](rvir_range_2d_i_mm[i])
+        #    out_esd_tot_inter_3[i] = out_esd_tot_3[i](observables.mm.R[i])
+        out_esd_tot_inter_3 = [out_esd_tot_3[i](observables.mm.R[i])
                                for i in range(observables.mm.nbins)]
         # This insert makes sure that the ESD's are on the fist place.
         output.insert(0, out_esd_tot_inter_3)
@@ -916,16 +910,16 @@ def model(theta, R): #, calculate_covariance=False):
         d_surf_dens2_2 = array(
                 [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-                for surf_dens2_i, r_i in zip(surf_dens2_2, rvir_range_2d_i_gg)])
+                for surf_dens2_i, r_i in zip(surf_dens2_2, observables.gg.R)])
 
         out_esd_tot_2 = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
              for d_surf_dens2_i, r_i in zip(d_surf_dens2_2, rvir_range_2d_i)])
 
-        #out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i_gg.size))
+        #out_esd_tot_inter_2 = np.zeros((nbins, observables.gg.R.size))
         #for i in range(nbins):
-        #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i_gg[i])
-        out_esd_tot_inter_2 = [out_esd_tot_2[i](rvir_range_2d_i_gg[i])
+        #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](observables.gg.R[i])
+        out_esd_tot_inter_2 = [out_esd_tot_2[i](observables.gg.R[i])
                                for i in range(observables.gg.nbins)]
         output.insert(0, out_esd_tot_inter_2)
     """
@@ -934,23 +928,23 @@ def model(theta, R): #, calculate_covariance=False):
         d_surf_dens2 = array(
             [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-            for surf_dens2_i, r_i in zip(surf_dens2, rvir_range_2d_i_gm)])
+            for surf_dens2_i, r_i in zip(surf_dens2, observables.gm.R)])
 
         out_esd_tot = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
-            for d_surf_dens2_i, r_i in zip(d_surf_dens2, rvir_range_2d_i_gm)])
+            for d_surf_dens2_i, r_i in zip(d_surf_dens2, observables.gm.R)])
 
         #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
         #for i in range(nbins):
         #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter = [out_esd_tot[i](rvir_range_2d_i_gm[i])
+        out_esd_tot_inter = [out_esd_tot[i](observables.gm.R[i])
                              for i in range(observables.gm.nbins)]
         # this should be moved to the power spectrum calculation
         if ingredients['pointmass']:
             # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
             pointmass = c_pm[1]/(np.pi*1e12) * array(
                 [10**m_pm / (r_i**2)
-                 for m_pm, r_i in zip(c_pm[0], rvir_range_2d_i_gm)])
+                 for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
             out_esd_tot_inter = [out_esd_tot_inter[i] + pointmass[i]
                                  for i in range(observables.gm.nbins)]
         if setup['return'] == 'esd_wp':

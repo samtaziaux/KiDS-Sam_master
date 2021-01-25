@@ -85,6 +85,9 @@ def run(hm_options, options, args):
     # utility variables
     rng_obsbins = range(Nobsbins)
 
+    observables._add_R(R)
+    parameters[1][obs_idx] = observables
+
     meta_names = sampling_utils.initialize_metanames(options, output, len(esd))
     # initialize
     lnprior = np.zeros(ndim)

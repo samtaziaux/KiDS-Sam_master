@@ -137,8 +137,10 @@ class ModelObservables:
     def __init__(self, observable_list):
         self.observable_list = observable_list
         self.obstypes = [obs.obstype for obs in self.observable_list]
-        # for convenience
+        # note that this is a list with number of bins per observable
         self._nbins = [obs.nbins for obs in self.observable_list]
+        # and this the total number of bins
+        self.nbins = sum(self._nbins)
         self.sampling = np.concatenate(
             [obs.sampling for obs in self.observable_list], axis=0)
         # lazy initialize

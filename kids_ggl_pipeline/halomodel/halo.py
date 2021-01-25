@@ -114,74 +114,28 @@ def model(theta, R, calculate_covariance=False):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
-    # We might want to move this outside of the model code, but I am not sure where.
-    # this can probably be output by the configuration setup, maybe as a dictionary
-    # or a custom object
-    """
-    nbins = 0
-    ingredient_gm, ingredient_gg, ingredient_mm, ingredient_mlf = False, False, False, False
-    hod_observable = None
-    for i, observable in enumerate(observables):
-        if observable.obstype == 'gm':
-            ingredient_gm = True
-            observable_gm = observable
-            hod_observable_gm = observable.sampling
-            if hod_observable is None:
-                hod_observable = hod_observable_gm
-            else:
-                hod_observable = np.concatenate([hod_observable, hod_observable_gm], axis=0)
-            nbins_gm = observable.nbins
-            idx_gm = np.s_[nbins:nbins+nbins_gm]
-            nbins += nbins_gm
-        if observable.obstype == 'gg':
-            ingredient_gg = True
-            observable_gg = observable
-            hod_observable_gg = observable.sampling
-            if hod_observable is None:
-                hod_observable = hod_observable_gg
-            else:
-                hod_observable = np.concatenate([hod_observable, hod_observable_gg], axis=0)
-            nbins_gg = observable.nbins
-            idx_gg = np.s_[nbins:nbins+nbins_gg]
-            nbins += nbins_gg
-        if observable.obstype == 'mm':
-            ingredient_mm = True
-            observable_mm = observable
-            nbins_mm = observable.nbins
-            idx_mm = np.s_[nbins:nbins+nbins_mm]
-            nbins += nbins_mm
-        if observable.obstype == 'mlf':
-            ingredient_mlf = True
-            observable_mlf = observable
-            hod_observable_mlf = observable.sampling
-            nbins_mlf = observable.nbins
-            idx_mlf = np.s_[nbins:nbins+nbins_mlf]
-            nbins += nbins_mlf
-    """
-
     if setup['return'] in ('wp', 'esd_wp') and not observables.gg:
         raise ValueError(
-        'If return=wp or return=esd_wp then you must toggle the' \
-        ' clustering as an ingredient. Similarly, if return=esd' \
-        ' or return=esd_wp then you must toggle the lensing' \
-        ' as an ingredient as well.')
+            'If return=wp or return=esd_wp then you must toggle the' \
+            ' clustering as an ingredient. Similarly, if return=esd' \
+            ' or return=esd_wp then you must toggle the lensing' \
+            ' as an ingredient as well.')
     if setup['return'] in ('esd', 'esd_wp') and not observables.gm:
         raise ValueError(
-        'If return=wp or return=esd_wp then you must toggle the' \
-        ' clustering as an ingredient. Similarly, if return=esd' \
-        ' or return=esd_wp then you must toggle the lensing' \
-        ' as an ingredient as well.')
-    
+            'If return=wp or return=esd_wp then you must toggle the' \
+            ' clustering as an ingredient. Similarly, if return=esd' \
+            ' or return=esd_wp then you must toggle the lensing' \
+            ' as an ingredient as well.')
+
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
-    
+
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
-    
-    #output = []
+
     nbins = observables.nbins
     output = np.empty(nbins, dtype=object)
-    
+
     if ingredients['nzlens']:
         assert len(cosmo) >= 10, \
             'When integrating nzlens, must provide an additional parameter' \
@@ -253,7 +207,7 @@ def model(theta, R, calculate_covariance=False):
         else rho_mean / omegam
     # same as with redshift
     rho_bg = expand_dims(rho_bg, -1)
-    
+
     concentration = c_concentration[0](mass_range, *c_concentration[1:])
     if ingredients['satellites']:
         concentration_sat = s_concentration[0](
@@ -443,14 +397,13 @@ def model(theta, R, calculate_covariance=False):
             expand_dims(concentration, -1), uk_c[observables.gm.idx].shape)
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
-    
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*k_range_lin.size).T
-    
+
     if not integrate_zlens:
         rho_bg = rho_bg[...,0]
-    
+
     if observables.gm:
         if ingredients['twohalo']:
             """
@@ -492,13 +445,13 @@ def model(theta, R, calculate_covariance=False):
                 mass_range)
         else:
             Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
-        
+
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgm_k_t = Pgm_c + Pgm_s
             Pgm_k = Pgm_c + Pgm_s + Pgm_2h
         else:
             Pgm_k = Pgm_c + Pgm_s + Pgm_2h
-    
+
         # finally integrate over (weight by, really) lens redshift
         if integrate_zlens:
             intnorm = np.sum(nz, axis=0)
@@ -621,8 +574,7 @@ def model(theta, R, calculate_covariance=False):
         #else:
         P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
                 for Pmm_k_i in Pmm_k]
-    
-    
+
     if observables.gm:
         if setup['return'] == 'all':
             output[observables.gm.idx] = Pgm_k
@@ -652,7 +604,7 @@ def model(theta, R, calculate_covariance=False):
         output.append(k_range_lin)
     else:
         pass
-    
+
     # correlation functions
     if observables.gm:
         if integrate_zlens:
@@ -788,7 +740,7 @@ def model(theta, R, calculate_covariance=False):
             surf_dens2 = array(
                 [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
                 for xi2_i, rho_i in zip(xi2, rho_bg)])
-             
+
         # units of Msun/pc^2
         if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
             pointmass = c_pm[1]/(2*np.pi) * array(
@@ -812,11 +764,11 @@ def model(theta, R, calculate_covariance=False):
             zw = nz * sigma_crit(cosmo_model, z, zs) \
                 if setup['return'] == 'kappa' else nz
             zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
-        
+
         # in Msun/pc^2
         if not setup['return'] == 'kappa':
             surf_dens2 /= 1e12
-    
+
         # fill/interpolate nans
         surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
         for i in range(observables.gm.nbins):
@@ -835,19 +787,19 @@ def model(theta, R, calculate_covariance=False):
                 output[observables.gm.idx] = surf_dens2
         if setup['return'] == 'all':
             output.append(surf_dens2)
-            
+
     if observables.gg:
         surf_dens2_2 = array(
             [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
             for xi2_i, rho_i in zip(xi2_2, rho_bg)])
-        
+
         if setup['distances'] == 'proper':
             surf_dens2_2 *= (1+zo)**2
-        
+
         # in Msun/pc^2
         if not setup['return'] in ('kappa', 'wp', 'esd_wp'):
             surf_dens2_2 /= 1e12
-        
+
         # fill/interpolate nans
         surf_dens2_2[(surf_dens2_2 <= 0) | (surf_dens2_2 >= 1e20)] = np.nan
         for i in range(observables.gg.nbins):
@@ -907,7 +859,7 @@ def model(theta, R, calculate_covariance=False):
                 output[observables.mm.idx] = surf_dens2_3
         if setup['return'] == 'all':
             output.append(surf_dens2_3)
-        
+
     if setup['return'] in ('kappa', 'sigma'):
         #output = list(output)
         output = [output, meff]
@@ -921,12 +873,11 @@ def model(theta, R, calculate_covariance=False):
         pass
     else:
         pass
-    
-    
+
     # excess surface density
     """
     # These two options are not really used for any observable! Keeping in for now.
-    
+
     if ingredients['mm']:
         d_surf_dens2_3 = array(
             [np.nan_to_num(
@@ -936,7 +887,7 @@ def model(theta, R, calculate_covariance=False):
         out_esd_tot_3 = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
             for d_surf_dens2_i, r_i in zip(d_surf_dens2_3, r_i)])
-    
+
         #out_esd_tot_inter_3 = np.zeros((nbins, rvir_range_2d_i_mm[0].size))
         #for i in range(nbins):
         #    out_esd_tot_inter_3[i] = out_esd_tot_3[i](rvir_range_2d_i_mm[i])
@@ -944,7 +895,7 @@ def model(theta, R, calculate_covariance=False):
                                for i in range(observables.mm.nbins)]
         # This insert makes sure that the ESD's are on the fist place.
         output.insert(0, out_esd_tot_inter_3)
-    
+
 
     if ingredients['gg']:
         d_surf_dens2_2 = array(
@@ -955,7 +906,7 @@ def model(theta, R, calculate_covariance=False):
         out_esd_tot_2 = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
              for d_surf_dens2_i, r_i in zip(d_surf_dens2_2, rvir_range_2d_i)])
-        
+
         #out_esd_tot_inter_2 = np.zeros((nbins, rvir_range_2d_i_gg.size))
         #for i in range(nbins):
         #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](rvir_range_2d_i_gg[i])
@@ -963,17 +914,17 @@ def model(theta, R, calculate_covariance=False):
                                for i in range(observables.gg.nbins)]
         output.insert(0, out_esd_tot_inter_2)
     """
-        
+
     if observables.gm:
         d_surf_dens2 = array(
             [np.nan_to_num(
                 d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
             for surf_dens2_i, r_i in zip(surf_dens2, rvir_range_2d_i_gm)])
-            
+
         out_esd_tot = array(
             [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
             for d_surf_dens2_i, r_i in zip(d_surf_dens2, rvir_range_2d_i_gm)])
-    
+
         #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
         #for i in range(nbins):
         #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
@@ -994,9 +945,9 @@ def model(theta, R, calculate_covariance=False):
             output = [output, meff]
         else:
             output = [out_esd_tot_inter, meff]
-    
+
     return output
-    
+
 
 if __name__ == '__main__':
     print(0)

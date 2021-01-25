@@ -149,8 +149,6 @@ class ModelObservables:
         self._mlf = None
         self._mm = None
 
-    ### create iterable. Should be able to remove after everything works
-
     def __getitem__(self, i):
         return self.observable_list[i]
 

@@ -23,6 +23,7 @@ _default_entries = {
     'z_epsilon': 'offset redshift between lenses and sources',
     'z_max': 'max redshift used in photo-z calibration',
     'specz_file': 'file containing weights for photo-z calibration',
+    'vmax_file': 'file containing Vmax values',
     }
 
 _default_values = {
@@ -45,6 +46,7 @@ _default_values = {
     'specz_file': 'None',
     'threads': 1,
     'output': 'analytical_covariance.txt',
+    'vmax_file': 'None',
     }
 
 _necessary_entries = {
@@ -71,6 +73,7 @@ _valid_entries = {
     'specz_file': str,
     'threads': int,
     'output': str,
+    'vmax_file': str,
     }
 
 

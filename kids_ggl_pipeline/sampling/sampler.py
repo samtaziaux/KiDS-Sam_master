@@ -45,7 +45,12 @@ def run(hm_options, options, args):
     val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     setup = parameters[1][parameters[0].index('setup')]
 
+    obs_idx = parameters[0].index('observables')
+    observables = parameters[1][obs_idx]
+
     print_opening_msg(args, options)
+
+    assert_output(setup, observables)
 
     # identify fixed and free parameters
     jfree = np.array([(p in priors.free_priors) for p in prior_types])
@@ -59,7 +64,7 @@ def run(hm_options, options, args):
             args, function, options, setup,# mock_options,
             parameters, join, starting, jfree, repeat, nparams)
         return
-        
+
     if args.cov:
         Ndatafiles = len(options['data'][0])
         assert Ndatafiles > 0, 'No data files found'
@@ -94,7 +99,7 @@ def run(hm_options, options, args):
     for n in names_extend:
         fail_value[n] = 9999
     fail_value = list(fail_value[0])
-        
+
     if not options['resume']:
         print('Starting values =', starting)
 
@@ -122,7 +127,7 @@ def run(hm_options, options, args):
         po = sample_ball(
             names, prior_types, jfree, starting, parameters,
             options['nwalkers'], ndim)
-            
+
     if not os.path.isfile(options['output']):
         print('Running a new model. Good luck!\n')
 
@@ -178,6 +183,23 @@ def run(hm_options, options, args):
     print('Everything saved to {0}!'.format(options['output']))
 
     return
+
+
+def assert_output(setup, observables):
+    if setup['return'] in ('wp', 'esd_wp') and not observables.gg:
+        raise ValueError(
+            'If return=wp or return=esd_wp then you must toggle the' \
+            ' clustering as an ingredient. Similarly, if return=esd' \
+            ' or return=esd_wp then you must toggle the lensing' \
+            ' as an ingredient as well.')
+    if setup['return'] in ('esd', 'esd_wp') and not observables.gm:
+        raise ValueError(
+            'If return=wp or return=esd_wp then you must toggle the' \
+            ' clustering as an ingredient. Similarly, if return=esd' \
+            ' or return=esd_wp then you must toggle the lensing' \
+            ' as an ingredient as well.')
+    return
+
 
 
 def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,

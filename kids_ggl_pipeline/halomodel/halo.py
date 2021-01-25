@@ -38,7 +38,7 @@ import mpmath as mp
 import matplotlib.pyplot as plt
 import scipy
 import sys
-from numpy import (arange, array, exp, expand_dims, iterable, linspace,
+from numpy import (arange, array, exp, expand_dims, iterable,
                    logspace, ones)
 from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
@@ -101,13 +101,13 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
-def model(theta, R, calculate_covariance=False):
+def model(theta, R): #, calculate_covariance=False):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
     # this has to happen before because theta is re-purposed below
-    if calculate_covariance:
-        covar = theta[1][theta[0].index('covariance')]
+    #if calculate_covariance:
+        #covar = theta[1][theta[0].index('covariance')]
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
@@ -161,15 +161,15 @@ def model(theta, R, calculate_covariance=False):
     integrate_zlens = ingredients['nzlens']
 
     # HMF set up parameters
-    k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
-    k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
-    k_range_lin = exp(k_range)
+    #k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
+    #k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
+    #k_range_lin = exp(k_range)
     # endpoint must be False for mass_range to be equal to hmf.m
-    mass_range = 10**linspace(
-        setup['logM_min'], setup['logM_max'], setup['logM_bins'],
-        endpoint=False)
-    setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
-                     / setup['logM_bins']
+    #mass_range = 10**linspace(
+        #setup['logM_min'], setup['logM_max'], setup['logM_bins'],
+        #endpoint=False)
+    #setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
+                     #/ setup['logM_bins']
 
     # if a single value is given for more than one bin, assign same
     # value to all bins
@@ -199,10 +199,13 @@ def model(theta, R, calculate_covariance=False):
     # Tinker10 should also be read from theta!
     transfer_params = \
         {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
-         'lnk_max': setup['lnk_max'], 'dlnk': k_step}
+         'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
 
-    mass_range = hmf[0].m
+    #mass_range = hmf[0].m
+    assert np.allclose(setup['mass_range'], hmf[0].m)
+    mass_range = setup['mass_range']
+
     rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
         else rho_mean / omegam
     # same as with redshift
@@ -272,8 +275,7 @@ def model(theta, R, calculate_covariance=False):
         #observables.gm.sampling, observables.gg.sampling, mass_range,
         #c_mor, c_scatter, s_mor, s_scatter,
 
-    pop_c = np.zeros((nbins,mass_range.size))
-    pop_s = np.zeros((nbins,mass_range.size))
+    pop_c, pop_s = np.zeros((2,nbins,mass_range.size))
     if observables.gm:
         if ingredients['centrals']:
             pop_c[observables.gm.idx,:], prob_c_gm = hod.number(
@@ -364,28 +366,28 @@ def model(theta, R, calculate_covariance=False):
     """Power spectra"""
 
     # damping of the 1h power spectra at small k
-    F_k1 = sp.erf(k_range_lin/0.1)
-    F_k2 = np.ones_like(k_range_lin)
-    #F_k2 = sp.erfc(k_range_lin/10.0)
+    F_k1 = sp.erf(setup['k_range_lin']/0.1)
+    F_k2 = np.ones_like(setup['k_range_lin'])
+    #F_k2 = sp.erfc(setup['k_range_lin']/10.0)
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         uk_c = nfw.uk(
-            k_range_lin, mass_range, rvir_range_lin, concentration, rho_bg,
+            setup['k_range_lin'], mass_range, rvir_range_lin, concentration, rho_bg,
             setup['delta'])
     elif integrate_zlens:
-        uk_c = np.ones((nbins,z.size//nbins,mass_range.size,k_range_lin.size))
+        uk_c = np.ones((nbins,z.size//nbins,mass_range.size,setup['k_range_lin'].size))
     else:
-        uk_c = np.ones((nbins,mass_range.size,k_range_lin.size))
+        uk_c = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
     # and of the NFW profile of the satellites
     if ingredients['satellites']:
         uk_s = nfw.uk(
-            k_range_lin, mass_range, rvir_range_lin, concentration_sat, rho_bg,
+            setup['k_range_lin'], mass_range, rvir_range_lin, concentration_sat, rho_bg,
             setup['delta'])
         uk_s = uk_s / expand_dims(uk_s[...,0], -1)
     elif integrate_zlens:
-        uk_s = np.ones((nbins,z.size//nbins,mass_range.size,k_range_lin.size))
+        uk_s = np.ones((nbins,z.size//nbins,mass_range.size,setup['k_range_lin'].size))
     else:
-        uk_s = np.ones((nbins,mass_range.size,k_range_lin.size))
+        uk_s = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
 
     # If there is miscentring to be accounted for
     # Only for galaxy-galaxy lensing!
@@ -393,13 +395,13 @@ def model(theta, R, calculate_covariance=False):
         p_off, r_off = c_miscent#[1:]
         uk_c[observables.gm.idx] = uk_c[observables.gm.idx] * nfw.miscenter(
             p_off, r_off, expand_dims(mass_range, -1),
-            expand_dims(rvir_range_lin, -1), k_range_lin,
+            expand_dims(rvir_range_lin, -1), setup['k_range_lin'],
             expand_dims(concentration, -1), uk_c[observables.gm.idx].shape)
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
-    bias = array([bias]*k_range_lin.size).T
+    bias = array([bias]*setup['k_range_lin'].size).T
 
     if not integrate_zlens:
         rho_bg = rho_bg[...,0]
@@ -409,7 +411,7 @@ def model(theta, R, calculate_covariance=False):
             """
             # unused but not removing as we might want to use it later
             #bias_out = bias.T[0] * array(
-                #[TwoHalo(hmf_i, ngal_i, pop_g_i, k_range_lin, rvir_range_lin_i,
+                #[TwoHalo(hmf_i, ngal_i, pop_g_i, setup['k_range_lin'], rvir_range_lin_i,
                      #mass_range)[1]
                 #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
                 #in zip(rvir_range_lin, hmf, ngal, pop_g)])
@@ -533,47 +535,60 @@ def model(theta, R, calculate_covariance=False):
         if setup['return'] == 'power':
             if integrate_zlens:
                 Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
-            P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                for Pg_k_i in Pgm_k]
+            P_inter = [UnivariateSpline(
+                            setup['k_range'], np.log(Pg_k_i), s=0, ext=0)
+                       for Pg_k_i in Pgm_k]
         else:
             if integrate_zlens:
                 if ingredients['haloexclusion'] and setup['return'] != 'power':
-                    P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k_t)]
-                    P_inter_2h = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_2h)]
+                    P_inter = [[UnivariateSpline(setup['k_range'], logPg_ij,
+                                                 s=0, ext=0)
+                                for logPg_ij in logPg_i]
+                               for logPg_i in np.log(Pgm_k_t)]
+                    P_inter_2h = [[UnivariateSpline(setup['k_range'],
+                                                    logPg_ij, s=0, ext=0)
+                                   for logPg_ij in logPg_i]
+                                  for logPg_i in np.log(Pgm_2h)]
                 else:
-                    P_inter = [[UnivariateSpline(k_range, logPg_ij, s=0, ext=0)
-                        for logPg_ij in logPg_i] for logPg_i in np.log(Pgm_k)]
+                    P_inter = [[UnivariateSpline(setup['k_range'], logPg_ij,
+                                                 s=0, ext=0)
+                                for logPg_ij in logPg_i]
+                               for logPg_i in np.log(Pgm_k)]
             else:
                 if ingredients['haloexclusion'] and setup['return'] != 'power':
-                    P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                        for Pg_k_i in Pgm_k_t]
-                    P_inter_2h = [UnivariateSpline(k_range, np.log(Pg_2h_i), s=0, ext=0)
-                        for Pg_2h_i in Pgm_2h]
+                    P_inter = [UnivariateSpline(setup['k_range'], Pg_k_i,
+                                                s=0, ext=0)
+                               for Pg_k_i in np.log(Pgm_k_t)]
+                    P_inter_2h = [UnivariateSpline(setup['k_range'],
+                                                   Pg_2h_i, s=0, ext=0)
+                                  for Pg_2h_i in np.log(Pgm_2h)]
                 else:
-                    P_inter = [UnivariateSpline(k_range, np.log(Pg_k_i), s=0, ext=0)
-                        for Pg_k_i in Pgm_k]
+                    P_inter = [UnivariateSpline(setup['k_range'],
+                                                Pg_k_i, s=0, ext=0)
+                               for Pg_k_i in np.log(Pgm_k)]
 
     if observables.gg:
         if ingredients['haloexclusion'] and setup['return'] != 'power':
-            P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
-                    for Pgg_k_i in Pgg_k_t]
-            P_inter_2_2h = [UnivariateSpline(k_range, np.log(Pgg_2h_i), s=0, ext=0)
-                    for Pgg_2h_i in Pgg_2h]
+            P_inter_2 = [UnivariateSpline(setup['k_range'], Pgg_k_i,
+                                          s=0, ext=0)
+                         for Pgg_k_i in np.log(Pgg_k_t)]
+            P_inter_2_2h = [UnivariateSpline(setup['k_range'], Pgg_2h_i,
+                                             s=0, ext=0)
+                            for Pgg_2h_i in np.log(Pgg_2h)]
         else:
-            P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
-                    for Pgg_k_i in Pgg_k]
+            P_inter_2 = [UnivariateSpline(setup['k_range'], Pgg_k_i, s=0,
+                                          ext=0)
+                         for Pgg_k_i in np.log(Pgg_k)]
 
     if observables.mm:
         #if ingredients['haloexclusion'] and setup['return'] != 'power':
-        #    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+        #    P_inter_3 = [UnivariateSpline(setup['k_range'], np.log(Pmm_k_i), s=0, ext=0)
         #            for Pmm_k_i in Pmm_k_t]
-        #    P_inter_3_2h = [UnivariateSpline(k_range, np.log(Pmm_2h_i), s=0, ext=0)
+        #    P_inter_3_2h = [UnivariateSpline(setup['k_range'], np.log(Pmm_2h_i), s=0, ext=0)
         #            for Pmm_2h_i in Pmm_2h]
         #else:
-        P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
-                for Pmm_k_i in Pmm_k]
+        P_inter_3 = [UnivariateSpline(setup['k_range'], Pmm_k_i, s=0, ext=0)
+                     for Pmm_k_i in np.log(Pmm_k)]
 
     if observables.gm:
         if setup['return'] == 'all':
@@ -601,7 +616,7 @@ def model(theta, R, calculate_covariance=False):
         output = [output, meff]
         return output
     elif setup['return'] == 'all':
-        output.append(k_range_lin)
+        output.append(setup['k_range_lin'])
     else:
         pass
 

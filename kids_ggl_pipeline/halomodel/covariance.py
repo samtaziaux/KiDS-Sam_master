@@ -756,7 +756,7 @@ def calc_cov_mlf_sn(params):
 
     val = delta_bin[b_i,b_j] * delta_r[i,j] * mlf_func[b_i][i] / (m_bin[b_i] * vmax[b_i][i])
     
-    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * (r_i * r_j)
     
     
 def calc_cov_mlf_ssc(params):
@@ -766,7 +766,7 @@ def calc_cov_mlf_ssc(params):
     
     val = area_norm_term**2.0 / (vmax[b_i][i] * vmax[b_j][j]) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * mlf_til[b_i][i] * mlf_til[b_j][j]
 
-    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * (r_i * r_j)
     
     
 def calc_cov_mlf_cross_sn(params):
@@ -796,7 +796,7 @@ def calc_cov_mlf_cross_sn(params):
         integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * count_b_j
         val = (1.0/Awr_i)/(2.0*np.pi) * trapz(integ2, dx=dlnk) * rho_i[b_i] / 1e12
     
-    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * r_j
     
     
 def calc_cov_mlf_cross_ssc(params):
@@ -842,8 +842,8 @@ def calc_cov_mlf_cross_ssc(params):
     if ingredient == 'gm':
         integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * (np.sqrt(survey_var_i[b_i] * survey_var_j[b_j])) * ps_deriv_gm_i * mlf_j
         val = (1.0/Awr_i)/(2.0*np.pi) * trapz(integ2, dx=dlnk) * rho_i[b_i] / 1e12
-    
-    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    # Area normalisation is not yet clear here!
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * r_j
 
 
 def aw_func(params):
@@ -1159,8 +1159,6 @@ def covariance(theta, R, calculate_covariance=True):
         l_range, alms, survey_area = calculate_alms(healpy_data, 1)
         survey_var = [survey_variance_from_healpy(hmf_i, k_range, z_kids, l_range, alms, survey_area) for hmf_i in hmf]
         kids_area = survey_area * 3600.0 # to arcmin^2
-        print(kids_area)
-        print(survey_var)
         area_norm_term = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
         area_sur = area_norm_term
         radius = np.sqrt(area_norm_term / np.pi)
@@ -1170,14 +1168,12 @@ def covariance(theta, R, calculate_covariance=True):
     else:
         kids_area = covar['area'] # in deg^2
         kids_area = kids_area * 3600.0 # to arcmin^2
-        print(kids_area)
         area_sur = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
         radius = np.sqrt(kids_area / np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h
         vol = radius**2.0 * Pi_max
         W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
         W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
         survey_var = [survey_variance(hmf_i, W_p, k_range, radius) for hmf_i in hmf]
-        print(survey_var)
         area_norm_term = W_p
     
 
@@ -1285,7 +1281,7 @@ def covariance(theta, R, calculate_covariance=True):
         pop_g_mlf_til = pop_c_mlf_til + pop_s_mlf_til
         
         mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
-                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf)]#*10.0**hod_observable_mlf)]
+                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf)]
         mlf_tilde_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
                     for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf_til)]
         for i,Ri in enumerate(rvir_range_2d_i_mlf):
@@ -1716,15 +1712,12 @@ def covariance(theta, R, calculate_covariance=True):
     if gauss == 'True':
         print('Calculating the Gaussian part of the SMF/LF covariance ...')
         if ingredient_mlf:
-            print('auto')
             cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), rvir_range_2d_i_mlf, rvir_range_2d_i_mlf, vmax, m_bin, mlf_out, size_r_mlf, size_r_mlf, covar)
             cov_mlf_tot += cov_mlf_gauss
         if ingredient_mlf and ingredient_gm and (cross == 'True'):
-            print('cross gm')
             cov_mlf_cross_gauss_gm = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gm.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_mlf, area_norm_term, count_b_interp, rho_bg, 'gm', idx_gm, idx_mlf, size_r_gm, size_r_mlf, covar)
             cov_mlf_cross_gm_tot += cov_mlf_cross_gauss_gm
         if ingredient_mlf and ingredient_gg and (cross == 'True'):
-            print('cross gg')
             cov_mlf_cross_gauss_gg = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_mlf, area_norm_term, count_b_interp, rho_bg, 'gg', idx_gg, idx_mlf, size_r_gg, size_r_mlf, covar)
             cov_mlf_cross_gg_tot += cov_mlf_cross_gauss_gg
             
@@ -1732,15 +1725,12 @@ def covariance(theta, R, calculate_covariance=True):
     if ssc == 'True':
         print('Calculating the SMF/LF super-sample covariance ...')
         if ingredient_mlf:
-            print('auto')
             cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), rvir_range_2d_i_mlf, rvir_range_2d_i_mlf, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, size_r_mlf, size_r_mlf, covar)
             cov_mlf_tot += cov_mlf_ssc
         if ingredient_mlf and ingredient_gm and (cross == 'True'):
-            print('cross gm')
             cov_mlf_cross_ssc_gm = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gm.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_mlf, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gm', idx_gm, idx_mlf, size_r_gm, size_r_mlf, covar)
             cov_mlf_cross_gm_tot += cov_mlf_cross_ssc_gm
         if ingredient_mlf and ingredient_gg and (cross == 'True'):
-            print('cross gg')
             cov_mlf_cross_ssc_gg = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_mlf, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gg', idx_gg, idx_mlf, size_r_gg, size_r_mlf, covar)
             cov_mlf_cross_gg_tot += cov_mlf_cross_ssc_gg
     
@@ -1773,13 +1763,28 @@ def covariance(theta, R, calculate_covariance=True):
     
     #"""
     
-    # REWRITE, this is stupid!
-    if ingredient_gm:
-        return  cov_esd_tot
-    if ingredient_gg:
-        return cov_wp_tot
-    if ingredient_gm and ingredient_gg:
-        return np.block([[cov_esd_tot, cov_cross_tot.T], [cov_cross_tot, cov_wp_tot]])
+    # I think this can be simplified a bit :/
+    if ingredient_gm and not (ingredient_gg or ingredient_mlf):
+        cov_block = cov_esd_tot
+    if ingredient_gg and not (ingredient_gm or ingredient_mlf):
+        cov_block = cov_wp_tot
+    if ingredient_mlf and not (ingredient_gm or ingredient_gg):
+        cov_block = cov_mlf_tot
+    if ingredient_gm and ingredient_gg and not ingredient_mlf:
+        cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
+                              [cov_cross_tot, cov_wp_tot]])
+    if ingredient_gm and ingredient_mlf and not ingredient_gg:
+        cov_block = np.block([[cov_esd_tot, cov_mlf_cross_gm_tot],
+                              [cov_mlf_cross_gm_tot.T, cov_mlf_tot]])
+    if ingredient_gg and ingredient_mlf and not ingredient_gm:
+        cov_block = np.block([[cov_wp_tot, cov_mlf_cross_gg_tot],
+                              [cov_mlf_cross_gg_tot.T, cov_mlf_tot]])
+    if ingredient_gm and ingredient_gg and ingredient_mlf:
+        cov_block = np.block([[cov_esd_tot, cov_cross_tot.T, cov_mlf_cross_gm_tot],
+                            [cov_cross_tot, cov_wp_tot, cov_mlf_cross_gg_tot],
+                            [cov_mlf_cross_gm_tot.T, cov_mlf_cross_gg_tot.T, cov_mlf_tot]])
+    
+    return cov_block
 
 
     

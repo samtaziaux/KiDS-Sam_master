@@ -405,8 +405,8 @@ def model(theta, R, calculate_covariance=False):
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(k_range_lin/0.1)
-    #F_k2 = np.ones_like(k_range_lin)
-    F_k2 = sp.erfc(k_range_lin/2.0)
+    F_k2 = np.ones_like(k_range_lin)
+    #F_k2 = sp.erfc(k_range_lin/2.0)
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
@@ -438,7 +438,7 @@ def model(theta, R, calculate_covariance=False):
             expand_dims(concentration, -1), uk_c[idx_gm].shape)
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
-    
+    """
     # read in Alex Mead BNL table:
     print('Importing BNL pickle...')
     import dill as pickle
@@ -448,7 +448,7 @@ def model(theta, R, calculate_covariance=False):
     
     Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm], rho_bg[idx_gm], z[idx_gm])])
     Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, z_i in zip(hmf[idx_gg], pop_g[idx_gg], ngal[idx_gg], z[idx_gg])])
-    
+    """
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*k_range_lin.size).T
@@ -561,77 +561,6 @@ def model(theta, R, calculate_covariance=False):
         Pmm_k = Pmm_1h + Pmm_2h
     
     # Outputs
-    #"""
-    import matplotlib.pyplot as pl
-    
-    pl.plot(k_range_lin, Pgm_k[0], label='Total')
-    pl.plot(k_range_lin, Pgm_k[0] + hmf[idx_gm][0].power*Igm[0], label='Total+BNL')
-    pl.plot(k_range_lin, Pgm_2h[0], label='2h')
-    pl.plot(k_range_lin, Pgm_2h[0] + hmf[idx_gm][0].power*Igm[0], label='2h BNL')
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.ylim([1e1,1e5])
-    pl.xlim([1e-2,1e1])
-    pl.legend()
-    pl.show()
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm.png')
-    pl.clf()
-    pl.close()
-    
-    pl.plot(k_range_lin, Pgm_k[0]/Pgm_k[0], label='Total')
-    pl.plot(k_range_lin, (Pgm_k[0] + hmf[idx_gm][0].power*Igm[0])/Pgm_k[0], label='Total+BNL')
-    pl.plot(k_range_lin, Pgm_2h[0]/Pgm_2h[0], label='2h')
-    pl.plot(k_range_lin, (Pgm_2h[0] + hmf[idx_gm][0].power*Igm[0])/Pgm_2h[0], label='2h BNL')
-    pl.xscale('log')
-    #pl.yscale('log')
-    pl.ylim([0,2])
-    pl.xlim([1e-2,1e1])
-    pl.legend()
-    pl.show()
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm_ratio.png')
-    pl.clf()
-    pl.close()
-    
-    
-    pl.plot(k_range_lin, Pgg_k[0], label='Total')
-    pl.plot(k_range_lin, Pgg_k[0] + hmf[idx_gg][0].power*Igg[0], label='Total+BNL')
-    pl.plot(k_range_lin, Pgg_2h[0], label='2h')
-    pl.plot(k_range_lin, Pgg_2h[0] + hmf[idx_gg][0].power*Igg[0], label='2h BNL')
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.ylim([1e1,1e5])
-    pl.xlim([1e-2,1e1])
-    pl.legend()
-    pl.show()
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gg.png')
-    pl.clf()
-    pl.close()
-    
-    pl.plot(k_range_lin, Pgg_k[0]/Pgg_k[0], label='Total')
-    pl.plot(k_range_lin, (Pgg_k[0] + hmf[idx_gg][0].power*Igg[0])/Pgg_k[0], label='Total+BNL')
-    pl.plot(k_range_lin, Pgg_2h[0]/Pgg_2h[0], label='2h')
-    pl.plot(k_range_lin, (Pgg_2h[0] + hmf[idx_gg][0].power*Igg[0])/Pgg_2h[0], label='BNL')
-    pl.xscale('log')
-    #pl.yscale('log')
-    pl.ylim([0,2])
-    pl.xlim([1e-2,1e1])
-    pl.legend()
-    pl.show()
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gg_ratio.png')
-    pl.clf()
-    pl.close()
-    
-    #Pgg_k = Pgg_k + array([hmf_i.power for hmf_i in hmf[idx_gg]])*Igg
-    #Pgm_k = Pgm_k + array([hmf_i.power for hmf_i in hmf[idx_gm]])*Igm
-    
-    Pgg_2h = (Pgg_2h + array([hmf_i.power for hmf_i in hmf[idx_gg]])*Igg)
-    Pgm_2h = (Pgm_2h + array([hmf_i.power for hmf_i in hmf[idx_gm]])*Igm)
-    
-    Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
-    Pgm_k = Pgm_c + Pgm_s + Pgm_2h
-    
-    #quit()
-    #"""
     if ingredient_gm:
         # note this doesn't include the point mass! also, we probably
         # need to return k
@@ -1016,7 +945,6 @@ def model(theta, R, calculate_covariance=False):
         else:
             output = [out_esd_tot_inter, meff]
     
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/delta_sigma_bnl.npy', np.array([rvir_range_2d_i_gm, rvir_range_2d_i_gg, out_esd_tot_inter, wp_out], dtype=object), allow_pickle=True)
     return output
     
 

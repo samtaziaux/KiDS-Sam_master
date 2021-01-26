@@ -80,11 +80,14 @@ def add_defaults(setup):
 
 def add_mass_range(setup):
     # endpoint must be False for mass_range to be equal to hmf.m
-    setup['mass_range'] = 10**np.linspace(
-        setup['logM_min'], setup['logM_max'], setup['logM_bins'],
-        endpoint=False)
-    setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
-        / setup['logM_bins']
+    try:
+        setup['mass_range'] = 10**np.linspace(
+            setup['logM_min'], setup['logM_max'], setup['logM_bins'],
+            endpoint=False)
+        setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
+            / setup['logM_bins']
+    except KeyError:
+        pass
     return setup
 
 
@@ -95,10 +98,14 @@ def add_rvir_range(setup):
 
 
 def add_wavenumber(setup):
-    setup['k_step'] = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
-    setup['k_range'] = np.arange(
-        setup['lnk_min'], setup['lnk_max'], setup['k_step'])
-    setup['k_range_lin'] = np.exp(setup['k_range'])
+    try:
+        setup['k_step'] = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
+    except KeyError:
+        pass
+    else:
+        setup['k_range'] = np.arange(
+            setup['lnk_min'], setup['lnk_max'], setup['k_step'])
+        setup['k_range_lin'] = np.exp(setup['k_range'])
     return setup
 
 

@@ -142,7 +142,7 @@ class ModelObservables:
         # and this the total number of bins
         self.nbins = sum(self._nbins)
         self.sampling = np.concatenate(
-            [obs.sampling for obs in self.observables], axis=0)
+            [obs.sampling for obs in self.observables if obs.obstype != 'mlf'], axis=0)
         # lazy initialize
         self._gg = None
         self._gm = None
@@ -204,6 +204,8 @@ class ModelObservables:
     def _add_R(self, R):
         for obs in self.observables:
             obs.R = [r[1:].astype('float64') for r in R[obs.idx]]
+            obs.size = np.array([len(r) for r in obs.R])
+            
 
     def _obs_attribute(self, i):
         obs = self.observables[i]

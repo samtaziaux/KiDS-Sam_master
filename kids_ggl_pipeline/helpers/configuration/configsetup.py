@@ -1,5 +1,6 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+import numpy as np
 
 
 _default_entries = {
@@ -77,6 +78,30 @@ def add_defaults(setup):
     return setup
 
 
+def add_mass_range(setup):
+    # endpoint must be False for mass_range to be equal to hmf.m
+    setup['mass_range'] = 10**np.linspace(
+        setup['logM_min'], setup['logM_max'], setup['logM_bins'],
+        endpoint=False)
+    setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
+        / setup['logM_bins']
+    return setup
+
+
+def add_rvir_range(setup):
+    setup['rvir_range_3d'] = np.logspace(-3.2, 4, 250, endpoint=True)
+    setup['rvir_range_3d_interp'] = np.logspace(-2.5, 1.2, 25, endpoint=True)
+    return setup
+
+
+def add_wavenumber(setup):
+    setup['k_step'] = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
+    setup['k_range'] = np.arange(
+        setup['lnk_min'], setup['lnk_max'], setup['k_step'])
+    setup['k_range_lin'] = np.exp(setup['k_range'])
+    return setup
+
+
 def append_entry(line, setup):
     """
     `line` should be a `ConfigLine` object
@@ -124,6 +149,9 @@ def check_setup(setup):
     check_necessary_entries(setup)
     setup = add_defaults(setup)
     check_entry_types(setup)
+    setup = add_mass_range(setup)
+    setup = add_rvir_range(setup)
+    setup = add_wavenumber(setup)
     return setup
 
 

@@ -21,11 +21,10 @@
   
     
       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script type="text/javascript" src="../_static/jquery.js"></script>
-        <script type="text/javascript" src="../_static/underscore.js"></script>
-        <script type="text/javascript" src="../_static/doctools.js"></script>
-        <script type="text/javascript" src="../_static/language_data.js"></script>
-        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
 
@@ -215,7 +214,7 @@ if you have a new working model, please push it!]. We will implement the ability
 <p>The user may also use the generic functions and distributions implemented in <code class="docutils literal notranslate"><span class="pre">helpers/functions.py</span></code> and
 <code class="docutils literal notranslate"><span class="pre">helpers/distributions.py</span></code>. For instance, the Duffy et al. (2008) mass-concentration relation is implemented in
 <code class="docutils literal notranslate"><span class="pre">halomodel/concentration.py</span></code> as:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">..helpers.functions</span> <span class="k">import</span> <span class="n">powerlaw_mz</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">..helpers.functions</span> <span class="kn">import</span> <span class="n">powerlaw_mz</span>
 
 <span class="k">def</span> <span class="nf">duffy08_crit</span><span class="p">(</span><span class="n">M</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">f</span> <span class="o">*</span> <span class="n">powerlaw_mz</span><span class="p">(</span>

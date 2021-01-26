@@ -1,0 +1,13 @@
+0000000000000000000000000000000000000000 06bb8fd58bdaddabce5b86dcbdc5175c909842a9 andrejdvornik <andrej.dvornik@me.com> 1442840720 +0200	WIP on master: fa3bf45 added demo feature
+06bb8fd58bdaddabce5b86dcbdc5175c909842a9 fd2b68f8b767a86ca205b61716ec53bcae225dc6 andrejdvornik <andrej.dvornik@me.com> 1442841735 +0200	WIP on master: 6f53fa8 cleaned sampler.py
+fd2b68f8b767a86ca205b61716ec53bcae225dc6 fef673d5008393a4bc1208f76d5dac9676a3abad andrejdvornik <andrej.dvornik@me.com> 1443100323 +0200	WIP on master: d876d68 added setup_integrand() to sampling_utils
+fef673d5008393a4bc1208f76d5dac9676a3abad a6b045b5f2a84bb26dba969a0592f55c37f56e93 andrejdvornik <andrej.dvornik@me.com> 1443187183 +0200	WIP on master: 02b709e fixed something more due to exclude_bins, should be fine now
+a6b045b5f2a84bb26dba969a0592f55c37f56e93 b35c07e38a86ce16df21cb95ff90bb460abe75ad andrejdvornik <andrej.dvornik@me.com> 1453200112 +0100	WIP on master: d1c997e config clea n-up
+b35c07e38a86ce16df21cb95ff90bb460abe75ad e002fdc639df3250dcb37634725b0ecc19e91bb9 andrejdvornik <andrej.dvornik@me.com> 1453367457 +0100	WIP on master: a4fca81 Update README.md
+e002fdc639df3250dcb37634725b0ecc19e91bb9 69a5b83bca694cec169698b74f56143f2179650d andrejdvornik <andrej.dvornik@me.com> 1456138586 +0100	WIP on master: 0ce0f44 Fixed a bug that prevented sampler updating the free parameters.
+69a5b83bca694cec169698b74f56143f2179650d 630821b1763064463cd1cb2069933468143d18fd andrejdvornik <andrej.dvornik@me.com> 1456139889 +0100	WIP on master: 61aef53 KiDS-450 compatible ESD production. Some test still have to be performed.
+630821b1763064463cd1cb2069933468143d18fd 00dbabe8e0383ec98967bcb1b91619624fe15015 andrejdvornik <andrej.dvornik@me.com> 1456508307 +0100	WIP on master: 3a3b491 Merge pull request #7 from KiDS-WL/andrej_working
+00dbabe8e0383ec98967bcb1b91619624fe15015 d949d83c5999f8919005a1a10b54fc7b3ecd1c1f andrejdvornik <andrej.dvornik@me.com> 1457008778 +0100	WIP on andrej_working: 994ca19 reverted change in write_to_fits() that introduced a bug
+d949d83c5999f8919005a1a10b54fc7b3ecd1c1f efc7ac7b7bcb5234a78e0a5afa7da658562b6aad andrejdvornik <andrej.dvornik@me.com> 1535615899 +0200	WIP on andrej_working: 1f0b905 Merge branch 'master' into andrej_working
+efc7ac7b7bcb5234a78e0a5afa7da658562b6aad 8f459964672fdb698b90ed81a36555ff29273f96 Andrej Dvornik <andrej.dvornik@me.com> 1591776712 +0200	WIP on andrej_working: fbddde3 Rather specify the exact version.
+8f459964672fdb698b90ed81a36555ff29273f96 36e497d2a2dcfeabb6ed5aa82725c5e183233244 Andrej Dvornik <andrej.dvornik@me.com> 1606234444 +0100	On andrej_working: Stash

@@ -8,7 +8,7 @@ import sys
 
 from . import confighod, configsampler, configsetup, configcovar
 from ...halomodel import nfw, nfw_stack, halo, covariance
-from ...halomodel.observables import Observable
+from ...halomodel.observables import ModelObservables, Observable
 from ...halomodel.selection import Selection
 
 # local, if present
@@ -249,6 +249,7 @@ class ConfigFile(object):
         sampling = configsampler.add_defaults(sampling)
         # add defaults and check types
         ingredients = confighod.add_default_ingredients(ingredients)
+        observables = ModelObservables(observables)
         setup = configsetup.check_setup(setup)
         covar = configcovar.check_covar(covar)
         hod_param_names = ['observables', 'selection', 'ingredients',

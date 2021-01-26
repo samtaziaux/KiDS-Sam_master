@@ -147,7 +147,7 @@ def model(theta, R): #, calculate_covariance=False):
         # hard-coded
         size_cosmo = 9
     
-    if observable.obstype == 'mlf':
+    if observables.mlf:
         if len(cosmo) == size_cosmo+1:
             assert len(cosmo) >= len(cosmo), \
                 'When using SMF/LF, must provide an additional parameter' \

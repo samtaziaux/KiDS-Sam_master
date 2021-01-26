@@ -1109,7 +1109,7 @@ def covariance(theta, R, calculate_covariance=True):
     # We might want to move this in the configuration part of the code!
     # Same goes for the bins above
     """
-    #print(dir(observables.gm.size))
+    print(dir(observables.gm.size))
     if observables.gm:
         observables.gm.R = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[observables.gm.idx]] # for testing
         observables.gm.size = np.array([len(r) for r in observables.gm.R])
@@ -1444,7 +1444,7 @@ def covariance(theta, R, calculate_covariance=True):
     P_lin_inter = [UnivariateSpline(setup['k_range'], np.log(hmf_i.power), s=0, ext=0)
                 for hmf_i in hmf]
                
-    k3P_lin_inter = [UnivariateSpline(setup['k_range'], np.log(k_range_lin**3.0 * hmf_i.power), s=0, ext=0)
+    k3P_lin_inter = [UnivariateSpline(setup['k_range'], np.log(setup['k_range_lin']**3.0 * hmf_i.power), s=0, ext=0)
                 for hmf_i in hmf]
                 
     dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]

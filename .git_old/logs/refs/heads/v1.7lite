@@ -1,7 +1,0 @@
-0000000000000000000000000000000000000000 36926b180c6c1707b7ee19c8a3cf188544b8402e Andrej Dvornik <andrej.dvornik@me.com> 1539962898 +0200	branch: Created from 36926b180c6c1707b7ee19c8a3cf188544b8402e
-36926b180c6c1707b7ee19c8a3cf188544b8402e 59e206ed4af1547df5ea0cd19d8426d22fe3448c Andrej Dvornik <andrej.dvornik@me.com> 1539963603 +0200	commit: v1.7lite
-59e206ed4af1547df5ea0cd19d8426d22fe3448c 09c21c74bd2a8f0cfffcf263aaf0e038e18d4fbb Andrej Dvornik <dvornik@strw.leidenuniv.nl> 1540214503 +0200	commit: Fixed imports
-09c21c74bd2a8f0cfffcf263aaf0e038e18d4fbb 36afa720177a49092765389d7d1f893d4b209870 Andrej Dvornik <dvornik@strw.leidenuniv.nl> 1540295565 +0200	commit: Solved import conflict for 1.7lite
-36afa720177a49092765389d7d1f893d4b209870 0e4085b6cb93a95139f0b4275293cda846b8a0eb Andrej Dvornik <dvornik@strw.leidenuniv.nl> 1540295950 +0200	commit: Solved import conflict for 1.7-lite
-0e4085b6cb93a95139f0b4275293cda846b8a0eb 9a1cb2bab406b7fcd8f1698d64c1dcb86b02f9fe Andrej Dvornik <dvornik@strw.leidenuniv.nl> 1540386500 +0200	commit: RA = 0 fix
-9a1cb2bab406b7fcd8f1698d64c1dcb86b02f9fe 5e97ed8cecc91e24a968b8b26dc246d69e7b9e63 Andrej Dvornik <dvornik@strw.leidenuniv.nl> 1540386837 +0200	commit: Update version, bug fixes in config

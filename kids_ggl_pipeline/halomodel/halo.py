@@ -114,19 +114,6 @@ def model(theta, R): #, calculate_covariance=False):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
-    if setup['return'] in ('wp', 'esd_wp') and not observables.gg:
-        raise ValueError(
-            'If return=wp or return=esd_wp then you must toggle the' \
-            ' clustering as an ingredient. Similarly, if return=esd' \
-            ' or return=esd_wp then you must toggle the lensing' \
-            ' as an ingredient as well.')
-    if setup['return'] in ('esd', 'esd_wp') and not observables.gm:
-        raise ValueError(
-            'If return=wp or return=esd_wp then you must toggle the' \
-            ' clustering as an ingredient. Similarly, if return=esd' \
-            ' or return=esd_wp then you must toggle the lensing' \
-            ' as an ingredient as well.')
-
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
@@ -232,23 +219,7 @@ def model(theta, R): #, calculate_covariance=False):
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
-    """
-    if observables.gm:
-        rvir_range_2d_i_gm = [r[1:].astype('float64')
-                              for r in R[observables.gm.idx]]
-        rx = observables.gm.R
-    if observables.gg:
-        rvir_range_2d_i_gg = [r[1:].astype('float64')
-                              for r in R[observables.gg.idx]]
-    if observables.mm:
-        rvir_range_2d_i_mm = [r[1:].astype('float64')
-                              for r in R[observables.mm.idx]]
-    if observables.mlf:
-        rvir_range_2d_i_mlf = [r[1:].astype('float64')
-                               for r in R[observables.mlf.idx]]
-    """
-    # We might want to move this in the configuration part of the code!
-    # Same goes for the bins above
+
 
     """Calculating halo model"""
 

@@ -1055,6 +1055,8 @@ def covariance(theta, R, calculate_covariance=True):
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
     
+    # Remove, for testing purposes
+    #"""
     if observables.gm:
         observables.gm.R = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[observables.gm.idx]] # for testing
         observables.gm.size = np.array([len(r) for r in observables.gm.R])
@@ -1068,7 +1070,7 @@ def covariance(theta, R, calculate_covariance=True):
         rvir_center = (rvir_bins[1:] + rvir_bins[:-1])/2.0
         observables.mlf.R = [10.0**rvir_center for r in range(2)]
         observables.mlf.size = np.array([len(r) for r in observables.mlf.R])
-    
+    #"""
     
     Pi_max = covar['pi_max'] # in Mpc/h
     eff_density = covar['eff_density'] # as defined in KiDS (gal / arcmin^2)

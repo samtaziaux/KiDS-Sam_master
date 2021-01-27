@@ -148,8 +148,9 @@ class ModelObservables:
         self._gm = None
         self._mlf = None
         self._mm = None
-
+        
     def __getitem__(self, i):
+        print(self.observables[i])
         return self.observables[i]
 
     def __iter__(self):
@@ -205,7 +206,6 @@ class ModelObservables:
         for obs in self.observables:
             obs.R = [r[1:].astype('float64') for r in R[obs.idx]]
             obs.size = np.array([len(r) for r in obs.R])
-            
 
     def _obs_attribute(self, i):
         obs = self.observables[i]

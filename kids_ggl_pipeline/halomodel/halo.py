@@ -119,9 +119,12 @@ def model(theta, R): #, calculate_covariance=False):
         s_concentration, s_mor, s_scatter, s_beta = theta
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
-
-    nbins = observables.nbins
-    output = np.empty(nbins, dtype=object)
+    
+    if observables.mlf:
+        nbins = observables.nbins - observables.mlf.nbins
+    else:
+        nbins = observables.nbins
+    output = np.empty(observables.nbins, dtype=object)
 
     if ingredients['nzlens']:
         assert len(cosmo) >= 11, \
@@ -274,8 +277,8 @@ def model(theta, R): #, calculate_covariance=False):
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
-    ngal = np.empty(nbins)
-    meff = np.empty(nbins)
+    ngal = np.empty(observables.nbins)
+    meff = np.empty(observables.nbins)
     if observables.gm:
         ngal[observables.gm.idx] = hod.nbar(
             dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range)

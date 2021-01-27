@@ -47,7 +47,10 @@ def run(hm_options, options, args):
 
     obs_idx = parameters[0].index('observables')
     observables = parameters[1][obs_idx]
-
+    init_mlf = observables.mlf # No idea why, but mlf instance doesn't get initilized to adopt R
+    
+    assert_output(setup, observables)
+    
     print_opening_msg(args, options)
 
     # identify fixed and free parameters
@@ -85,11 +88,9 @@ def run(hm_options, options, args):
     cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
     rng_obsbins = range(Nobsbins)
-
+    
     observables._add_R(R)
     parameters[1][obs_idx] = observables
-    
-    assert_output(setup, observables)
 
     meta_names = sampling_utils.initialize_metanames(options, output, len(esd))
     # initialize

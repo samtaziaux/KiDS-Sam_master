@@ -191,7 +191,7 @@ def model(theta, R): #, calculate_covariance=False):
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
 
     assert np.allclose(setup['mass_range'], hmf[0].m)
-    # aliasing for now
+    # alias
     mass_range = setup['mass_range']
 
     rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
@@ -206,12 +206,8 @@ def model(theta, R): #, calculate_covariance=False):
 
     rvir_range_lin = virial_radius(
         mass_range, rho_bg, setup['delta'])
-    #rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
+    # alias
     rvir_range_3d = setup['rvir_range_3d']
-    # these are not very informative names but the "i" stands for
-    # interpolated
-    #rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
-    #rvir_range_3d_i = logspace(-4, 2, 60, endpoint=True)
     rvir_range_3d_i = setup['rvir_range_3d_interp']
     # integrate over redshift later on
     # assuming this means arcmin for now -- implement a way to check later!
@@ -349,8 +345,8 @@ def model(theta, R): #, calculate_covariance=False):
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         uk_c = nfw.uk(
-            setup['k_range_lin'], mass_range, rvir_range_lin, concentration, rho_bg,
-            setup['delta'])
+            setup['k_range_lin'], mass_range, rvir_range_lin, concentration,
+            rho_bg, setup['delta'])
     elif integrate_zlens:
         uk_c = np.ones((nbins,z.size//nbins,mass_range.size,setup['k_range_lin'].size))
     else:
@@ -358,11 +354,12 @@ def model(theta, R): #, calculate_covariance=False):
     # and of the NFW profile of the satellites
     if ingredients['satellites']:
         uk_s = nfw.uk(
-            setup['k_range_lin'], mass_range, rvir_range_lin, concentration_sat, rho_bg,
-            setup['delta'])
+            setup['k_range_lin'], mass_range, rvir_range_lin,
+            concentration_sat, rho_bg, setup['delta'])
         uk_s = uk_s / expand_dims(uk_s[...,0], -1)
     elif integrate_zlens:
-        uk_s = np.ones((nbins,z.size//nbins,mass_range.size,setup['k_range_lin'].size))
+        uk_s = np.ones((nbins,z.size//nbins,mass_range.size,
+                        setup['k_range_lin'].size))
     else:
         uk_s = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
 
@@ -454,13 +451,16 @@ def model(theta, R): #, calculate_covariance=False):
             Pgg_2h = F_k2 * bias * array(
             [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
             for hmf_i, ngal_i, pop_g_i
-            in zip(hmf[observables.gg.idx], expand_dims(ngal[observables.gg.idx], -1),
+            in zip(hmf[observables.gg.idx],
+                    expand_dims(ngal[observables.gg.idx], -1),
                     expand_dims(pop_g[observables.gg.idx], -2))])
         else:
             Pgg_2h = F_k2 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
 
-        ncen = hod.nbar(dndm[observables.gg.idx], pop_c[observables.gg.idx], mass_range)
-        nsat = hod.nbar(dndm[observables.gg.idx], pop_s[observables.gg.idx], mass_range)
+        ncen = hod.nbar(dndm[observables.gg.idx], pop_c[observables.gg.idx],
+                        mass_range)
+        nsat = hod.nbar(dndm[observables.gg.idx], pop_s[observables.gg.idx],
+                        mass_range)
 
         if ingredients['centrals']:
             """

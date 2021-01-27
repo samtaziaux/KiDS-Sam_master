@@ -216,28 +216,8 @@ that start with a <code class="docutils literal notranslate"><span class="pre">#
 </pre></div>
 </div>
 <p>The first column here is an arbitrary (and dummy) name for the observable in question; the second colum specifies the type of
-observable being passed, of which four are currently implemented:</p>
-<table class="docutils align-default">
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 80%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">gg</span></code></p></td>
-<td><p>Galaxy clustering</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">gm</span></code></p></td>
-<td><p>Galaxy-galaxy lensing</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mlf</span></code></p></td>
-<td><p>Stellar mass or luminosity function</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mm</span></code></p></td>
-<td><p>Matter-matter correlation function</p></td>
-</tr>
-</tbody>
-</table>
-<p>The third and fourth columns are the lower
+observable being passed: it is <code class="docutils literal notranslate"><span class="pre">gm</span></code> for galaxy-galaxy lensing, <code class="docutils literal notranslate"><span class="pre">gg</span></code> for galaxy clustering, <code class="docutils literal notranslate"><span class="pre">mm</span></code> for matter-matter correlation
+and <code class="docutils literal notranslate"><span class="pre">mlf</span></code> for the stellar mass or luminosity function. The third and fourth columns are the lower
 and upper bin limits used in the stacking (comma-separated). In this case, we use two bins in the ranges <span class="math notranslate nohighlight">\(10 \leq \log_{10}
 m_\star \leq 11\)</span> and <span class="math notranslate nohighlight">\(11 \leq \log_{10} m_\star \leq 12.5\)</span>; note that the bins need not be adjacent nor exclusive.</p>
 <p>The final column is optional, and its only possible value is <code class="docutils literal notranslate"><span class="pre">log</span></code>. This tells the pipeline that the observable is given in
@@ -302,16 +282,15 @@ is 100% complete – simply write</p>
 <span class="n">satellites</span>      <span class="kc">False</span>
 <span class="n">miscentring</span>     <span class="kc">False</span>
 <span class="n">twohalo</span>         <span class="kc">True</span>
-<span class="n">haloexclusion</span>   <span class="kc">False</span>
+<span class="n">haloexclusion</span>    <span class="kc">False</span>
 <span class="n">nzlens</span>          <span class="kc">False</span>
 </pre></div>
 </div>
 <p>The names of the ingredients cannot be changed, and any missing ingredients will be set to <code class="docutils literal notranslate"><span class="pre">False</span></code>. If any provided ingredient
 does not match those listed above, a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> will be raised. All of these accept values of <code class="docutils literal notranslate"><span class="pre">True</span></code> or <code class="docutils literal notranslate"><span class="pre">False</span></code>. In the
-example above, <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> will calculate a model of central galaxies only, including a point mass component to account for the
-stellar mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass
-(<code class="docutils literal notranslate"><span class="pre">misecentring=False</span></code>). It will not account for the fact that haloes cannot overlap (<code class="docutils literal notranslate"><span class="pre">haloexclusion=False</span></code>), and a single
-redshift will be used as the mean (or effective) redshift for the lens sample (<code class="docutils literal notranslate"><span class="pre">nzlens=False</span></code>).</p>
+example above, <code class="docutils literal notranslate"><span class="pre">`kids_ggl</span></code> will calculate a model of central galaxies only, including a point mass component to account for the
+stellar mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass. In this case
+will not account for the fact that haloes cannot overlap.</p>
 <p>The parameter <code class="docutils literal notranslate"><span class="pre">nzlens</span></code> enables a model in which the final signal is the weighted average of signals calculated following a
 user-provided lens redshift distribution (see below). <em>WARNING</em>: setting <code class="docutils literal notranslate"><span class="pre">nzlens</span></code> to <code class="docutils literal notranslate"><span class="pre">True</span></code> significantly slows down the halo
 model computation.</p>
@@ -402,7 +381,7 @@ The first 8 parameters define the <code class="docutils literal notranslate"><sp
 <code class="docutils literal notranslate"><span class="pre">wa</span></code>, and <code class="docutils literal notranslate"><span class="pre">Neff</span></code> make the default model a flat <code class="docutils literal notranslate"><span class="pre">LambdaCDM</span></code> cosmology. They need not all be fixed, but in this example they are
 (note, however, that at the moment the <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> halo model can only handle physical distances, which require a cosmology to be
 calculated). The last parameter above is a list of point estimates for the redshifts of each bin. List of redshifts should reflect
-the total number of bins given by the observable(s). In this case there should be 5 bins total.</p>
+the total number of bins given by the observable(s). In this case, it should have 5 entries.</p>
 <div class="section" id="optional-cosmological-parameters">
 <h4>Optional cosmological parameters<a class="headerlink" href="#optional-cosmological-parameters" title="Permalink to this headline">¶</a></h4>
 <p>In addition to the above list, there are a few optional parameters, depending on the chosen setup:</p>
@@ -437,62 +416,38 @@ where the source redshift is known to be <span class="math notranslate nohighlig
 produce a variety of halo model prescriptions, taking advantage of the backbone established by <code class="docutils literal notranslate"><span class="pre">halo.model</span></code> (i.e., the user need
 not write their own full-fledged model to do this):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">centrals</span><span class="o">/</span><span class="n">pointmass</span><span class="p">]</span>
-<span class="n">logmstar</span>        <span class="n">array</span>       <span class="mf">10.3</span><span class="p">,</span><span class="mf">11.5</span>
+<span class="n">logmstar</span>        <span class="n">array</span>     <span class="mf">10.3</span><span class="p">,</span><span class="mf">11.5</span>
 <span class="n">point_norm</span>      <span class="n">uniform</span>     <span class="mf">0.5</span>     <span class="mi">5</span>
-
 <span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">centrals</span><span class="o">/</span><span class="n">concentration</span><span class="p">]</span>
 <span class="n">name</span>            <span class="n">duffy08_crit</span>
 <span class="n">cosmo</span><span class="o">.</span><span class="n">z</span>         <span class="n">repeat</span>
 <span class="n">fc</span>              <span class="n">uniform</span>     <span class="mf">0.2</span>     <span class="mi">5</span>
 <span class="n">cosmo</span><span class="o">.</span><span class="n">h</span>
-
 <span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">centrals</span><span class="o">/</span><span class="n">mor</span><span class="p">]</span>
 <span class="n">name</span>            <span class="n">powerlaw</span>
-<span class="n">logM0</span>           <span class="n">fixed</span>       <span class="mf">12.0</span>
-<span class="n">a</span>               <span class="n">uniform</span>     <span class="o">-</span><span class="mi">5</span>      <span class="mi">5</span>
-<span class="n">b</span>               <span class="n">student</span>     <span class="mi">1</span>
-
+<span class="n">logM0</span>           <span class="n">fixed</span>          <span class="mf">12.0</span>
+<span class="n">a</span>               <span class="n">uniform</span>        <span class="o">-</span><span class="mi">5</span>      <span class="mi">5</span>
+<span class="n">b</span>               <span class="n">student</span>        <span class="mi">1</span>
 <span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">centrals</span><span class="o">/</span><span class="n">scatter</span><span class="p">]</span>
 <span class="n">name</span>            <span class="n">lognormal</span>
-<span class="n">sigma_c</span>         <span class="n">jeffreys</span>
-
+<span class="n">sigma_c</span>         <span class="n">jeffrey</span>
 <span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">centrals</span><span class="o">/</span><span class="n">miscentring</span><span class="p">]</span>
 <span class="n">name</span>            <span class="n">fiducial</span>
-<span class="n">p_off</span>           <span class="n">uniform</span>      <span class="mi">0</span>       <span class="mi">1</span>
-<span class="n">R_off</span>           <span class="n">uniform</span>      <span class="mi">0</span>       <span class="mf">1.5</span>
+<span class="n">p_off</span>           <span class="n">uniform</span>        <span class="mi">0</span>       <span class="mi">1</span>
+<span class="n">R_off</span>           <span class="n">uniform</span>        <span class="mi">0</span>       <span class="mf">1.5</span>
 
 <span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">twohalo</span><span class="p">]</span>
-<span class="n">bias</span>            <span class="n">uniform</span>      <span class="mf">0.2</span>     <span class="mi">5</span>
-
-<span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">satellites</span><span class="o">/</span><span class="n">concentration</span><span class="p">]</span>
-<span class="n">name</span>            <span class="n">duffy08_mean</span>
-<span class="n">cosmo</span><span class="o">.</span><span class="n">z</span>         <span class="n">repeat</span>
-<span class="n">f_c_s</span>           <span class="n">array</span>       <span class="mf">1.0</span>
-<span class="n">cosmo</span><span class="o">.</span><span class="n">h</span>
-
-<span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">satellites</span><span class="o">/</span><span class="n">mor</span><span class="p">]</span>
-<span class="n">name</span>            <span class="n">double_powerlaw</span>
-<span class="n">hod</span><span class="o">.</span><span class="n">centrals</span><span class="o">.</span><span class="n">mor</span><span class="o">.</span><span class="n">logM0</span>      <span class="n">repeat</span>
-<span class="n">hod</span><span class="o">.</span><span class="n">centrals</span><span class="o">.</span><span class="n">mor</span><span class="o">.</span><span class="n">logM1</span>      <span class="n">repeat</span>
-<span class="n">hod</span><span class="o">.</span><span class="n">centrals</span><span class="o">.</span><span class="n">mor</span><span class="o">.</span><span class="n">a</span>          <span class="n">repeat</span>
-<span class="n">hod</span><span class="o">.</span><span class="n">centrals</span><span class="o">.</span><span class="n">mor</span><span class="o">.</span><span class="n">b</span>          <span class="n">repeat</span>
-<span class="n">norm</span>            <span class="n">fixed</span>       <span class="mf">0.56</span>
-
-<span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">satellites</span><span class="o">/</span><span class="n">scatter</span><span class="p">]</span>
-<span class="n">name</span>            <span class="n">modschechter</span>
-<span class="n">logMref</span>         <span class="n">fixed</span>       <span class="mf">12.0</span>
-<span class="n">alpha_s</span>         <span class="n">fixed</span>       <span class="o">-</span><span class="mf">1.34</span>
-<span class="n">b</span>               <span class="n">fixed</span>       <span class="o">-</span><span class="mf">1.15</span>  <span class="n">join</span><span class="p">:</span><span class="n">b</span>
-<span class="n">b</span>               <span class="n">fixed</span>       <span class="mf">0.59</span>   <span class="n">join</span><span class="p">:</span><span class="n">b</span>
-<span class="n">b</span>               <span class="n">fixed</span>       <span class="mf">0.0</span>    <span class="n">join</span><span class="p">:</span><span class="n">b</span>
+<span class="n">bias</span>            <span class="n">uniform</span>     <span class="mf">0.2</span>     <span class="mi">5</span>
 
 <span class="p">[</span><span class="n">hod</span><span class="o">/</span><span class="n">satellites</span><span class="o">/</span><span class="n">beta</span><span class="p">]</span>
-<span class="n">beta</span>            <span class="n">fixed</span>        <span class="mi">1</span>
+<span class="n">beta</span>            <span class="n">fixed</span>    <span class="mi">1</span>
 </pre></div>
 </div>
 <p>The idea behind this structure is that the HOD may be fully specified by the user, including for instance the complexity of the
-mass-observable scaling relation (see <a class="reference external" href="custom.html">Customizing the Halo Model</a>).
-While it is the order of the sections that is enforced by the
+mass-observable scaling relation (see <a class="reference external" href="custom.html">Customizing the Halo Model</a>). Note that the HOD may also contain a model for
+satellites and potentially other ingredients (as suggested by the <code class="docutils literal notranslate"><span class="pre">ingredients</span></code> section above), but a simple centrals-only model
+will serve our purpose here (but note that <code class="docutils literal notranslate"><span class="pre">halo.model</span></code> does require satellite sections to be defined; please refer to
+<code class="docutils literal notranslate"><span class="pre">demo/ggl_model_demo.txt</span></code> for a full working configuration file). While it is the order of the sections that is enforced by the
 halo model, the <code class="docutils literal notranslate"><span class="pre">hod/</span></code> prefix to all HOD sections is required for the configuration file to be read properly. The names and depths
 of sections/subsections is arbitrary, though we recommend that the section names not be modified for consistency and ease of
 interpretation by other users.</p>
@@ -501,7 +456,7 @@ information see the <a class="reference external" href="sampler.html#Priors">Pri
 <p><strong>Note:</strong> The miscentring implementation has not yet been modified from <code class="docutils literal notranslate"><span class="pre">v1</span></code>, and therefore the <code class="docutils literal notranslate"><span class="pre">name</span></code> parameter is silent
 for now (but still must be defined and given a value). No matter the value given, miscentring will be modelled as in <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2015MNRAS.452.3529V/abstract">Viola et al. (2015)</a>
 Should anyone require more flexibility please raise an issue and we will make this a more urgent update.</p>
-<p>See <a class="reference external" href="formalism.html">Formalism</a> for details on the HOD.</p>
+<p><strong>Note:</strong> beta is a Poisson parameter, beta = &lt;N_s (N_s - 1)|M&gt;/&lt;N_s|M&gt;^2 (Eq. 42 in Dvornik et al. 2018)</p>
 </div>
 </div>
 <div class="section" id="general-setup">
@@ -509,105 +464,25 @@ Should anyone require more flexibility please raise an issue and we will make th
 <p>There is an additional section, <code class="docutils literal notranslate"><span class="pre">setup</span></code>, which includes details on, well, the setup of the model. There are four mandatory
 parameters in this section:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">setup</span><span class="p">]</span>
-<span class="k">return</span>          <span class="n">esd</span>
-<span class="n">delta</span>           <span class="mi">200</span>
-<span class="n">delta_ref</span>       <span class="n">SOMean</span>
-<span class="n">distances</span>       <span class="n">comoving</span>
+<span class="k">return</span>          <span class="n">esd</span>        <span class="c1"># one of {&#39;esd&#39;, &#39;kappa&#39;, &#39;sigma&#39;, &#39;esd_wp&#39;, &#39;wp&#39;, &#39;power&#39;}</span>
+<span class="n">delta</span>           <span class="mi">200</span>        <span class="c1"># adopted overdensity</span>
+<span class="n">delta_ref</span>       <span class="n">SOMean</span>       <span class="c1"># reference background density. Can be one of {&#39;FOF&#39;, &#39;SOCritical&#39;, &#39;SOMean&#39;, &#39;SOVirial&#39;}, see `hmf` documentation for details.</span>
+<span class="n">distances</span>       <span class="n">comoving</span>     <span class="c1"># whether to work with &#39;comoving&#39; or &#39;proper&#39; distances</span>
 </pre></div>
 </div>
-<p>The details are as follows:</p>
-<table class="docutils align-default">
-<colgroup>
-<col style="width: 13%" />
-<col style="width: 33%" />
-<col style="width: 54%" />
-</colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Parameter</p></th>
-<th class="head"><p>Type or options</p></th>
-<th class="head"><p>Details</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">return</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{esd,kappa,power,sigma,wp,esd_wp}</span></code></p></td>
-<td><p>Observable to return</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">delta</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">float</span> <span class="pre">&gt;</span> <span class="pre">0</span></code></p></td>
-<td><p>Overdensity</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">delta_ref</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{FOF,SOCritical,SOMean,SOVirial}</span></code></p></td>
-<td><p>Reference background density (see
-<a class="reference external" href="https://hmf.readthedocs.io/en/latest/">hmf documentation</a>)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">distances</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{comoving,proper}</span></code></p></td>
-<td><p>Which coordinate frame to use</p></td>
-</tr>
-</tbody>
-</table>
-<p>and other parameters that, if omitted, are assigned their default values. The syntax is as usual:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">parameter</span>       <span class="n">value</span>
-</pre></div>
-</div>
-<table class="docutils align-default">
-<colgroup>
-<col style="width: 12%" />
-<col style="width: 8%" />
-<col style="width: 13%" />
-<col style="width: 67%" />
-</colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Parameter</p></th>
-<th class="head"><p>Default
-value</p></th>
-<th class="head"><p>Type or
-options</p></th>
-<th class="head"><p>Details</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">transfer</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">EH</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">{EH,CAMB}</span></code></p></td>
-<td><p>Transfer solver (see <a class="reference external" href="https://hmf.readthedocs.io/en/latest/">hmf documentation</a>)</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lnk_bins</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">1000</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">&gt;</span> <span class="pre">0</span></code></p></td>
-<td><p>Number of logarithmic wavenumber bins for power spectra</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lnk_min</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">-15</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
-<td><p>Natural log of minimum wavenumber</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lnk_max</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">10</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
-<td><p>Natural log of maximum wavenumber</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">logM_bins</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">200</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">int</span> <span class="pre">&gt;</span> <span class="pre">0</span></code></p></td>
-<td><p>Number of logarithmic mass bins for mass function</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">logM_min</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">10</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
-<td><p>Base-10 log of minimum mass</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">logM_max</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">16</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">float</span></code></p></td>
-<td><p>Base-10 log of maximum mass</p></td>
-</tr>
-</tbody>
-</table>
-<p>When using <code class="docutils literal notranslate"><span class="pre">CAMB</span></code> as the transfer function solver, be sure to use a smaller <span class="math notranslate nohighlight">\(k\)</span> range, as the
+<p>and other parameters that, if omitted, are assigned their default values. For the time being, these are the <span class="math notranslate nohighlight">\(\ln k\)</span> and
+<span class="math notranslate nohighlight">\(\log M\)</span> binning schemes (the former is set to 1,000 bins in the range (-15,10), and the latter to 200 bins over (10,16)), as
+well as the transfer function solver, which can be set to either <code class="docutils literal notranslate"><span class="pre">EH</span></code> (default) or <code class="docutils literal notranslate"><span class="pre">CAMB</span></code> (refer to the <a class="reference external" href="https://hmf.readthedocs.io/en/latest/">hmf documentation</a>) for details). When using <code class="docutils literal notranslate"><span class="pre">CAMB</span></code>, be sure to use a smaller <span class="math notranslate nohighlight">\(k\)</span> range, as the
 default numbers used here make it <em>very</em> slow. Specifically, the available optional setup parameters are:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">transfer</span>        <span class="n">EH</span>
+<span class="n">lnk_bins</span>        <span class="mi">1000</span>
+<span class="n">lnk_min</span>         <span class="o">-</span><span class="mi">15</span>
+<span class="n">lnk_max</span>         <span class="mi">10</span>
+<span class="n">logM_bins</span>       <span class="mi">200</span>
+<span class="n">logM_min</span>        <span class="mi">10</span>
+<span class="n">logM_max</span>        <span class="mi">16</span>
+</pre></div>
+</div>
 <p>In your own model, the <code class="docutils literal notranslate"><span class="pre">setup</span></code> section should include any parameter in the halo model that would <em>never</em> be a free parameter (not
 even a nuisance parameter); for instance, binning schemes or any precision-setting values. Note that <code class="docutils literal notranslate"><span class="pre">setup</span></code> is a dictionary in
 <code class="docutils literal notranslate"><span class="pre">kids_ggl</span></code> and therefore the order of its entries is irrelevant.</p>

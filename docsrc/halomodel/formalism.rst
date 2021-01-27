@@ -7,8 +7,7 @@ matter structures characterized by a mass *M* at redshift :math:`z`. It is usual
 that observables are calculated in terms of their power spectra. Here we describe the essential elements of the halo model formalism 
 implemented in ``kids_ggl``. For more details please refer to `van Uitert et al. 2016 
 <https://ui.adsabs.harvard.edu/abs/2016MNRAS.459.3251V/abstract>`_ and `Dvornik et al. 2017 
-<https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract>`_ and `2018
-<https://ui.adsabs.harvard.edu/abs/2018MNRAS.479.1240D/abstract>`_. As much as possile, the notation in this page is consistent with 
+<https://ui.adsabs.harvard.edu/abs/2017MNRAS.468.3251D/abstract>`_. As much as possile, the notation in this page is consistent with 
 that used in the default configuration file, which may create some inconsistencies with the notation in those references.
 
 The galaxy-matter power spectrum can then be separated into 
@@ -120,11 +119,3 @@ Central galaxies populate haloes following a lognormal distribution in halo mass
 
 *TO BE CONTINUED...*
 
-
-Finally, there is a "Poisson term" for satellite galaxies that specifies the level of stochasticity in the HOD,
-
-.. math::
-
-    \beta(M) \equiv \frac{\langle N_\mathrm{s}(N_\mathrm{s}-1)|M\rangle}{\langle N_\mathrm{s}|M\rangle^2}
-
-See Eq. (42) of Dvornik et al. (2018) for more details.

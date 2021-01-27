@@ -48,19 +48,8 @@ The first section defines the observables: ::
     logmstar    gm  10,11   11,12.5     log
 
 The first column here is an arbitrary (and dummy) name for the observable in question; the second colum specifies the type of
-observable being passed, of which four are currently implemented:
-
-+---------+-------------------------------------+
-| ``gg``  | Galaxy clustering                   |
-+---------+-------------------------------------+
-| ``gm``  | Galaxy-galaxy lensing               |
-+---------+-------------------------------------+
-| ``mlf`` | Stellar mass or luminosity function |
-+---------+-------------------------------------+
-| ``mm``  | Matter-matter correlation function  |
-+---------+-------------------------------------+
-
-The third and fourth columns are the lower
+observable being passed: it is ``gm`` for galaxy-galaxy lensing, ``gg`` for galaxy clustering, ``mm`` for matter-matter correlation
+and ``mlf`` for the stellar mass or luminosity function. The third and fourth columns are the lower
 and upper bin limits used in the stacking (comma-separated). In this case, we use two bins in the ranges :math:`10 \leq \log_{10} 
 m_\star \leq 11` and :math:`11 \leq \log_{10} m_\star \leq 12.5`; note that the bins need not be adjacent nor exclusive.
 
@@ -132,15 +121,14 @@ Here we define which ingredients will be included in the halo model: ::
     satellites      False
     miscentring     False
     twohalo         True
-    haloexclusion   False
+    haloexclusion    False
     nzlens          False
 
 The names of the ingredients cannot be changed, and any missing ingredients will be set to ``False``. If any provided ingredient 
 does not match those listed above, a ``ValueError`` will be raised. All of these accept values of ``True`` or ``False``. In the 
-example above, ``kids_ggl`` will calculate a model of central galaxies only, including a point mass component to account for the 
-stellar mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass
-(``misecentring=False``). It will not account for the fact that haloes cannot overlap (``haloexclusion=False``), and a single
-redshift will be used as the mean (or effective) redshift for the lens sample (``nzlens=False``).
+example above, ```kids_ggl`` will calculate a model of central galaxies only, including a point mass component to account for the 
+stellar mass, and a two halo term, and it is assumed that central galaxies are always co-located with the center of mass. In this case
+will not account for the fact that haloes cannot overlap.
 
 The parameter ``nzlens`` enables a model in which the final signal is the weighted average of signals calculated following a 
 user-provided lens redshift distribution (see below). *WARNING*: setting ``nzlens`` to ``True`` significantly slows down the halo 
@@ -241,7 +229,7 @@ The first 8 parameters define the ``Flatw0waCDM`` cosmology within which the mod
 ``wa``, and ``Neff`` make the default model a flat ``LambdaCDM`` cosmology. They need not all be fixed, but in this example they are 
 (note, however, that at the moment the ``kids_ggl`` halo model can only handle physical distances, which require a cosmology to be 
 calculated). The last parameter above is a list of point estimates for the redshifts of each bin. List of redshifts should reflect
-the total number of bins given by the observable(s). In this case there should be 5 bins total.
+the total number of bins given by the observable(s). In this case, it should have 5 entries.
 
 
 Optional cosmological parameters
@@ -282,61 +270,37 @@ produce a variety of halo model prescriptions, taking advantage of the backbone 
 not write their own full-fledged model to do this): ::
 
     [hod/centrals/pointmass]
-    logmstar        array       10.3,11.5
+    logmstar        array     10.3,11.5
     point_norm      uniform     0.5     5
-
     [hod/centrals/concentration]
     name            duffy08_crit
     cosmo.z         repeat
     fc              uniform     0.2     5
     cosmo.h
-
     [hod/centrals/mor]
     name            powerlaw
-    logM0           fixed       12.0
-    a               uniform     -5      5
-    b               student     1
-
+    logM0           fixed          12.0
+    a               uniform        -5      5
+    b               student        1
     [hod/centrals/scatter]
     name            lognormal
-    sigma_c         jeffreys
-
+    sigma_c         jeffrey
     [hod/centrals/miscentring]
     name            fiducial
-    p_off           uniform      0       1
-    R_off           uniform      0       1.5
+    p_off           uniform        0       1
+    R_off           uniform        0       1.5
     
     [hod/twohalo]
-    bias            uniform      0.2     5
+    bias            uniform     0.2     5
     
-    [hod/satellites/concentration]
-    name            duffy08_mean
-    cosmo.z         repeat
-    f_c_s           array       1.0
-    cosmo.h
-
-    [hod/satellites/mor]
-    name            double_powerlaw
-    hod.centrals.mor.logM0      repeat
-    hod.centrals.mor.logM1      repeat
-    hod.centrals.mor.a          repeat
-    hod.centrals.mor.b          repeat
-    norm            fixed       0.56
-
-    [hod/satellites/scatter]
-    name            modschechter
-    logMref         fixed       12.0
-    alpha_s         fixed       -1.34
-    b               fixed       -1.15  join:b
-    b               fixed       0.59   join:b
-    b               fixed       0.0    join:b
-
     [hod/satellites/beta]
-    beta            fixed        1
+    beta            fixed    1
 
 The idea behind this structure is that the HOD may be fully specified by the user, including for instance the complexity of the 
-mass-observable scaling relation (see `Customizing the Halo Model <custom.html>`_).
-While it is the order of the sections that is enforced by the 
+mass-observable scaling relation (see `Customizing the Halo Model <custom.html>`_). Note that the HOD may also contain a model for 
+satellites and potentially other ingredients (as suggested by the ``ingredients`` section above), but a simple centrals-only model 
+will serve our purpose here (but note that ``halo.model`` does require satellite sections to be defined; please refer to 
+``demo/ggl_model_demo.txt`` for a full working configuration file). While it is the order of the sections that is enforced by the 
 halo model, the ``hod/`` prefix to all HOD sections is required for the configuration file to be read properly. The names and depths 
 of sections/subsections is arbitrary, though we recommend that the section names not be modified for consistency and ease of 
 interpretation by other users.
@@ -348,8 +312,7 @@ information see the `Priors <sampler.html#Priors>`_ section.
 for now (but still must be defined and given a value). No matter the value given, miscentring will be modelled as in |ref:viola15|_
 Should anyone require more flexibility please raise an issue and we will make this a more urgent update.
 
-See `Formalism <formalism.html>`_ for details on the HOD.
-
+**Note:** beta is a Poisson parameter, beta = <N_s (N_s - 1)|M>/<N_s|M>^2 (Eq. 42 in Dvornik et al. 2018)
 
 General setup
 *************
@@ -358,52 +321,24 @@ There is an additional section, ``setup``, which includes details on, well, the 
 parameters in this section: ::
 
     [setup]
-    return          esd
-    delta           200
-    delta_ref       SOMean
-    distances       comoving
+    return          esd        # one of {'esd', 'kappa', 'sigma', 'esd_wp', 'wp', 'power'}
+    delta           200        # adopted overdensity
+    delta_ref       SOMean       # reference background density. Can be one of {'FOF', 'SOCritical', 'SOMean', 'SOVirial'}, see `hmf` documentation for details.
+    distances       comoving     # whether to work with 'comoving' or 'proper' distances
 
-The details are as follows:
-
-+---------------+---------------------------------------+---------------------------------------------------------------+
-| Parameter     | Type or options                       | Details                                                       |
-+===============+=======================================+===============================================================+
-| ``return``    | ``{esd,kappa,power,sigma,wp,esd_wp}`` | Observable to return                                          |
-+---------------+---------------------------------------+---------------------------------------------------------------+
-| ``delta``     | ``float > 0``                         | Overdensity                                                   |
-+---------------+---------------------------------------+---------------------------------------------------------------+
-| ``delta_ref`` | ``{FOF,SOCritical,SOMean,SOVirial}``  | Reference background density (see                             |
-|               |                                       | `hmf documentation <https://hmf.readthedocs.io/en/latest/>`_) |
-+---------------+---------------------------------------+---------------------------------------------------------------+
-| ``distances`` | ``{comoving,proper}``                 | Which coordinate frame to use                                 |
-+---------------+---------------------------------------+---------------------------------------------------------------+
-
-
-and other parameters that, if omitted, are assigned their default values. The syntax is as usual: ::
-
-    parameter       value
-
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-| Parameter     | Default  | Type or         | Details                                                                            |
-|               | value    | options         |                                                                                    |
-+===============+==========+=================+====================================================================================+
-| ``transfer``  | ``EH``   | ``{EH,CAMB}``   | Transfer solver (see `hmf documentation <https://hmf.readthedocs.io/en/latest/>`_) |
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-| ``lnk_bins``  | ``1000`` | ``int > 0``     | Number of logarithmic wavenumber bins for power spectra                            |
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-| ``lnk_min``   | ``-15``  | ``float``       | Natural log of minimum wavenumber                                                  |
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-| ``lnk_max``   | ``10``   | ``float``       | Natural log of maximum wavenumber                                                  |
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-| ``logM_bins`` | ``200``  | ``int > 0``     | Number of logarithmic mass bins for mass function                                  |
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-| ``logM_min``  | ``10``   | ``float``       | Base-10 log of minimum mass                                                        |
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-| ``logM_max``  | ``16``   | ``float``       | Base-10 log of maximum mass                                                        |
-+---------------+----------+-----------------+------------------------------------------------------------------------------------+
-
-When using ``CAMB`` as the transfer function solver, be sure to use a smaller :math:`k` range, as the 
+and other parameters that, if omitted, are assigned their default values. For the time being, these are the :math:`\ln k` and 
+:math:`\log M` binning schemes (the former is set to 1,000 bins in the range (-15,10), and the latter to 200 bins over (10,16)), as 
+well as the transfer function solver, which can be set to either ``EH`` (default) or ``CAMB`` (refer to the `hmf documentation 
+<https://hmf.readthedocs.io/en/latest/>`_) for details). When using ``CAMB``, be sure to use a smaller :math:`k` range, as the 
 default numbers used here make it *very* slow. Specifically, the available optional setup parameters are: ::
+
+    transfer        EH
+    lnk_bins        1000
+    lnk_min         -15
+    lnk_max         10
+    logM_bins       200
+    logM_min        10
+    logM_max        16
 
 In your own model, the ``setup`` section should include any parameter in the halo model that would *never* be a free parameter (not 
 even a nuisance parameter); for instance, binning schemes or any precision-setting values. Note that ``setup`` is a dictionary in 

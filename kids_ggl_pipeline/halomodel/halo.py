@@ -367,7 +367,7 @@ def model(theta, R): #, calculate_covariance=False):
     # If there is miscentring to be accounted for
     # Only for galaxy-galaxy lensing!
     if ingredients['miscentring']:
-        p_off, r_off = c_miscent#[1:]
+        p_off, r_off = c_miscent[1:]
         uk_c[observables.gm.idx] = uk_c[observables.gm.idx] * nfw.miscenter(
             p_off, r_off, expand_dims(mass_range, -1),
             expand_dims(rvir_range_lin, -1), setup['k_range_lin'],

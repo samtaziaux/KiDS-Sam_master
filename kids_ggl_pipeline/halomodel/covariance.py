@@ -46,6 +46,9 @@ if sys.version_info[0] == 2:
     range = xrange
 from time import time
 from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
+from astropy.units import Quantity
+import astropy.io.fits as fits
+import healpy as hp
 
 from hmf import MassFunction
 import hmf.mass_function.fitting_functions as ff
@@ -94,7 +97,6 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     """
     
     from kids_ggl_pipeline.esd_production.shearcode_modules import calc_Sigmacrit
-    import astropy.io.fits as fits
     
     zsrcbins = np.arange(0.025,3.5,0.05)
     
@@ -132,10 +134,10 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     return 1.0/k_interpolated(z_in)
 
 
-def survey_variance_test(mass_func, W_p, k_range, radius):
+def survey_variance_test(hmf, W_p, k_range, radius):
 
     # Seems to be about right! To be checked again!.
-    P_lin = mass_func.power
+    P_lin = hmf.power
 
     # This works when testing against Mohammed et al. 2017. Survey variance for a simulation cube!
     v_w = radius
@@ -145,15 +147,51 @@ def survey_variance_test(mass_func, W_p, k_range, radius):
     return sigma
 
 
-def survey_variance(mass_func, W_p, k_range, radius):
+def survey_variance(hmf, W_p, k_range, radius):
     
     # Seems to be about right! To be checked again!.
     
-    P_lin = mass_func.power
+    P_lin = hmf.power
 
     Awr = simps(np.exp(k_range) * sp.jv(0, np.exp(k_range) * radius)/(2.0*np.pi) * W_p(np.exp(k_range))**2.0, k_range)
     integ2 = W_p(np.exp(k_range))**2.0 * np.exp(k_range)**2.0 * P_lin
     sigma = (1.0 / (2.0*np.pi**2.0 * Awr)) * simps(integ2, np.exp(k_range))
+    
+    return sigma
+    
+    
+def calculate_alms(maskfile, binary):
+    # functions borrowed from Benjamin's code
+
+    data = fits.getdata(maskfile, 1).field(0).flatten()
+    nside = hp.npix2nside(len(data))
+
+    if (binary == 1):
+        data_final = np.where(data<1.0,0,1)
+    else:
+        data_final = data
+
+    survey_area = np.count_nonzero(data_final)*hp.nside2pixarea(nside,degrees=True)
+    
+    lmax = 3*nside-1  # default range suggested by healpy
+    Cl = hp.anafast(data_final, use_weights=True)
+
+    l_range = np.arange(lmax)
+    alms = (2*l_range+1)*Cl[:lmax]
+    
+    return l_range, alms, survey_area
+    
+    
+def survey_variance_from_healpy(hmf, k_range, z, l_range, alms, survey_area):
+    # functions borrowed from Benjamin's code
+
+    P_lin_inter = UnivariateSpline(k_range, np.log(hmf.power), s=0, ext=0)
+
+    fk = hmf.cosmo.angular_diameter_distance(z).value
+    k = l_range/fk
+    ps = np.exp(P_lin_inter(np.log(k)))
+    
+    sigma = np.nansum(ps * alms)/survey_area**2.0
     
     return sigma
 
@@ -492,11 +530,28 @@ def halo_model_integrals(dndm, uk_c, uk_s, bias, rho_bg, ngal, population_cen, p
         I = trapz(integ6, Mh, axis=0)/(rho_bg**3.0)
 
     return I
+    
+    
+def count_bispectrum(hmf, uk_c, bias, rho_bg, ngal, mlf, Mh):
+    dndm = hmf.dndm
+    rho_bg = expand_dims(rho_bg, -1)
+    term1 = expand_dims(dndm * expand_dims(mlf, -1) * Mh**2.0, -1) * uk_c**2.0
+    term2 = expand_dims(dndm * bias * Mh, -1) * uk_c
+    term3 = expand_dims(dndm * bias * expand_dims(mlf, -1) * Mh, -1) * uk_c
+    
+    #print(term1.shape)
+    #print(term2.shape)
+    #print(term3.shape)
+    
+    I1 = trapz(term1, Mh, axis=1)/(rho_bg**2.0)
+    I2 = trapz(term2, Mh, axis=0) * trapz(term3, Mh, axis=1)/(rho_bg**2.0)
+
+    return I1 + 2.0 * hmf.power * I2
 
 
 def calc_cov_non_gauss(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, T1h, T234h, b_g, W_p, volume, rho_bg, ingredient, idx_1, idx_2, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, T1h, T234h, b_g, area_norm_term, volume, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     bg_i = b_g[idx_1][b_i][0]
@@ -508,9 +563,14 @@ def calc_cov_non_gauss(params):
     
     lnk, dlnk = k_adaptive(r_i, r_j, limit=1000)
     
-    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+        Awr_j = area_norm_term
+        Aw_rr = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
     
     T234_i = T234h[idx_1][b_i](np.exp(lnk), np.exp(lnk))
     T234_j = T234h[idx_2][b_j](np.exp(lnk), np.exp(lnk))
@@ -538,7 +598,7 @@ def calc_cov_non_gauss(params):
 
 def calc_cov_ssc(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, W_p, Pi_max, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, area_norm_term, b_g, survey_var, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     bg_i = b_g[idx_1][b_i][0]
@@ -552,9 +612,14 @@ def calc_cov_ssc(params):
     
     lnk, dlnk = k_adaptive(r_i, r_j)
     
-    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+        Awr_j = area_norm_term
+        Aw_rr = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
     
     P_gm_i = Pgm[idx_1][b_i](lnk)
     P_gm_j = Pgm[idx_2][b_j](lnk)
@@ -608,7 +673,7 @@ def calc_cov_ssc(params):
 
 def calc_cov_gauss(params):
     
-    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2 = params
+    b_i, b_j, i, j, radius_1, radius_2, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, ingredient, subtract_randoms, idx_1, idx_2, size_1, size_2, covar = params
     r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
     
     shape_noise_i = shape_noise[idx_1]
@@ -620,10 +685,15 @@ def calc_cov_gauss(params):
     delta = np.eye(len(radius_1), len(radius_2))
     
     lnk, dlnk = k_adaptive(r_i, r_j)
-        
-    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
+    
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+        Awr_j = area_norm_term
+        Aw_rr = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+        Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
                 
     P_gm_i = np.exp(P_inter[idx_1][b_i](lnk))
     P_gm_j = np.exp(P_inter[idx_2][b_j](lnk))
@@ -638,10 +708,10 @@ def calc_cov_gauss(params):
     # wp
     if ingredient == 'gg':
         integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * (P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j])*(P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j])
-        val1 = ((2.0*Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ1, dx=dlnk)
+        val1 = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * 2.0 * simps(integ1, dx=dlnk)
         if subtract_randoms == 'False':
             integ2 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j) * W_p(np.exp(lnk))**2.0 * np.sqrt((P_gg_i + 1.0/ngal_i[b_i]* delta[b_i, b_j]))*np.sqrt((P_gg_j + 1.0/ngal_j[b_j]* delta[b_i, b_j]))
-            val2 = (4.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ2, dx=dlnk)
+            val2 = ((2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * 4.0 * simps(integ2, dx=dlnk)
         else:
             val2 = 0.0
         val = val1 + val2
@@ -674,6 +744,106 @@ def calc_cov_gauss(params):
     
     
     return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
+    
+    
+def calc_cov_mlf_sn(params):
+    
+    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, mlf_func, size_1, size_2, covar = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
+    
+    delta_bin = np.eye(len(radius_1), len(radius_2))
+    delta_r = np.eye(len(radius_1[b_i]), len(radius_2[b_j]))
+
+    val = delta_bin[b_i,b_j] * delta_r[i,j] * mlf_func[b_i][i] / (m_bin[b_i] * vmax[b_i][i])
+    
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * (r_i * r_j)
+    
+    
+def calc_cov_mlf_ssc(params):
+
+    b_i, b_j, i, j, radius_1, radius_2, vmax, m_bin, area_norm_term, mlf_til, survey_var, size_1, size_2, covar = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
+    
+    val = area_norm_term**2.0 / (vmax[b_i][i] * vmax[b_j][j]) * (np.sqrt(survey_var[b_i])*np.sqrt(survey_var[b_j])) * mlf_til[b_i][i] * mlf_til[b_j][j]
+
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * (r_i * r_j)
+    
+    
+def calc_cov_mlf_cross_sn(params):
+    
+    # radius 1 here should be for the 2-point function, radius 2 for 1-point function. Same goes for i: 2-point, j: 1-point
+
+    b_i, b_j, i, j, radius_1, radius_2, area_norm_term, count_b, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
+
+    lnk, dlnk = k_adaptive(r_i, r_i)
+    
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+
+    count_b_j = count_b[b_j][j](lnk)
+    rho_i = rho_bg[idx_1]
+    
+    # wp
+    if ingredient == 'gg':
+        integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * count_b_j
+        val = (1.0/Awr_i)/(2.0*np.pi) * trapz(integ1, dx=dlnk)
+    
+    # ESD
+    if ingredient == 'gm':
+        integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * count_b_j
+        val = (1.0/Awr_i)/(2.0*np.pi) * trapz(integ2, dx=dlnk) * rho_i[b_i] / 1e12
+    
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * r_j
+    
+    
+def calc_cov_mlf_cross_ssc(params):
+
+    # radius 1 here should be for the 2-point function, radius 2 for 1-point function. Same goes for i: 2-point, j: 1-point
+
+    b_i, b_j, i, j, radius_1, radius_2, P_lin, dlnP_lin, Pgm, Pgg, I_g, I_m, I_gg, I_gm, mlf_til, area_norm_term, b_g, survey_var_1, survey_var_2, rho_bg, ingredient, idx_1, idx_2, size_1, size_2, covar = params
+    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
+    
+    bg_i = b_g[idx_1][b_i][0]
+    rho_i = rho_bg[idx_1]
+    survey_var_i = survey_var_1[idx_1]
+    survey_var_j = survey_var_2
+    mlf_j = mlf_til[b_j][j]
+    
+    lnk, dlnk = k_adaptive(r_i, r_i)
+    
+    if covar['healpy'] == 'True':
+        Awr_i = area_norm_term
+    else:
+        Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
+    
+    P_gm_i = Pgm[idx_1][b_i](lnk)
+    P_gg_i = Pgg[idx_1][b_i](lnk)
+    P_lin_i = P_lin[idx_1][b_i](lnk)
+    dP_lin_i = dlnP_lin[idx_1][b_i](lnk)
+    Ig_i = I_g[idx_1][b_i](lnk)
+    Im_i = I_m[idx_1][b_i](lnk)
+    Igg_i = I_gg[idx_1][b_i](lnk)
+    Igm_i = I_gm[idx_1][b_i](lnk)
+    
+    # Responses
+    ps_deriv_gg_i = (68.0/21.0 - (1.0/3.0)*(dP_lin_i)) * np.exp(P_lin_i) * np.exp(Ig_i)*np.exp(Ig_i) + np.exp(Igg_i) - 2.0 * bg_i * np.exp(P_gg_i)
+    
+    ps_deriv_gm_i = (68.0/21.0 - (1.0/3.0)*(dP_lin_i)) * np.exp(P_lin_i) * np.exp(Ig_i)*np.exp(Im_i) + np.exp(Igm_i) - bg_i * np.exp(P_gm_i)
+    
+    # wp
+    if ingredient == 'gg':
+        integ1 = np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i) * (np.sqrt(survey_var_i[b_i] * survey_var_j[b_j])) * ps_deriv_gg_i * mlf_j
+        val = (1.0/Awr_i)/(2.0*np.pi) * trapz(integ1, dx=dlnk)
+    
+    # ESD
+    if ingredient == 'gm':
+        integ2 = np.exp(lnk)**2.0 * sp.jv(2, np.exp(lnk) * r_i) * (np.sqrt(survey_var_i[b_i] * survey_var_j[b_j])) * ps_deriv_gm_i * mlf_j
+        val = (1.0/Awr_i)/(2.0*np.pi) * trapz(integ2, dx=dlnk) * rho_i[b_i] / 1e12
+    # Area normalisation is not yet clear here!
+    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * r_j
 
 
 def aw_func(params):
@@ -798,56 +968,26 @@ def covariance(theta, R, calculate_covariance=True):
             for name in ('observables', 'selection', 'ingredients',
                     'parameters', 'setup')]
 
-    #assert len(observables) == 1, \
-    #    'working with more than one observable is not yet supported.' \
-    #    ' If you would like this feature added please raise an issue.'
+    if observables.mlf:
+        nbins = observables.nbins - observables.mlf.nbins
+    else:
+        nbins = observables.nbins
     
-    # We might want to move this outside of the model code, but I am not sure where.
-    nbins = 0
-    ingredient_gm, ingredient_gg, ingredient_mm, ingredient_mlf = False, False, False, False
-    hod_observable = None
-    for i, observable in enumerate(observables):
-        if observable.obstype == 'gm':
-            ingredient_gm = True
-            observable_gm = observable
-            hod_observable_gm = observable.sampling
-            if hod_observable is None:
-                hod_observable = hod_observable_gm
-            else:
-                hod_observable = np.concatenate([hod_observable, hod_observable_gm], axis=0)
-            nbins_gm = observable.nbins
-            idx_gm = np.s_[nbins:nbins+nbins_gm]
-            nbins += nbins_gm
-        if observable.obstype == 'gg':
-            ingredient_gg = True
-            observable_gg = observable
-            hod_observable_gg = observable.sampling
-            if hod_observable is None:
-                hod_observable = hod_observable_gg
-            else:
-                hod_observable = np.concatenate([hod_observable, hod_observable_gg], axis=0)
-            nbins_gg = observable.nbins
-            idx_gg = np.s_[nbins:nbins+nbins_gg]
-            nbins += nbins_gg
-        if observable.obstype == 'mlf':
-            ingredient_mlf = True
-            observable_mlf = observable
-            hod_observable_mlf = observable.sampling
-            nbins_mlf = observable.nbins
-            idx_mlf = np.s_[nbins:nbins+nbins_mlf]
-            nbins += nbins_mlf
-
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
+    size_cosmo = 9
     
-    if ingredients['nzlens']:
-        nz = cosmo[9].T
-        size_cosmo = 10
-    else:
-        size_cosmo = 9
+    if observables.mlf:
+        if len(cosmo) == size_cosmo+1:
+            assert len(cosmo) >= len(cosmo), \
+                'When using SMF/LF, must provide an additional parameter' \
+                '"z_mlf", corresponding to mean redshift values for SMF/LF. See' \
+                'demo for an example.'
+        z_mlf = cosmo[-1]
+        size_cosmo += 1
     # cheap hack. I'll use this for CMB lensing, but we can
     # also use this to account for difference between shear
     # and reduced shear
@@ -861,17 +1001,6 @@ def covariance(theta, R, calculate_covariance=True):
             ' choice for the zlens parameter')
 
     integrate_zlens = ingredients['nzlens']
-
-    # HMF set up parameters
-    k_step = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
-    k_range = arange(setup['lnk_min'], setup['lnk_max'], k_step)
-    k_range_lin = exp(k_range)
-    # endpoint must be False for mass_range to be equal to hmf.m
-    mass_range = 10**linspace(
-        setup['logM_min'], setup['logM_max'], setup['logM_bins'],
-        endpoint=False)
-    setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
-                    / setup['logM_bins']
 
     # if a single value is given for more than one bin, assign same
     # value to all bins
@@ -894,10 +1023,12 @@ def covariance(theta, R, calculate_covariance=True):
     # Tinker10 should also be read from theta!
     transfer_params = \
         {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
-        'lnk_max': setup['lnk_max'], 'dlnk': k_step}
+         'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
     hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
     
-    mass_range = hmf[0].m
+    assert np.allclose(setup['mass_range'], hmf[0].m)
+    # aliasing for now
+    mass_range = setup['mass_range']
     rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
         else rho_mean / omegam
     
@@ -911,10 +1042,11 @@ def covariance(theta, R, calculate_covariance=True):
 
     rvir_range_lin = virial_radius(
         mass_range, rho_bg, setup['delta'])
-    rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
+    #rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
+    rvir_range_3d = setup['rvir_range_3d']
     # these are not very informative names but the "i" stands for
     # interpolated
-    rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
+    #rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
     #rvir_range_3d_i = logspace(-4, 2, 60, endpoint=True)
     # integrate over redshift later on
     # assuming this means arcmin for now -- implement a way to check later!
@@ -922,33 +1054,26 @@ def covariance(theta, R, calculate_covariance=True):
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
-    if ingredient_gm:
-        rvir_range_2d_i_gm = [r[1:].astype('float64') for r in R[idx_gm]]
-        #rvir_range_2d_i_gm = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gm]] # for testing
-        size_r_gm = np.array([len(r) for r in rvir_range_2d_i_gm])
-    if ingredient_gg:
-        rvir_range_2d_i_gg = [r[1:].astype('float64') for r in R[idx_gg]]
-        #rvir_range_2d_i_gg = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[idx_gg]] # for testing
-        size_r_gg = np.array([len(r) for r in rvir_range_2d_i_gg])
-    #if ingredients['mm']:
-        #rvir_range_2d_i_mm = [r[1:].astype('float64') for r in R[idx_mm]] # mm not used in this code!
-        #size_r_mm = np.array([len(r) for r in rvir_range_2d_i_mm])
-    if ingredient_mlf:
-        rvir_range_2d_i_mlf = [r[1:].astype('float64') for r in R[idx_mlf]]
-        size_r_mlf = np.array([len(r) for r in rvir_range_2d_i_mlf])
-    # We might want to move this in the configuration part of the code!
-    # Same goes for the bins above
+    
+    if observables.gm:
+        observables.gm.R = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[observables.gm.idx]] # for testing
+        observables.gm.size = np.array([len(r) for r in observables.gm.R])
+    if observables.gg:
+        observables.gg.R = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[observables.gg.idx]] # for testing
+        observables.gg.size = np.array([len(r) for r in observables.gg.R])
+    if observables.mlf:
+        observables.mlf.R = [logspace(7, 13, 30, endpoint=True) for r in range(2)]#R[idx_mlf]]
+        n_bins = 30
+        rvir_bins = np.linspace(7, 12.5, n_bins+1, endpoint=True, retstep=True)[0]
+        rvir_center = (rvir_bins[1:] + rvir_bins[:-1])/2.0
+        observables.mlf.R = [10.0**rvir_center for r in range(2)]
+        observables.mlf.size = np.array([len(r) for r in observables.mlf.R])
     
     
-    
-    # Check Benjamin's code how the realistic survey geometry is accounted for! (healpix, or something)
-
-    Pi_max = covar['pi_max'] #100.0 # in Mpc/h
-    kids_area = covar['area'] #180 # in deg^2
-    kids_area = kids_area * 3600.0 # to arcmin^2
-    eff_density = covar['eff_density'] #8.53 # as defined in KiDS (gal / arcmin^2)
-    kids_variance_squared = covar['variance_squared'] #0.082 # as defined in KiDS papers
-    z_kids = covar['mean_survey_redshift'] #0.6
+    Pi_max = covar['pi_max'] # in Mpc/h
+    eff_density = covar['eff_density'] # as defined in KiDS (gal / arcmin^2)
+    kids_variance_squared = covar['variance_squared'] # as defined in KiDS papers
+    z_kids = covar['mean_survey_redshift']
     gauss = covar['gauss']
     non_gauss = covar['non_gauss']
     ssc = covar['ssc']
@@ -958,52 +1083,75 @@ def covariance(theta, R, calculate_covariance=True):
     
     z_epsilon = covar['z_epsilon']
     z_max = covar['z_max']
-    spec_z_path = covar['specz_file']
+    
+    if observables.mlf:
+        if covar['vmax_file'] == 'None':
+            raise ValueError(
+                'When calculating the SMF/LF covariance matrix, the Vmax file is needed.' /
+                'It should be a text file with 2 columns, first column the log10 of stellar mass/luminosity'/
+                'the second one Vmax at that stellar mass/luminosity.')
 
     if covar['kids_sigma_crit'] == 'True':
         # KiDS specific sigma_crit, accounting for n(z)!
+        spec_z_path = covar['specz_file']
         sigma_crit = sigma_crit_kids(hmf, z, z_epsilon, z_max, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0
     else:
         sigma_crit = sigma_crit_func(cosmo_model, z, z_kids)
     
-    #eff_density_in_mpc = eff_density  / ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value / hmf[0].cosmo.h )**2.0 # not used
     eff_density_in_rad = eff_density * (10800.0/np.pi)**2.0 # convert to radians
     
-    shape_noise = ((sigma_crit / rho_bg[...,0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / hmf[0].cosmo.angular_diameter_distance(z_kids).value) # With lensing the projected distance is the distance between the observer and effective survey redshift.
+    Pi_max_lens = hmf[0].cosmo.angular_diameter_distance(z_kids).value
+    shape_noise = ((sigma_crit / rho_bg[...,0])**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / Pi_max_lens) # With lensing the projected distance is the distance between the observer and effective survey redshift.
     #shape_noise = np.zeros_like(shape_noise)
+    
+    if covar['healpy'] == 'True':
+        healpy_data = covar['healpy_data']
+        print('Using healpy map to determine survey variance and area.')
+        l_range, alms, survey_area = calculate_alms(healpy_data, 1)
+        survey_var = [survey_variance_from_healpy(hmf_i, k_range, z_kids, l_range, alms, survey_area) for hmf_i in hmf]
+        kids_area = survey_area * 3600.0 # to arcmin^2
+        area_norm_term = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
+        area_sur = area_norm_term
+        radius = np.sqrt(area_norm_term / np.pi)
+        vol = radius**2.0 * Pi_max
+        W = 2.0*np.pi*radius**2.0 * sp.jv(1, setup['k_range_lin']*radius) / (setup['k_range_lin']*radius)
+        W_p = UnivariateSpline(setup['k_range_lin'], W, s=0, ext=0)
+    else:
+        kids_area = covar['area'] # in deg^2
+        kids_area = kids_area * 3600.0 # to arcmin^2
+        area_sur = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
+        radius = np.sqrt(kids_area / np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h
+        vol = radius**2.0 * Pi_max
+        W = 2.0*np.pi*radius**2.0 * sp.jv(1, setup['k_range_lin']*radius) / (setup['k_range_lin']*radius)
+        W_p = UnivariateSpline(setup['k_range_lin'], W, s=0, ext=0)
+        survey_var = [survey_variance(hmf_i, W_p, setup['k_range'], radius) for hmf_i in hmf]
+        area_norm_term = W_p
+    
 
-    radius = np.sqrt(kids_area) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h # Square survey
-    
-    W = 2.0*np.pi*radius**2.0 * sp.jv(1, k_range_lin*radius) / (k_range_lin*radius)
-    W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    survey_var = [survey_variance(hmf_i, W_p, k_range, radius) for hmf_i in hmf]
-    
-        
     print('Survey and observational details set.')
     if covar['kids_sigma_crit'] == 'True':
         print('Using KiDS specific sigma_crit setup.')
-    
     
     # Calculating halo model
     
     # interpolate selection function to the same grid as redshift and
     # observable to be used in trapz
     
-    completeness = np.ones(hod_observable.shape)
+    completeness = np.ones(observables.sampling.shape)
     if ingredients['centrals']:
         pop_c, prob_c = hod.number(
-            hod_observable, mass_range, c_mor[0], c_scatter[0],
+            observables.sampling, mass_range, c_mor[0], c_scatter[0],
             c_mor[1:], c_scatter[1:], completeness,
-            obs_is_log=observable_gm.is_log)
+            obs_is_log=observables.gm.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
-        prob_c = np.zeros((nbins,hod_observable.shape[1],mass_range.size))
+        prob_c = np.zeros((nbins,observables.sampling.shape,mass_range.size))
 
     if ingredients['satellites']:
         pop_s, prob_s = hod.number(
-            hod_observable, mass_range, s_mor[0], s_scatter[0],
+            observables.sampling, mass_range, s_mor[0], s_scatter[0],
             s_mor[1:], s_scatter[1:], completeness,
-            obs_is_log=observable_gm.is_log)
+            obs_is_log=observables.gm.is_log)
     else:
         pop_s = np.zeros(pop_c.shape)
         prob_s = np.zeros(prob_c.shape)
@@ -1015,73 +1163,106 @@ def covariance(theta, R, calculate_covariance=True):
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal = hod.nbar(dndm, pop_g, mass_range)
     meff = hod.Mh_effective(
-        dndm, pop_g, mass_range, return_log=observable_gm.is_log)
-     
-     
-    # Luminosity or mass function as an output:
-    if ingredient_mlf:
-        # Needs independent redshift input!
-        z_mlf = z[idx_mlf]
-        if z_mlf.size == 1 and nbins_mlf > 1:
-            z_mlf = z_mlf*np.ones(nbins_mlf)
-        if z_mlf.size != nbins_mlf:
-            raise ValueError(
-                'Number of redshift bins should be equal to the number of observable bins!')
-        hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
-        dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
+        dndm, pop_g, mass_range, return_log=observables.gm.is_log)
         
-        pop_c_mlf = np.zeros((nbins_mlf,mass_range.size))
-        pop_s_mlf = np.zeros((nbins_mlf,mass_range.size))
-        
-        if ingredients['centrals']:
-            pop_c_mlf = hod.mlf(
-                hod_observable_mlf, dndm_mlf, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:],
-                obs_is_log=observable_mlf.is_log)
-
-        if ingredients['satellites']:
-            pop_s_mlf = hod.mlf(
-                hod_observable_mlf, dndm_mlf, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:],
-                obs_is_log=observable_mlf.is_log)
-        pop_g_mlf = pop_c_mlf + pop_s_mlf
-        
-        mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
-                    for hod_i, ngal_i in zip(hod_observable_mlf, pop_g_mlf*10.0**hod_observable_mlf)]
-        # This needs to be added to the final covariance calculation for the mlf/lmf!
-     
      
     """
     # Power spectrum
     """
-                   
-                   
+    
     # damping of the 1h power spectra at small k
-    F_k1 = sp.erf(k_range_lin/0.1)
-    F_k2 = np.ones_like(k_range_lin)
+    F_k1 = sp.erf(setup['k_range_lin']/0.1)
+    F_k2 = np.ones_like(setup['k_range_lin'])
     # Fourier Transform of the NFW profile
     
     if ingredients['centrals']:
         uk_c = nfw.uk(
-            k_range_lin, mass_range, rvir_range_lin, concentration, rho_bg,
+            setup['k_range_lin'], mass_range, rvir_range_lin, concentration, rho_bg,
             setup['delta'])
         uk_c = uk_c / expand_dims(uk_c[...,0], -1)
     else:
-        uk_c = np.ones((nbins,mass_range.size,k_range_lin.size))
+        uk_c = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
     # and of the NFW profile of the satellites
     if ingredients['satellites']:
         uk_s = nfw.uk(
-            k_range_lin, mass_range, rvir_range_lin, concentration_sat, rho_bg,
+            setup['k_range_lin'], mass_range, rvir_range_lin, concentration_sat, rho_bg,
             setup['delta'])
         uk_s = uk_s / expand_dims(uk_s[...,0], -1)
     else:
-        uk_s = np.ones((nbins,mass_range.size,k_range_lin.size))
+        uk_s = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
 
+    # Luminosity or mass function as an output:
+    if observables.mlf:
+        # Needs independent redshift input!
+        #z_mlf = z_in[idx_mlf]
+        if z_mlf.size == 1 and observables.mlf.nbins > 1:
+            z_mlf = z_mlf*np.ones(observables.mlf.nbins)
+        if z_mlf.size != observables.mlf.nbins:
+            raise ValueError(
+                'Number of redshift bins should be equal to the number of observable bins!')
+        hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
+        dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
+        bias_mlf = array([bias_tinker10(hmf_i) for hmf_i in hmf_mlf])
+        
+        pop_c_mlf = np.zeros((observables.mlf.nbins,mass_range.size))
+        pop_s_mlf = np.zeros((observables.mlf.nbins,mass_range.size))
+        pop_c_mlf_til = np.zeros((observables.mlf.nbins,mass_range.size))
+        pop_s_mlf_til = np.zeros((observables.mlf.nbins,mass_range.size))
+        
+        if ingredients['centrals']:
+            pop_c_mlf = hod.mlf(
+                observables.mlf.sampling, dndm_mlf, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:],
+                obs_is_log=observables.mlf.is_log)
+            pop_c_mlf_til = hod.mlf_tilde(
+                observables.mlf.sampling, dndm_mlf, bias_mlf, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:],
+                obs_is_log=observables.mlf.is_log)
+
+        if ingredients['satellites']:
+            pop_s_mlf = hod.mlf(
+                observables.mlf.sampling, dndm_mlf, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:],
+                obs_is_log=observables.mlf.is_log)
+            pop_s_mlf_til = hod.mlf_tilde(
+                observables.mlf.sampling, dndm_mlf, bias_mlf, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:],
+                obs_is_log=observables.mlf.is_log)
+        pop_g_mlf = pop_c_mlf + pop_s_mlf
+        pop_g_mlf_til = pop_c_mlf_til + pop_s_mlf_til
+        
+        mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
+                    for hod_i, ngal_i in zip(observables.mlf.sampling, pop_g_mlf)]
+        mlf_tilde_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
+                    for hod_i, ngal_i in zip(observables.mlf.sampling, pop_g_mlf_til)]
+        for i,Ri in enumerate(observables.mlf.R):
+            Ri = Quantity(Ri, unit='Mpc')
+            #observables.mlf.R[i] = Ri.to(setup['R_unit']).value
+        mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
+                    in zip(mlf_inter, observables.mlf.R)]
+        mlf_til = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
+                    in zip(mlf_tilde_inter, observables.mlf.R)]
+        m_bin = [np.diff(i)[0] for i in observables.mlf.R]
+        count_b = array([count_bispectrum(hmf_i, uk_c_i, bias_tinker10(hmf_i), rho_bg_i, ngal_i, mlf_out_i, mass_range)
+                for hmf_i, uk_c_i, rho_bg_i, ngal_i, mlf_out_i in
+                zip(hmf, uk_c, rho_bg, ngal, mlf_out)])
+        count_b_interp = [[UnivariateSpline(setup['k_range'], count_b_i, s=0, ext=0)
+                    for count_b_i in count] for count in count_b]
+        if covar['healpy'] == 'True':
+            survey_var_mlf = [survey_variance_from_healpy(hmf_i, setup['k_range'], z_kids, l_range, alms, survey_area) for hmf_i in hmf_mlf]
+        else:
+            survey_var_mlf = [survey_variance(hmf_i, W_p, setup['k_range'], radius) for hmf_i in hmf_mlf]
+        
+        vmax_data = np.genfromtxt(open(covar['vmax_file'], 'rb'), delimiter=None, comments='#')
+        M_center = vmax_data[:,0]
+        vmax_in = vmax_data[:,1]
+        vmax_inter = UnivariateSpline(10.0**M_center, vmax_in, s=0, ext=0)
+        vmax = [vmax_inter(i)for i in observables.mlf.R]
     
     
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
-    bias = array([bias]*k_range_lin.size).T
+    bias = array([bias]*setup['k_range_lin'].size).T
     
    
     rho_bg = rho_bg[...,0]
@@ -1157,13 +1338,13 @@ def covariance(theta, R, calculate_covariance=True):
 
 
 
-    P_inter = [UnivariateSpline(k_range, np.log(Pgm_k_i), s=0, ext=0)
+    P_inter = [UnivariateSpline(setup['k_range'], np.log(Pgm_k_i), s=0, ext=0)
                     for Pgm_k_i in Pgm_k]
         
-    P_inter_2 = [UnivariateSpline(k_range, np.log(Pgg_k_i), s=0, ext=0)
+    P_inter_2 = [UnivariateSpline(setup['k_range'], np.log(Pgg_k_i), s=0, ext=0)
                     for Pgg_k_i in Pgg_k]
 
-    P_inter_3 = [UnivariateSpline(k_range, np.log(Pmm_k_i), s=0, ext=0)
+    P_inter_3 = [UnivariateSpline(setup['k_range'], np.log(Pmm_k_i), s=0, ext=0)
                     for Pmm_k_i in Pmm_k]
                     
     
@@ -1189,25 +1370,25 @@ def covariance(theta, R, calculate_covariance=True):
                                     for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
                                     zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
     
-    I_inter_g = [UnivariateSpline(k_range, np.log(I_g_i), s=0, ext=0)
+    I_inter_g = [UnivariateSpline(setup['k_range'], np.log(I_g_i), s=0, ext=0)
                for I_g_i in I_g]
                
-    I_inter_m = [UnivariateSpline(k_range, np.log(I_m_i), s=0, ext=0)
+    I_inter_m = [UnivariateSpline(setup['k_range'], np.log(I_m_i), s=0, ext=0)
                 for I_m_i in I_m]
                  
-    I_inter_gg = [UnivariateSpline(k_range, np.log(I_gg_i), s=0, ext=0)
+    I_inter_gg = [UnivariateSpline(setup['k_range'], np.log(I_gg_i), s=0, ext=0)
                 for I_gg_i in I_gg]
                  
-    I_inter_gm = [UnivariateSpline(k_range, np.log(I_gm_i), s=0, ext=0)
+    I_inter_gm = [UnivariateSpline(setup['k_range'], np.log(I_gm_i), s=0, ext=0)
                 for I_gm_i in I_gm]
                 
-    I_inter_mm = [UnivariateSpline(k_range, np.log(I_mm_i), s=0, ext=0)
+    I_inter_mm = [UnivariateSpline(setup['k_range'], np.log(I_mm_i), s=0, ext=0)
                 for I_mm_i in I_mm]
     
-    P_lin_inter = [UnivariateSpline(k_range, np.log(hmf_i.power), s=0, ext=0)
+    P_lin_inter = [UnivariateSpline(setup['k_range'], np.log(hmf_i.power), s=0, ext=0)
                 for hmf_i in hmf]
                
-    k3P_lin_inter = [UnivariateSpline(k_range, np.log(k_range_lin**3.0 * hmf_i.power), s=0, ext=0)
+    k3P_lin_inter = [UnivariateSpline(setup['k_range'], np.log(setup['k_range_lin']**3.0 * hmf_i.power), s=0, ext=0)
                 for hmf_i in hmf]
                 
     dlnk3P_lin_interdlnk = [f.derivative() for f in k3P_lin_inter]
@@ -1241,15 +1422,24 @@ def covariance(theta, R, calculate_covariance=True):
         print('Trispectra done.')
    
 
-    if ingredient_gm:
-        cov_esd = np.zeros((size_r_gm.sum(), size_r_gm.sum()), dtype=np.float64)
+    if observables.gm:
+        cov_esd = np.zeros((observables.gm.size.sum(), observables.gm.size.sum()), dtype=np.float64)
         cov_esd_tot = cov_esd.copy()
-    if ingredient_gg:
-        cov_wp = np.zeros((size_r_gg.sum(), size_r_gg.sum()), dtype=np.float64)
+    if observables.gg:
+        cov_wp = np.zeros((observables.gg.size.sum(), observables.gg.size.sum()), dtype=np.float64)
         cov_wp_tot = cov_wp.copy()
-    if ingredient_gm and ingredient_gg:
-        cov_cross = np.zeros((size_r_gg.sum(), size_r_gm.sum()), dtype=np.float64)
+    if observables.gm and observables.gg:
+        cov_cross = np.zeros((observables.gg.size.sum(), observables.gm.size.sum()), dtype=np.float64)
         cov_cross_tot = cov_cross.copy()
+    if observables.mlf:
+        cov_mlf = np.zeros((observables.mlf.size.sum(), observables.mlf.size.sum()), dtype=np.float64)
+        cov_mlf_tot = cov_mlf.copy()
+    if observables.mlf and observables.gm:
+        cov_mlf_cross_gm = np.zeros((observables.gm.size.sum(), observables.mlf.size.sum()), dtype=np.float64)
+        cov_mlf_cross_gm_tot = cov_mlf_cross_gm.copy()
+    if observables.mlf and observables.gg:
+        cov_mlf_cross_gg = np.zeros((observables.gg.size.sum(), observables.mlf.size.sum()), dtype=np.float64)
+        cov_mlf_cross_gg_tot = cov_mlf_cross_gg.copy()
     
     """
     ######################################################
@@ -1433,69 +1623,119 @@ def covariance(theta, R, calculate_covariance=True):
     #"""
     if gauss == 'True':
         print('Calculating the Gaussian part of the covariance ...')
-        if ingredient_gm:
-            cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, idx_gm, idx_gm, size_r_gm, size_r_gm)
+        if observables.gm:
+            cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max_lens, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
             cov_esd_tot += cov_esd_gauss
-        if ingredient_gg:
-            cov_wp_gauss = parallelise(calc_cov_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gg', subtract_randoms, idx_gg, idx_gg, size_r_gg, size_r_gg)
+        if observables.gg:
+            cov_wp_gauss = parallelise(calc_cov_gauss, nproc, cov_wp.copy(), observables.gg.R, observables.gg.R, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gg', subtract_randoms, observables.gg.idx, observables.gg.idx, observables.gg.size, observables.gg.size, covar)
             cov_wp_tot += cov_wp_gauss
-        if ingredient_gm and ingredient_gg and (cross == 'True'):
-            cov_cross_gauss = parallelise(calc_cov_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_inter, P_inter_2, P_inter_3, W_p, Pi_max, shape_noise, ngal, rho_bg, 'cross', subtract_randoms, idx_gg, idx_gm, size_r_gg, size_r_gm)
+        if observables.gm and observables.gg and (cross == 'True'):
+            cov_cross_gauss = parallelise(calc_cov_gauss, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_inter, P_inter_2, P_inter_3, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'cross', subtract_randoms, observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_gauss
-    else:
-        pass
         
 
     if ssc == 'True':
         print('Calculating the super-sample covariance ...')
-        if ingredient_gm:
-            cov_esd_ssc = parallelise(calc_cov_ssc, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
+        if observables.gm:
+            cov_esd_ssc = parallelise(calc_cov_ssc, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, area_norm_term, bias_num, survey_var, rho_bg, 'gm', observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
             cov_esd_tot += cov_esd_ssc
-        if ingredient_gg:
-            cov_wp_ssc = parallelise(calc_cov_ssc, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
+        if observables.gg:
+            cov_wp_ssc = parallelise(calc_cov_ssc, nproc, cov_wp.copy(), observables.gg.R, observables.gg.R, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, area_norm_term, bias_num, survey_var, rho_bg, 'gg', observables.gg.idx, observables.gg.idx, observables.gg.size, observables.gg.size, covar)
             cov_wp_tot += cov_wp_ssc
-        if ingredient_gm and ingredient_gg and (cross == 'True'):
-            cov_cross_ssc = parallelise(calc_cov_ssc, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, W_p, Pi_max, bias_num, survey_var, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
+        if observables.gm and observables.gg and (cross == 'True'):
+            cov_cross_ssc = parallelise(calc_cov_ssc, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, area_norm_term, bias_num, survey_var, rho_bg, 'cross', observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_ssc
-    else:
-        pass
-
+    
 
     if non_gauss == 'True':
         print('Calculating the connected (non-Gaussian) part of the covariance ...')
-        if ingredient_gm:
-            cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), rvir_range_2d_i_gm, rvir_range_2d_i_gm, Tgmgm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, rho_bg, 'gm', idx_gm, idx_gm, size_r_gm, size_r_gm)
+        if observables.gm:
+            cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, Tgmgm, T234h, bias_num, area_norm_term, vol, rho_bg, 'gm', observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
             cov_esd_tot += cov_esd_non_gauss
-        if ingredient_gg:
-            cov_wp_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_wp.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gg, Tgggg, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, rho_bg, 'gg', idx_gg, idx_gg, size_r_gg, size_r_gg)
+        if observables.gg:
+            cov_wp_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_wp.copy(), observables.gg.R, observables.gg.R, Tgggg, T234h, bias_num, area_norm_term, vol, rho_bg, 'gg', observables.gg.idx, observables.gg.idx, observables.gg.size, observables.gg.size, covar)
             cov_wp_tot += cov_wp_non_gauss
-        if ingredient_gm and ingredient_gg and (cross == 'True'):
-            cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), rvir_range_2d_i_gg, rvir_range_2d_i_gm, Tgggm, T234h, bias_num, W_p, np.pi*radius**2.0*Pi_max, rho_bg, 'cross', idx_gg, idx_gm, size_r_gg, size_r_gm)
+        if observables.gm and observables.gg and (cross == 'True'):
+            cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, Tgggm, T234h, bias_num, area_norm_term, vol, rho_bg, 'cross', observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_non_gauss
-    else:
-        pass
+            
+            
+    if gauss == 'True':
+        print('Calculating the Gaussian part of the SMF/LF covariance ...')
+        if observables.mlf:
+            cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, mlf_out, observables.mlf.size, observables.mlf.size, covar)
+            cov_mlf_tot += cov_mlf_gauss
+        if observables.mlf and observables.gm and (cross == 'True'):
+            cov_mlf_cross_gauss_gm = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
+            cov_mlf_cross_gm_tot += cov_mlf_cross_gauss_gm
+        if observables.mlf and observables.gg and (cross == 'True'):
+            cov_mlf_cross_gauss_gg = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
+            cov_mlf_cross_gg_tot += cov_mlf_cross_gauss_gg
+            
+            
+    if ssc == 'True':
+        print('Calculating the SMF/LF super-sample covariance ...')
+        if observables.mlf:
+            cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, observables.mlf.size, observables.mlf.size, covar)
+            cov_mlf_tot += cov_mlf_ssc
+        if observables.mlf and observables.gm and (cross == 'True'):
+            cov_mlf_cross_ssc_gm = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
+            cov_mlf_cross_gm_tot += cov_mlf_cross_ssc_gm
+        if observables.mlf and observables.gg and (cross == 'True'):
+            cov_mlf_cross_ssc_gg = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_inter, P_inter_2, I_inter_g, I_inter_m, I_inter_gg, I_inter_gm, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
+            cov_mlf_cross_gg_tot += cov_mlf_cross_ssc_gg
+    
+
     
     # To be removed, only for testing purposes
-    """
-    aw_values = np.zeros((size_r_gm.sum(), size_r_gm.sum(), 3), dtype=np.float64)
-    aw_values = calc_aw(nproc, aw_values, rvir_range_2d_i_gm, rvir_range_2d_i_gm, W_p, size_r_gm, size_r_gm)
+    #"""
+    rescale = 1.0#covar['area']/survey_area #1.0#
+    aw_values = np.zeros((observables.gm.size.sum(), observables.gm.size.sum(), 3), dtype=np.float64)
+    aw_values = calc_aw(nproc, aw_values, observables.gm.R, observables.gm.R, W_p, observables.gm.size, observables.gm.size)
     
     cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
                         [cov_cross_tot, cov_wp_tot]])
     
+    #cov_esd_gauss, cov_wp_gauss, cov_cross_gauss = np.zeros((observables.gm.size.sum(), observables.gm.size.sum()), dtype=np.float64), np.zeros((observables.gg.size.sum(), observables.gg.size.sum()), dtype=np.float64), np.zeros((observables.gg.size.sum(), observables.gm.size.sum()), dtype=np.float64)
     cov_esd_non_gauss, cov_wp_non_gauss, cov_cross_non_gauss = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
+    cov_esd_ssc, cov_wp_ssc, cov_cross_ssc = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
     
-    all = np.array([size_r_gm, size_r_gg, rvir_range_2d_i_gm, rvir_range_2d_i_gg, cov_esd_gauss, cov_esd_non_gauss, cov_esd_ssc, cov_wp_gauss, cov_wp_non_gauss, cov_wp_ssc, cov_esd_tot, cov_wp_tot, cov_cross_tot, cov_block, aw_values, radius**2.0], dtype=object)
+    all = np.array([observables.gm.size, observables.gg.size, observables.gm.R, observables.gg.R, cov_esd_gauss/rescale, cov_esd_non_gauss/rescale, cov_esd_ssc/rescale, cov_wp_gauss/rescale, cov_wp_non_gauss/rescale, cov_wp_ssc/rescale, cov_esd_tot/rescale, cov_wp_tot/rescale, cov_cross_tot/rescale, cov_block/rescale, aw_values, radius**2.0], dtype=object)
     
     np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/cov_all.npy', all)
+    
+    cov_block2 = np.block([[cov_esd_tot, cov_cross_tot.T, cov_mlf_cross_gm_tot],
+                            [cov_cross_tot, cov_wp_tot, cov_mlf_cross_gg_tot],
+                            [cov_mlf_cross_gm_tot.T, cov_mlf_cross_gg_tot.T, cov_mlf_tot]])
+    
+    all2 = np.array([observables.gm.size, observables.gg.size, observables.mlf.size, observables.gm.R, observables.gg.R, observables.mlf.R, cov_esd_gauss/rescale, cov_esd_non_gauss/rescale, cov_esd_ssc/rescale, cov_wp_gauss/rescale, cov_wp_non_gauss/rescale, cov_wp_ssc/rescale, cov_mlf_gauss/rescale, cov_mlf_cross_gauss_gm/rescale, cov_mlf_cross_gauss_gg/rescale, cov_mlf_ssc/rescale, cov_mlf_cross_ssc_gm/rescale, cov_mlf_cross_ssc_gg/rescale, cov_esd_tot/rescale, cov_wp_tot/rescale, cov_cross_tot/rescale, cov_mlf_tot/rescale, cov_mlf_cross_gm_tot/rescale, cov_mlf_cross_gg_tot/rescale, cov_block/rescale, cov_block2/rescale, aw_values, radius**2.0, mlf_out], dtype=object)
+    
+    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/cov_all_smf.npy', all2)
+    
     #"""
     
-    if ingredient_gm:
-        return  cov_esd_tot
-    if ingredient_gg:
-        return cov_wp_tot
-    if ingredient_gm and ingredient_gg:
-        return np.block([[cov_esd_tot, cov_cross_tot.T], [cov_cross_tot, cov_wp_tot]])
+    # I think this can be simplified a bit :/
+    if observables.gm and not (observables.gg or observables.mlf):
+        cov_block = cov_esd_tot
+    if observables.gg and not (observables.gm or observables.mlf):
+        cov_block = cov_wp_tot
+    if observables.mlf and not (observables.gm or observables.gg):
+        cov_block = cov_mlf_tot
+    if observables.gm and observables.gg and not observables.mlf:
+        cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
+                              [cov_cross_tot, cov_wp_tot]])
+    if observables.gm and observables.mlf and not observables.gg:
+        cov_block = np.block([[cov_esd_tot, cov_mlf_cross_gm_tot],
+                              [cov_mlf_cross_gm_tot.T, cov_mlf_tot]])
+    if observables.gg and observables.mlf and not observables.gm:
+        cov_block = np.block([[cov_wp_tot, cov_mlf_cross_gg_tot],
+                              [cov_mlf_cross_gg_tot.T, cov_mlf_tot]])
+    if observables.gm and observables.gg and observables.mlf:
+        cov_block = np.block([[cov_esd_tot, cov_cross_tot.T, cov_mlf_cross_gm_tot],
+                            [cov_cross_tot, cov_wp_tot, cov_mlf_cross_gg_tot],
+                            [cov_mlf_cross_gm_tot.T, cov_mlf_cross_gg_tot.T, cov_mlf_tot]])
+    
+    return cov_block
 
 
     

@@ -64,7 +64,7 @@ from .lens import (
     power_to_corr_ogata, wp, wp_beta_correction, power_to_sigma, power_to_sigma_ogata)
 from .dark_matter import (
     mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
-    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion)
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion, beta_nl)
 from .covariance import covariance
 from .. import hod
 
@@ -132,12 +132,15 @@ def model(theta, R): #, calculate_covariance=False):
         s_concentration, s_mor, s_scatter, s_beta = theta
 
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
-
-    nbins = observables.nbins
-    output = np.empty(nbins, dtype=object)
+    
+    if observables.mlf:
+        nbins = observables.nbins - observables.mlf.nbins
+    else:
+        nbins = observables.nbins
+    output = np.empty(observables.nbins, dtype=object)
 
     if ingredients['nzlens']:
-        assert len(cosmo) >= 10, \
+        assert len(cosmo) >= 11, \
             'When integrating nzlens, must provide an additional parameter' \
             '"nz", corresponding to the histogram of lens redshifts. See' \
             'demo for an example.'
@@ -146,6 +149,15 @@ def model(theta, R): #, calculate_covariance=False):
     else:
         # hard-coded
         size_cosmo = 9
+    
+    if observables.mlf:
+        if len(cosmo) == size_cosmo+1:
+            assert len(cosmo) >= len(cosmo), \
+                'When using SMF/LF, must provide an additional parameter' \
+                '"z_mlf", corresponding to mean redshift values for SMF/LF. See' \
+                'demo for an example.'
+        z_mlf = cosmo[-1]
+        size_cosmo += 1
     # cheap hack. I'll use this for CMB lensing, but we can
     # also use this to account for difference between shear
     # and reduced shear
@@ -184,7 +196,7 @@ def model(theta, R): #, calculate_covariance=False):
     cosmo_model = Flatw0waCDM(
         H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
         Neff=Neff, w0=w0, wa=wa)
-
+    
     # Tinker10 should also be read from theta!
     transfer_params = \
         {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
@@ -298,8 +310,8 @@ def model(theta, R): #, calculate_covariance=False):
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
-    ngal = np.empty(nbins)
-    meff = np.empty(nbins)
+    ngal = np.empty(observables.nbins)
+    meff = np.empty(observables.nbins)
     if observables.gm:
         ngal[observables.gm.idx] = hod.nbar(
             dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range)
@@ -319,7 +331,7 @@ def model(theta, R): #, calculate_covariance=False):
     # Luminosity or mass function as an output:
     if observables.mlf:
         # Needs independent redshift input!
-        z_mlf = z[observables.mlf.idx]
+        #z_mlf = z[observables.mlf.idx]
         if z_mlf.size == 1 and observables.mlf.nbins > 1:
             z_mlf = z_mlf*np.ones(observables.mlf.nbins)
         if z_mlf.size != observables.mlf.nbins:
@@ -386,13 +398,24 @@ def model(theta, R): #, calculate_covariance=False):
     # If there is miscentring to be accounted for
     # Only for galaxy-galaxy lensing!
     if ingredients['miscentring']:
-        p_off, r_off = c_miscent#[1:]
+        p_off, r_off = c_miscent[1:]
         uk_c[observables.gm.idx] = uk_c[observables.gm.idx] * nfw.miscenter(
             p_off, r_off, expand_dims(mass_range, -1),
             expand_dims(rvir_range_lin, -1), setup['k_range_lin'],
             expand_dims(concentration, -1), uk_c[observables.gm.idx].shape)
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
+    """
+    # read in Alex Mead BNL table:
+    print('Importing BNL pickle...')
+    import dill as pickle
+    with open('/net/home/fohlen12/dvornik/interpolator_BNL.npy', 'rb') as dill_file:
+        beta_interp = pickle.load(dill_file)
+    print(beta_interp([0.5, 12.3, 12.8, 1e-1]))
+    
+    Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm], rho_bg[idx_gm], z[idx_gm])])
+    Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, z_i in zip(hmf[idx_gg], pop_g[idx_gg], ngal[idx_gg], z[idx_gg])])
+    """
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*setup['k_range_lin'].size).T

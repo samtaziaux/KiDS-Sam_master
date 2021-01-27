@@ -47,10 +47,11 @@ def run(hm_options, options, args):
 
     obs_idx = parameters[0].index('observables')
     observables = parameters[1][obs_idx]
-
-    print_opening_msg(args, options)
-
+    init_mlf = observables.mlf # No idea why, but mlf instance doesn't get initilized to adopt R
+    
     assert_output(setup, observables)
+    
+    print_opening_msg(args, options)
 
     # identify fixed and free parameters
     jfree = np.array([(p in priors.free_priors) for p in prior_types])
@@ -69,12 +70,15 @@ def run(hm_options, options, args):
         Ndatafiles = len(options['data'][0])
         assert Ndatafiles > 0, 'No data files found'
         R = io.load_data_esd_only(options, setup)
+        observables._add_R(R)
+        parameters[1][obs_idx] = observables
         # We need to make sure one can also read in the mock data to calculate the covariance for!
         cov_calc(
             args, function, R, options, setup,
             parameters, join, starting, jfree, repeat, nparams)
         return
 
+    
     # load data files
     Ndatafiles = len(options['data'][0])
     assert Ndatafiles > 0, 'No data files found'
@@ -84,7 +88,7 @@ def run(hm_options, options, args):
     cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
     rng_obsbins = range(Nobsbins)
-
+    
     observables._add_R(R)
     parameters[1][obs_idx] = observables
 

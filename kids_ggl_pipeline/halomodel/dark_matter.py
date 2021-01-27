@@ -236,7 +236,7 @@ def bias_tinker10(hmf):
     func = func_i(nu0)
     hmf.update(Mmin = min, Mmax = max, dlog10m = step)
     return func / norm
-
+    
 
 def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
     """
@@ -308,6 +308,58 @@ def halo_exclusion(xi, r, meff, rho_dm, delta):
     #xi_exc = ((1.0 + xi) * filter) - 1.0 # Given how sigma function in lens.py is coded up, the simple method is fine!
     xi_exc = xi * filter
     return xi_exc
+
+
+def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, redshift):
+    """ Non-linear halo bias correction from Meat et al. 2020 (https://arxiv.org/abs/2011.08858)
+        Equation 17, that gets added to the usual 2h term from Cacciato.
+    
+    Parameters
+    ----------
+    dndm : float array, shape (P,)
+        differential mass function
+    population_1 : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    population_2 : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    norm_1 : float array, shape (nbins,)
+        normalisation constant 1
+    norm_2 : float array, shape (nbins,)
+        normalisation constant 2
+    bias : float array, shape (P,)
+        halo bias function
+    meff : float array, shape (nbins,)
+        average halo mass in observable bin
+    beta_interp : interpolator instance, callable function
+        interpolated beta_nl function provided from Alex Mead files
+        (https://github.com/alexander-mead/BNL)
+    k : float array, shape (P,)
+        k vector array
+    z : float,
+        redshift
+
+    Returns
+    -------
+    beta : float array, shape (K,)
+        non-linear bias term
+    """
+    bias = bias_tinker10(hmf)
+    
+    beta_i = np.zeros((Mh.size, Mh.size, k.size))
+    print(beta_i.shape)
+    indices = np.vstack(np.meshgrid(np.arange(Mh.size),np.arange(Mh.size),np.arange(k.size))).reshape(3,-1).T
+    values = np.vstack(np.meshgrid(np.log10(Mh), np.log10(Mh), k)).reshape(3,-1).T
+    
+    for i,val in enumerate(values):
+        beta_i[indices[i,0], indices[i,1], indices[i,2]] = beta_interp(np.insert(val, 0, redshift)) - 1.0
+    
+    print(beta_i.shape)
+    
+    intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
+    intg2 = expand_dims(population_2 * hmf.dndm * bias, -1) * trapz(intg1, Mh, axis=1)
+    beta = trapz(intg2, Mh, axis=0) / (norm_1*norm_2)
+    
+    return beta
 
 
 """

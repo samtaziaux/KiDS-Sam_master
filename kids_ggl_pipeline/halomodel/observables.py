@@ -150,7 +150,6 @@ class ModelObservables:
         self._mm = None
         
     def __getitem__(self, i):
-        print(self.observables[i])
         return self.observables[i]
 
     def __iter__(self):

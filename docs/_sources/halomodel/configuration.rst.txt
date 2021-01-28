@@ -221,15 +221,19 @@ parameters: ::
     w0              fixed     -1.0
     wa              fixed     0.0
     Neff            fixed     3.046
-    z               array     0.188,0.195,0.188,0.195,0.19
+    z               array     0.188,0.195,0.188,0.195
+    z_mlf           array     0.19
 
 
 Both the list of parameters and their order in ``cosmo`` are mandatory (and therefore the names are just for the user's reference). 
 The first 8 parameters define the ``Flatw0waCDM`` cosmology within which the model is evaluated. The default values for ``w0``, 
 ``wa``, and ``Neff`` make the default model a flat ``LambdaCDM`` cosmology. They need not all be fixed, but in this example they are 
 (note, however, that at the moment the ``kids_ggl`` halo model can only handle physical distances, which require a cosmology to be 
-calculated). The last parameter above is a list of point estimates for the redshifts of each bin. List of redshifts should reflect
-the total number of bins given by the observable(s). In this case, it should have 5 entries.
+calculated). The second to last parameter above is a list of point estimates for the redshifts of each bin for obserables that are not
+stellar or luminosity functions. List of redshifts should reflect the total number of bins given by the observable(s). In this case there
+should be 4 bins total. The second parameters is a list of point estimates for the redshifts for each ``mlf`` bin. Total number of bins
+should be reflected in the number of redshifts.
+>>>>>>> 5a30a0cd1e55855ee455211f47c50370341a60f2
 
 
 Optional cosmological parameters

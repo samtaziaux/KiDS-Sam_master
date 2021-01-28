@@ -1055,7 +1055,6 @@ def covariance(theta, R, calculate_covariance=True):
             obs_is_log=observables.gm.is_log)
     else:
         pop_c = np.zeros((nbins,mass_range.size))
-        prob_c = np.zeros((nbins,observables.sampling.shape,mass_range.size))
 
     if ingredients['satellites']:
         pop_s, prob_s = hod.number(
@@ -1064,10 +1063,8 @@ def covariance(theta, R, calculate_covariance=True):
             obs_is_log=observables.gm.is_log)
     else:
         pop_s = np.zeros(pop_c.shape)
-        prob_s = np.zeros(prob_c.shape)
 
     pop_g = pop_c + pop_s
-    prob_g = prob_c + prob_s
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])

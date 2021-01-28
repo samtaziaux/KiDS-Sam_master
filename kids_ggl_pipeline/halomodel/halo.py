@@ -288,8 +288,8 @@ def model(theta, R): #, calculate_covariance=False):
             z_mlf, setup, cosmo_model, transfer_params)
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
 
-        pop_c_mlf, pop_s_mlf = np.zeros(
-            (2,observables.mlf.nbins,mass_range.size))
+        pop_c_mlf = np.zeros(observables.mlf.sampling.shape)
+        pop_s_mlf = np.zeros(observables.mlf.sampling.shape)
 
         if ingredients['centrals']:
             pop_c_mlf = hod.mlf(

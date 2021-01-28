@@ -825,67 +825,6 @@ def calc_cov_mlf_cross_ssc(params):
     return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val * r_j
 
 
-def aw_func(params):
-    
-    ######################################################
-    ###### To be removed, only for testing purposes ######
-    ######################################################
-
-    b_i, b_j, i, j, radius_1, radius_2, W_p, size_1, size_2 = params
-    
-    r_i, r_j = radius_1[b_i][i], radius_2[b_j][j]
-
-    # the number of steps to fit into a half-period at high-k.
-    # 6 is better than 1e-4.
-    minsteps = 8
-    
-    # set min_k, 1e-6 should be good enough
-    mink = 1e-6
-    
-    temp_min_k = 1.0
-    
-    # getting maxk here is the important part. It must be a half multiple of
-    # pi/r to be at a "zero", it must be >1 AND it must have a number of half
-    # cycles > 38 (for 1E-5 precision).
-    min_k = (2.0 * np.ceil((temp_min_k * np.sqrt(r_i*r_j) / np.pi - 1.0) / 2.0) + 0.5) * np.pi / np.sqrt(r_i*r_j)
-    maxk = max(501.5 * np.pi / np.sqrt(r_i*r_j), min_k)
-    # Now we calculate the requisite number of steps to have a good dk at hi-k.
-    nk = np.int(np.ceil(np.log(maxk / mink) / np.log(maxk / (maxk - np.pi / (minsteps * np.sqrt(r_i*r_j))))))
-    #nk = 10000
-                
-    lnk, dlnk = np.linspace(np.log(mink), np.log(maxk), nk, retstep=True)
-        
-    Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Awr_j = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_j)/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-    Aw_rr = simps(np.exp(lnk)**2.0 * (sp.jv(0, np.exp(lnk) * r_i) * sp.jv(0, np.exp(lnk) * r_j))/(2.0*np.pi) * W_p(np.exp(lnk))**2.0, dx=dlnk)
-
-    return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, np.array([Awr_i, Awr_j, Aw_rr])
-    
-    
-def calc_aw(nproc, out, radius_1, radius_2, W_p, size_1, size_2):
-
-    ######################################################
-    ###### To be removed, only for testing purposes ######
-    ######################################################
-
-    paramlist = []
-    for a in range(len(radius_1)):
-        for b in range(len(radius_2)):
-            for c in range(len(radius_1[a])):
-                for d in range(len(radius_2[b])):
-                    paramlist.append([a, b, c, d])
-
-    for p in paramlist:
-        p.extend([radius_1, radius_2, W_p, size_1, size_2])
-        
-    pool = multi.Pool(processes=nproc)
-    for i, j, val in pool.map(aw_func, paramlist):
-        #print(i, j, val)
-        out[i,j,:] = val
-
-    return out
-    
-    
 def parallelise(func, nproc, cov_out, radius_1, radius_2, *args):
 
     paramlist = []
@@ -1023,16 +962,6 @@ def covariance(theta, R, calculate_covariance=True):
         mass_range, rho_bg, setup['delta'])
     #rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
     rvir_range_3d = setup['rvir_range_3d']
-    # these are not very informative names but the "i" stands for
-    # interpolated
-    #rvir_range_3d_i = logspace(-2.5, 1.2, 25, endpoint=True)
-    #rvir_range_3d_i = logspace(-4, 2, 60, endpoint=True)
-    # integrate over redshift later on
-    # assuming this means arcmin for now -- implement a way to check later!
-    #if setup['distances'] == 'angular':
-        #R = R * cosmo.
-    #rvir_range_2d_i = R[0][1:]
-    #rvir_range_2d_i = R[:,1:]
     
     # Remove, for testing purposes
     #"""
@@ -1185,10 +1114,10 @@ def covariance(theta, R, calculate_covariance=True):
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
         bias_mlf = array([bias_tinker10(hmf_i) for hmf_i in hmf_mlf])
         
-        pop_c_mlf = np.zeros((observables.mlf.nbins,mass_range.size))
-        pop_s_mlf = np.zeros((observables.mlf.nbins,mass_range.size))
-        pop_c_mlf_til = np.zeros((observables.mlf.nbins,mass_range.size))
-        pop_s_mlf_til = np.zeros((observables.mlf.nbins,mass_range.size))
+        pop_c_mlf = np.zeros(observables.mlf.sampling.shape)
+        pop_s_mlf = np.zeros(observables.mlf.sampling.shape)
+        pop_c_mlf_til = np.zeros(observables.mlf.sampling.shape)
+        pop_s_mlf_til = np.zeros(observables.mlf.sampling.shape)
         
         if ingredients['centrals']:
             pop_c_mlf = hod.mlf(
@@ -1671,8 +1600,7 @@ def covariance(theta, R, calculate_covariance=True):
     # To be removed, only for testing purposes
     #"""
     rescale = 1.0#covar['area']/survey_area #1.0#
-    aw_values = np.zeros((observables.gm.size.sum(), observables.gm.size.sum(), 3), dtype=np.float64)
-    aw_values = calc_aw(nproc, aw_values, observables.gm.R, observables.gm.R, W_p, observables.gm.size, observables.gm.size)
+    aw_values = np.ones((observables.gm.size.sum(), observables.gm.size.sum(), 3), dtype=np.float64)
     
     cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],
                         [cov_cross_tot, cov_wp_tot]])

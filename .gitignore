@@ -23,5 +23,5 @@ cristobal/
 configs_andrej/
 
 # docs build
-docs/_*/*
+#docs/_*/* # For sphinx theme to work this is needed!
 docsrc/_*/*

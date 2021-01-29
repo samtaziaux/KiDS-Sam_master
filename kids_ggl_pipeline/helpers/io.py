@@ -554,24 +554,30 @@ def write_hdr(options, function, parameters, names, prior_types):
     return hdrfile
 
 
-def write_signal(R, y, options, setup, err=None, output_path='mock'):
+def write_signal(R, y, options, setup, cov, err=None, output_path='mock'):
     """
     Write the signal to an ascii file
     """
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
     outputs = []
-    if len(y.shape) == 1:
+    if len(y) == 1:
         y = np.array([y])
     yname = setup['return']
     for i, yi in zip(count(), y):
         output = os.path.join(
             output_path,
-            'kids_ggl_mock_{0}_{1}.txt'.format(yname, i))
+            'kids_ggl_mock_{0}_{1}.txt'.format(yname, i+1))
         ascii.write(
-            [R, yi], output, names=('R',yname), format='commented_header',
+            [R[i][1:], yi], output, names=('R',yname), format='commented_header',
             formats={'R':'.2e',yname:'.2e'})
         outputs.append(output)
+    if cov is not None:
+        output_cov = os.path.join(
+            output_path,
+            'kids_ggl_mock_cov.txt')
+        np.savetxt(output_cov, cov, header='2D analytical covariance matrix', comments='# ')
+        print('Saved covariance to {0}'.format(output_cov))
     return outputs
 
 

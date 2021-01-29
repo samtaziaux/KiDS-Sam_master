@@ -34,8 +34,6 @@ import hmf.mass_function.fitting_functions as ff
 import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
-#from . import covariance
-from . import profiles
 from .tools import (
     fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
@@ -872,14 +870,13 @@ def k_adaptive(r_i, r_j, limit=None):
     
 
 
-def covariance(theta, R, calculate_covariance=True):
+def covariance(theta, R):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
     # this has to happen before because theta is re-purposed below
     # this is always true here, though
-    if calculate_covariance:
-        covar = theta[1][theta[0].index('covariance')]
+    covar = theta[1][theta[0].index('covariance')]
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
@@ -964,7 +961,8 @@ def covariance(theta, R, calculate_covariance=True):
     rvir_range_3d = setup['rvir_range_3d']
     
     # Remove, for testing purposes
-    #"""
+    """
+    print('Using test radii')
     if observables.gm:
         observables.gm.R = [logspace(-2, np.log10(30), 20, endpoint=True) for r in R[observables.gm.idx]] # for testing
         observables.gm.size = np.array([len(r) for r in observables.gm.R])
@@ -1144,7 +1142,7 @@ def covariance(theta, R, calculate_covariance=True):
                     for hod_i, ngal_i in zip(observables.mlf.sampling, pop_g_mlf_til)]
         for i,Ri in enumerate(observables.mlf.R):
             Ri = Quantity(Ri, unit='Mpc')
-            #observables.mlf.R[i] = Ri.to(setup['R_unit']).value
+            observables.mlf.R[i] = Ri.to(setup['R_unit']).value
         mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
                     in zip(mlf_inter, observables.mlf.R)]
         mlf_til = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
@@ -1568,8 +1566,8 @@ def covariance(theta, R, calculate_covariance=True):
             
             
     if gauss == 'True':
-        print('Calculating the Gaussian part of the SMF/LF covariance ...')
         if observables.mlf:
+            print('Calculating the Gaussian part of the SMF/LF covariance ...')
             cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, mlf_out, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_gauss
         if observables.mlf and observables.gm and (cross == 'True'):
@@ -1581,8 +1579,8 @@ def covariance(theta, R, calculate_covariance=True):
             
             
     if ssc == 'True':
-        print('Calculating the SMF/LF super-sample covariance ...')
         if observables.mlf:
+            print('Calculating the SMF/LF super-sample covariance ...')
             cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_ssc
         if observables.mlf and observables.gm and (cross == 'True'):
@@ -1595,7 +1593,7 @@ def covariance(theta, R, calculate_covariance=True):
 
     
     # To be removed, only for testing purposes
-    #"""
+    """
     rescale = 1.0#covar['area']/survey_area #1.0#
     aw_values = np.ones((observables.gm.size.sum(), observables.gm.size.sum(), 3), dtype=np.float64)
     

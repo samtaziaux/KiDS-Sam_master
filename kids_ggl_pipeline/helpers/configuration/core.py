@@ -190,6 +190,8 @@ class ConfigFile(object):
     def read(self):
         """Read the configuration file"""
         section = ConfigSection()
+        model = None
+        cov = None
         section_names = []
         observables = []
         names = []
@@ -210,6 +212,9 @@ class ConfigFile(object):
             line = ConfigLine(line)
             if line.words[0] == 'model':
                 model = self.read_function(line.words[1])
+                continue
+            if line.words[0] == 'cov':
+                cov = self.read_function(line.words[1])
                 continue
             if line.is_section():
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
@@ -257,7 +262,7 @@ class ConfigFile(object):
         hod_params = [
             hod_param_names,
             [observables, selection, ingredients, parameters, setup, covar]]
-        hm_params = [model, hod_params, np.array(names), np.array(priors),
+        hm_params = [model, cov, hod_params, np.array(names), np.array(priors),
                      np.array(nparams), np.array(repeat), join,
                      np.array(starting), output]
         return hm_params, sampling

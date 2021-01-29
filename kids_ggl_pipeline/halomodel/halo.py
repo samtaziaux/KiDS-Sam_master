@@ -35,7 +35,6 @@ import hmf.mass_function.fitting_functions as ff
 import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
-#from . import covariance
 from .tools import (
     fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (
@@ -194,7 +193,6 @@ def model(theta, R): #, calculate_covariance=False):
         #R = R * cosmo.
     #rvir_range_2d_i = R[0][1:]
     #rvir_range_2d_i = R[:,1:]
-
 
     """Calculating halo model"""
 

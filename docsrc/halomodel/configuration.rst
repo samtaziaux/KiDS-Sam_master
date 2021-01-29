@@ -35,6 +35,12 @@ The configuration file starts with a single line specifying the model to be used
 
 which is fixed for now.
 
+If the covariance is to be calculated, the second line is optional ::
+
+    cov            covariance.covariance
+
+which is fixed for now.
+
 Model ingredients
 *****************
 

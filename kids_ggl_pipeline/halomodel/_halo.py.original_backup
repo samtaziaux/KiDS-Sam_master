@@ -52,7 +52,7 @@ import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
-from . import profiles
+#from . import profiles
 from .tools import (
     fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (

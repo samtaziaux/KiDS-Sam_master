@@ -222,6 +222,7 @@ def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
     b_g = trapz(
         hmf.dndm * population * bias_tinker10(hmf),
         m_x, **kwargs) / ngal
+        
     return (hmf.power * b_g), b_g
     
     

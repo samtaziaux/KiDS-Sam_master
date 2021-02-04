@@ -218,30 +218,10 @@ def bias_tinker10(hmf):
     
 
 def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
-    """
-    Note that I removed the argument k_x which was required but not
-    used
-    """
-    #print('in twohalo:')
-    #print('dndlnm =', hmf.dndlnm.shape)
-    #if np.iterable(ngal):
-        #print('ngal =', ngal.shape)
-    #else:
-        #print('ngal =', ngal)
-    #print('population =', population.shape)
-    #print('r_x =', r_x.shape)
-    #print('m_x =', m_x.shape)
-    #print('integrand =', (hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x).shape)
+    """Galaxy-matter two halo term"""
     b_g = trapz(
         hmf.dndm * population * bias_tinker10(hmf),
         m_x, **kwargs) / ngal
-    #print('b_g =', b_g.shape)#, b_g[:,None].shape)
-    #try:
-        #print('output =', (hmf.power*b_g[:,None]).shape)
-    #except ValueError:
-        #print('output =', (hmf.power*b_g).shape)
-    #print()
-    #return (hmf.power * np.expand_dims(b_g, -1)), b_g
     return (hmf.power * b_g), b_g
     
     

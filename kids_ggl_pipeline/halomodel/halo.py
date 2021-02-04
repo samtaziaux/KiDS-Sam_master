@@ -367,6 +367,8 @@ def model(theta, R): #, calculate_covariance=False):
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*setup['k_range_lin'].size).T
+    if setup['delta_ref'] == 'SOCritical':
+        bias = bias * omegam
 
     if not integrate_zlens:
         rho_bg = rho_bg[...,0]

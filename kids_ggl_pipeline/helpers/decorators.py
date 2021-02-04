@@ -6,6 +6,7 @@ This module contains custom decorators used in KiDS-GGL for convenience
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+from astropy.units import Quantity
 from functools import wraps
 
 
@@ -77,8 +78,30 @@ def logfunc(func):
         return 10**func(*args, **kwargs)
     return decorated
 
-def inMpc(a):
-    return
 
-def array(a):
-    return
+def inMpc(f):
+    """Change units of a Quantity to Mpc and return a float.
+
+    First argument in `f` must be `R`.
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if isinstance(args[1], Quantity):
+            args[1] = args[1].to(u.Mpc).value
+        return f(*args, **kwargs)
+    return decorated
+
+
+def array(f):
+    """Turn the first argument (assumed to be `R`) into a 2-d array
+    to allow multiple profiles to be defined in one call
+    """
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        args = list(args)
+#         args[1] = args[1][:,None] if hasattr(args[1], '__iter__') \
+#             else np.array([args[1]])[:,None]
+        if len(args[1].shape) == 1:
+            args[1] = np.expand_dims(args[1], -1)
+        return f(*args, **kwargs)
+    return decorated

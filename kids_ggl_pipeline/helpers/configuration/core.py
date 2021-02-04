@@ -7,8 +7,8 @@ from six import string_types
 import sys
 
 from . import confighod, configsampler, configsetup, configcovar
-from ...halomodel import nfw, nfw_stack, halo, halo_2, covariance, cmbhalo
-from ...halomodel.observables import Observable
+from ...halomodel import nfw, nfw_stack, halo, cmbhalo, covariance
+from ...halomodel.observables import ModelObservables, Observable
 from ...halomodel.selection import Selection
 
 # local, if present
@@ -98,18 +98,7 @@ class ConfigSection(str):
         """
         `line` should be a `ConfigLine` object
         """
-        fmt = line.words[1].split(',')
-        n = int(fmt[0]) if len(fmt) == 2 else 0
-        fmt = fmt[-1]
-        # a scalar or 1d array
-        if n == 0:
-            output[0].append(line.words[0])
-            output[1].append(line.words[1])
-        # a nd array
-        else:
-            for i in range(1, n+1):
-                output[0].append('{0}{1}'.format(line.words[0], i))
-                output[1].append(fmt)
+        output.append(line.words[0])
         return output
 
     def append_parameters(
@@ -180,8 +169,12 @@ class ConfigFile(object):
         if self._valid_modules is None:
             _modules = {
                 'nfw': nfw, 'nfw_stack': nfw_stack, 'halo': halo,
+<<<<<<< HEAD
                 'halo_2': halo_2, 'covariance': covariance,
                 'cmbhalo': cmbhalo}
+=======
+                'covariance': covariance}
+>>>>>>> master
             try:
                 _modules['models'] = models
             except NameError:
@@ -202,6 +195,8 @@ class ConfigFile(object):
     def read(self):
         """Read the configuration file"""
         section = ConfigSection()
+        model = None
+        cov = None
         section_names = []
         observables = []
         names = []
@@ -215,13 +210,16 @@ class ConfigFile(object):
         covar = {}
         setup = {}
         # dictionaries don't preserve order
-        output = [[], []]
+        output = []
         sampling = {}
         path = ''
         for line in self.data:
             line = ConfigLine(line)
             if line.words[0] == 'model':
                 model = self.read_function(line.words[1])
+                continue
+            if line.words[0] == 'cov':
+                cov = self.read_function(line.words[1])
                 continue
             if line.is_section():
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
@@ -261,6 +259,7 @@ class ConfigFile(object):
         sampling = configsampler.add_defaults(sampling)
         # add defaults and check types
         ingredients = confighod.add_default_ingredients(ingredients)
+        observables = ModelObservables(observables)
         setup = configsetup.check_setup(setup)
         covar = configcovar.check_covar(covar)
         hod_param_names = ['observables', 'selection', 'ingredients',
@@ -268,7 +267,7 @@ class ConfigFile(object):
         hod_params = [
             hod_param_names,
             [observables, selection, ingredients, parameters, setup, covar]]
-        hm_params = [model, hod_params, np.array(names), np.array(priors),
+        hm_params = [model, cov, hod_params, np.array(names), np.array(priors),
                      np.array(nparams), np.array(repeat), join,
                      np.array(starting), output]
         return hm_params, sampling

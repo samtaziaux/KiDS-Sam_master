@@ -15,6 +15,7 @@ kids_ggl_pipeline.egg-info/
 
 # demo output
 demo/earlyscience_satellites/demo_mcmc_output.*
+demo/halo_model_results
 
 # working folders
 brouwer/
@@ -22,5 +23,5 @@ cristobal/
 configs_andrej/
 
 # docs build
-docs/_*/*
+#docs/_*/* # For sphinx theme to work this is needed!
 docsrc/_*/*

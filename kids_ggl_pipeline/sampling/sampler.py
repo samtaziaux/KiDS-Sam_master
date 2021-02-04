@@ -38,13 +38,19 @@ from .. import __version__
 
 def run(hm_options, options, args):
 
-    function, parameters, names, prior_types, \
+    function, function_cov, parameters, names, prior_types, \
         nparams, repeat, join, starting, output = \
             hm_options
 
     val1, val2, val3, val4 = parameters[1][parameters[0].index('parameters')]
     setup = parameters[1][parameters[0].index('setup')]
 
+    obs_idx = parameters[0].index('observables')
+    observables = parameters[1][obs_idx]
+    init_mlf = observables.mlf # No idea why, but mlf instance doesn't get initilized to adopt R
+    
+    assert_output(setup, observables)
+    
     print_opening_msg(args, options)
 
     # identify fixed and free parameters
@@ -54,12 +60,32 @@ def run(hm_options, options, args):
         'ERROR: Not all starting points defined for free parameters.'
 
     if args.mock:
+        assert function != None, \
+            'ERROR: model function not defined.'
+        assert function_cov != None, \
+            'ERROR: covariance function not defined.'
         #mock_options = parameters[1][parameters[0].index('mock')]
         mock(
-            args, function, options, setup,# mock_options,
-            parameters, join, starting, jfree, repeat, nparams)
+            args, function, function_cov, options, setup, #mock_options
+            parameters, join, starting, jfree, repeat,
+            nparams, observables, obs_idx)
         return
 
+    if args.cov:
+        assert function_cov != None, \
+            'ERROR: covariance function not defined.'
+        Ndatafiles = len(options['data'][0])
+        assert Ndatafiles > 0, 'No data files found'
+        R = io.load_data_esd_only(options, setup)
+        # We need to make sure one can also read in the mock data to calculate the covariance for!
+        cov_calc(
+            args, function_cov, R, options, setup,
+            parameters, join, starting, jfree, repeat,
+            nparams, observables, obs_idx)
+        return
+
+    assert function != None, \
+        'ERROR: model function not defined.'
     # load data files
     Ndatafiles = len(options['data'][0])
     assert Ndatafiles > 0, 'No data files found'
@@ -68,14 +94,12 @@ def run(hm_options, options, args):
     #val1 = np.append(val1, [Rrange, angles])
     cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
-    #Nobsbins, Nrbins = esd.shape
     rng_obsbins = range(Nobsbins)
-    #rng_rbins = range(Nrbins) #not used
+    
+    observables._add_R(R)
+    parameters[1][obs_idx] = observables
 
-    metadata, meta_names, fits_format = \
-        sampling_utils.initialize_metadata(options, output, esd.shape)
-    # some additional requirements of lnprob
-    #fail_value = sampling_utils.initialize_fail_value(metadata)
+    meta_names = sampling_utils.initialize_metanames(options, output, len(esd))
     # initialize
     lnprior = np.zeros(ndim)
 
@@ -89,15 +113,9 @@ def run(hm_options, options, args):
     for n in names_extend:
         fail_value[n] = 9999
     fail_value = list(fail_value[0])
-    
-    if args.cov:
-        # We need to make sure one can also read in the mock data to calculate the covariance for!
-        cov_calc(
-            args, function, R, options, setup,
-            parameters, join, starting, jfree, repeat, nparams)
-        return
 
-    print('Starting values =', starting)
+    if not options['resume']:
+        print('Starting values =', starting)
 
     # are we just running a demo?
     if args.demo:
@@ -115,19 +133,20 @@ def run(hm_options, options, args):
         backend = emcee.backends.HDFBackend(options['output'])
         if os.path.isfile(options['output']):
             print('Initial size: {0}'.format(backend.iteration))
+        po = backend.get_chain(discard=backend.iteration - 1)[0]
     else:
         backend = emcee.backends.HDFBackend(options['output'])
         backend.reset(options['nwalkers'], ndim)
+        # set up starting point for all walkers
+        po = sample_ball(
+            names, prior_types, jfree, starting, parameters,
+            options['nwalkers'], ndim)
+
     if not os.path.isfile(options['output']):
         print('Running a new model. Good luck!\n')
 
-    # set up starting point for all walkers
-    po = sample_ball(
-        names, prior_types, jfree, starting, parameters,
-        options['nwalkers'], ndim)
-
     # burn-in
-    if options['nburn'] > 0:
+    if (options['nburn'] > 0) and not (options['resume']):
         with Pool(processes=options['threads']) as pool:
             sampler = emcee.EnsembleSampler(
                  options['nwalkers'], ndim, lnprob,
@@ -141,7 +160,6 @@ def run(hm_options, options, args):
             options['nburn'], ctime()))
     else:
         pos = po
-
 
     index = 0
     autocorr = np.empty(options['nsteps'])
@@ -179,6 +197,23 @@ def run(hm_options, options, args):
     print('Everything saved to {0}!'.format(options['output']))
 
     return
+
+
+def assert_output(setup, observables):
+    if setup['return'] in ('wp', 'esd_wp') and not observables.gg:
+        raise ValueError(
+            'If return=wp or return=esd_wp then you must toggle the' \
+            ' clustering as an ingredient. Similarly, if return=esd' \
+            ' or return=esd_wp then you must toggle the lensing' \
+            ' as an ingredient as well.')
+    if setup['return'] in ('esd', 'esd_wp') and not observables.gm:
+        raise ValueError(
+            'If return=wp or return=esd_wp then you must toggle the' \
+            ' clustering as an ingredient. Similarly, if return=esd' \
+            ' or return=esd_wp then you must toggle the lensing' \
+            ' as an ingredient as well.')
+    return
+
 
 
 def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
@@ -236,8 +271,8 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     return
 
 
-def mock(args, function, options, setup, parameters, join, starting, jfree,
-         repeat, nparams):
+def mock(args, function, function_cov, options, setup, parameters, join, starting, jfree,
+         repeat, nparams, observables, obs_idx):
     """Generate mock observations given a set of cosmological and
     astrophysical parameters, as well as the observational setup
 
@@ -246,29 +281,44 @@ def mock(args, function, options, setup, parameters, join, starting, jfree,
     * call covariance module, and pass mock_options to it (it
       should be possible to disable this though)
     """
-    R = np.array(
-        [np.logspace(setup['logR_min'], setup['logR_max'],
-                     setup['logR_bins'])])
+    
+    if observables.mlf:
+        nbins = observables.nbins - observables.mlf.nbins
+    else:
+        nbins = observables.nbins
+    
+    R = np.array([np.logspace(setup['logR_min'], setup['logR_max'],
+                     setup['logR_bins']) for n in range(nbins)], dtype=object)
+    if observables.mlf:
+        R = np.concatenate((R, np.array([np.logspace(sam[0], sam[-1], setup['logR_bins'])
+                    for sam in observables.mlf.sampling], dtype=object)), axis=0)
+
     R, _ = sampling_utils.setup_integrand(R, options['precision'])
+    
+    observables._add_R(R)
+    parameters[1][obs_idx] = observables
+    
     p = update_parameters(starting, parameters, nparams, join, jfree, repeat)
     # run model!
-    model = function(p, R, calculate_covariance=args.cov)
+    model = function(p, R)
     # apply random noise
     #
-    # this is vestigial from when I integrated the offset
-    # centrals for the satellite lensing measurements
-    R = R[0,1:]
     # save
     if args.cov:
-        pass
-    else:
-        outputs = io.write_signal(R, model[0], options, setup)
-        print('Saved mock signal to {0}'.format(outputs))
+        print('Mock signal generated, calculating the covariance, sit tight.')
+        cov = cov_calc(args, function_cov, R, options, setup, parameters, join, starting, jfree,
+            repeat, nparams, observables, obs_idx)
+    #else:
+    if not args.cov:
+        cov = None
+    outputs = io.write_signal(R, model[0], options, setup, cov)
+    print('Saved mock signal to:')
+    print(*outputs, sep = "\n")
     return
     
     
 def cov_calc(args, function, R, options, setup, parameters, join, starting, jfree,
-            repeat, nparams):
+            repeat, nparams, observables, obs_idx):
     
     """Generate  the covariance
     including astrophysical terms through the --cov cmd line option
@@ -278,12 +328,17 @@ def cov_calc(args, function, R, options, setup, parameters, join, starting, jfre
     * saves covariance as 2D matrix to a text file as specified in the config file
     """
     
+    observables._add_R(R)
+    parameters[1][obs_idx] = observables
+    
     to = time()
     p = update_parameters(starting, parameters, nparams, join, jfree, repeat)
     # run model!
-    covariance = function(p, R, calculate_covariance=args.cov)
+    covariance = function(p, R)
     print('\nCovariance calculation took {0:.2e} seconds'.format(time()-to))
     
+    if args.mock:
+        return covariance
     # save
     output = parameters[1][parameters[0].index('covariance')]['output']
     
@@ -362,7 +417,9 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
 def print_opening_msg(args, options):
     print('\nRunning KiDS-GGL pipeline version {0} - sampler\n'.format(
         __version__))
-    if args.cov:
+    if args.mock and args.cov:
+        print(' ** Generating mock observations and covariance matrix **')
+    elif args.cov:
         print(' ** Calculating covariance matrix only **')
     elif args.demo:
         print(' ** Running demo only **')

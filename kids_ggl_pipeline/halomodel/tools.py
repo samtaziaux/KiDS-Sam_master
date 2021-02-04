@@ -1,31 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-#  tools.py
-#
-#  Copyright 2014 Andrej Dvornik <dvornik@dommel.strw.leidenuniv.nl>
-#
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
-#
-#
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import time
-from hmf import MassFunction, fitting_functions as ff
+from hmf import MassFunction
+import hmf.mass_function.fitting_functions as ff
 import numpy as np
 import matplotlib.pyplot as pl
 import scipy
@@ -172,8 +152,8 @@ def load_hmf(z, setup, cosmo_model, transfer_params):
         hmf.append(MassFunction(
             Mmin=setup['logM_min'], Mmax=setup['logM_max'],
             dlog10m=setup['mstep'],
-            hmf_model=ff.Tinker10, delta_h=setup['delta'],
-            delta_wrt=setup['delta_ref'], delta_c=1.686,
+            hmf_model=ff.Tinker10, mdef_model=setup['delta_ref'],
+            mdef_params={'overdensity':setup['delta']}, disable_mass_conversion=True, delta_c=1.686,
             cosmo_model=cosmo_model, z=zi,
             transfer_model=setup['transfer'], **transfer_params)
             )

@@ -9,10 +9,9 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=
 set BUILDDIR=_build
-<<<<<<< HEAD
 set SPHINXPROJ=KiDS-GGLPipeline
 =======
->>>>>>> zlens
+
 
 if "%1" == "" goto help
 

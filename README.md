@@ -12,7 +12,7 @@ fitting module (i.e., halo model) with a given sampling technique.*
 #### 1. Installation
     
     
-**a)** Contact Cristóbal Sifón (sifon@astro.princeton.edu) to become a member
+**a)** Contact Cristóbal Sifón (cristobal.sifon@pucv.cl) to become a member
        of the KiDS-WL repository and join the KiDS-GGL team
 
 **b)** Download [the latest stable version of the KiDS-GGL pipeline](https://github.com/KiDS-WL/KiDS-GGL/releases/latest) and unpack,
@@ -50,7 +50,7 @@ or the following in your `~/.cshrc` or `~/.tcshrc` if your shell is set to `csh`
 
         setenv PATH ${PATH}:<path_to_kids_ggl_folder>
 
-where, in my case, `<path_to_kids_ggl_folder>=/Library/Frameworks/Python.framework/Versions/2.7/bin`.
+where, in my case, `<path_to_kids_ggl_folder>=/Library/Frameworks/Python.framework/Versions/3.6/bin`.
 
 **e)** You can run an example by typing (see below for details)
 
@@ -65,7 +65,7 @@ At this point you are also able to import any component of the KiDS-GGL pipeline
 
 #### 2. Set up your configuration file.
     
-See `demo/ggl_demo_nfw_stack.txt` and `demo/ggl_model_demo.txt` for guidance. The former is intended for a simple average NFW modelling of the signal and only works with `kids_ggl<2.0.0`, while the latter is a full halo model and requires `kids_ggl>=2.0.0`.
+See `demo/ggl_halomodel.config` and `demo/ggl_covariance_demo.config` for guidance. The full halo model requires `kids_ggl>=2.0.0`.
 
 
 #### 3. Run! 
@@ -103,7 +103,7 @@ the `--no-cov` option is ignored if `--demo` is not present.
 - Always check how many cores are available in your machine before running in parallel.
 - **Contribute!**
  
-If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristóbal Sifón (sifon@astro.princeton.edu).
+If you have any questions, please (preferably) raise an issue in `github`, or contact Andrej Dvornik (dvornik@strw.leidenuniv.nl), Margot Brouwer (brouwer@strw.leidenuniv.nl) and/or Cristóbal Sifón (cristobal.sifon@pucv.cl).
 
 
 Update log:

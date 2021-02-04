@@ -12,7 +12,7 @@ if sys.version_info[0] == 3:
     xrange = range
 
 # local
-from . import nfw, nfw_stack, satellites, halo, halo_2
+from . import nfw, nfw_stack, satellites, halo
 try:
     import models
 except ImportError:
@@ -40,8 +40,6 @@ def read_function(module, function):
         function = getattr(nfw_stack, function)
     elif module == 'halo':
         function = getattr(halo, function)
-    elif module == 'halo_2':
-        function = getattr(halo_2, function)
     elif module == 'models':
         function = getattr(models, function)
     print('Successfully imported {0}'.format(function))

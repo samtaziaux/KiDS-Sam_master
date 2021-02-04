@@ -16,7 +16,7 @@
 model             halo.model
 
 [observables]
-logmstar        10,10.5,11   10.5,11,12     log
+logmstar        gm  10,10.5,11   10.5,11,12     log
 
 [selection]
 logmstar_selection.txt      z,logmstar,completeness      fixed_width
@@ -84,7 +84,7 @@ b               fixed     0.0       join:b
 [setup]
 return          esd
 delta           200
-delta_ref       mean
+delta_ref       SOMean # one of FOF, SOCritical, SOMean, SOVirial, see documentation of hmf!
 distances       comoving
 # note that these are input units
 R_unit          Mpc

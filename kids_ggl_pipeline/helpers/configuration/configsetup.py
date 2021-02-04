@@ -1,5 +1,6 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+import numpy as np
 
 
 _default_entries = {
@@ -35,7 +36,7 @@ _default_values = {
 
 _necessary_entries = {
     'delta': 'overdensity for mass definition (typically 200 or 500)',
-    'delta_ref': 'background density reference: {"mean","crit"}',
+    'delta_ref': 'background density reference: {"FOF", "SOCritical", "SOMean", "SOVirial"}',
     'distances': 'whether to use "proper" or "comoving" distances',
     'return': 'which quantity should the halo model return',
     'R_unit': 'units of the radial bins',
@@ -47,7 +48,7 @@ _necessary_entries = {
 
 _valid_entries = {
     'delta': float,
-    'delta_ref': ('mean', 'crit', 'critical'),
+    'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial'),
     'distances': ('comoving', 'proper', 'angular'),
     'lnk_bins': int,
     'lnk_min': float,
@@ -74,6 +75,37 @@ def add_defaults(setup):
     for key, value in _default_values.items():
         if key not in setup:
             setup[key] = value
+    return setup
+
+
+def add_mass_range(setup):
+    # endpoint must be False for mass_range to be equal to hmf.m
+    try:
+        setup['mass_range'] = 10**np.linspace(
+            setup['logM_min'], setup['logM_max'], setup['logM_bins'],
+            endpoint=False)
+        setup['mstep'] = (setup['logM_max']-setup['logM_min']) \
+            / setup['logM_bins']
+    except KeyError:
+        pass
+    return setup
+
+
+def add_rvir_range(setup):
+    setup['rvir_range_3d'] = np.logspace(-3.2, 4, 250, endpoint=True)
+    setup['rvir_range_3d_interp'] = np.logspace(-2.5, 1.2, 25, endpoint=True)
+    return setup
+
+
+def add_wavenumber(setup):
+    try:
+        setup['k_step'] = (setup['lnk_max']-setup['lnk_min']) / setup['lnk_bins']
+    except KeyError:
+        pass
+    else:
+        setup['k_range'] = np.arange(
+            setup['lnk_min'], setup['lnk_max'], setup['k_step'])
+        setup['k_range_lin'] = np.exp(setup['k_range'])
     return setup
 
 
@@ -124,6 +156,9 @@ def check_setup(setup):
     check_necessary_entries(setup)
     setup = add_defaults(setup)
     check_entry_types(setup)
+    setup = add_mass_range(setup)
+    setup = add_rvir_range(setup)
+    setup = add_wavenumber(setup)
     return setup
 
 

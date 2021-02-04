@@ -21,7 +21,7 @@ where, for instance, ``<version>=2.0.0``.
 
 Enter the folder where the pipeline is located and run ::
 
-    python setup.py install
+    pip install .
 
 If you are not using Anaconda, you may have to add a ``--user`` flag to the above if you do not have root privileges (though we 
 absolutely recommend using Anaconda).
@@ -50,7 +50,7 @@ or the following in your ``~/.cshrc`` or ``~/.tcshrc`` if your shell is set to `
 
 You can run a quick example by typing ::
 
-    kids_ggl -c demo/ggl_demo_nfw_stack.txt --sampler --demo
+    kids_ggl -c demo/ggl_halomodel.config --sampler --demo
 
 This should show three panels with data points and lines resembling the Early Science satellite galaxy-galaxy lensing results of 
 Sifon et al. (2015) and, after closing it, show the 3x3x14x14 covariance matrix.

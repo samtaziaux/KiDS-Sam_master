@@ -75,6 +75,12 @@ class Observable(object):
         self._name = name
 
     @property
+    def nbins(self):
+        if self._nbins is None:
+            self._nbins = self.binlows.size
+        return self._nbins
+
+    @property
     def obstype(self):
         return self._obstype
 
@@ -86,12 +92,6 @@ class Observable(object):
             ' type of observable you are modelling. Valid observables' \
             f'are {self._valid_obstypes}.'
         self._obstype = obstype
-
-    @property
-    def nbins(self):
-        if self._nbins is None:
-            self._nbins = self.binlows.size
-        return self._nbins
 
     @property
     def sampling_size(self):
@@ -132,6 +132,87 @@ class Observable(object):
              for lo, hi in zip(self.binlows, self.binhighs)])
 
 
+class ModelObservables:
 
+    def __init__(self, observables):
+        self.observables = observables
+        self.obstypes = [obs.obstype for obs in self.observables]
+        # note that this is a list with number of bins per observable
+        self._nbins = [obs.nbins for obs in self.observables]
+        # and this the total number of bins
+        self.nbins = sum(self._nbins)
+        self.sampling = np.concatenate(
+            [obs.sampling for obs in self.observables if obs.obstype != 'mlf'], axis=0)
+        # lazy initialize
+        self._gg = None
+        self._gm = None
+        self._mlf = None
+        self._mm = None
+        
+    def __getitem__(self, i):
+        return self.observables[i]
+
+    def __iter__(self):
+        self._i = 0
+        return self
+
+    def __next__(self):
+        if self._i < len(self.observables):
+            next = self.observables[self._i]
+            self._i += 1
+            return next
+        else: raise StopIteration
+
+    @property
+    def gg(self):
+        if self._gg is None:
+            if 'gg' in self.obstypes:
+                self._gg = self._obs_attribute(self.obstypes.index('gg'))
+            else:
+                self._gg = False
+        return self._gg
+
+    @property
+    def gm(self):
+        if self._gm is None:
+            if 'gm' in self.obstypes:
+                self._gm = self._obs_attribute(self.obstypes.index('gm'))
+            else:
+                self._gm = False
+        return self._gm
+
+    @property
+    def mlf(self):
+        if self._mlf is None:
+            if 'mlf' in self.obstypes:
+                self._mlf = self._obs_attribute(self.obstypes.index('mlf'))
+            else:
+                self._mlf = False
+        return self._mlf
+
+    @property
+    def mm(self):
+        if self._mm is None:
+            if 'mm' in self.obstypes:
+                self._mm = self._obs_attribute(self.obstypes.index('mm'))
+            else:
+                self._mm = False
+        return self._mm
+
+    ### hidden methods ###
+
+    def _add_R(self, R):
+        for obs in self.observables:
+            obs.R = [r[1:].astype('float64') for r in R[obs.idx]]
+            obs.size = np.array([len(r) for r in obs.R])
+
+    def _obs_attribute(self, i):
+        obs = self.observables[i]
+        obs.idx = self._obs_idx(i)
+        return obs
+
+    def _obs_idx(self, i):
+        prior = sum(self._nbins[:i])
+        return np.s_[prior:prior+self._nbins[i]]
 
 

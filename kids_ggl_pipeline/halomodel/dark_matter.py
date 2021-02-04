@@ -1,26 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-#  dark.py
-#
-#  Copyright 2014 Andrej Dvornik <dvornik@dommel.strw.leidenuniv.nl>
-#
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2 of the License, or
-#  (at your option) any later version.
-#
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
-#
-#
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -196,7 +175,6 @@ def bias_ps(hmf, r_x):
         
     """
     bias = 1.0+(hmf.nu-1.0)/(hmf.growth*hmf.delta_c)
-    #print ("Bias OK.")
     return bias
 
 
@@ -206,7 +184,7 @@ def bias_tinker10_func(hmf):
         
     """
     nu = hmf.nu**0.5
-    y = np.log10(hmf.delta_halo)
+    y = np.log10(hmf.mdef_params['overdensity'])
     A = 1.0 + 0.24 * y * np.exp(-(4. / y) ** 4.)
     a = 0.44 * y - 0.88
     B = 0.183
@@ -237,33 +215,13 @@ def bias_tinker10(hmf):
     func = func_i(nu0)
     hmf.update(Mmin = min, Mmax = max, dlog10m = step)
     return func / norm
-
+    
 
 def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
-    """
-    Note that I removed the argument k_x which was required but not
-    used
-    """
-    #print('in twohalo:')
-    #print('dndlnm =', hmf.dndlnm.shape)
-    #if np.iterable(ngal):
-        #print('ngal =', ngal.shape)
-    #else:
-        #print('ngal =', ngal)
-    #print('population =', population.shape)
-    #print('r_x =', r_x.shape)
-    #print('m_x =', m_x.shape)
-    #print('integrand =', (hmf.dndlnm * population * Bias_Tinker10(hmf, r_x) / m_x).shape)
+    """Galaxy-matter two halo term"""
     b_g = trapz(
         hmf.dndm * population * bias_tinker10(hmf),
         m_x, **kwargs) / ngal
-    #print('b_g =', b_g.shape)#, b_g[:,None].shape)
-    #try:
-        #print('output =', (hmf.power*b_g[:,None]).shape)
-    #except ValueError:
-        #print('output =', (hmf.power*b_g).shape)
-    #print()
-    #return (hmf.power * np.expand_dims(b_g, -1)), b_g
     return (hmf.power * b_g), b_g
     
     
@@ -309,6 +267,58 @@ def halo_exclusion(xi, r, meff, rho_dm, delta):
     #xi_exc = ((1.0 + xi) * filter) - 1.0 # Given how sigma function in lens.py is coded up, the simple method is fine!
     xi_exc = xi * filter
     return xi_exc
+
+
+def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, redshift):
+    """ Non-linear halo bias correction from Meat et al. 2020 (https://arxiv.org/abs/2011.08858)
+        Equation 17, that gets added to the usual 2h term from Cacciato.
+    
+    Parameters
+    ----------
+    dndm : float array, shape (P,)
+        differential mass function
+    population_1 : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    population_2 : float array, shape (nbins,P)
+        occupation probability as a function of halo mass
+    norm_1 : float array, shape (nbins,)
+        normalisation constant 1
+    norm_2 : float array, shape (nbins,)
+        normalisation constant 2
+    bias : float array, shape (P,)
+        halo bias function
+    meff : float array, shape (nbins,)
+        average halo mass in observable bin
+    beta_interp : interpolator instance, callable function
+        interpolated beta_nl function provided from Alex Mead files
+        (https://github.com/alexander-mead/BNL)
+    k : float array, shape (P,)
+        k vector array
+    z : float,
+        redshift
+
+    Returns
+    -------
+    beta : float array, shape (K,)
+        non-linear bias term
+    """
+    bias = bias_tinker10(hmf)
+    
+    beta_i = np.zeros((Mh.size, Mh.size, k.size))
+    print(beta_i.shape)
+    indices = np.vstack(np.meshgrid(np.arange(Mh.size),np.arange(Mh.size),np.arange(k.size))).reshape(3,-1).T
+    values = np.vstack(np.meshgrid(np.log10(Mh), np.log10(Mh), k)).reshape(3,-1).T
+    
+    for i,val in enumerate(values):
+        beta_i[indices[i,0], indices[i,1], indices[i,2]] = beta_interp(np.insert(val, 0, redshift)) - 1.0
+    
+    print(beta_i.shape)
+    
+    intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
+    intg2 = expand_dims(population_2 * hmf.dndm * bias, -1) * trapz(intg1, Mh, axis=1)
+    beta = trapz(intg2, Mh, axis=0) / (norm_1*norm_2)
+    
+    return beta
 
 
 """

@@ -17,7 +17,7 @@ def axlabel(return_value):
               'sigma': r'\Sigma',
               'xi': r'\xi',
               'wp': r'w_{p}',
-              'esd_wp': r'unit'}
+              'esd_wp': r'\Delta\Sigma\, /\, w_{p}'}
     return labels[return_value]
 
 
@@ -27,7 +27,7 @@ def covariance(R, cov, cor, output=None):
     # with a label i.e., this function should probably take `setup`
     # as an (optional) argument
     fig, axes = plt.subplots(
-        figsize=(10,8), nrows=cov.shape[0], ncols=cov.shape[0])
+        figsize=(10,8), nrows=len(cov), ncols=len(cov))
     #vmin, vmax = np.percentile(cov, [1,99])
     #vmin, vmax = -1.0, 1.0
     vmin, vmax = 0, 1
@@ -94,7 +94,7 @@ def signal(R, y, yerr, Nobsbins, model=None, observable='', fig=None, axes=None,
         # from within the model
         if Ri[0] == 0 and len(Ri) == len(yi) + 1:
             Ri = Ri[1:]
-        ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10)
+        ax.errorbar(Ri, yi, yerr=ei, fmt='ko', ms=10, fillstyle='none')
         if len(fi) == len(Ri):
             ax.plot(Ri, fi, 'r-', lw=3)
         #ax.set_xscale('log')

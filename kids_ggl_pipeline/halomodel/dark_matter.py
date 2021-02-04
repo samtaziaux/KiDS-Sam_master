@@ -227,10 +227,7 @@ def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
     
     
 def two_halo_gg(hmf, ngal, population, m_x, **kwargs):
-    """
-    Note that I removed the argument k_x which was required but not
-    used
-    """
+    """Galaxy-galaxy two halo term"""
     b_g = trapz(
         hmf.dndm * population * bias_tinker10(hmf),
         m_x, **kwargs) / ngal

@@ -172,8 +172,8 @@ def model(theta, R): #, calculate_covariance=False):
     # alias
     mass_range = setup['mass_range']
 
-    rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
-        else rho_mean / omegam
+    rho_bg = rho_mean / omegam if setup['delta_ref'] == 'SOCritical' \
+        else rho_mean
     # same as with redshift
     rho_bg = expand_dims(rho_bg, -1)
 

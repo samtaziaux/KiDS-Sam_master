@@ -169,12 +169,7 @@ class ConfigFile(object):
         if self._valid_modules is None:
             _modules = {
                 'nfw': nfw, 'nfw_stack': nfw_stack, 'halo': halo,
-<<<<<<< HEAD
-                'halo_2': halo_2, 'covariance': covariance,
-                'cmbhalo': cmbhalo}
-=======
-                'covariance': covariance}
->>>>>>> master
+                'covariance': covariance, 'cmbhalo': cmbhalo}
             try:
                 _modules['models'] = models
             except NameError:

@@ -121,10 +121,6 @@ def model(theta, R): #, calculate_covariance=False):
 
     # if a single value is given for more than one bin, assign same
     # value to all bins
-    #if not np.iterable(z):
-    #    z = np.array([z])
-    #if z.ndim > 1:
-    #    z = z.reshape(1,-1).squeeze()
     if z.size == 1 and nbins > 1:
         z = z*np.ones(nbins)
     # this is in case redshift is used in the concentration or
@@ -152,37 +148,11 @@ def model(theta, R): #, calculate_covariance=False):
     # alias
     rvir_range_3d = setup['rvir_range_3d']
     rvir_range_3d_i = setup['rvir_range_3d_interp']
-    # integrate over redshift later on
-    # assuming this means arcmin for now -- implement a way to check later!
-    #if setup['distances'] == 'angular':
-        #R = R * cosmo.
-    #rvir_range_2d_i = R[0][1:]
-    #rvir_range_2d_i = R[:,1:]
 
     """Calculating halo model"""
 
-    # interpolate selection function to the same grid as redshift and
-    # observable to be used in trapz
-    if selection.filename == 'None':
-        if integrate_zlens:
-            completeness = np.ones(
-                (z.size,nbins,observables.sampling.shape[1]))
-        else:
-            completeness = np.ones(observables.sampling.shape)
-    elif integrate_zlens:
-        completeness = np.array(
-            [[selection.interpolate([zi]*obs.size, obs, method='linear')
-              for obs in observables.sampling] for zi in z])
-    else:
-        completeness = np.array(
-            [selection.interpolate([zi]*obs.size, obs, method='linear')
-             for zi, obs in zip(z, observables.sampling)])
-    # shape ([z.size,]nbins,sampling)
-    if integrate_zlens:
-        assert completeness.shape \
-            == (z.size,nbins,observables.sampling.shape[1])
-    else:
-        assert completeness.shape == observables.sampling.shape
+    completeness = calculate_completeness(
+        z, observables, selection, ingredients)
 
     #pop_c, pop_s = hod.hod(
         #ingredients, observables.nbins, observables.gm.nbins,
@@ -894,6 +864,32 @@ def model(theta, R): #, calculate_covariance=False):
             output = [out_esd_tot_inter, meff]
 
     return output
+
+
+def calculate_completeness(z, observables, selection, ingredients):
+    # interpolate selection function to the same grid as redshift and
+    # observable to be used in trapz
+    if selection.filename == 'None':
+        if ingredients['nzlens']:
+            completeness = np.ones(
+                (z.size,observables.nbins,observables.sampling.shape[1]))
+        else:
+            completeness = np.ones(observables.sampling.shape)
+    elif ingredients['nzlens']:
+        completeness = np.array(
+            [[selection.interpolate([zi]*obs.size, obs, method='linear')
+              for obs in observables.sampling] for zi in z])
+    else:
+        completeness = np.array(
+            [selection.interpolate([zi]*obs.size, obs, method='linear')
+             for zi, obs in zip(z, observables.sampling)])
+    # shape ([z.size,]nbins,sampling)
+    if ingredients['nzlens']:
+        assert completeness.shape \
+            == (z.size,observables.nbins,observables.sampling.shape[1])
+    else:
+        assert completeness.shape == observables.sampling.shape
+    return completeness
 
 
 def load_cosmology(cosmo):

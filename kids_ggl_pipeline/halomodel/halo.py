@@ -154,37 +154,8 @@ def model(theta, R): #, calculate_covariance=False):
     completeness = calculate_completeness(
         z, observables, selection, ingredients)
 
-    #pop_c, pop_s = hod.hod(
-        #ingredients, observables.nbins, observables.gm.nbins,
-        #observables.gg.nbins, observables.gm, observables.gg,
-        #observables.gm.sampling, observables.gg.sampling, mass_range,
-        #c_mor, c_scatter, s_mor, s_scatter,
-
-    pop_c, pop_s = np.zeros((2,nbins,mass_range.size))
-    if observables.gm:
-        if ingredients['centrals']:
-            pop_c[observables.gm.idx,:], prob_c_gm = hod.number(
-                observables.gm.sampling, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:], completeness[observables.gm.idx],
-                obs_is_log=observables.gm.is_log)
-        if ingredients['satellites']:
-            pop_s[observables.gm.idx,:], prob_s_gm = hod.number(
-                observables.gm.sampling, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:], completeness[observables.gm.idx],
-                obs_is_log=observables.gm.is_log)
-
-    if observables.gg:
-        if ingredients['centrals']:
-            pop_c[observables.gg.idx,:], prob_c_gg = hod.number(
-                observables.gg.sampling, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:], completeness[observables.gg.idx],
-                obs_is_log=observables.gg.is_log)
-        if ingredients['satellites']:
-            pop_s[observables.gg.idx,:], prob_s_gg = hod.number(
-                observables.gg.sampling, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:], completeness[observables.gg.idx],
-                obs_is_log=observables.gg.is_log)
-
+    pop_c, pop_s = populations(
+        observables, ingredients, completeness, mass_range, theta)
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
@@ -866,6 +837,8 @@ def model(theta, R): #, calculate_covariance=False):
     return output
 
 
+## auxiliary functions
+
 def calculate_completeness(z, observables, selection, ingredients):
     # interpolate selection function to the same grid as redshift and
     # observable to be used in trapz
@@ -898,6 +871,38 @@ def load_cosmology(cosmo):
         H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
         Neff=Neff, w0=w0, wa=wa)
     return cosmo_model, sigma8, n_s, z
+
+
+def populations(observables, ingredients, completeness, mass_range, theta):
+    pop_c, pop_s = np.zeros((2,observables.nbins,mass_range.size))
+
+    c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        s_concentration, s_mor, s_scatter, s_beta = theta[1:]
+
+    if observables.gm:
+        if ingredients['centrals']:
+            pop_c[observables.gm.idx,:], prob_c_gm = hod.number(
+                observables.gm.sampling, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:], completeness[observables.gm.idx],
+                obs_is_log=observables.gm.is_log)
+        if ingredients['satellites']:
+            pop_s[observables.gm.idx,:], prob_s_gm = hod.number(
+                observables.gm.sampling, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:], completeness[observables.gm.idx],
+                obs_is_log=observables.gm.is_log)
+
+    if observables.gg:
+        if ingredients['centrals']:
+            pop_c[observables.gg.idx,:], prob_c_gg = hod.number(
+                observables.gg.sampling, mass_range, c_mor[0], c_scatter[0],
+                c_mor[1:], c_scatter[1:], completeness[observables.gg.idx],
+                obs_is_log=observables.gg.is_log)
+        if ingredients['satellites']:
+            pop_s[observables.gg.idx,:], prob_s_gg = hod.number(
+                observables.gg.sampling, mass_range, s_mor[0], s_scatter[0],
+                s_mor[1:], s_scatter[1:], completeness[observables.gg.idx],
+                obs_is_log=observables.gg.is_log)
+    return pop_c, pop_s
 
 
 def preamble(theta, R):

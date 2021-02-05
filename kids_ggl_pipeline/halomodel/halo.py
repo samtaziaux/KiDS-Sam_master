@@ -131,23 +131,13 @@ def model(theta, R): #, calculate_covariance=False):
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
     z = expand_dims(z, -1)
-    if integrate_zlens:
-        z_shape_test = (nz.shape[1] == nbins)
-    else:
-        z_shape_test = (z.size == nbins)
-    
+
     # Tinker10 should also be read from theta!
-    transfer_params = \
-        {'sigma_8': sigma8, 'n': n_s, 'lnk_min': setup['lnk_min'],
-         'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
-    hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
+    hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
 
     assert np.allclose(setup['mass_range'], hmf[0].m)
     # alias
     mass_range = setup['mass_range']
-
-    rho_bg = rho_mean / omegam if setup['delta_ref'] == 'SOCritical' \
-        else rho_mean
 
     # same as with redshift
     rho_bg = expand_dims(rho_bg, -1)

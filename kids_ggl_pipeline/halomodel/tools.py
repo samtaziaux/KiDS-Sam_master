@@ -164,6 +164,10 @@ def load_hmf(z, setup, cosmo_model, sigma8, n_s):
         #rho_mean_z[i] = hmf[i].mean_density # Add to return
     rho_bg = rho_mean / cosmo_model.Om0 if setup['delta_ref'] == 'SOCritical' \
         else rho_mean
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter (where the new dimension will
+    # be occupied by mass)
+    rho_bg = np.expand_dims(rho_bg, -1)
     return hmf, rho_bg
 
 

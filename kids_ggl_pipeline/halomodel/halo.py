@@ -95,6 +95,8 @@ def model(theta, R): #, calculate_covariance=False):
 
     cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
 
+    ### a final bit of massaging ###
+
     if observables.mlf:
         nbins = observables.nbins - observables.mlf.nbins
     else:
@@ -111,40 +113,28 @@ def model(theta, R): #, calculate_covariance=False):
     if observables.mlf:
         z_mlf = cosmo[-1]
         size_cosmo += 1
+
     # cheap hack. I'll use this for CMB lensing, but we can
     # also use this to account for difference between shear
     # and reduced shear
     if len(cosmo) == size_cosmo+1:
         zs = cosmo[-1]
 
-    # if a single value is given for more than one bin, assign same
-    # value to all bins
-    if z.size == 1 and nbins > 1:
-        z = z*np.ones(nbins)
-    # this is in case redshift is used in the concentration or
-    # scaling relation or scatter (where the new dimension will
-    # be occupied by mass)
-    z = expand_dims(z, -1)
+    z = format_z(z, nbins)
+    ### load halo mass functions ###
 
     # Tinker10 should also be read from theta!
     hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
 
     assert np.allclose(setup['mass_range'], hmf[0].m)
-    # alias
+    # alias (should probably get rid of it)
     mass_range = setup['mass_range']
-
-    # same as with redshift
-    rho_bg = expand_dims(rho_bg, -1)
-
-    # alias
-    rvir_range_3d = setup['rvir_range_3d']
-    rvir_range_3d_i = setup['rvir_range_3d_interp']
 
     """Calculating halo model"""
 
     # can probably move this into populations()
     completeness = calculate_completeness(
-        z, observables, selection, ingredients)
+        observables, selection, ingredients, z)
     pop_c, pop_s = populations(
         observables, ingredients, completeness, mass_range, theta)
     pop_g = pop_c + pop_s
@@ -323,7 +313,12 @@ def model(theta, R): #, calculate_covariance=False):
     else:
         pass
 
-    # correlation functions
+    ### correlation functions ###
+
+    # alias
+    rvir_range_3d = setup['rvir_range_3d']
+    rvir_range_3d_i = setup['rvir_range_3d_interp']
+
     if observables.gm:
         if ingredients['nzlens']:
             if ingredients['haloexclusion']:
@@ -669,7 +664,7 @@ def model(theta, R): #, calculate_covariance=False):
 
 ## auxiliary functions
 
-def calculate_completeness(z, observables, selection, ingredients):
+def calculate_completeness(observables, selection, ingredients, z):
     # interpolate selection function to the same grid as redshift and
     # observable to be used in trapz
     if selection.filename == 'None':
@@ -1020,6 +1015,19 @@ def preamble(theta, R):
             ' observable bins!')
 
     return
+
+
+def format_z(z, nbins):
+    # if a single value is given for more than one bin, assign same
+    # value to all bins
+    if z.size == 1 and nbins > 1:
+        z = z*np.ones(nbins)
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter (where the new dimension will
+    # be occupied by mass)
+    z = expand_dims(z, -1)
+    return z
+
 
 if __name__ == '__main__':
     print(0)

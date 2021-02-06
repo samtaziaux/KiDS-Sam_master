@@ -191,8 +191,7 @@ def model(theta, R): #, calculate_covariance=False):
         rho_bg = rho_bg[...,0]
 
     if observables.gm:
-
-        Pgm_c, Pgm_s, Pgm_2h = calculate_Pk_gm(
+        Pgm_c, Pgm_s, Pgm_2h = calculate_Pgm(
             setup, observables, ingredients, hmf, mass_range, dndm, rho_bg,
             bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, F_k1, F_k2)
 
@@ -210,46 +209,9 @@ def model(theta, R): #, calculate_covariance=False):
 
     # Galaxy - galaxy spectra (for clustering)
     if observables.gg:
-        if ingredients['twohalo']:
-            Pgg_2h = F_k2 * bias * array(
-            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
-            for hmf_i, ngal_i, pop_g_i
-            in zip(hmf[observables.gg.idx],
-                    expand_dims(ngal[observables.gg.idx], -1),
-                    expand_dims(pop_g[observables.gg.idx], -2))])
-        else:
-            Pgg_2h = F_k2 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
-
-        ncen = hod.nbar(dndm[observables.gg.idx], pop_c[observables.gg.idx],
-                        mass_range)
-        nsat = hod.nbar(dndm[observables.gg.idx], pop_s[observables.gg.idx],
-                        mass_range)
-
-        if ingredients['centrals']:
-            """
-            Pgg_c = F_k1 * gg_cen_analy(
-                dndm, ncen, ngal, (nbins,setup['lnk_bins']), mass_range)
-            """
-            Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
-        else:
-            Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
-
-        if ingredients['satellites']:
-            beta = s_beta
-            Pgg_s = F_k1 * gg_sat_analy(
-                dndm[observables.gg.idx], uk_s[observables.gg.idx],
-                pop_s[observables.gg.idx], ngal[observables.gg.idx], beta,
-                mass_range)
-        else:
-            Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
-
-        if ingredients['centrals'] and ingredients['satellites']:
-            Pgg_cs = F_k1 * gg_cen_sat_analy(
-                dndm[observables.gg.idx], uk_s[observables.gg.idx],
-                pop_c[observables.gg.idx], pop_s[observables.gg.idx],
-                ngal[observables.gg.idx], mass_range)
-        else:
-            Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
+        Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = calculate_Pgg(
+            setup, observables, ingredients, hmf, mass_range, dndm, bias,
+            pop_g, pop_c, pop_s, uk_s, ngal, F_k1, F_k2)
 
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgg_k_t = Pgg_c + (2.0 * Pgg_cs) + Pgg_s
@@ -259,19 +221,9 @@ def model(theta, R): #, calculate_covariance=False):
 
     # Matter - matter spectra
     if observables.mm:
-        if ingredients['twohalo']:
-            Pmm_2h = F_k2 * array([hmf_i.power
-                                   for hmf_i in hmf[observables.mm.idx]])
-        else:
-            Pmm_2h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
-
-        if ingredients['centrals']:
-            Pmm_1h = F_k1 * mm_analy(
-                dndm[observables.mm.idx], uk_c[observables.mm.idx],
-                rho_bg[observables.mm.idx], mass_range)
-        else:
-            Pmm_1h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
-
+        Pmm_1h, Pmm_2h = calculate_Pmm(
+            setup, observables, ingredients, hmf, mass_range, dndm, uk_c,
+            F_k1, F_k2)
         #if ingredients['haloexclusion'] and setup['return'] != 'power':
         #    Pmm_k_t = Pmm_1h
         #    Pmm_k = Pmm_1h + Pmm_2h
@@ -806,7 +758,49 @@ def calculate_ngal(observables, pop_g, dndm, mass_range):
     return ngal, meff
 
 
-def calculate_Pk_gm(setup, observables, ingredients, hmf, mass_range, dndm,
+def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
+                  bias, pop_g, pop_c, pop_s, uk_s, ngal, F_k1, F_k2):
+    if ingredients['twohalo']:
+        Pgg_2h = F_k2 * bias * array(
+        [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+        for hmf_i, ngal_i, pop_g_i
+        in zip(hmf[observables.gg.idx],
+                expand_dims(ngal[observables.gg.idx], -1),
+                expand_dims(pop_g[observables.gg.idx], -2))])
+    else:
+        Pgg_2h = F_k2 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
+
+    ncen = hod.nbar(dndm[observables.gg.idx], pop_c[observables.gg.idx],
+                    mass_range)
+    nsat = hod.nbar(dndm[observables.gg.idx], pop_s[observables.gg.idx],
+                    mass_range)
+
+    #if ingredients['centrals']:
+        #Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
+    #else:
+    Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
+
+    if ingredients['satellites']:
+        beta = s_beta
+        Pgg_s = F_k1 * gg_sat_analy(
+            dndm[observables.gg.idx], uk_s[observables.gg.idx],
+            pop_s[observables.gg.idx], ngal[observables.gg.idx], beta,
+            mass_range)
+    else:
+        Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
+
+    if ingredients['centrals'] and ingredients['satellites']:
+        Pgg_cs = F_k1 * gg_cen_sat_analy(
+            dndm[observables.gg.idx], uk_s[observables.gg.idx],
+            pop_c[observables.gg.idx], pop_s[observables.gg.idx],
+            ngal[observables.gg.idx], mass_range)
+    else:
+        Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
+
+    return Pgg_c, Pgg_s, Pgg_cs, Pgg_2h
+
+
+def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
                     rho_bg, bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal,
                     F_k1, F_k2):
     if ingredients['twohalo']:
@@ -848,6 +842,23 @@ def calculate_Pk_gm(setup, observables, ingredients, hmf, mass_range, dndm,
     else:
         Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
     return Pgm_c, Pgm_s, Pgm_2h
+
+
+def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
+                  uk_c, F_k1, F_k2):
+    if ingredients['twohalo']:
+        Pmm_2h = F_k2 * array([hmf_i.power
+                               for hmf_i in hmf[observables.mm.idx]])
+    else:
+        Pmm_2h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
+
+    if ingredients['centrals']:
+        Pmm_1h = F_k1 * mm_analy(
+            dndm[observables.mm.idx], uk_c[observables.mm.idx],
+            rho_bg[observables.mm.idx], mass_range)
+    else:
+        Pmm_1h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
+    return Pmm_1h, Pmm_2h
 
 
 def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,

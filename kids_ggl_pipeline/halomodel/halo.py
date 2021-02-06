@@ -117,8 +117,6 @@ def model(theta, R): #, calculate_covariance=False):
     if len(cosmo) == size_cosmo+1:
         zs = cosmo[-1]
 
-    integrate_zlens = ingredients['nzlens']
-
     # if a single value is given for more than one bin, assign same
     # value to all bins
     if z.size == 1 and nbins > 1:
@@ -138,13 +136,6 @@ def model(theta, R): #, calculate_covariance=False):
     # same as with redshift
     rho_bg = expand_dims(rho_bg, -1)
 
-    concentration = c_concentration[0](mass_range, *c_concentration[1:])
-    if ingredients['satellites']:
-        concentration_sat = s_concentration[0](
-            mass_range, *s_concentration[1:])
-
-    rvir_range_lin = virial_radius(
-        mass_range, rho_bg, setup['delta'])
     # alias
     rvir_range_3d = setup['rvir_range_3d']
     rvir_range_3d_i = setup['rvir_range_3d_interp']
@@ -164,81 +155,14 @@ def model(theta, R): #, calculate_covariance=False):
 
     # Luminosity or mass function as an output:
     if observables.mlf:
-        # Needs independent redshift input!
-        #z_mlf = z[observables.mlf.idx]
-        if z_mlf.size == 1 and observables.mlf.nbins > 1:
-            z_mlf = z_mlf*np.ones(observables.mlf.nbins)
-        if z_mlf.size != observables.mlf.nbins:
-            raise ValueError(
-                'Number of redshift bins should be equal to the number of' \
-                ' observable bins!')
-        hmf_mlf, _rho_mean = load_hmf(
-            z_mlf, setup, cosmo_model, transfer_params)
-        dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
-
-        pop_c_mlf = np.zeros(observables.mlf.sampling.shape)
-        pop_s_mlf = np.zeros(observables.mlf.sampling.shape)
-
-        if ingredients['centrals']:
-            pop_c_mlf = hod.mlf(
-                observables.mlf.sampling, dndm_mlf, mass_range, c_mor[0],
-                c_scatter[0], c_mor[1:], c_scatter[1:],
-                obs_is_log=observables.mlf.is_log)
-
-        if ingredients['satellites']:
-            pop_s_mlf = hod.mlf(
-                observables.mlf.sampling, dndm_mlf, mass_range, s_mor[0],
-                s_scatter[0], s_mor[1:], s_scatter[1:],
-                obs_is_log=observables.mlf.is_log)
-        pop_g_mlf = pop_c_mlf + pop_s_mlf
-
-        mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
-                     for hod_i, ngal_i
-                     in zip(observables.mlf.sampling,
-                            pop_g_mlf*10.0**observables.mlf.sampling)]
-        for i, Ri in enumerate(observables.mlf.R):
-            Ri = Quantity(Ri, unit='Mpc')
-            observables.mlf.R[i] = Ri.to(setup['R_unit']).value
-        mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
-                   in zip(mlf_inter, observables.mlf.R)]
-        output[observables.mlf.idx] = mlf_out
+        output[observables.mlf.idx] = calculate_mlf(
+            z_mlf, observables, ingredients, mass_range, theta)
 
     """Power spectra"""
 
-    # damping of the 1h power spectra at small k
-    F_k1 = sp.erf(setup['k_range_lin']/0.1)
-    F_k2 = np.ones_like(setup['k_range_lin'])
-    #F_k2 = sp.erfc(setup['k_range_lin']/10.0)
-    # Fourier Transform of the NFW profile
-    if ingredients['centrals']:
-        uk_c = nfw.uk(
-            setup['k_range_lin'], mass_range, rvir_range_lin, concentration,
-            rho_bg, setup['delta'])
-    elif integrate_zlens:
-        uk_c = np.ones((nbins,z.size//nbins,mass_range.size,setup['k_range_lin'].size))
-    else:
-        uk_c = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
-    # and of the NFW profile of the satellites
-    if ingredients['satellites']:
-        uk_s = nfw.uk(
-            setup['k_range_lin'], mass_range, rvir_range_lin,
-            concentration_sat, rho_bg, setup['delta'])
-        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
-    elif integrate_zlens:
-        uk_s = np.ones((nbins,z.size//nbins,mass_range.size,
-                        setup['k_range_lin'].size))
-    else:
-        uk_s = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
-
-    # If there is miscentring to be accounted for
-    # Only for galaxy-galaxy lensing!
-    if ingredients['miscentring']:
-        p_off, r_off = c_miscent[1:]
-        uk_c[observables.gm.idx] = uk_c[observables.gm.idx] * nfw.miscenter(
-            p_off, r_off, expand_dims(mass_range, -1),
-            expand_dims(rvir_range_lin, -1), setup['k_range_lin'],
-            expand_dims(concentration, -1), uk_c[observables.gm.idx].shape)
-    uk_c = uk_c / expand_dims(uk_c[...,0], -1)
+    uk_c, uk_s = calculate_uk(
+        setup, observables, ingredients, z, mass_range, rho_bg,
+        c_concentration, s_concentration, c_miscent)
 
     """
     # read in Alex Mead BNL table:
@@ -247,17 +171,23 @@ def model(theta, R): #, calculate_covariance=False):
     with open('/net/home/fohlen12/dvornik/interpolator_BNL.npy', 'rb') as dill_file:
         beta_interp = pickle.load(dill_file)
     print(beta_interp([0.5, 12.3, 12.8, 1e-1]))
-    
+
     Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm], rho_bg[idx_gm], z[idx_gm])])
     Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, z_i in zip(hmf[idx_gg], pop_g[idx_gg], ngal[idx_gg], z[idx_gg])])
     """
+
+    # damping of the 1h power spectra at small k
+    F_k1 = sp.erf(setup['k_range_lin']/0.1)
+    F_k2 = np.ones_like(setup['k_range_lin'])
+    #F_k2 = sp.erfc(setup['k_range_lin']/10.0)
+
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*setup['k_range_lin'].size).T
     if setup['delta_ref'] == 'SOCritical':
         bias = bias * omegam
 
-    if not integrate_zlens:
+    if not ingredients['nzlens']:
         rho_bg = rho_bg[...,0]
 
     if observables.gm:
@@ -277,7 +207,7 @@ def model(theta, R): #, calculate_covariance=False):
                        expand_dims(ngal[observables.gm.idx], -1),
                        expand_dims(pop_g[observables.gm.idx], -2))])
             #print('Pg_2h in {0:.2e} s'.format(time()-ti))
-        #elif integrate_zlens:
+        #elif ingredients['nzlens']:
             #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
         else:
             Pgm_2h = np.zeros((observables.gm.nbins,setup['lnk_bins']))
@@ -287,7 +217,7 @@ def model(theta, R): #, calculate_covariance=False):
                 dndm[observables.gm.idx], uk_c[observables.gm.idx],
                 rho_bg[observables.gm.idx], pop_c[observables.gm.idx],
                 ngal[observables.gm.idx], mass_range)
-        elif integrate_zlens:
+        elif ingredients['nzlens']:
             Pgm_c = np.zeros((z.size,observables.gm.nbins,setup['lnk_bins']))
         else:
             Pgm_c = F_k1 * np.zeros((observables.gm.nbins,setup['lnk_bins']))
@@ -309,7 +239,7 @@ def model(theta, R): #, calculate_covariance=False):
             Pgm_k = Pgm_c + Pgm_s + Pgm_2h
 
         # finally integrate over (weight by, really) lens redshift
-        if integrate_zlens:
+        if ingredients['nzlens']:
             intnorm = np.sum(nz, axis=0)
             meff[observables.gm.idx] \
                 = np.sum(nz*meff[observables.gm.idx], axis=0) / intnorm
@@ -390,13 +320,13 @@ def model(theta, R): #, calculate_covariance=False):
         # note this doesn't include the point mass! also, we probably
         # need to return k
         if setup['return'] == 'power':
-            if integrate_zlens:
+            if ingredients['nzlens']:
                 Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
             P_inter = [UnivariateSpline(
                             setup['k_range'], np.log(Pg_k_i), s=0, ext=0)
                        for Pg_k_i in Pgm_k]
         else:
-            if integrate_zlens:
+            if ingredients['nzlens']:
                 if ingredients['haloexclusion'] and setup['return'] != 'power':
                     P_inter = [[UnivariateSpline(setup['k_range'], logPg_ij,
                                                  s=0, ext=0)
@@ -479,7 +409,7 @@ def model(theta, R): #, calculate_covariance=False):
 
     # correlation functions
     if observables.gm:
-        if integrate_zlens:
+        if ingredients['nzlens']:
             if ingredients['haloexclusion']:
                 xi2 = np.array(
                     [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
@@ -511,7 +441,7 @@ def model(theta, R): #, calculate_covariance=False):
                      for P_inter_i in P_inter])
         # not yet allowed
         if setup['return'] == 'xi':
-            if integrate_zlens:
+            if ingredients['nzlens']:
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
             xi_out_i = array(
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)
@@ -520,7 +450,7 @@ def model(theta, R): #, calculate_covariance=False):
                 [x_i(r_i) for x_i, r_i in zip(xi_out_i, observables.gm.R)])
             output[observables.gm.idx] = xi_out
         if setup['return'] == 'all':
-            if integrate_zlens:
+            if ingredients['nzlens']:
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
             output.append(xi2)
 
@@ -596,7 +526,7 @@ def model(theta, R): #, calculate_covariance=False):
     #    else rvir_range_3d_i
 
     if observables.gm:
-        if integrate_zlens:
+        if ingredients['nzlens']:
             surf_dens2 = array(
                 [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_range_3d_i)
                 for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
@@ -620,12 +550,12 @@ def model(theta, R): #, calculate_covariance=False):
                  for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
             surf_dens2 = surf_dens2 + pointmass
 
-        zo = expand_dims(z, -1) if integrate_zlens else z
+        zo = expand_dims(z, -1) if ingredients['nzlens'] else z
         if setup['distances'] == 'proper':
             surf_dens2 *= (1+zo)**2
         if setup['return'] == 'kappa':
             surf_dens2 /= sigma_crit(cosmo_model, zo, zs)
-        if integrate_zlens:
+        if ingredients['nzlens']:
             # haven't checked the denominator below
             norm = trapz(nz, z, axis=0)
             #if setup['return'] == 'kappa':
@@ -849,6 +779,48 @@ def calculate_completeness(z, observables, selection, ingredients):
     return completeness
 
 
+def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta):
+    if z_mlf.size == 1 and observables.mlf.nbins > 1:
+        z_mlf = z_mlf*np.ones(observables.mlf.nbins)
+    if z_mlf.size != observables.mlf.nbins:
+        raise ValueError(
+            'Number of redshift bins should be equal to the number of' \
+            ' observable bins!')
+    hmf_mlf, _rho_mean = load_hmf(
+        z_mlf, setup, cosmo_model, transfer_params)
+    dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
+
+    c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        s_concentration, s_mor, s_scatter, s_beta = theta[1:]
+
+    pop_c_mlf = np.zeros(observables.mlf.sampling.shape)
+    pop_s_mlf = np.zeros(observables.mlf.sampling.shape)
+
+    if ingredients['centrals']:
+        pop_c_mlf = hod.mlf(
+            observables.mlf.sampling, dndm_mlf, mass_range, c_mor[0],
+            c_scatter[0], c_mor[1:], c_scatter[1:],
+            obs_is_log=observables.mlf.is_log)
+
+    if ingredients['satellites']:
+        pop_s_mlf = hod.mlf(
+            observables.mlf.sampling, dndm_mlf, mass_range, s_mor[0],
+            s_scatter[0], s_mor[1:], s_scatter[1:],
+            obs_is_log=observables.mlf.is_log)
+    pop_g_mlf = pop_c_mlf + pop_s_mlf
+
+    mlf_inter = [UnivariateSpline(hod_i, np.log(ngal_i), s=0, ext=0)
+                 for hod_i, ngal_i
+                 in zip(observables.mlf.sampling,
+                        pop_g_mlf*10.0**observables.mlf.sampling)]
+    for i, Ri in enumerate(observables.mlf.R):
+        Ri = Quantity(Ri, unit='Mpc')
+        observables.mlf.R[i] = Ri.to(setup['R_unit']).value
+    mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
+               in zip(mlf_inter, observables.mlf.R)]
+    return mlf_out
+
+
 def calculate_ngal(observables, pop_g, dndm, mass_range):
     ngal = np.empty(observables.nbins)
     meff = np.empty(observables.nbins)
@@ -868,6 +840,50 @@ def calculate_ngal(observables, pop_g, dndm, mass_range):
         ngal[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
         meff[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
     return ngal, meff
+
+
+def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
+                 c_concentration, s_concentration, c_miscent):
+    rvir_range_lin = virial_radius(mass_range, rho_bg, setup['delta'])
+    # Fourier Transform of the NFW profile
+    if ingredients['centrals']:
+        concentration = c_concentration[0](mass_range, *c_concentration[1:])
+        uk_c = nfw.uk(
+            setup['k_range_lin'], mass_range, rvir_range_lin, concentration,
+            rho_bg, setup['delta'])
+    elif ingredients['nzlens']:
+        uk_c = np.ones((observables.nbins, z.size//observables.nbins,
+                        mass_range.size, setup['k_range_lin'].size))
+    else:
+        uk_c = np.ones((observables.nbins, mass_range.size,
+                        setup['k_range_lin'].size))
+    # and of the NFW profile of the satellites
+    if ingredients['satellites']:
+        concentration_sat = s_concentration[0](
+            mass_range, *s_concentration[1:])
+        uk_s = nfw.uk(
+            setup['k_range_lin'], mass_range, rvir_range_lin,
+            concentration_sat, rho_bg, setup['delta'])
+        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
+    elif ingredients['nzlens']:
+        uk_s = np.ones((observables.nbins, z.size//observables.nbins,
+                        mass_range.size, setup['k_range_lin'].size))
+    else:
+        uk_s = np.ones((observables.nbins, mass_range.size,
+                        setup['k_range_lin'].size))
+
+    # If there is miscentring to be accounted for
+    # Only for galaxy-galaxy lensing!
+    if ingredients['miscentring']:
+        p_off, r_off = c_miscent[1:]
+        uk_c[observables.gm.idx] = uk_c[observables.gm.idx] * nfw.miscenter(
+            p_off, r_off, expand_dims(mass_range, -1),
+            expand_dims(rvir_range_lin, -1), setup['k_range_lin'],
+            expand_dims(concentration, -1), uk_c[observables.gm.idx].shape)
+
+    uk_c = uk_c / expand_dims(uk_c[...,0], -1)
+
+    return uk_c, uk_s
 
 
 def load_cosmology(cosmo):

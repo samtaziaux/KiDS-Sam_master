@@ -204,10 +204,10 @@ def model(theta, R): #, calculate_covariance=False):
             pop_g, pop_c, pop_s, uk_s, ngal, F_k1, F_k2)
 
         if ingredients['haloexclusion'] and setup['return'] != 'power':
-            Pgg_k_t = Pgg_c + (2.0 * Pgg_cs) + Pgg_s
-            Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
+            Pgg_k_t = Pgg_c + 2*Pgg_cs + Pgg_s
+            Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
         else:
-            Pgg_k = Pgg_c + (2.0 * Pgg_cs) + Pgg_s + Pgg_2h
+            Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
 
     # Matter - matter spectra
     if observables.mm:
@@ -228,82 +228,82 @@ def model(theta, R): #, calculate_covariance=False):
         if setup['return'] == 'power':
             if ingredients['nzlens']:
                 Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
-            P_inter = [UnivariateSpline(
-                            setup['k_range'], np.log(Pg_k_i), s=0, ext=0)
-                       for Pg_k_i in Pgm_k]
+            Pgm_func = [UnivariateSpline(
+                           setup['k_range'], np.log(Pg_k_i), s=0, ext=0)
+                        for Pg_k_i in Pgm_k]
         else:
             if ingredients['nzlens']:
                 if ingredients['haloexclusion'] and setup['return'] != 'power':
-                    P_inter = [[UnivariateSpline(setup['k_range'], logPg_ij,
+                    Pgm_func = [[UnivariateSpline(setup['k_range'], logPg_ij,
                                                  s=0, ext=0)
-                                for logPg_ij in logPg_i]
-                               for logPg_i in np.log(Pgm_k_t)]
-                    P_inter_2h = [[UnivariateSpline(setup['k_range'],
+                                 for logPg_ij in logPg_i]
+                                for logPg_i in np.log(Pgm_k_t)]
+                    Pgm_2h_func = [[UnivariateSpline(setup['k_range'],
                                                     logPg_ij, s=0, ext=0)
-                                   for logPg_ij in logPg_i]
-                                  for logPg_i in np.log(Pgm_2h)]
+                                    for logPg_ij in logPg_i]
+                                   for logPg_i in np.log(Pgm_2h)]
                 else:
-                    P_inter = [[UnivariateSpline(setup['k_range'], logPg_ij,
+                    Pgm_func = [[UnivariateSpline(setup['k_range'], logPg_ij,
                                                  s=0, ext=0)
-                                for logPg_ij in logPg_i]
-                               for logPg_i in np.log(Pgm_k)]
+                                 for logPg_ij in logPg_i]
+                                for logPg_i in np.log(Pgm_k)]
             else:
                 if ingredients['haloexclusion'] and setup['return'] != 'power':
-                    P_inter = [UnivariateSpline(setup['k_range'], Pg_k_i,
+                    Pgm_func = [UnivariateSpline(setup['k_range'], Pg_k_i,
                                                 s=0, ext=0)
-                               for Pg_k_i in np.log(Pgm_k_t)]
-                    P_inter_2h = [UnivariateSpline(setup['k_range'],
+                                for Pg_k_i in np.log(Pgm_k_t)]
+                    Pgm_2h_func = [UnivariateSpline(setup['k_range'],
                                                    Pg_2h_i, s=0, ext=0)
-                                  for Pg_2h_i in np.log(Pgm_2h)]
+                                   for Pg_2h_i in np.log(Pgm_2h)]
                 else:
-                    P_inter = [UnivariateSpline(setup['k_range'],
-                                                Pg_k_i, s=0, ext=0)
-                               for Pg_k_i in np.log(Pgm_k)]
+                    Pgm_func = [UnivariateSpline(setup['k_range'],
+                                                 Pg_k_i, s=0, ext=0)
+                                for Pg_k_i in np.log(Pgm_k)]
 
-    if observables.gg:
-        if ingredients['haloexclusion'] and setup['return'] != 'power':
-            P_inter_2 = [UnivariateSpline(setup['k_range'], Pgg_k_i,
-                                          s=0, ext=0)
-                         for Pgg_k_i in np.log(Pgg_k_t)]
-            P_inter_2_2h = [UnivariateSpline(setup['k_range'], Pgg_2h_i,
-                                             s=0, ext=0)
-                            for Pgg_2h_i in np.log(Pgg_2h)]
-        else:
-            P_inter_2 = [UnivariateSpline(setup['k_range'], Pgg_k_i, s=0,
-                                          ext=0)
-                         for Pgg_k_i in np.log(Pgg_k)]
-
-    if observables.mm:
-        #if ingredients['haloexclusion'] and setup['return'] != 'power':
-        #    P_inter_3 = [UnivariateSpline(setup['k_range'], np.log(Pmm_k_i), s=0, ext=0)
-        #            for Pmm_k_i in Pmm_k_t]
-        #    P_inter_3_2h = [UnivariateSpline(setup['k_range'], np.log(Pmm_2h_i), s=0, ext=0)
-        #            for Pmm_2h_i in Pmm_2h]
-        #else:
-        P_inter_3 = [UnivariateSpline(setup['k_range'], Pmm_k_i, s=0, ext=0)
-                     for Pmm_k_i in np.log(Pmm_k)]
-
-    if observables.gm:
         if setup['return'] == 'all':
             output[observables.gm.idx] = Pgm_k
         if setup['return'] == 'power':
-            Pgm_out = [exp(P_i(np.log(r_i)))
-                       for P_i, r_i in zip(P_inter, observables.gm.R)]
+            Pgm_out = [exp(P_i(logr_i)) for P_i, logr_i
+                       in zip(Pgm_func, np.log(observables.gm.R))]
             output[observables.gm.idx] = Pgm_out
+
     if observables.gg:
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            Pgg_func = [UnivariateSpline(setup['k_range'], Pgg_k_i,
+                                          s=0, ext=0)
+                         for Pgg_k_i in np.log(Pgg_k_t)]
+            Pgg_2h_func = [UnivariateSpline(setup['k_range'], Pgg_2h_i,
+                                             s=0, ext=0)
+                            for Pgg_2h_i in np.log(Pgg_2h)]
+        else:
+            Pgg_func = [UnivariateSpline(setup['k_range'], Pgg_k_i, s=0,
+                                          ext=0)
+                         for Pgg_k_i in np.log(Pgg_k)]
+
         if setup['return'] == 'all':
             output[observables.gg.idx] = Pgg_k
         if setup['return'] == 'power':
-            Pgg_out = [exp(P_i(np.log(r_i)))
-                       for P_i, r_i in zip(P_inter_2, observables.gg.R)]
+            Pgg_out = [exp(P_i(logr_i)) for P_i, logr_i
+                       in zip(Pgg_func, np.log(observables.gg.R))]
             output[observables.gg.idx] = Pgg_out
+
     if observables.mm:
+        #if ingredients['haloexclusion'] and setup['return'] != 'power':
+        #    Pmm_func = [UnivariateSpline(setup['k_range'], np.log(Pmm_k_i), s=0, ext=0)
+        #            for Pmm_k_i in Pmm_k_t]
+        #    Pmm_2h_func = [UnivariateSpline(setup['k_range'], np.log(Pmm_2h_i), s=0, ext=0)
+        #            for Pmm_2h_i in Pmm_2h]
+        #else:
+        Pmm_func = [UnivariateSpline(setup['k_range'], Pmm_k_i, s=0, ext=0)
+                     for Pmm_k_i in np.log(Pmm_k)]
+
         if setup['return'] == 'all':
             output[observables.mm.idx] = Pmm_k
         if setup['return'] == 'power':
-            Pmm_out = [exp(P_i(np.log(r_i)))
-                       for P_i, r_i in zip(P_inter_3, observables.mm.R)]
+            Pmm_out = [exp(P_i(logr_i)) for P_i, logr_i
+                       in zip(Pmm_func, np.log(observables.mm.R))]
             output[observables.mm.idx] = Pmm_out
+
     if setup['return'] == 'power':
         output = list(output)
         output = [output, meff]
@@ -323,33 +323,34 @@ def model(theta, R): #, calculate_covariance=False):
         if ingredients['nzlens']:
             if ingredients['haloexclusion']:
                 xi2 = np.array(
-                    [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
-                      for P_inter_ji in P_inter_j] for P_inter_j in P_inter])
+                    [[power_to_corr_ogata(Pgm_func_ji, rvir_range_3d)
+                      for Pgm_func_ji in Pgm_func_j] for Pgm_func_j in Pgm_func])
                 xi2_2h = np.array(
-                    [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
-                      for P_inter_ji in P_inter_j] for P_inter_j in P_inter_2h])
+                    [[power_to_corr_ogata(Pgm_2h_func_ji, rvir_range_3d)
+                      for Pgm_2h_func_ji in Pgm_2h_func_j]
+                     for Pgm_2h_func_j in Pgm_2h_func])
                 xi2 = xi2 + halo_exclusion(
                     xi2_2h, rvir_range_3d, meff[observables.gm.idx],
                     rho_bg[observables.gm.idx], setup['delta'])
             else:
                 xi2 = np.array(
-                    [[power_to_corr_ogata(P_inter_ji, rvir_range_3d)
-                      for P_inter_ji in P_inter_j] for P_inter_j in P_inter])
+                    [[power_to_corr_ogata(Pgm_func_ji, rvir_range_3d)
+                      for Pgm_func_ji in Pgm_func_j] for Pgm_func_j in Pgm_func])
         else:
             if ingredients['haloexclusion']:
                 xi2 = np.array(
-                    [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                     for P_inter_i in P_inter])
+                    [power_to_corr_ogata(Pgm_func_i, rvir_range_3d)
+                     for Pgm_func_i in Pgm_func])
                 xi2_2h = np.array(
-                    [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                     for P_inter_i in P_inter_2h])
+                    [power_to_corr_ogata(Pgm_2h_func_i, rvir_range_3d)
+                     for Pgm_2h_func_i in Pgm_2h_func])
                 xi2 = xi2 + halo_exclusion(
                     xi2_2h, rvir_range_3d, meff[observables.gm.idx],
                     rho_bg[observables.gm.idx], setup['delta'])
             else:
                 xi2 = np.array(
-                    [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                     for P_inter_i in P_inter])
+                    [power_to_corr_ogata(Pgm_func_i, rvir_range_3d)
+                     for Pgm_func_i in Pgm_func])
         # not yet allowed
         if setup['return'] == 'xi':
             if ingredients['nzlens']:
@@ -368,18 +369,18 @@ def model(theta, R): #, calculate_covariance=False):
     if observables.gg:
         if ingredients['haloexclusion']:
             xi2_2 = np.array(
-                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                for P_inter_i in P_inter_2])
+                [power_to_corr_ogata(Pgg_func_i, rvir_range_3d)
+                for Pgg_func_i in Pgg_func])
             xi2_2_2h = np.array(
-                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                for P_inter_i in P_inter_2_2h])
+                [power_to_corr_ogata(Pgg_2h_i, rvir_range_3d)
+                for Pgg_2h_i in Pgg_2h_func])
             xi2_2 = xi2_2 + halo_exclusion(
                 xi2_2_2h, rvir_range_3d, meff[observables.gg.idx],
                 rho_bg[observables.gg.idx], setup['delta'])
         else:
             xi2_2 = np.array(
-                [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-                for P_inter_i in P_inter_2])
+                [power_to_corr_ogata(Pgg_func_i, rvir_range_3d)
+                for Pgg_func_i in Pgg_func])
         if setup['return'] == 'xi':
             xi_out_i_2 = array(
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)
@@ -393,18 +394,18 @@ def model(theta, R): #, calculate_covariance=False):
     if observables.mm:
         #if ingredients['haloexclusion']:
         #    xi2_3 = np.array(
-        #        [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-        #        for P_inter_i in P_inter_3])
+        #        [power_to_corr_ogata(Pmm_func_i, rvir_range_3d)
+        #        for Pmm_func_i in Pmm_func])
         #    xi2_3_2h = np.array(
-        #        [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-        #        for P_inter_i in P_inter_3_2h])
+        #        [power_to_corr_ogata(Pmm_2h_func_i, rvir_range_3d)
+        #        for Pmm_2h_func_i in Pmm_2h_func])
         #    xi2_3 = xi2_3 + halo_exclusion(
         #    xi2_3_2h, rvir_range_3d, meff[observables.mm.idx],
         #    rho_bg[observables.mm.idx], setup['delta'])
         #else:
         xi2_3 = np.array(
-            [power_to_corr_ogata(P_inter_i, rvir_range_3d)
-            for P_inter_i in P_inter_3])
+            [power_to_corr_ogata(Pmm_func_i, rvir_range_3d)
+             for Pmm_func_i in Pmm_func])
         if setup['return'] == 'xi':
             xi_out_i_3 = np.array(
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)

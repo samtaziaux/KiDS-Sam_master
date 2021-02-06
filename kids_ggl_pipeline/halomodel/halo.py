@@ -79,7 +79,7 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
-def model(theta, R): #, calculate_covariance=False):
+def model(theta, R):
 
     # ideally we would move this to somewhere separate later on
     preamble(theta, R)
@@ -148,7 +148,7 @@ def model(theta, R): #, calculate_covariance=False):
         output[observables.mlf.idx] = calculate_mlf(
             z_mlf, observables, ingredients, mass_range, theta)
 
-    """Power spectra"""
+    ### Power spectra ###
 
     uk_c, uk_s = calculate_uk(
         setup, observables, ingredients, z, mass_range, rho_bg,
@@ -162,62 +162,35 @@ def model(theta, R): #, calculate_covariance=False):
         beta_interp = pickle.load(dill_file)
     print(beta_interp([0.5, 12.3, 12.8, 1e-1]))
 
-    Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm], rho_bg[idx_gm], z[idx_gm])])
-    Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i, mass_range, beta_interp, k_range_lin, z_i) for hmf_i, pop_g_i, ngal_i, z_i in zip(hmf[idx_gg], pop_g[idx_gg], ngal[idx_gg], z[idx_gg])])
+    Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i,
+                         mass_range, beta_interp, k_range_lin, z_i)
+                 for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i
+                 in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm],
+                        rho_bg[idx_gm], z[idx_gm])])
+    Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i, mass_range,
+                         beta_interp, k_range_lin, z_i)
+                 for hmf_i, pop_g_i, ngal_i, z_i
+                 in zip(hmf[idx_gg], pop_g[idx_gg], ngal[idx_gg], z[idx_gg])])
     """
-
-    # damping of the 1h power spectra at small k
-    F_k1 = sp.erf(setup['k_range_lin']/0.1)
-    F_k2 = np.ones_like(setup['k_range_lin'])
-    #F_k2 = sp.erfc(setup['k_range_lin']/10.0)
-
-    # Galaxy - dark matter spectra (for lensing)
-    bias = c_twohalo
-    bias = array([bias]*setup['k_range_lin'].size).T
-    if setup['delta_ref'] == 'SOCritical':
-        bias = bias * omegam
 
     if not ingredients['nzlens']:
         rho_bg = rho_bg[...,0]
 
+    Pgm, Pgg, Pmm = calculate_power_spectra(
+            setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
+            c_twohalo, pop_g, pop_c, pop_s, uk_c, uk_s, ngal)
     if observables.gm:
-        Pgm_c, Pgm_s, Pgm_2h = calculate_Pgm(
-            setup, observables, ingredients, hmf, mass_range, dndm, rho_bg,
-            bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, F_k1, F_k2)
-
-        if ingredients['haloexclusion'] and setup['return'] != 'power':
+        Pgm_c, Pgm_s, Pgm_2h = Pgm
+        Pgm_k = Pgm_c + Pgm_s + Pgm_2h
+        if ingredients['haloexclusion']:
             Pgm_k_t = Pgm_c + Pgm_s
-            Pgm_k = Pgm_c + Pgm_s + Pgm_2h
-        else:
-            Pgm_k = Pgm_c + Pgm_s + Pgm_2h
-
-        # finally integrate over (weight by, really) lens redshift
-        if ingredients['nzlens']:
-            intnorm = np.sum(nz, axis=0)
-            meff[observables.gm.idx] \
-                = np.sum(nz*meff[observables.gm.idx], axis=0) / intnorm
-
-    # Galaxy - galaxy spectra (for clustering)
     if observables.gg:
-        Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = calculate_Pgg(
-            setup, observables, ingredients, hmf, mass_range, dndm, bias,
-            pop_g, pop_c, pop_s, uk_s, ngal, F_k1, F_k2)
-
-        if ingredients['haloexclusion'] and setup['return'] != 'power':
+        Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = Pgg
+        Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
+        if ingredients['haloexclusion']:
             Pgg_k_t = Pgg_c + 2*Pgg_cs + Pgg_s
-            Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
-        else:
-            Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
-
-    # Matter - matter spectra
     if observables.mm:
-        Pmm_1h, Pmm_2h = calculate_Pmm(
-            setup, observables, ingredients, hmf, mass_range, dndm, uk_c,
-            F_k1, F_k2)
-        #if ingredients['haloexclusion'] and setup['return'] != 'power':
-        #    Pmm_k_t = Pmm_1h
-        #    Pmm_k = Pmm_1h + Pmm_2h
-        #else:
+        Pmm_1h, Pmm_2h = Pmm
         Pmm_k = Pmm_1h + Pmm_2h
 
     # Outputs
@@ -855,6 +828,67 @@ def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
     else:
         Pmm_1h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
     return Pmm_1h, Pmm_2h
+
+
+def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
+                            dndm, rho_bg, c_twohalo, pop_g, pop_c, pop_s,
+                            uk_c, uk_s, ngal):
+    """Wrapper to calculate gm, gg, and/or mm power spectra"""
+    # Galaxy - dark matter spectra (for lensing)
+    bias = c_twohalo
+    bias = array([bias]*setup['k_range_lin'].size).T
+    if setup['delta_ref'] == 'SOCritical':
+        bias = bias * omegam
+
+    # damping of the 1h power spectra at small k
+    F_k1 = sp.erf(setup['k_range_lin']/0.1)
+    F_k2 = np.ones_like(setup['k_range_lin'])
+    #F_k2 = sp.erfc(setup['k_range_lin']/10.0)
+
+    output = [[], [], []]
+
+    if observables.gm:
+        Pgm_c, Pgm_s, Pgm_2h = calculate_Pgm(
+            setup, observables, ingredients, hmf, mass_range, dndm, rho_bg,
+            bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, F_k1, F_k2)
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            Pgm_k_t = Pgm_c + Pgm_s
+            Pgm_k = Pgm_c + Pgm_s + Pgm_2h
+        else:
+            Pgm_k = Pgm_c + Pgm_s + Pgm_2h
+        # finally integrate over (weight by, really) lens redshift
+        if ingredients['nzlens']:
+            intnorm = np.sum(nz, axis=0)
+            meff[observables.gm.idx] \
+                = np.sum(nz*meff[observables.gm.idx], axis=0) / intnorm
+        output[0] = (Pgm_c, Pgm_s, Pgm_2h)
+
+    # Galaxy - galaxy spectra (for clustering)
+    if observables.gg:
+        Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = calculate_Pgg(
+            setup, observables, ingredients, hmf, mass_range, dndm, bias,
+            pop_g, pop_c, pop_s, uk_s, ngal, F_k1, F_k2)
+
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            Pgg_k_t = Pgg_c + 2*Pgg_cs + Pgg_s
+            Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
+        else:
+            Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
+        output[1] = (Pgg_c, Pgg_s, Pgg_cs, Pgg_2h)
+
+    # Matter - matter spectra
+    if observables.mm:
+        Pmm_1h, Pmm_2h = calculate_Pmm(
+            setup, observables, ingredients, hmf, mass_range, dndm, uk_c,
+            F_k1, F_k2)
+        #if ingredients['haloexclusion'] and setup['return'] != 'power':
+        #    Pmm_k_t = Pmm_1h
+        #    Pmm_k = Pmm_1h + Pmm_2h
+        #else:
+        #Pmm_k = Pmm_1h + Pmm_2h
+        output[2] = (Pmm_1h, Pmm_2h)
+
+    return output
 
 
 def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,

@@ -151,32 +151,16 @@ def model(theta, R): #, calculate_covariance=False):
 
     """Calculating halo model"""
 
+    # can probably move this into populations()
     completeness = calculate_completeness(
         z, observables, selection, ingredients)
-
     pop_c, pop_s = populations(
         observables, ingredients, completeness, mass_range, theta)
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
-    ngal = np.empty(observables.nbins)
-    meff = np.empty(observables.nbins)
-    if observables.gm:
-        ngal[observables.gm.idx] = hod.nbar(
-            dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range)
-        meff[observables.gm.idx] = hod.Mh_effective(
-            dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range,
-            return_log=observables.gm.is_log)
-    if observables.gg:
-        ngal[observables.gg.idx] = hod.nbar(
-            dndm[observables.gg.idx], pop_g[observables.gg.idx], mass_range)
-        meff[observables.gg.idx] = hod.Mh_effective(
-            dndm[observables.gg.idx], pop_g[observables.gg.idx], mass_range,
-            return_log=observables.gg.is_log)
-    if observables.mm:
-        ngal[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
-        meff[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
+    ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range)
 
     # Luminosity or mass function as an output:
     if observables.mlf:
@@ -863,6 +847,27 @@ def calculate_completeness(z, observables, selection, ingredients):
     else:
         assert completeness.shape == observables.sampling.shape
     return completeness
+
+
+def calculate_ngal(observables, pop_g, dndm, mass_range):
+    ngal = np.empty(observables.nbins)
+    meff = np.empty(observables.nbins)
+    if observables.gm:
+        ngal[observables.gm.idx] = hod.nbar(
+            dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range)
+        meff[observables.gm.idx] = hod.Mh_effective(
+            dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range,
+            return_log=observables.gm.is_log)
+    if observables.gg:
+        ngal[observables.gg.idx] = hod.nbar(
+            dndm[observables.gg.idx], pop_g[observables.gg.idx], mass_range)
+        meff[observables.gg.idx] = hod.Mh_effective(
+            dndm[observables.gg.idx], pop_g[observables.gg.idx], mass_range,
+            return_log=observables.gg.is_log)
+    if observables.mm:
+        ngal[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
+        meff[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
+    return ngal, meff
 
 
 def load_cosmology(cosmo):

@@ -176,63 +176,36 @@ def model(theta, R):
     if not ingredients['nzlens']:
         rho_bg = rho_bg[...,0]
 
+    # spectra that are not required are just dummy variables
     Pgm, Pgg, Pmm = calculate_power_spectra(
             setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
-            c_twohalo, pop_g, pop_c, pop_s, uk_c, uk_s, ngal)
+            c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal)
     if observables.gm:
         Pgm_c, Pgm_s, Pgm_2h = Pgm
-        Pgm_k = Pgm_c + Pgm_s + Pgm_2h
-        if ingredients['haloexclusion']:
-            Pgm_k_t = Pgm_c + Pgm_s
+        Pgm_1h = Pgm_c + Pgm_s
+        Pgm = (Pgm_1h, Pgm_2h) if ingredients['haloexclusion'] \
+            else Pgm_1h + Pgm_2h
     if observables.gg:
+        ncen = hod.nbar(dndm[observables.gg.idx], pop_c[observables.gg.idx],
+                        mass_range)
+        nsat = hod.nbar(dndm[observables.gg.idx], pop_s[observables.gg.idx],
+                        mass_range)
         Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = Pgg
-        Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
-        if ingredients['haloexclusion']:
-            Pgg_k_t = Pgg_c + 2*Pgg_cs + Pgg_s
+        Pgg_1h = Pgg_c + 2*Pgg_cs + Pgg_s
+        Pgg = (Pgg_1h, Pgg_2h) if ingredients['haloexclusion'] \
+            else Pgg_1h + Pgg_2h
     if observables.mm:
         Pmm_1h, Pmm_2h = Pmm
-        Pmm_k = Pmm_1h + Pmm_2h
+        Pmm = Pmm_1h + Pmm_2h
 
-    # Outputs
+    ### interpolate power spectra ###
+
+    Pgm_func, Pgg_func, Pmm_func = interpolate_power(
+        setup, observables, ingredients, Pgm, Pgg, Pmm)
 
     if observables.gm:
-        # note this doesn't include the point mass! also, we probably
-        # need to return k
-        if setup['return'] == 'power':
-            if ingredients['nzlens']:
-                Pgm_k = np.sum(z*Pgm_k, axis=1) / intnorm
-            Pgm_func = [UnivariateSpline(
-                           setup['k_range'], np.log(Pg_k_i), s=0, ext=0)
-                        for Pg_k_i in Pgm_k]
-        else:
-            if ingredients['nzlens']:
-                if ingredients['haloexclusion'] and setup['return'] != 'power':
-                    Pgm_func = [[UnivariateSpline(setup['k_range'], logPg_ij,
-                                                 s=0, ext=0)
-                                 for logPg_ij in logPg_i]
-                                for logPg_i in np.log(Pgm_k_t)]
-                    Pgm_2h_func = [[UnivariateSpline(setup['k_range'],
-                                                    logPg_ij, s=0, ext=0)
-                                    for logPg_ij in logPg_i]
-                                   for logPg_i in np.log(Pgm_2h)]
-                else:
-                    Pgm_func = [[UnivariateSpline(setup['k_range'], logPg_ij,
-                                                 s=0, ext=0)
-                                 for logPg_ij in logPg_i]
-                                for logPg_i in np.log(Pgm_k)]
-            else:
-                if ingredients['haloexclusion'] and setup['return'] != 'power':
-                    Pgm_func = [UnivariateSpline(setup['k_range'], Pg_k_i,
-                                                s=0, ext=0)
-                                for Pg_k_i in np.log(Pgm_k_t)]
-                    Pgm_2h_func = [UnivariateSpline(setup['k_range'],
-                                                   Pg_2h_i, s=0, ext=0)
-                                   for Pg_2h_i in np.log(Pgm_2h)]
-                else:
-                    Pgm_func = [UnivariateSpline(setup['k_range'],
-                                                 Pg_k_i, s=0, ext=0)
-                                for Pg_k_i in np.log(Pgm_k)]
-
+        if ingredients['haloexclusion'] and setup['return'] != 'power':
+            Pgm_func, Pgm_2h_func = Pgm_func
         if setup['return'] == 'all':
             output[observables.gm.idx] = Pgm_k
         if setup['return'] == 'power':
@@ -241,18 +214,6 @@ def model(theta, R):
             output[observables.gm.idx] = Pgm_out
 
     if observables.gg:
-        if ingredients['haloexclusion'] and setup['return'] != 'power':
-            Pgg_func = [UnivariateSpline(setup['k_range'], Pgg_k_i,
-                                          s=0, ext=0)
-                         for Pgg_k_i in np.log(Pgg_k_t)]
-            Pgg_2h_func = [UnivariateSpline(setup['k_range'], Pgg_2h_i,
-                                             s=0, ext=0)
-                            for Pgg_2h_i in np.log(Pgg_2h)]
-        else:
-            Pgg_func = [UnivariateSpline(setup['k_range'], Pgg_k_i, s=0,
-                                          ext=0)
-                         for Pgg_k_i in np.log(Pgg_k)]
-
         if setup['return'] == 'all':
             output[observables.gg.idx] = Pgg_k
         if setup['return'] == 'power':
@@ -261,15 +222,6 @@ def model(theta, R):
             output[observables.gg.idx] = Pgg_out
 
     if observables.mm:
-        #if ingredients['haloexclusion'] and setup['return'] != 'power':
-        #    Pmm_func = [UnivariateSpline(setup['k_range'], np.log(Pmm_k_i), s=0, ext=0)
-        #            for Pmm_k_i in Pmm_k_t]
-        #    Pmm_2h_func = [UnivariateSpline(setup['k_range'], np.log(Pmm_2h_i), s=0, ext=0)
-        #            for Pmm_2h_i in Pmm_2h]
-        #else:
-        Pmm_func = [UnivariateSpline(setup['k_range'], Pmm_k_i, s=0, ext=0)
-                     for Pmm_k_i in np.log(Pmm_k)]
-
         if setup['return'] == 'all':
             output[observables.mm.idx] = Pmm_k
         if setup['return'] == 'power':
@@ -288,42 +240,16 @@ def model(theta, R):
 
     ### correlation functions ###
 
-    # alias
+    xi_gm, xi_gg, xi_mm = calculate_correlations(
+        setup, observables, ingredients, Pgm_func, Pgg_func, Pmm_func)
+
+    # for now
+    xi2 = xi_gm
+    xi2_2 = xi_gg
+    xi2_3 = xi_mm
     rvir_range_3d = setup['rvir_range_3d']
-    rvir_range_3d_i = setup['rvir_range_3d_interp']
 
     if observables.gm:
-        if ingredients['nzlens']:
-            if ingredients['haloexclusion']:
-                xi2 = np.array(
-                    [[power_to_corr_ogata(Pgm_func_ji, rvir_range_3d)
-                      for Pgm_func_ji in Pgm_func_j] for Pgm_func_j in Pgm_func])
-                xi2_2h = np.array(
-                    [[power_to_corr_ogata(Pgm_2h_func_ji, rvir_range_3d)
-                      for Pgm_2h_func_ji in Pgm_2h_func_j]
-                     for Pgm_2h_func_j in Pgm_2h_func])
-                xi2 = xi2 + halo_exclusion(
-                    xi2_2h, rvir_range_3d, meff[observables.gm.idx],
-                    rho_bg[observables.gm.idx], setup['delta'])
-            else:
-                xi2 = np.array(
-                    [[power_to_corr_ogata(Pgm_func_ji, rvir_range_3d)
-                      for Pgm_func_ji in Pgm_func_j] for Pgm_func_j in Pgm_func])
-        else:
-            if ingredients['haloexclusion']:
-                xi2 = np.array(
-                    [power_to_corr_ogata(Pgm_func_i, rvir_range_3d)
-                     for Pgm_func_i in Pgm_func])
-                xi2_2h = np.array(
-                    [power_to_corr_ogata(Pgm_2h_func_i, rvir_range_3d)
-                     for Pgm_2h_func_i in Pgm_2h_func])
-                xi2 = xi2 + halo_exclusion(
-                    xi2_2h, rvir_range_3d, meff[observables.gm.idx],
-                    rho_bg[observables.gm.idx], setup['delta'])
-            else:
-                xi2 = np.array(
-                    [power_to_corr_ogata(Pgm_func_i, rvir_range_3d)
-                     for Pgm_func_i in Pgm_func])
         # not yet allowed
         if setup['return'] == 'xi':
             if ingredients['nzlens']:
@@ -338,22 +264,7 @@ def model(theta, R):
             if ingredients['nzlens']:
                 xi2 = np.sum(z*xi2, axis=1) / intnorm
             output.append(xi2)
-
     if observables.gg:
-        if ingredients['haloexclusion']:
-            xi2_2 = np.array(
-                [power_to_corr_ogata(Pgg_func_i, rvir_range_3d)
-                for Pgg_func_i in Pgg_func])
-            xi2_2_2h = np.array(
-                [power_to_corr_ogata(Pgg_2h_i, rvir_range_3d)
-                for Pgg_2h_i in Pgg_2h_func])
-            xi2_2 = xi2_2 + halo_exclusion(
-                xi2_2_2h, rvir_range_3d, meff[observables.gg.idx],
-                rho_bg[observables.gg.idx], setup['delta'])
-        else:
-            xi2_2 = np.array(
-                [power_to_corr_ogata(Pgg_func_i, rvir_range_3d)
-                for Pgg_func_i in Pgg_func])
         if setup['return'] == 'xi':
             xi_out_i_2 = array(
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)
@@ -363,22 +274,7 @@ def model(theta, R):
             output[observables.gg.idx] = xi_out_2
         if setup['return'] == 'all':
             output.append(xi2_2)
-
     if observables.mm:
-        #if ingredients['haloexclusion']:
-        #    xi2_3 = np.array(
-        #        [power_to_corr_ogata(Pmm_func_i, rvir_range_3d)
-        #        for Pmm_func_i in Pmm_func])
-        #    xi2_3_2h = np.array(
-        #        [power_to_corr_ogata(Pmm_2h_func_i, rvir_range_3d)
-        #        for Pmm_2h_func_i in Pmm_2h_func])
-        #    xi2_3 = xi2_3 + halo_exclusion(
-        #    xi2_3_2h, rvir_range_3d, meff[observables.mm.idx],
-        #    rho_bg[observables.mm.idx], setup['delta'])
-        #else:
-        xi2_3 = np.array(
-            [power_to_corr_ogata(Pmm_func_i, rvir_range_3d)
-             for Pmm_func_i in Pmm_func])
         if setup['return'] == 'xi':
             xi_out_i_3 = np.array(
                 [UnivariateSpline(rvir_range_3d, np.nan_to_num(si), s=0)
@@ -409,6 +305,9 @@ def model(theta, R):
     # accuracy of the ESD when returning sigma or kappa
     #rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
     #    else rvir_range_3d_i
+
+    # alias
+    rvir_range_3d_i = setup['rvir_range_3d_interp']
 
     if observables.gm:
         if ingredients['nzlens']:
@@ -664,6 +563,88 @@ def calculate_completeness(observables, selection, ingredients, z):
     return completeness
 
 
+def calculate_correlations_single():
+    return
+
+def calculate_correlations(setup, observables, ingredients, Pgm_func,
+                           Pgg_func, Pmm_func):
+    # alias
+    rvir_range_3d = setup['rvir_range_3d']
+    xi_gm = None
+    xi_gg = None
+    xi_mm = None
+
+    if observables.gm:
+        if ingredients['nzlens']:
+            if ingredients['haloexclusion']:
+                xi2 = np.array(
+                    [[power_to_corr_ogata(Pgm_func_ji, rvir_range_3d)
+                      for Pgm_func_ji in Pgm_func_j] for Pgm_func_j in Pgm_func])
+                xi2_2h = np.array(
+                    [[power_to_corr_ogata(Pgm_2h_func_ji, rvir_range_3d)
+                      for Pgm_2h_func_ji in Pgm_2h_func_j]
+                     for Pgm_2h_func_j in Pgm_2h_func])
+                xi2 = xi2 + halo_exclusion(
+                    xi2_2h, rvir_range_3d, meff[observables.gm.idx],
+                    rho_bg[observables.gm.idx], setup['delta'])
+            else:
+                xi2 = np.array(
+                    [[power_to_corr_ogata(Pgm_func_ji, rvir_range_3d)
+                      for Pgm_func_ji in Pgm_func_j] for Pgm_func_j in Pgm_func])
+        else:
+            if ingredients['haloexclusion']:
+                xi2 = np.array(
+                    [power_to_corr_ogata(Pgm_func_i, rvir_range_3d)
+                     for Pgm_func_i in Pgm_func])
+                xi2_2h = np.array(
+                    [power_to_corr_ogata(Pgm_2h_func_i, rvir_range_3d)
+                     for Pgm_2h_func_i in Pgm_2h_func])
+                xi2 = xi2 + halo_exclusion(
+                    xi2_2h, rvir_range_3d, meff[observables.gm.idx],
+                    rho_bg[observables.gm.idx], setup['delta'])
+            else:
+                xi2 = np.array(
+                    [power_to_corr_ogata(Pgm_func_i, rvir_range_3d)
+                     for Pgm_func_i in Pgm_func])
+        xi_gm = xi2
+
+    if observables.gg:
+        if ingredients['haloexclusion']:
+            xi2_2 = np.array(
+                [power_to_corr_ogata(Pgg_func_i, rvir_range_3d)
+                for Pgg_func_i in Pgg_func])
+            xi2_2_2h = np.array(
+                [power_to_corr_ogata(Pgg_2h_i, rvir_range_3d)
+                for Pgg_2h_i in Pgg_2h_func])
+            xi2_2 = xi2_2 + halo_exclusion(
+                xi2_2_2h, rvir_range_3d, meff[observables.gg.idx],
+                rho_bg[observables.gg.idx], setup['delta'])
+        else:
+            xi2_2 = np.array(
+                [power_to_corr_ogata(Pgg_func_i, rvir_range_3d)
+                for Pgg_func_i in Pgg_func])
+        xi_gg = xi2_2
+
+    if observables.mm:
+        #if ingredients['haloexclusion']:
+        #    xi2_3 = np.array(
+        #        [power_to_corr_ogata(Pmm_func_i, rvir_range_3d)
+        #        for Pmm_func_i in Pmm_func])
+        #    xi2_3_2h = np.array(
+        #        [power_to_corr_ogata(Pmm_2h_func_i, rvir_range_3d)
+        #        for Pmm_2h_func_i in Pmm_2h_func])
+        #    xi2_3 = xi2_3 + halo_exclusion(
+        #    xi2_3_2h, rvir_range_3d, meff[observables.mm.idx],
+        #    rho_bg[observables.mm.idx], setup['delta'])
+        #else:
+        xi2_3 = np.array(
+            [power_to_corr_ogata(Pmm_func_i, rvir_range_3d)
+             for Pmm_func_i in Pmm_func])
+        xi_mm = xi2_3
+
+    return xi_gm, xi_gg, xi_mm
+
+
 def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta):
     if z_mlf.size == 1 and observables.mlf.nbins > 1:
         z_mlf = z_mlf*np.ones(observables.mlf.nbins)
@@ -728,7 +709,7 @@ def calculate_ngal(observables, pop_g, dndm, mass_range):
 
 
 def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
-                  bias, pop_g, pop_c, pop_s, uk_s, ngal, F_k1, F_k2):
+                  bias, pop_g, pop_c, pop_s, uk_s, ngal, beta, F_k1, F_k2):
     if ingredients['twohalo']:
         Pgg_2h = F_k2 * bias * array(
         [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
@@ -739,18 +720,12 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
     else:
         Pgg_2h = F_k2 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
 
-    ncen = hod.nbar(dndm[observables.gg.idx], pop_c[observables.gg.idx],
-                    mass_range)
-    nsat = hod.nbar(dndm[observables.gg.idx], pop_s[observables.gg.idx],
-                    mass_range)
-
     #if ingredients['centrals']:
         #Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
     #else:
     Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
 
     if ingredients['satellites']:
-        beta = s_beta
         Pgg_s = F_k1 * gg_sat_analy(
             dndm[observables.gg.idx], uk_s[observables.gg.idx],
             pop_s[observables.gg.idx], ngal[observables.gg.idx], beta,
@@ -831,8 +806,8 @@ def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
 
 
 def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
-                            dndm, rho_bg, c_twohalo, pop_g, pop_c, pop_s,
-                            uk_c, uk_s, ngal):
+                            dndm, rho_bg, c_twohalo, s_beta, pop_g, pop_c,
+                            pop_s, uk_c, uk_s, ngal):
     """Wrapper to calculate gm, gg, and/or mm power spectra"""
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
@@ -867,7 +842,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
     if observables.gg:
         Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = calculate_Pgg(
             setup, observables, ingredients, hmf, mass_range, dndm, bias,
-            pop_g, pop_c, pop_s, uk_s, ngal, F_k1, F_k2)
+            pop_g, pop_c, pop_s, uk_s, ngal, s_beta, F_k1, F_k2)
 
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgg_k_t = Pgg_c + 2*Pgg_cs + Pgg_s
@@ -933,6 +908,56 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     uk_c = uk_c / expand_dims(uk_c[...,0], -1)
 
     return uk_c, uk_s
+
+
+def interpolate_power_single(logk, logPk, s=0, ext=0):
+    if len(logPk.shape) == 3:
+        logPk_func = [[UnivariateSpline(logk, logPk_ij, s=s, ext=ext)
+                       for logPk_ij in logPk_i] for logPk_i in logPk]
+    else:
+        logPk_func = [UnivariateSpline(logk, logPk_i, s=s, ext=ext)
+                      for logPk_i in logPk]
+    return logPk_func
+
+
+def interpolate_power(setup, observables, ingredients, Pgm, Pgg, Pmm):
+    """Produce UnivariateSplines of log P(log k)"""
+    # dummy variables in case any are disabled
+    Pgm_func = None
+    Pgg_func = None
+    Pmm_func = None
+    # galaxy-matter
+    if observables.gm:
+        # in this case Pgm stands for Pgm_1h
+        if ingredients['haloexclusion']:
+            Pgm, Pgm_2h = Pgm
+        if setup['return'] == 'power':
+            if ingredients['haloexclusion']:
+                Pgm = Pgm_1h + Pgm_2h
+            if ingredients['nzlens']:
+                Pgm = np.sum(z*Pgm, axis=1) / intnorm
+            Pgm_func = interpolate_power_single(setup['k_range'], np.log(Pgm))
+        else:
+            Pgm_func = interpolate_power_single(setup['k_range'], np.log(Pgm))
+            if ingredients['haloexclusion']:
+                Pgm_2h_func = interpolate_power_single(
+                    setup['k_range'], np.log(Pgm_2h))
+                Pgm_func = (Pgm_func, Pgm_2h_func)
+    # galaxy-galaxy
+    if observables.gg:
+        # in this case Pgg stands for Pgg_1h
+        if ingredients['haloexclusion']:
+            Pgg, Pgg_2h = Pgg
+        Pgg_func = interpolate_power_single(setup['k_range'], np.log(Pgg))
+        if ingredients['haloexclusion']:
+            Pgg_2h_func = interpolate_power_single(
+                setup['k_range'], np.log(Pgg_2h))
+            Pgg_func = (Pgg_func, Pgg_2h_func)
+    # matter-matter
+    if observables.mm:
+        Pmm_func = interpolate_power_single(setup['k_range'], np.log(Pgg))
+
+    return Pgm_func, Pgg_func, Pmm_func
 
 
 def load_cosmology(cosmo):

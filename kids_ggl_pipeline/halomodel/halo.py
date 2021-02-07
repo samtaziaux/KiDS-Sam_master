@@ -204,8 +204,8 @@ def model(theta, R):
         setup, observables, ingredients, Pgm, Pgg, Pmm)
 
     if observables.gm:
-        if ingredients['haloexclusion'] and setup['return'] != 'power':
-            Pgm_func, Pgm_2h_func = Pgm_func
+        #if ingredients['haloexclusion'] and setup['return'] != 'power':
+            #Pgm_func, Pgm_2h_func = Pgm_func
         if setup['return'] == 'all':
             output[observables.gm.idx] = Pgm_k
         if setup['return'] == 'power':
@@ -563,17 +563,54 @@ def calculate_completeness(observables, selection, ingredients, z):
     return completeness
 
 
-def calculate_correlations_single():
-    return
+def calculate_correlations_single(setup, observable, ingredients, Pk_func):
+    """Calculate correlation functions for a single observable
+
+    Note this takes a single observable rather than all observables as
+    usual
+    """
+    if ingredients['haloexclusion']:
+        Pk_func, Pk_2h_func = Pk_func
+    # how best to test whether there are one or two dimensions?
+    if not np.iterable(Pk_func[0]):
+        Pk_func = [Pk_func]
+        if ingredients['haloexclusion']:
+            Pk_2h_func = [Pk_2h_func]
+    xi2 = np.array([[power_to_corr_ogata(Pk_func_ij, setup['rvir_range_3d'])
+                     for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_func])
+    # only gm and gg because the matter correlation does not know about
+    # halos I guess?
+    if ingredients['haloexclusion'] and observable.name in ('gm','gg'):
+        xi2_2h = [[power_to_corr_ogata(Pk_func_ij, setup['rvir_range_3d'])
+                   for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_func]
+        xi2 = xi2 + halo_exclusion(
+            xi2_2h, setup['rvir_range_3d'], meff[observable.idx],
+            rho_bg[observable.idx], setup['delta'])
+    if len(xi2) == 1:
+        xi2 = xi2[0]
+    return xi2
+
 
 def calculate_correlations(setup, observables, ingredients, Pgm_func,
                            Pgg_func, Pmm_func):
     # alias
-    rvir_range_3d = setup['rvir_range_3d']
-    xi_gm = None
-    xi_gg = None
-    xi_mm = None
+    #rvir_range_3d = setup['rvir_range_3d']
+    xi2_gm = None
+    xi2_gg = None
+    xi2_mm = None
 
+    if observables.gm:
+        xi2_gm = calculate_correlations_single(
+            setup, observables.gm, ingredients, Pgm_func)
+    if observables.gg:
+        xi2_gg = calculate_correlations_single(
+            setup, observables.gg, ingredients, Pgg_func)
+    if observables.mm:
+        xi2_mm = calculate_correlations_single(
+            setup, observables.mm, ingredients, Pgg_func)
+
+    return xi2_gm, xi2_gg, xi2_mm
+    """
     if observables.gm:
         if ingredients['nzlens']:
             if ingredients['haloexclusion']:
@@ -643,6 +680,7 @@ def calculate_correlations(setup, observables, ingredients, Pgm_func,
         xi_mm = xi2_3
 
     return xi_gm, xi_gg, xi_mm
+    """
 
 
 def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta):
@@ -933,7 +971,7 @@ def interpolate_power(setup, observables, ingredients, Pgm, Pgg, Pmm):
             Pgm, Pgm_2h = Pgm
         if setup['return'] == 'power':
             if ingredients['haloexclusion']:
-                Pgm = Pgm_1h + Pgm_2h
+                Pgm = Pgm + Pgm_2h
             if ingredients['nzlens']:
                 Pgm = np.sum(z*Pgm, axis=1) / intnorm
             Pgm_func = interpolate_power_single(setup['k_range'], np.log(Pgm))

@@ -120,6 +120,8 @@ def model(theta, R):
     # and reduced shear
     if len(cosmo) == size_cosmo+1:
         zs = cosmo[-1]
+    else:
+        zs = None
 
     z = format_z(z, nbins)
     ### load halo mass functions ###
@@ -240,7 +242,8 @@ def model(theta, R):
     ### correlation functions ###
 
     xi_gm, xi_gg, xi_mm = calculate_correlations(
-        setup, observables, ingredients, Pgm_func, Pgg_func, Pmm_func)
+        setup, observables, ingredients, Pgm_func, Pgg_func, Pmm_func, rho_bg,
+        meff)
 
     if setup['return'] in ('all', 'xi'):
         output = output_xi(
@@ -270,8 +273,8 @@ def model(theta, R):
     rvir_range_3d_i = setup['rvir_range_3d_interp']
 
     output, sigma_gm, sigma_gg, sigma_mm = calculate_surface_density(
-        setup, observables, ingredients, output, xi_gm, xi_gg, xi_mm,
-        c_pm, rho_bg, z, nz)
+        setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
+        rho_bg, z, nz, c_pm, output, cosmo_model, zs)
 
     if setup['return'] in ('wp', 'esd_wp'):
         wp_out_i = np.array(
@@ -408,7 +411,8 @@ def calculate_completeness(observables, selection, ingredients, z):
     return completeness
 
 
-def calculate_correlations_single(setup, observable, ingredients, Pk_func):
+def calculate_correlations_single(setup, observable, ingredients, Pk_func,
+                                  rho_bg, meff):
     """Calculate correlation functions for a single observable
 
     Note this takes a single observable rather than all observables as
@@ -425,7 +429,7 @@ def calculate_correlations_single(setup, observable, ingredients, Pk_func):
                      for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_func])
     # only gm and gg because the matter correlation does not know about
     # halos I guess?
-    if ingredients['haloexclusion'] and observable.name in ('gm','gg'):
+    if ingredients['haloexclusion'] and observable.obstype in ('gm','gg'):
         xi2_2h = [[power_to_corr_ogata(Pk_func_ij, setup['rvir_range_3d'])
                    for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_func]
         xi2 = xi2 + halo_exclusion(
@@ -437,19 +441,19 @@ def calculate_correlations_single(setup, observable, ingredients, Pk_func):
 
 
 def calculate_correlations(setup, observables, ingredients, Pgm_func,
-                           Pgg_func, Pmm_func):
+                           Pgg_func, Pmm_func, rho_bg, meff):
     xi2_gm = None
     xi2_gg = None
     xi2_mm = None
     if observables.gm:
         xi2_gm = calculate_correlations_single(
-            setup, observables.gm, ingredients, Pgm_func)
+            setup, observables.gm, ingredients, Pgm_func, rho_bg, meff)
     if observables.gg:
         xi2_gg = calculate_correlations_single(
-            setup, observables.gg, ingredients, Pgg_func)
+            setup, observables.gg, ingredients, Pgg_func, rho_bg, meff)
     if observables.mm:
         xi2_mm = calculate_correlations_single(
-            setup, observables.mm, ingredients, Pgg_func)
+            setup, observables.mm, ingredients, Pgg_func, rho_bg, meff)
     return xi2_gm, xi2_gg, xi2_mm
 
 
@@ -674,135 +678,99 @@ def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
     return output
 
 
-def calculate_surface_density(setup, observables, ingredients, output,
-                              xi_gm, xi_gg, xi_mm, c_pm, rho_bg, z, nz):
+def calculate_surface_density_single(setup, observable, ingredients, xi2,
+                                     rho_bg, z, nz, c_pm, output,
+                                     cosmo_model, zs):
+    if observable.obstype == 'gm' and ingredients['nzlens']:
+        surface_density = array(
+            [[sigma(xi2_ij, rho_bg_i, setup['rvir_range_3d'],
+                    setup['rvir_range_3d_interp'])
+            for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
+        z = expand_dims(z, -1)
+    else:
+        surface_density = array(
+            [sigma(xi2_i, rho_i, setup['rvir_range_3d'],
+             setup['rvir_range_3d_interp'])
+            for xi2_i, rho_i in zip(xi2, rho_bg)])
+
+    # esd pointmass is added at the end
+    if observable.obstype == 'gm' and ingredients['pointmass'] \
+            and setup['return'] in ('sigma', 'kappa'):
+        pointmass = c_pm[1]/(2*np.pi) * array(
+            [10**m_pm / r_i**2
+             for m_pm, r_i in zip(c_pm[0], observable.R)])
+        surface_density = surface_density + pointmass
+
+    if setup['distances'] == 'proper':
+        surface_density *= (1+z)**2
+
+    if observable.obstype == 'gm':
+        if setup['return'] == 'kappa':
+            surface_density /= sigma_crit(cosmo_model, z, zs)
+        if ingredients['nzlens']:
+            # haven't checked the denominator below
+            norm = trapz(nz, z, axis=0)
+            surface_density = \
+                trapz(surface_density * expand_dims(nz, -1), z[:,0], axis=0) \
+                / norm[:,None]
+            zw = nz * sigma_crit(cosmo_model, z, zs) \
+                if setup['return'] == 'kappa' else nz
+            zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
+        # in Msun/pc^2
+        if setup['return'] != 'kappa':
+            surface_density /= 1e12
+    if observable.obstype == 'gg' \
+            and setup['return'] not in ('kappa', 'wp', 'esd_wp'):
+        surface_density /= 1e12
+    if observable.obstype == 'mm' and setup['return'] != 'kappa':
+        surface_density /= 1e12
+
+    # fill/interpolate nans
+    mask = (surface_density <= 0) | (surface_density >= 1e20)
+    surface_density[mask] = np.nan
+    for i in range(observable.nbins):
+        surface_density[i] = fill_nan(surface_density[i])
+    if setup['return'] in ('kappa', 'sigma'):
+        surface_density_r = array(
+            [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
+             for si in surface_density])
+        surface_density = np.array(
+            [s_r(r_i) for s_r, r_i in zip(surface_density_r, observable.R)])
+        #return [sigma_gm, meff]
+        if observable.nbins == 1:
+            output[observable.idx.start] = surface_density[0]
+        else:
+            output[observable.idx] = surface_density
+
+    return output, surface_density
+
+
+def calculate_surface_density(setup, observables, ingredients,
+                              xi_gm, xi_gg, xi_mm, rho_bg, z, nz, c_pm,
+                              output, cosmo_model, zs):
     rvir_range_3d = setup['rvir_range_3d']
     rvir_range_3d_i = setup['rvir_range_3d_interp']
     # dummy
     sigma_gm = None
     sigma_gg = None
     sigma_mm = None
+
     if observables.gm:
-        if ingredients['nzlens']:
-            sigma_gm = array(
-                [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_range_3d_i)
-                for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2_gm, rho_bg)])
-            """
-            if setup['distances'] == 'proper':
-                sigma_gm = trapz(
-                    sigma_gm*expand_dims(nz*(1+z)**2, -1), z[:,0], axis=0)
-            else:
-                sigma_gm = trapz(sigma_gm*expand_dims(nz, -1), z[:,0], axis=0)
-            sigma_gm = sigma_gm / trapz(nz, z, axis=0)[:,None]
-            """
-        else:
-            sigma_gm = array(
-                [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-                for xi2_i, rho_i in zip(xi_gm, rho_bg)])
-
-        # units of Msun/pc^2
-        if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
-            pointmass = c_pm[1]/(2*np.pi) * array(
-                [10**m_pm / r_i**2
-                 for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
-            sigma_gm = sigma_gm + pointmass
-
-        zo = expand_dims(z, -1) if ingredients['nzlens'] else z
-        if setup['distances'] == 'proper':
-            sigma_gm *= (1+zo)**2
-        if setup['return'] == 'kappa':
-            sigma_gm /= sigma_crit(cosmo_model, zo, zs)
-        if ingredients['nzlens']:
-            # haven't checked the denominator below
-            norm = trapz(nz, z, axis=0)
-            #if setup['return'] == 'kappa':
-                #print('sigma_crit =', sigma_crit(cosmo_model, z, zs).shape)
-            sigma_gm = \
-                trapz(sigma_gm * expand_dims(nz, -1), z[:,0], axis=0) \
-                / norm[:,None]
-            zw = nz * sigma_crit(cosmo_model, z, zs) \
-                if setup['return'] == 'kappa' else nz
-            zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
-
-        # in Msun/pc^2
-        if not setup['return'] == 'kappa':
-            sigma_gm /= 1e12
-
-        # fill/interpolate nans
-        sigma_gm[(sigma_gm <= 0) | (sigma_gm >= 1e20)] = np.nan
-        for i in range(observables.gm.nbins):
-            sigma_gm[i] = fill_nan(sigma_gm[i])
-        if setup['return'] in ('kappa', 'sigma'):
-            sigma_gm_r = array(
-                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
-                for si in sigma_gm])
-            sigma_gm = np.array(
-                [s_r(r_i)
-                 for s_r, r_i in zip(sigma_gm_r, observables.gm.R)])
-            #return [sigma_gm, meff]
-            if observables.gm.nbins == 1:
-                output[observables.gm.idx.start] = sigma_gm[0]
-            else:
-                output[observables.gm.idx] = sigma_gm
+        output, sigma_gm = calculate_surface_density_single(
+            setup, observables.gm, ingredients, xi_gm, rho_bg, z, nz, c_pm,
+            output, cosmo_model, zs)
         if setup['return'] == 'all':
             output.append(sigma_gm)
-
     if observables.gg:
-        sigma_gg = array(
-            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-            for xi2_i, rho_i in zip(xi_gg, rho_bg)])
-
-        if setup['distances'] == 'proper':
-            sigma_gg *= (1+z)**2
-
-        # in Msun/pc^2
-        if not setup['return'] in ('kappa', 'wp', 'esd_wp'):
-            sigma_gg /= 1e12
-
-        # fill/interpolate nans
-        sigma_gg[(sigma_gg <= 0) | (sigma_gg >= 1e20)] = np.nan
-        for i in range(observables.gg.nbins):
-            sigma_gg[i] = fill_nan(sigma_gg[i])
-        if setup['return'] in ('kappa', 'sigma'):
-            sigma_gg_r = array(
-                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
-                for si in sigma_gg])
-            sigma_gg = np.array(
-                [s_r(r_i) for s_r, r_i
-                 in zip(sigma_gg_r, observables.gg.R)])
-        if setup['return'] in ('kappa', 'sigma'):
-            if observables.gg.nbins == 1:
-                output[observables.gg.idx.start] = sigma_gg[0]
-            else:
-                output[observables.gg.idx] = sigma_gg
-
+        output, sigma_gg = calculate_surface_density_single(
+            setup, observables.gg, ingredients, xi_gg, rho_bg, z, nz, c_pm,
+            output, cosmo_model, zs)
+        if setup['return'] == 'all':
+            output.append(sigma_gg)
     if observables.mm:
-        sigma_mm = np.array(
-            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-             for xi2_i, rho_i in zip(xi_mm, rho_bg)])
-
-        if setup['distances'] == 'proper':
-            sigma_mm *= (1+z)**2
-        # in Msun/pc^2
-        if not setup['return'] == 'kappa':
-            sigma_mm /= 1e12
-
-        # fill/interpolate nans
-        sigma_mm[(sigma_mm <= 0) | (sigma_mm >= 1e20)] = np.nan
-        for i in range(observables.mm.nbins):
-            sigma_mm[i] = fill_nan(sigma_mm[i])
-        if setup['return'] in ('kappa', 'sigma'):
-            sigma_mm_r = array(
-                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
-                for si in sigma_mm])
-            sigma_mm = array(
-                [s_r(r_i) for s_r, r_i
-                 in zip(sigma_mm_r, observables.mm.R)])
-            #return [sigma_mm, meff]
-            if observables.mm.nbins == 1:
-                output[observables.mm.idx.start] = sigma_mm[0]
-            else:
-                output[observables.mm.idx] = sigma_mm
+        output, sigma_mm = calculate_surface_density_single(
+            setup, observables.mm, ingredients, xi_mm, rho_bg, z, nz, c_pm,
+            output, cosmo_model, zs)
         if setup['return'] == 'all':
             output.append(sigma_mm)
 
@@ -872,7 +840,7 @@ def interpolate_xi_single(observable, rvir_range_3d, xi):
 
 def output_xi_single(output, setup, observable, xi, nz=None):
     if setup['return'] == 'xi':
-        if ingredients['nzlens'] and observable.name == 'gm':
+        if ingredients['nzlens'] and observable.obstype == 'gm':
             xi = np.sum(nz*xi, axis=1) / np.sum(nz, axis=0)
         xi_out = interpolate_xi_single(observable, setup['rvir_range_3d'], xi)
         output[observable.idx] = xi_out

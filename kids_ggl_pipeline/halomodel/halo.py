@@ -96,7 +96,7 @@ def model(theta, R): #, calculate_covariance=False):
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
 
-    sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
+    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
     
     if observables.mlf:
         nbins = observables.nbins - observables.mlf.nbins
@@ -164,18 +164,13 @@ def model(theta, R): #, calculate_covariance=False):
     
     # Tinker10 should also be read from theta!
     transfer_params = \
-        {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
+        {'sigma_8': sigma8, 'n': n_s, 'lnk_min': setup['lnk_min'],
          'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
-    hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
+    hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
 
     assert np.allclose(setup['mass_range'], hmf[0].m)
     # alias
     mass_range = setup['mass_range']
-
-    rho_bg = rho_mean / omegam if setup['delta_ref'] == 'SOCritical' \
-        else rho_mean
-    # same as with redshift
-    rho_bg = expand_dims(rho_bg, -1)
 
     concentration = c_concentration[0](mass_range, *c_concentration[1:])
     if ingredients['satellites']:

@@ -868,6 +868,25 @@ def k_adaptive(r_i, r_j, limit=None):
     
     return lnk, dlnk
     
+    
+def load_cosmology(cosmo):
+    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
+    cosmo_model = Flatw0waCDM(
+        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
+        Neff=Neff, w0=w0, wa=wa)
+    return cosmo_model, sigma8, n_s, z
+
+
+def format_z(z, nbins):
+    # if a single value is given for more than one bin, assign same
+    # value to all bins
+    if z.size == 1 and nbins > 1:
+        z = z*np.ones(nbins)
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter (where the new dimension will
+    # be occupied by mass)
+    z = expand_dims(z, -1)
+    return z
 
 
 def covariance(theta, R):
@@ -892,6 +911,8 @@ def covariance(theta, R):
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
 
+    cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
+
     sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
     size_cosmo = 9
     
@@ -915,40 +936,14 @@ def covariance(theta, R):
             ' that the redshift parameters are properly set given your' \
             ' choice for the zlens parameter')
 
-    integrate_zlens = ingredients['nzlens']
 
-    # if a single value is given for more than one bin, assign same
-    # value to all bins
-    #if not np.iterable(z):
-    #    z = np.array(z)
-    if z.size == 1 and nbins > 1:
-        z = z*np.ones(nbins)
-    # this is in case redshift is used in the concentration or
-    # scaling relation or scatter (where the new dimension will
-    # be occupied by mass)
-    #z = expand_dims(z, -1)
-    if z.size != nbins:
-        raise ValueError(
-            'Number of redshift bins should be equal to the number of observable bins!')
-
-    cosmo_model = Flatw0waCDM(
-        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
-        Neff=Neff, w0=w0, wa=wa)
-
-    # Tinker10 should also be read from theta!
-    transfer_params = \
-        {'sigma_8': sigma8, 'n': n, 'lnk_min': setup['lnk_min'],
-         'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
-    hmf, rho_mean = load_hmf(z, setup, cosmo_model, transfer_params)
+    z = format_z(z, nbins)
+    hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
     
     assert np.allclose(setup['mass_range'], hmf[0].m)
     # aliasing for now
     mass_range = setup['mass_range']
-    rho_bg = rho_mean if setup['delta_ref'] == 'SOMean' \
-        else rho_mean / omegam
-    
-    # same as with redshift
-    rho_bg = expand_dims(rho_bg, -1)
+
 
     concentration = c_concentration[0](mass_range, *c_concentration[1:])
     if ingredients['satellites']:

@@ -144,10 +144,13 @@ def fill_nan(a):
         return np.interp(indices, indices[not_nan], a[not_nan])
 
 
-def load_hmf(z, setup, cosmo_model, transfer_params):
+def load_hmf(z, setup, cosmo_model, sigma8, n_s):
+    transfer_params = \
+        {'sigma_8': sigma8, 'n': n_s, 'lnk_min': setup['lnk_min'],
+         'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
     hmf = []
     rho_mean = np.zeros(z.shape[0])
-    rho_mean_z = np.zeros(z.shape[0])
+    #rho_mean_z = np.zeros(z.shape[0])
     for i, zi in enumerate(z):
         hmf.append(MassFunction(
             Mmin=setup['logM_min'], Mmax=setup['logM_max'],
@@ -157,10 +160,15 @@ def load_hmf(z, setup, cosmo_model, transfer_params):
             cosmo_model=cosmo_model, z=zi,
             transfer_model=setup['transfer'], **transfer_params)
             )
-        # shouldn't this be the mean density at the lens redshift?
         rho_mean[i] = hmf[i].mean_density0
-        rho_mean_z[i] = hmf[i].mean_density # Add to return
-    return hmf, rho_mean
+        #rho_mean_z[i] = hmf[i].mean_density # Add to return
+    rho_bg = rho_mean / cosmo_model.Om0 if setup['delta_ref'] == 'SOCritical' \
+        else rho_mean
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter (where the new dimension will
+    # be occupied by mass)
+    rho_bg = np.expand_dims(rho_bg, -1)
+    return hmf, rho_bg
 
 
 def virial_mass(r, rho_mean, delta_halo):

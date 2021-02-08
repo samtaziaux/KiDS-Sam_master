@@ -1169,6 +1169,8 @@ def covariance(theta, R):
     bias = c_twohalo
     bias = array([bias]*setup['k_range_lin'].size).T
     
+    if setup['delta_ref'] == 'SOCritical':
+        bias = bias * omegam
    
     rho_bg = rho_bg[...,0]
     

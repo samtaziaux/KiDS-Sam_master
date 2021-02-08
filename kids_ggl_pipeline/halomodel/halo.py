@@ -242,13 +242,7 @@ def model(theta, R):
     xi_gm, xi_gg, xi_mm = calculate_correlations(
         setup, observables, ingredients, Pgm_func, Pgg_func, Pmm_func)
 
-    # for now
-    xi2 = xi_gm
-    xi2_2 = xi_gg
-    xi2_3 = xi_mm
-    rvir_range_3d = setup['rvir_range_3d']
-
-    if setup['return'] in ('xi', 'all'):
+    if setup['return'] in ('all', 'xi'):
         output = output_xi(
             setup, observables, ingredients, xi_gm, xi_gg, xi_mm, z, nz)
 
@@ -259,7 +253,8 @@ def model(theta, R):
         else:
             output.append(rvir_range_3d)
 
-    # projected surface density
+    ### projected surface density ###
+
     # this is the slowest part of the model
     #
     # do we require a double loop here when weighting n(zlens)?
@@ -274,142 +269,21 @@ def model(theta, R):
     # alias
     rvir_range_3d_i = setup['rvir_range_3d_interp']
 
-    if observables.gm:
-        if ingredients['nzlens']:
-            surf_dens2 = array(
-                [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_range_3d_i)
-                for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
-            """
-            if setup['distances'] == 'proper':
-                surf_dens2 = trapz(
-                    surf_dens2*expand_dims(nz*(1+z)**2, -1), z[:,0], axis=0)
-            else:
-                surf_dens2 = trapz(surf_dens2*expand_dims(nz, -1), z[:,0], axis=0)
-            surf_dens2 = surf_dens2 / trapz(nz, z, axis=0)[:,None]
-            """
-        else:
-            surf_dens2 = array(
-                [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-                for xi2_i, rho_i in zip(xi2, rho_bg)])
+    output, sigma_gm, sigma_gg, sigma_mm = calculate_surface_density(
+        setup, observables, ingredients, output, xi_gm, xi_gg, xi_mm,
+        c_pm, rho_bg, z, nz)
 
-        # units of Msun/pc^2
-        if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
-            pointmass = c_pm[1]/(2*np.pi) * array(
-                [10**m_pm / r_i**2
-                 for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
-            surf_dens2 = surf_dens2 + pointmass
-
-        zo = expand_dims(z, -1) if ingredients['nzlens'] else z
-        if setup['distances'] == 'proper':
-            surf_dens2 *= (1+zo)**2
-        if setup['return'] == 'kappa':
-            surf_dens2 /= sigma_crit(cosmo_model, zo, zs)
-        if ingredients['nzlens']:
-            # haven't checked the denominator below
-            norm = trapz(nz, z, axis=0)
-            #if setup['return'] == 'kappa':
-                #print('sigma_crit =', sigma_crit(cosmo_model, z, zs).shape)
-            surf_dens2 = \
-                trapz(surf_dens2 * expand_dims(nz, -1), z[:,0], axis=0) \
-                / norm[:,None]
-            zw = nz * sigma_crit(cosmo_model, z, zs) \
-                if setup['return'] == 'kappa' else nz
-            zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
-
-        # in Msun/pc^2
-        if not setup['return'] == 'kappa':
-            surf_dens2 /= 1e12
-
-        # fill/interpolate nans
-        surf_dens2[(surf_dens2 <= 0) | (surf_dens2 >= 1e20)] = np.nan
-        for i in range(observables.gm.nbins):
-            surf_dens2[i] = fill_nan(surf_dens2[i])
-        if setup['return'] in ('kappa', 'sigma'):
-            surf_dens2_r = array(
-                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
-                for si in surf_dens2])
-            surf_dens2 = np.array(
-                [s_r(r_i)
-                 for s_r, r_i in zip(surf_dens2_r, observables.gm.R)])
-            #return [surf_dens2, meff]
-            if observables.gm.nbins == 1:
-                output[observables.gm.idx.start] = surf_dens2[0]
-            else:
-                output[observables.gm.idx] = surf_dens2
-        if setup['return'] == 'all':
-            output.append(surf_dens2)
-
-    if observables.gg:
-        surf_dens2_2 = array(
-            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-            for xi2_i, rho_i in zip(xi2_2, rho_bg)])
-
-        if setup['distances'] == 'proper':
-            surf_dens2_2 *= (1+zo)**2
-
-        # in Msun/pc^2
-        if not setup['return'] in ('kappa', 'wp', 'esd_wp'):
-            surf_dens2_2 /= 1e12
-
-        # fill/interpolate nans
-        surf_dens2_2[(surf_dens2_2 <= 0) | (surf_dens2_2 >= 1e20)] = np.nan
-        for i in range(observables.gg.nbins):
-            surf_dens2_2[i] = fill_nan(surf_dens2_2[i])
-        if setup['return'] in ('kappa', 'sigma'):
-            surf_dens2_2_r = array(
-                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
-                for si in surf_dens2_2])
-            surf_dens2_2 = np.array(
-                [s_r(r_i) for s_r, r_i
-                 in zip(surf_dens2_2_r, observables.gg.R)])
-        if setup['return'] in ('kappa', 'sigma'):
-            if observables.gg.nbins == 1:
-                output[observables.gg.idx.start] = surf_dens2_2[0]
-            else:
-                output[observables.gg.idx] = surf_dens2_2
-        if setup['return'] in ('wp', 'esd_wp'):
-            wp_out_i = np.array(
-                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i),
-                                  s=0)
-                 for wi, rho_i in zip(surf_dens2_2, rho_bg)])
-            wp_out = [wp_i(r_i) for wp_i, r_i
-                      in zip(wp_out_i, observables.gg.R)]
-            #output.append(wp_out)
-        if setup['return'] == 'all':
-            wp_out = surf_dens2_2/expand_dims(rho_bg, -1)
-            output.append([surf_dens2_2, wp_out])
-
-
-    if observables.mm:
-        surf_dens2_3 = np.array(
-            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
-             for xi2_i, rho_i in zip(xi2_3, rho_bg)])
-
-        if setup['distances'] == 'proper':
-            surf_dens2_3 *= (1+zo)**2
-
-        # in Msun/pc^2
-        if not setup['return'] == 'kappa':
-            surf_dens2_3 /= 1e12
-
-        # fill/interpolate nans
-        surf_dens2_3[(surf_dens2_3 <= 0) | (surf_dens2_3 >= 1e20)] = np.nan
-        for i in range(observables.mm.nbins):
-            surf_dens2_3[i] = fill_nan(surf_dens2_3[i])
-        if setup['return'] in ('kappa', 'sigma'):
-            surf_dens2_3_r = array(
-                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
-                for si in surf_dens2_3])
-            surf_dens2_3 = array(
-                [s_r(r_i) for s_r, r_i
-                 in zip(surf_dens2_3_r, observables.mm.R)])
-            #return [surf_dens2_3, meff]
-            if observables.mm.nbins == 1:
-                output[observables.mm.idx.start] = surf_dens2_3[0]
-            else:
-                output[observables.mm.idx] = surf_dens2_3
-        if setup['return'] == 'all':
-            output.append(surf_dens2_3)
+    if setup['return'] in ('wp', 'esd_wp'):
+        wp_out_i = np.array(
+            [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i),
+                              s=0)
+             for wi, rho_i in zip(sigma_gg, rho_bg)])
+        wp_out = [wp_i(r_i) for wp_i, r_i
+                  in zip(wp_out_i, observables.gg.R)]
+        #output.append(wp_out)
+    if setup['return'] == 'all':
+        wp_out = sigma_gg/expand_dims(rho_bg, -1)
+        output.append([sigma_gg, wp_out])
 
     if setup['return'] in ('kappa', 'sigma'):
         #output = list(output)
@@ -430,14 +304,14 @@ def model(theta, R):
     # These two options are not really used for any observable! Keeping in for now.
 
     if ingredients['mm']:
-        d_surf_dens2_3 = array(
+        d_sigma_mm = array(
             [np.nan_to_num(
-            d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-            for surf_dens2_i, r_i in zip(surf_dens2_3, observables.mm.R)])
+            d_sigma(sigma_mm_i, rvir_range_3d_i, r_i))
+            for sigma_mm_i, r_i in zip(sigma_mm, observables.mm.R)])
 
         out_esd_tot_3 = array(
-            [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
-            for d_surf_dens2_i, r_i in zip(d_surf_dens2_3, r_i)])
+            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_mm_i), s=0)
+            for d_sigma_mm_i, r_i in zip(d_sigma_mm, r_i)])
 
         #out_esd_tot_inter_3 = np.zeros((nbins, observables.mm.R[0].size))
         #for i in range(nbins):
@@ -449,14 +323,14 @@ def model(theta, R):
 
 
     if ingredients['gg']:
-        d_surf_dens2_2 = array(
+        d_sigma_gg = array(
                 [np.nan_to_num(
-                d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-                for surf_dens2_i, r_i in zip(surf_dens2_2, observables.gg.R)])
+                d_sigma(sigma_gg_i, rvir_range_3d_i, r_i))
+                for sigma_gg_i, r_i in zip(sigma_gg, observables.gg.R)])
 
         out_esd_tot_2 = array(
-            [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
-             for d_surf_dens2_i, r_i in zip(d_surf_dens2_2, rvir_range_2d_i)])
+            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_gg_i), s=0)
+             for d_sigma_gg_i, r_i in zip(d_sigma_gg, rvir_range_2d_i)])
 
         #out_esd_tot_inter_2 = np.zeros((nbins, observables.gg.R.size))
         #for i in range(nbins):
@@ -467,14 +341,14 @@ def model(theta, R):
     """
 
     if observables.gm:
-        d_surf_dens2 = array(
+        d_sigma_gm = array(
             [np.nan_to_num(
-                d_sigma(surf_dens2_i, rvir_range_3d_i, r_i))
-            for surf_dens2_i, r_i in zip(surf_dens2, observables.gm.R)])
+                d_sigma(sigma_gm_i, rvir_range_3d_i, r_i))
+            for sigma_gm_i, r_i in zip(sigma_gm, observables.gm.R)])
 
         out_esd_tot = array(
-            [UnivariateSpline(r_i, np.nan_to_num(d_surf_dens2_i), s=0)
-            for d_surf_dens2_i, r_i in zip(d_surf_dens2, observables.gm.R)])
+            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_gm_i), s=0)
+            for d_sigma_gm_i, r_i in zip(d_sigma_gm, observables.gm.R)])
 
         #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
         #for i in range(nbins):
@@ -497,10 +371,16 @@ def model(theta, R):
         else:
             output = [out_esd_tot_inter, meff]
 
+    # Finally!
     return output
 
 
-## auxiliary functions
+#############################
+##                         ##
+##   auxiliary functions   ##
+##                         ##
+#############################
+
 
 def calculate_completeness(observables, selection, ingredients, z):
     # interpolate selection function to the same grid as redshift and
@@ -792,6 +672,141 @@ def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
         output[2] = (Pmm_1h, Pmm_2h)
 
     return output
+
+
+def calculate_surface_density(setup, observables, ingredients, output,
+                              xi_gm, xi_gg, xi_mm, c_pm, rho_bg, z, nz):
+    rvir_range_3d = setup['rvir_range_3d']
+    rvir_range_3d_i = setup['rvir_range_3d_interp']
+    # dummy
+    sigma_gm = None
+    sigma_gg = None
+    sigma_mm = None
+    if observables.gm:
+        if ingredients['nzlens']:
+            sigma_gm = array(
+                [[sigma(xi2_ij, rho_bg_i, rvir_range_3d, rvir_range_3d_i)
+                for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2_gm, rho_bg)])
+            """
+            if setup['distances'] == 'proper':
+                sigma_gm = trapz(
+                    sigma_gm*expand_dims(nz*(1+z)**2, -1), z[:,0], axis=0)
+            else:
+                sigma_gm = trapz(sigma_gm*expand_dims(nz, -1), z[:,0], axis=0)
+            sigma_gm = sigma_gm / trapz(nz, z, axis=0)[:,None]
+            """
+        else:
+            sigma_gm = array(
+                [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
+                for xi2_i, rho_i in zip(xi_gm, rho_bg)])
+
+        # units of Msun/pc^2
+        if setup['return'] in ('sigma', 'kappa') and ingredients['pointmass']:
+            pointmass = c_pm[1]/(2*np.pi) * array(
+                [10**m_pm / r_i**2
+                 for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
+            sigma_gm = sigma_gm + pointmass
+
+        zo = expand_dims(z, -1) if ingredients['nzlens'] else z
+        if setup['distances'] == 'proper':
+            sigma_gm *= (1+zo)**2
+        if setup['return'] == 'kappa':
+            sigma_gm /= sigma_crit(cosmo_model, zo, zs)
+        if ingredients['nzlens']:
+            # haven't checked the denominator below
+            norm = trapz(nz, z, axis=0)
+            #if setup['return'] == 'kappa':
+                #print('sigma_crit =', sigma_crit(cosmo_model, z, zs).shape)
+            sigma_gm = \
+                trapz(sigma_gm * expand_dims(nz, -1), z[:,0], axis=0) \
+                / norm[:,None]
+            zw = nz * sigma_crit(cosmo_model, z, zs) \
+                if setup['return'] == 'kappa' else nz
+            zeff = trapz(zw*z, z, axis=0) / trapz(zw, z, axis=0)
+
+        # in Msun/pc^2
+        if not setup['return'] == 'kappa':
+            sigma_gm /= 1e12
+
+        # fill/interpolate nans
+        sigma_gm[(sigma_gm <= 0) | (sigma_gm >= 1e20)] = np.nan
+        for i in range(observables.gm.nbins):
+            sigma_gm[i] = fill_nan(sigma_gm[i])
+        if setup['return'] in ('kappa', 'sigma'):
+            sigma_gm_r = array(
+                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
+                for si in sigma_gm])
+            sigma_gm = np.array(
+                [s_r(r_i)
+                 for s_r, r_i in zip(sigma_gm_r, observables.gm.R)])
+            #return [sigma_gm, meff]
+            if observables.gm.nbins == 1:
+                output[observables.gm.idx.start] = sigma_gm[0]
+            else:
+                output[observables.gm.idx] = sigma_gm
+        if setup['return'] == 'all':
+            output.append(sigma_gm)
+
+    if observables.gg:
+        sigma_gg = array(
+            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
+            for xi2_i, rho_i in zip(xi_gg, rho_bg)])
+
+        if setup['distances'] == 'proper':
+            sigma_gg *= (1+z)**2
+
+        # in Msun/pc^2
+        if not setup['return'] in ('kappa', 'wp', 'esd_wp'):
+            sigma_gg /= 1e12
+
+        # fill/interpolate nans
+        sigma_gg[(sigma_gg <= 0) | (sigma_gg >= 1e20)] = np.nan
+        for i in range(observables.gg.nbins):
+            sigma_gg[i] = fill_nan(sigma_gg[i])
+        if setup['return'] in ('kappa', 'sigma'):
+            sigma_gg_r = array(
+                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
+                for si in sigma_gg])
+            sigma_gg = np.array(
+                [s_r(r_i) for s_r, r_i
+                 in zip(sigma_gg_r, observables.gg.R)])
+        if setup['return'] in ('kappa', 'sigma'):
+            if observables.gg.nbins == 1:
+                output[observables.gg.idx.start] = sigma_gg[0]
+            else:
+                output[observables.gg.idx] = sigma_gg
+
+    if observables.mm:
+        sigma_mm = np.array(
+            [sigma(xi2_i, rho_i, rvir_range_3d, rvir_range_3d_i)
+             for xi2_i, rho_i in zip(xi_mm, rho_bg)])
+
+        if setup['distances'] == 'proper':
+            sigma_mm *= (1+z)**2
+        # in Msun/pc^2
+        if not setup['return'] == 'kappa':
+            sigma_mm /= 1e12
+
+        # fill/interpolate nans
+        sigma_mm[(sigma_mm <= 0) | (sigma_mm >= 1e20)] = np.nan
+        for i in range(observables.mm.nbins):
+            sigma_mm[i] = fill_nan(sigma_mm[i])
+        if setup['return'] in ('kappa', 'sigma'):
+            sigma_mm_r = array(
+                [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
+                for si in sigma_mm])
+            sigma_mm = array(
+                [s_r(r_i) for s_r, r_i
+                 in zip(sigma_mm_r, observables.mm.R)])
+            #return [sigma_mm, meff]
+            if observables.mm.nbins == 1:
+                output[observables.mm.idx.start] = sigma_mm[0]
+            else:
+                output[observables.mm.idx] = sigma_mm
+        if setup['return'] == 'all':
+            output.append(sigma_mm)
+
+    return output, sigma_gm, sigma_gg, sigma_mm
 
 
 def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,

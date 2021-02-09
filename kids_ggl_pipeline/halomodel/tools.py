@@ -144,6 +144,77 @@ def fill_nan(a):
         return np.interp(indices, indices[not_nan], a[not_nan])
 
 
+def download_directory(repository, server_path, out_path):
+    # keep imports local
+    import os
+    from github import Github, GithubException
+    """
+    Download all contents at server_path
+    """
+    
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    
+    g = Github()
+    repository = g.get_repo(repository)
+    contents = repository.get_dir_contents(server_path)
+
+    for content in contents:
+        print("Processing %s" % content.path)
+        if content.type == 'dir':
+            download_directory(repository, content.path)
+        else:
+            try:
+                path = content.path
+                file_content = repository.get_contents(path)
+                file_data = file_content.decoded_content
+                file_out = open(out_path + '/' + content.name, 'wb')
+                file_out.write(file_data)
+                file_out.close()
+            except (GithubException, IOError) as exc:
+                print('Error processing %s: %s', content.path, exc)
+
+
+def read_mead_data()
+    # keep imports local
+    import dill as pickle
+    import os
+    from scipy.interpolate import LinearNDInterpolator
+    
+    path0 = os.getcwd()
+    path = os.path.join(path0, 'BNL_data')
+
+    download_directory('alexander-mead/BNL', '/data/BNL/M512', path)
+    
+    file_num = (len([name for name in os.listdir(path)]) - 1) // 2
+    print(file_num)
+    
+    # read in the snapshot number and corresponding redshift, will also loop over snap number
+    snaps = np.genfromtxt(path + '/MDR1_redshifts.csv', delimiter=',', skip_header=1)[:,[2,3]]
+    out_array = np.empty((file_num * 8 * 8 * 25, 5))
+    id = 0
+    for i,snap in enumerate(np.flip(snaps[:,0])):
+        try:
+            dat = np.genfromtxt(path+'/MDR1_rockstar_%s_bnl.dat'%int(snap))
+            mass = np.genfromtxt(path+'/MDR1_rockstar_%s_binstats.dat'%int(snap))
+            idx = 0
+            for m1, mass1 in enumerate(mass[:,2]):
+                for m2, mass2 in enumerate(mass[:,2]):
+                    for k, k_val in enumerate(np.unique(dat[:,0])):
+                        out_array[id,:] = np.array([snaps[i,1], mass1, mass2, k_val, dat[idx,1]])
+                        idx += 1
+                        id += 1
+        except:
+            pass
+    
+    print('Interpolating')
+    x = out_array[:,:4]
+    data = out_array[:,4]
+    my_interpolating_function = LinearNDInterpolator(x, data, fill_value=1.0)
+    with open(path0+'/interpolator_BNL.npy', 'wb') as dill_file:
+        pickle.dump(my_interpolating_function, dill_file)
+
+
 def load_hmf(z, setup, cosmo_model, sigma8, n_s):
     transfer_params = \
         {'sigma_8': sigma8, 'n': n_s, 'lnk_min': setup['lnk_min'],

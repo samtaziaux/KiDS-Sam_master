@@ -352,6 +352,8 @@ def model(theta, R): #, calculate_covariance=False):
         # read in Alex Mead BNL table:
         print('Importing BNL pickle...')
         import dill as pickle
+        path0 = os.getcwd()
+        #with open(path0+'/interpolator_BNL.npy', 'rb') as dill_file:
         with open('/net/home/fohlen12/dvornik/interpolator_BNL2.npy', 'rb') as dill_file:
             beta_interp = pickle.load(dill_file)
     

@@ -268,7 +268,7 @@ def halo_exclusion(xi, r, meff, rho_dm, delta):
 
 
 def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, redshift):
-    """ Non-linear halo bias correction from Meat et al. 2020 (https://arxiv.org/abs/2011.08858)
+    """ Non-linear halo bias correction from Mead et al. 2020 (https://arxiv.org/abs/2011.08858)
         Equation 17, that gets added to the usual 2h term from Cacciato.
     
     Parameters

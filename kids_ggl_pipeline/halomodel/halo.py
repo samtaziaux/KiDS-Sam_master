@@ -270,7 +270,6 @@ def model(theta, R):
     #    else rvir_range_3d_i
 
     # alias
-    rvir_range_3d_i = setup['rvir_range_3d_interp']
 
     output, sigma_gm, sigma_gg, sigma_mm = calculate_surface_density(
         setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
@@ -302,77 +301,18 @@ def model(theta, R):
     else:
         pass
 
-    # excess surface density
-    """
-    # These two options are not really used for any observable! Keeping in for now.
-
-    if ingredients['mm']:
-        d_sigma_mm = array(
-            [np.nan_to_num(
-            d_sigma(sigma_mm_i, rvir_range_3d_i, r_i))
-            for sigma_mm_i, r_i in zip(sigma_mm, observables.mm.R)])
-
-        out_esd_tot_3 = array(
-            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_mm_i), s=0)
-            for d_sigma_mm_i, r_i in zip(d_sigma_mm, r_i)])
-
-        #out_esd_tot_inter_3 = np.zeros((nbins, observables.mm.R[0].size))
-        #for i in range(nbins):
-        #    out_esd_tot_inter_3[i] = out_esd_tot_3[i](observables.mm.R[i])
-        out_esd_tot_inter_3 = [out_esd_tot_3[i](observables.mm.R[i])
-                               for i in range(observables.mm.nbins)]
-        # This insert makes sure that the ESD's are on the fist place.
-        output.insert(0, out_esd_tot_inter_3)
-
-
-    if ingredients['gg']:
-        d_sigma_gg = array(
-                [np.nan_to_num(
-                d_sigma(sigma_gg_i, rvir_range_3d_i, r_i))
-                for sigma_gg_i, r_i in zip(sigma_gg, observables.gg.R)])
-
-        out_esd_tot_2 = array(
-            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_gg_i), s=0)
-             for d_sigma_gg_i, r_i in zip(d_sigma_gg, rvir_range_2d_i)])
-
-        #out_esd_tot_inter_2 = np.zeros((nbins, observables.gg.R.size))
-        #for i in range(nbins):
-        #    out_esd_tot_inter_2[i] = out_esd_tot_2[i](observables.gg.R[i])
-        out_esd_tot_inter_2 = [out_esd_tot_2[i](observables.gg.R[i])
-                               for i in range(observables.gg.nbins)]
-        output.insert(0, out_esd_tot_inter_2)
-    """
+    ### excess surface density ###
 
     if observables.gm:
-        d_sigma_gm = array(
-            [np.nan_to_num(
-                d_sigma(sigma_gm_i, rvir_range_3d_i, r_i))
-            for sigma_gm_i, r_i in zip(sigma_gm, observables.gm.R)])
-
-        out_esd_tot = array(
-            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_gm_i), s=0)
-            for d_sigma_gm_i, r_i in zip(d_sigma_gm, observables.gm.R)])
-
-        #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
-        #for i in range(nbins):
-        #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter = [out_esd_tot[i](observables.gm.R[i])
-                             for i in range(observables.gm.nbins)]
-        # this should be moved to the power spectrum calculation
-        if ingredients['pointmass']:
-            # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
-            pointmass = c_pm[1]/(np.pi*1e12) * array(
-                [10**m_pm / (r_i**2)
-                 for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
-            out_esd_tot_inter = [out_esd_tot_inter[i] + pointmass[i]
-                                 for i in range(observables.gm.nbins)]
+        esd_gm = calculate_esd(setup, observables, ingredients, sigma_gm, c_pm)
         if setup['return'] == 'esd_wp':
-            output[observables.gm.idx] = out_esd_tot_inter
+            output[observables.gm.idx] = esd_gm
+            # I need to move this to when wp is calculated
             output[observables.gg.idx] = wp_out
             output = list(output)
             output = [output, meff]
         else:
-            output = [out_esd_tot_inter, meff]
+            output = [esd_gm, meff]
 
     # Finally!
     return output
@@ -455,6 +395,53 @@ def calculate_correlations(setup, observables, ingredients, Pgm_func,
         xi2_mm = calculate_correlations_single(
             setup, observables.mm, ingredients, Pgg_func, rho_bg, meff)
     return xi2_gm, xi2_gg, xi2_mm
+
+
+def calculate_esd_single(setup, observable, surface_density):
+    esd = array(
+        [np.nan_to_num(d_sigma(sigma_i, setup['rvir_range_3d_interp'], R_i))
+         for sigma_i, R_i in zip(surface_density, observable.R)])
+    esd_func = array(
+        [UnivariateSpline(R_i, np.nan_to_num(esd_i), s=0)
+         for esd_i, R_i in zip(esd, observable.R)])
+    esd = [esd_func_i(R_i)
+           for esd_func_i, R_i in zip(esd_func, observable.R)]
+    return esd
+
+
+def calculate_esd(setup, observables, ingredients, sigma_gm, c_pm):
+    """This is only ever used for gm, but adding the others would
+    be trivial if necessary"""
+    if observables.gm:
+        """
+        d_sigma_gm = array(
+            [np.nan_to_num(
+                d_sigma(sigma_gm_i, rvir_range_3d_i, r_i))
+            for sigma_gm_i, r_i in zip(sigma_gm, observables.gm.R)])
+
+        out_esd_tot = array(
+            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_gm_i), s=0)
+            for d_sigma_gm_i, r_i in zip(d_sigma_gm, observables.gm.R)])
+
+        #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
+        #for i in range(nbins):
+        #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
+        out_esd_tot_inter = [out_esd_tot[i](observables.gm.R[i])
+                             for i in range(observables.gm.nbins)]
+        """
+        esd = calculate_esd_single(setup, observables.gm, sigma_gm)
+        if ingredients['pointmass']:
+            # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
+            pointmass = c_pm[1]/(np.pi*1e12) * array(
+                [10**m_pm / (r_i**2)
+                 for m_pm, r_i in zip(c_pm[0], observables.gm.R)])
+            esd = [esd[i] + pointmass[i] for i in range(observables.gm.nbins)]
+    return esd
+
+
+def output_esd_single(output, observable, esd, meff):
+    if setup['return'] in ('esd', 'esd_wp'):
+        output[observables.gm.idx] = esd
 
 
 def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta):
@@ -748,8 +735,6 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
 def calculate_surface_density(setup, observables, ingredients,
                               xi_gm, xi_gg, xi_mm, rho_bg, z, nz, c_pm,
                               output, cosmo_model, zs):
-    rvir_range_3d = setup['rvir_range_3d']
-    rvir_range_3d_i = setup['rvir_range_3d_interp']
     # dummy
     sigma_gm = None
     sigma_gg = None

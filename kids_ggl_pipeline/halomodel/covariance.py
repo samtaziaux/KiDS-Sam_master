@@ -887,9 +887,90 @@ def format_z(z, nbins):
     # be occupied by mass)
     z = expand_dims(z, -1)
     return z
+    
+    
+def preamble(theta, R):
+    """Preamble function
+
+    This function is specified separately in the configuration file
+    and is called only once when initializing the sampler module,
+    rather than at every step in the MCMC. Include here all variable
+    tests, for instance.
+
+    This function does not return anything
+    """
+    np.seterr(
+        divide='ignore', over='ignore', under='ignore', invalid='ignore')
+
+    observables, selection, ingredients, theta, setup \
+        = [theta[1][theta[0].index(name)]
+           for name in ('observables', 'selection', 'ingredients',
+                        'parameters', 'setup')]
+    cosmo = theta[0]
+    sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
+
+    if observables.mlf:
+        nbins = observables.nbins - observables.mlf.nbins
+    else:
+        nbins = observables.nbins
+    output = np.empty(observables.nbins, dtype=object)
+
+    if ingredients['nzlens']:
+        assert len(cosmo) >= 11, \
+            'When integrating nzlens, must provide an additional parameter' \
+            '"nz", corresponding to the histogram of lens redshifts. See' \
+            'demo for an example.'
+        nz = cosmo[9].T
+        size_cosmo = 10
+    else:
+        # hard-coded
+        size_cosmo = 9
+    
+    if observables.mlf:
+        if len(cosmo) == size_cosmo+1:
+            assert len(cosmo) >= len(cosmo), \
+                'When using SMF/LF, must provide an additional parameter' \
+                '"z_mlf", corresponding to mean redshift values for SMF/LF. See' \
+                'demo for an example.'
+        z_mlf = cosmo[-1]
+        size_cosmo += 1
+    # cheap hack. I'll use this for CMB lensing, but we can
+    # also use this to account for difference between shear
+    # and reduced shear
+    if len(cosmo) == size_cosmo+1:
+        zs = cosmo[-1]
+    elif setup['return'] == 'kappa':
+        raise ValueError(
+            'If return=kappa then you must provide a source redshift as' \
+            ' the last cosmological parameter. Alternatively, make sure' \
+            ' that the redshift parameters are properly set given your' \
+            ' choice for the zlens parameter')
+
+    # if a single value is given for more than one bin, assign same
+    # value to all bins
+    if z.size == 1 and nbins > 1:
+        z = z*np.ones(nbins)
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter (where the new dimension will
+    # be occupied by mass)
+    z = expand_dims(z, -1)
+    if ingredients['nzlens']:
+        z_shape_test = (nz.shape[1] == nbins)
+    else:
+        z_shape_test = (z.size == nbins)
+    if not z_shape_test:
+        raise ValueError(
+            'Number of redshift bins should be equal to the number of' \
+            ' observable bins!')
+
+    return
 
 
 def covariance(theta, R):
+    
+    # ideally we would move this to somewhere separate later on
+    #preamble(theta, R)
+    
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
@@ -912,36 +993,28 @@ def covariance(theta, R):
         s_concentration, s_mor, s_scatter, s_beta = theta
 
     cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
-
-    sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
-    size_cosmo = 9
     
     if observables.mlf:
-        if len(cosmo) == size_cosmo+1:
-            assert len(cosmo) >= len(cosmo), \
-                'When using SMF/LF, must provide an additional parameter' \
-                '"z_mlf", corresponding to mean redshift values for SMF/LF. See' \
-                'demo for an example.'
         z_mlf = cosmo[-1]
         size_cosmo += 1
     # cheap hack. I'll use this for CMB lensing, but we can
     # also use this to account for difference between shear
     # and reduced shear
+        # cheap hack. I'll use this for CMB lensing, but we can
+    # also use this to account for difference between shear
+    # and reduced shear
     if len(cosmo) == size_cosmo+1:
         zs = cosmo[-1]
-    elif setup['return'] == 'kappa':
-        raise ValueError(
-            'If return=kappa then you must provide a source redshift as' \
-            ' the last cosmological parameter. Alternatively, make sure' \
-            ' that the redshift parameters are properly set given your' \
-            ' choice for the zlens parameter')
-
+    else:
+        zs = None
 
     z = format_z(z, nbins)
-    hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
     
+        # Tinker10 should also be read from theta!
+    hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
+
     assert np.allclose(setup['mass_range'], hmf[0].m)
-    # aliasing for now
+    # alias (should probably get rid of it)
     mass_range = setup['mass_range']
 
 
@@ -953,7 +1026,7 @@ def covariance(theta, R):
     rvir_range_lin = virial_radius(
         mass_range, rho_bg, setup['delta'])
     #rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
-    rvir_range_3d = setup['rvir_range_3d']
+    #rvir_range_3d = setup['rvir_range_3d']
     
     # Remove, for testing purposes
     """

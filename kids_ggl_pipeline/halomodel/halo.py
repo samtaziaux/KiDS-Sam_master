@@ -157,32 +157,13 @@ def model(theta, R):
         setup, observables, ingredients, z, mass_range, rho_bg,
         c_concentration, s_concentration, c_miscent)
 
-    """
-    # read in Alex Mead BNL table:
-    print('Importing BNL pickle...')
-    import dill as pickle
-    with open('/net/home/fohlen12/dvornik/interpolator_BNL.npy', 'rb') as dill_file:
-        beta_interp = pickle.load(dill_file)
-    print(beta_interp([0.5, 12.3, 12.8, 1e-1]))
-
-    Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i,
-                         mass_range, beta_interp, k_range_lin, z_i)
-                 for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i
-                 in zip(hmf[idx_gm], pop_g[idx_gm], ngal[idx_gm],
-                        rho_bg[idx_gm], z[idx_gm])])
-    Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i, mass_range,
-                         beta_interp, k_range_lin, z_i)
-                 for hmf_i, pop_g_i, ngal_i, z_i
-                 in zip(hmf[idx_gg], pop_g[idx_gg], ngal[idx_gg], z[idx_gg])])
-    """
-
     if not ingredients['nzlens']:
         rho_bg = rho_bg[...,0]
 
     # spectra that are not required are just dummy variables
     Pgm, Pgg, Pmm = calculate_power_spectra(
             setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
-            c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal)
+            c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, z)
     if observables.gm:
         Pgm_c, Pgm_s, Pgm_2h = Pgm
         Pgm_1h = Pgm_c + Pgm_s
@@ -508,7 +489,8 @@ def calculate_ngal(observables, pop_g, dndm, mass_range):
 
 
 def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
-                  bias, pop_g, pop_c, pop_s, uk_s, ngal, beta, F_k1, F_k2):
+                  bias, pop_g, pop_c, pop_s, uk_s, ngal, beta, F_k1, F_k2, Igg):
+    bnl = False # This needs to be added from a config file, after I am done with a proper implementation!
     if ingredients['twohalo']:
         Pgg_2h = F_k2 * bias * array(
         [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
@@ -516,6 +498,8 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
         in zip(hmf[observables.gg.idx],
                 expand_dims(ngal[observables.gg.idx], -1),
                 expand_dims(pop_g[observables.gg.idx], -2))])
+        if bnl == True:
+            Pgg_2h = (Pgg_2h + array([hmf_i.power for hmf_i in hmf[observables.gg.idx]])*Igg)
     else:
         Pgg_2h = F_k2 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
 
@@ -545,7 +529,8 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
 
 def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
                     rho_bg, bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal,
-                    F_k1, F_k2):
+                    F_k1, F_k2, Igm):
+    bnl = False # This needs to be added from a config file, after I am done with a proper implementation!
     if ingredients['twohalo']:
         """
         # unused but not removing as we might want to use it later
@@ -561,6 +546,8 @@ def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
             in zip(hmf[observables.gm.idx],
                    expand_dims(ngal[observables.gm.idx], -1),
                    expand_dims(pop_g[observables.gm.idx], -2))])
+        if bnl == True:
+            Pgm_2h = (Pgm_2h + array([hmf_i.power for hmf_i in hmf[observables.gm.idx]])*Igm)
     #elif ingredients['nzlens']:
         #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
     else:
@@ -588,7 +575,7 @@ def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
 
 
 def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
-                  uk_c, F_k1, F_k2):
+                  uk_c, F_k1, F_k2, Imm):
     if ingredients['twohalo']:
         Pmm_2h = F_k2 * array([hmf_i.power
                                for hmf_i in hmf[observables.mm.idx]])
@@ -604,9 +591,9 @@ def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
     return Pmm_1h, Pmm_2h
 
 
-def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
+def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
                             dndm, rho_bg, c_twohalo, s_beta, pop_g, pop_c,
-                            pop_s, uk_c, uk_s, ngal):
+                            pop_s, uk_c, uk_s, ngal, z):
     """Wrapper to calculate gm, gg, and/or mm power spectra"""
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
@@ -621,10 +608,28 @@ def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
 
     output = [[], [], []]
 
+    bnl = False # This needs to be added from a config file, after I am done with a proper implementation!
+    if bnl == True:
+        # read in Alex Mead BNL table:
+        print('Importing BNL pickle...')
+        import dill as pickle
+        path0 = os.getcwd()
+        with open(path0+'/interpolator_BNL.npy', 'rb') as dill_file:
+            beta_interp = pickle.load(dill_file)
+
     if observables.gm:
+        if bnl == True:
+            Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i,
+                        mass_range, beta_interp, setup['k_range_lin'], z_i)
+                        for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in
+                            zip(hmf[observables.gm.idx], pop_g[observables.gm.idx],
+                            ngal[observables.gm.idx], rho_bg[observables.gm.idx],
+                            z[observables.gm.idx])])
+        else:
+            Igm = None
         Pgm_c, Pgm_s, Pgm_2h = calculate_Pgm(
             setup, observables, ingredients, hmf, mass_range, dndm, rho_bg,
-            bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, F_k1, F_k2)
+            bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, F_k1, F_k2, Igm)
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgm_k_t = Pgm_c + Pgm_s
             Pgm_k = Pgm_c + Pgm_s + Pgm_2h
@@ -639,9 +644,17 @@ def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
 
     # Galaxy - galaxy spectra (for clustering)
     if observables.gg:
+        if bnl == True:
+            Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i,
+                        mass_range, beta_interp, setup['k_range_lin'], z_i)
+                        for hmf_i, pop_g_i, ngal_i, z_i in
+                            zip(hmf[observables.gg.idx], pop_g[observables.gg.idx],
+                            ngal[observables.gg.idx], z[observables.gg.idx])])
+        else:
+            Igg = None
         Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = calculate_Pgg(
             setup, observables, ingredients, hmf, mass_range, dndm, bias,
-            pop_g, pop_c, pop_s, uk_s, ngal, s_beta, F_k1, F_k2)
+            pop_g, pop_c, pop_s, uk_s, ngal, s_beta, F_k1, F_k2, Igg)
 
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgg_k_t = Pgg_c + 2*Pgg_cs + Pgg_s
@@ -654,7 +667,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf,mass_range,
     if observables.mm:
         Pmm_1h, Pmm_2h = calculate_Pmm(
             setup, observables, ingredients, hmf, mass_range, dndm, uk_c,
-            F_k1, F_k2)
+            F_k1, F_k2, Imm=None)
         #if ingredients['haloexclusion'] and setup['return'] != 'power':
         #    Pmm_k_t = Pmm_1h
         #    Pmm_k = Pmm_1h + Pmm_2h

@@ -1173,7 +1173,7 @@ def covariance(theta, R):
         if z_mlf.size != observables.mlf.nbins:
             raise ValueError(
                 'Number of redshift bins should be equal to the number of observable bins!')
-        hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, transfer_params)
+        hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, sigma8, n_s)
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
         bias_mlf = array([bias_tinker10(hmf_i) for hmf_i in hmf_mlf])
         

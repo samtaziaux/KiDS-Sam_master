@@ -160,7 +160,7 @@ def download_directory(repository, server_path, out_path):
     contents = repository.get_dir_contents(server_path)
 
     for content in contents:
-        print("Processing %s" % content.path)
+        print('Processing %s' % content.path)
         if content.type == 'dir':
             download_directory(repository, content.path)
         else:
@@ -175,7 +175,7 @@ def download_directory(repository, server_path, out_path):
                 print('Error processing %s: %s', content.path, exc)
 
 
-def read_mead_data()
+def read_mead_data():
     # keep imports local
     import dill as pickle
     import os

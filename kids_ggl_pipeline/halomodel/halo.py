@@ -149,7 +149,7 @@ def model(theta, R):
     # Luminosity or mass function as an output:
     if observables.mlf:
         output[observables.mlf.idx] = calculate_mlf(
-            z_mlf, observables, ingredients, mass_range, theta)
+            z_mlf, observables, ingredients, mass_range, theta, setup, cosmo_model, sigma8, n_s)
 
     ### Power spectra ###
 
@@ -258,7 +258,7 @@ def model(theta, R):
 
     if setup['return'] in ('wp', 'esd_wp'):
         wp_out_i = np.array(
-            [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(wi/rho_i),
+            [UnivariateSpline(setup['rvir_range_3d_interp'], np.nan_to_num(wi/rho_i),
                               s=0)
              for wi, rho_i in zip(sigma_gg, rho_bg)])
         wp_out = [wp_i(r_i) for wp_i, r_i
@@ -425,15 +425,14 @@ def output_esd_single(output, observable, esd, meff):
         output[observables.gm.idx] = esd
 
 
-def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta):
+def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta, setup, cosmo_model, sigma8, n_s):
     if z_mlf.size == 1 and observables.mlf.nbins > 1:
         z_mlf = z_mlf*np.ones(observables.mlf.nbins)
     if z_mlf.size != observables.mlf.nbins:
         raise ValueError(
             'Number of redshift bins should be equal to the number of' \
             ' observable bins!')
-    hmf_mlf, _rho_mean = load_hmf(
-        z_mlf, setup, cosmo_model, transfer_params)
+    hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, sigma8, n_s)
     dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
 
     c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
@@ -490,7 +489,7 @@ def calculate_ngal(observables, pop_g, dndm, mass_range):
 
 def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
                   bias, pop_g, pop_c, pop_s, uk_s, ngal, beta, F_k1, F_k2, Igg):
-    bnl = False # This needs to be added from a config file, after I am done with a proper implementation!
+    
     if ingredients['twohalo']:
         Pgg_2h = F_k2 * bias * array(
         [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
@@ -498,7 +497,7 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
         in zip(hmf[observables.gg.idx],
                 expand_dims(ngal[observables.gg.idx], -1),
                 expand_dims(pop_g[observables.gg.idx], -2))])
-        if bnl == True:
+        if ingredients['bnl']:
             Pgg_2h = (Pgg_2h + array([hmf_i.power for hmf_i in hmf[observables.gg.idx]])*Igg)
     else:
         Pgg_2h = F_k2 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
@@ -530,7 +529,7 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
 def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
                     rho_bg, bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal,
                     F_k1, F_k2, Igm):
-    bnl = False # This needs to be added from a config file, after I am done with a proper implementation!
+    
     if ingredients['twohalo']:
         """
         # unused but not removing as we might want to use it later
@@ -546,7 +545,7 @@ def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
             in zip(hmf[observables.gm.idx],
                    expand_dims(ngal[observables.gm.idx], -1),
                    expand_dims(pop_g[observables.gm.idx], -2))])
-        if bnl == True:
+        if ingredients['bnl']:
             Pgm_2h = (Pgm_2h + array([hmf_i.power for hmf_i in hmf[observables.gm.idx]])*Igm)
     #elif ingredients['nzlens']:
         #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
@@ -608,17 +607,20 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
 
     output = [[], [], []]
 
-    bnl = False # This needs to be added from a config file, after I am done with a proper implementation!
-    if bnl == True:
+    if ingredients['bnl']:
+        print('Using non-linear halo bias correction from Mead at al. 2020. Warning, this is slow!')
+        from .tools import read_mead_data
+        read_mead_data()
         # read in Alex Mead BNL table:
         print('Importing BNL pickle...')
         import dill as pickle
         path0 = os.getcwd()
         with open(path0+'/interpolator_BNL.npy', 'rb') as dill_file:
+        #with open('/net/home/fohlen12/dvornik/interpolator_BNL2.npy', 'rb') as dill_file:
             beta_interp = pickle.load(dill_file)
 
     if observables.gm:
-        if bnl == True:
+        if ingredients['bnl']:
             Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i,
                         mass_range, beta_interp, setup['k_range_lin'], z_i)
                         for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in
@@ -644,7 +646,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
 
     # Galaxy - galaxy spectra (for clustering)
     if observables.gg:
-        if bnl == True:
+        if ingredients['bnl']:
             Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i,
                         mass_range, beta_interp, setup['k_range_lin'], z_i)
                         for hmf_i, pop_g_i, ngal_i, z_i in

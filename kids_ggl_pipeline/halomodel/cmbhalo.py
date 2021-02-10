@@ -55,14 +55,14 @@ from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
 #from hmf import transfer_models as tf
 
 # CMB specific utilities
-import pixell.enmap
-import pixell.utils
+#import pixell.enmap
+#import pixell.utils
 # my own crap
-from profiley.filtering import Filter
+#from profiley.filtering import Filter
 
 from . import baryons, longdouble_utils as ld, nfw
 #from . import covariance
-from . import profiles
+#from . import profiles
 from .tools import (
     fill_nan, load_hmf, virial_mass, virial_radius)
 from .lens import (

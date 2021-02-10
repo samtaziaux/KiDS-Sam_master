@@ -915,16 +915,7 @@ def preamble(theta, R):
         nbins = observables.nbins
     output = np.empty(observables.nbins, dtype=object)
 
-    if ingredients['nzlens']:
-        assert len(cosmo) >= 11, \
-            'When integrating nzlens, must provide an additional parameter' \
-            '"nz", corresponding to the histogram of lens redshifts. See' \
-            'demo for an example.'
-        nz = cosmo[9].T
-        size_cosmo = 10
-    else:
-        # hard-coded
-        size_cosmo = 9
+    size_cosmo = 9
     
     if observables.mlf:
         if len(cosmo) == size_cosmo+1:
@@ -994,6 +985,7 @@ def covariance(theta, R):
 
     cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
     
+    size_cosmo = 9
     if observables.mlf:
         z_mlf = cosmo[-1]
         size_cosmo += 1

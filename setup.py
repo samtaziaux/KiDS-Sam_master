@@ -8,6 +8,7 @@ except ImportError:
     from distutils.core import setup
 
 
+
 from kids_ggl_pipeline.helpers.setup_helpers import (
     data_files_recursively, find_location, find_version, read)
 

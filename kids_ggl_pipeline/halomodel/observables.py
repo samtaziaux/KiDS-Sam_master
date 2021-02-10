@@ -143,12 +143,11 @@ class ModelObservables:
         self.nbins = sum(self._nbins)
         self.sampling = np.concatenate(
             [obs.sampling for obs in self.observables if obs.obstype != 'mlf'], axis=0)
-        # lazy initialize
-        self._gg = None
-        self._gm = None
-        self._mlf = None
-        self._mm = None
-        
+        self.gg = self._init_obs('gg')
+        self.gm = self._init_obs('gm')
+        self.mlf = self._init_obs('mlf')
+        self.mm = self._init_obs('mm')
+
     def __getitem__(self, i):
         return self.observables[i]
 
@@ -163,43 +162,13 @@ class ModelObservables:
             return next
         else: raise StopIteration
 
-    @property
-    def gg(self):
-        if self._gg is None:
-            if 'gg' in self.obstypes:
-                self._gg = self._obs_attribute(self.obstypes.index('gg'))
-            else:
-                self._gg = False
-        return self._gg
-
-    @property
-    def gm(self):
-        if self._gm is None:
-            if 'gm' in self.obstypes:
-                self._gm = self._obs_attribute(self.obstypes.index('gm'))
-            else:
-                self._gm = False
-        return self._gm
-
-    @property
-    def mlf(self):
-        if self._mlf is None:
-            if 'mlf' in self.obstypes:
-                self._mlf = self._obs_attribute(self.obstypes.index('mlf'))
-            else:
-                self._mlf = False
-        return self._mlf
-
-    @property
-    def mm(self):
-        if self._mm is None:
-            if 'mm' in self.obstypes:
-                self._mm = self._obs_attribute(self.obstypes.index('mm'))
-            else:
-                self._mm = False
-        return self._mm
-
     ### hidden methods ###
+
+    def _init_obs(self, obs):
+        if obs in self.obstypes:
+            return self._obs_attribute(self.obstypes.index(obs))
+        else:
+            return False
 
     def _add_R(self, R):
         for obs in self.observables:

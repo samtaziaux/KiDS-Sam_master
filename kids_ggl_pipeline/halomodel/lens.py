@@ -168,17 +168,6 @@ def sigma(corr, rho_mean, r_i, r_x):
         print('interpolated in {0:.2e} s'.format(time()-to))
     integ = lambda x, rxi: (10**c(log10(rxi/x))-1) / \
                            (x*x * (1-x*x)**0.5)
-    #integ = lambda x, rxi: 10**c(log10(rxi/x)) / \
-    #                        (x*x * (1-x*x)**0.5)
-    #@jit(float64(float64, float64, float64, float64), nopython=False)#, cache=True)
-    #def integ(x, rxi, r_i, corr):
-        #c = UnivariateSpline(_log10(r_i), _log10(1+corr), s=0, ext=0)
-        #return 10**c(_log10(rxi/x)) / (x**2*(1-x**2)**0.5)
-    #s = np.array([quad(integ, 0, 1, args=(rxi,r_i,corr), full_output=1)[0]
-                  #for rxi in r_x])
-    #@jit(float64(float64, float64), nopython=False)#, cache=True)
-    #def integ(x, rxi):
-        #return 10**c(_log10(rxi/x)) / (x**2*(1-x**2)**0.5)
     to = time()
     s = np.array([quad(integ, 0, 1, args=(rxi,), full_output=1)[0] for rxi in r_x])
     if debug:

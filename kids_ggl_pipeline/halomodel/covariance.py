@@ -1076,9 +1076,9 @@ def covariance(theta, R):
         healpy_data = covar['healpy_data']
         print('Using healpy map to determine survey variance and area.')
         l_range, alms, survey_area = calculate_alms(healpy_data, 1)
-        survey_var = [survey_variance_from_healpy(hmf_i, k_range, z_kids, l_range, alms, survey_area) for hmf_i in hmf]
+        survey_var = [survey_variance_from_healpy(hmf_i, setup['k_range'], z_kids, l_range, alms, survey_area) for hmf_i in hmf]
         kids_area = survey_area * 3600.0 # to arcmin^2
-        area_norm_term = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
+        area_norm_term = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) * hmf[0].cosmo.h)**2.0
         area_sur = area_norm_term
         radius = np.sqrt(area_norm_term / np.pi)
         vol = radius**2.0 * Pi_max
@@ -1087,8 +1087,8 @@ def covariance(theta, R):
     else:
         kids_area = covar['area'] # in deg^2
         kids_area = kids_area * 3600.0 # to arcmin^2
-        area_sur = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h)**2.0
-        radius = np.sqrt(kids_area / np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) / hmf[0].cosmo.h
+        area_sur = kids_area * (((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) * hmf[0].cosmo.h)**2.0
+        radius = np.sqrt(kids_area / np.pi) * ((hmf[0].cosmo.kpc_comoving_per_arcmin(z_kids).to('Mpc/arcmin')).value) * hmf[0].cosmo.h
         vol = radius**2.0 * Pi_max
         W = 2.0*np.pi*radius**2.0 * sp.jv(1, setup['k_range_lin']*radius) / (setup['k_range_lin']*radius)
         W_p = UnivariateSpline(setup['k_range_lin'], W, s=0, ext=0)
@@ -1664,7 +1664,7 @@ def covariance(theta, R):
     
     #cov_esd_gauss, cov_wp_gauss, cov_cross_gauss = np.zeros((observables.gm.size.sum(), observables.gm.size.sum()), dtype=np.float64), np.zeros((observables.gg.size.sum(), observables.gg.size.sum()), dtype=np.float64), np.zeros((observables.gg.size.sum(), observables.gm.size.sum()), dtype=np.float64)
     cov_esd_non_gauss, cov_wp_non_gauss, cov_cross_non_gauss = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
-    cov_esd_ssc, cov_wp_ssc, cov_cross_ssc = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
+    #cov_esd_ssc, cov_wp_ssc, cov_cross_ssc = np.zeros_like(cov_esd_gauss), np.zeros_like(cov_wp_gauss), np.zeros_like(cov_cross_gauss)
     
     all = np.array([observables.gm.size, observables.gg.size, observables.gm.R, observables.gg.R, cov_esd_gauss/rescale, cov_esd_non_gauss/rescale, cov_esd_ssc/rescale, cov_wp_gauss/rescale, cov_wp_non_gauss/rescale, cov_wp_ssc/rescale, cov_esd_tot/rescale, cov_wp_tot/rescale, cov_cross_tot/rescale, cov_block/rescale, aw_values, radius**2.0], dtype=object)
     

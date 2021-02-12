@@ -142,14 +142,26 @@ class ModelObservables:
         # and this the total number of bins
         self.nbins = sum(self._nbins)
         self.sampling = np.concatenate(
-            [obs.sampling for obs in self.observables if obs.obstype != 'mlf'], axis=0)
+            [obs.sampling for obs in self.observables if obs.obstype != 'mlf'],
+            axis=0)
+        self.cmblens = self._init_obs('cmblens')
         self.gg = self._init_obs('gg')
         self.gm = self._init_obs('gm')
         self.mlf = self._init_obs('mlf')
         self.mm = self._init_obs('mm')
 
     def __getitem__(self, i):
-        return self.observables[i]
+        if isinstance(i, (int,np.integer)):
+            return self.observables[i]
+        elif isinstance(i, str):
+            if i not in self.obstypes:
+                err = f'{i} not a valid observable, must be one of {self.obstypes}'
+                raise KeyError(err)
+            return self.observables[self.obstypes.index(i)]
+        else:
+            err = 'index must be either int or str, received ' \
+                  f'{type(i).__name__} instead'
+            raise TypeError(err)
 
     def __iter__(self):
         self._i = 0

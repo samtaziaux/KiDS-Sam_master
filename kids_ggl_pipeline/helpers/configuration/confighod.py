@@ -105,7 +105,12 @@ def hod_function(line, names, parameters, priors, section):
     elif 'scatter' in section:
         parameters[0].append(getattr(scatter, line.words[1]))
     elif 'concentration' in section:
-        parameters[0].append(getattr(concentration, line.words[1]))
+        # if the function does not exist, then this might just be a
+        # model name, e.g., for colossus
+        try:
+            parameters[0].append(getattr(concentration, line.words[1]))
+        except AttributeError:
+            parameters[0].append(line.words[1])
     # felixibility not yet implemented
     elif 'miscentring' in section:
         parameters[0].append(line.words[1])

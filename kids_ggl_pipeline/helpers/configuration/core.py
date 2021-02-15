@@ -191,6 +191,7 @@ class ConfigFile(object):
         """Read the configuration file"""
         section = ConfigSection()
         model = None
+        preamble = None
         cov = None
         section_names = []
         observables = []
@@ -213,6 +214,8 @@ class ConfigFile(object):
             if line.words[0] == 'model':
                 model = self.read_function(line.words[1])
                 continue
+            if line.words[0] == 'preamble':
+                preamble = self.read_function(line.words[1])
             if line.words[0] == 'cov':
                 cov = self.read_function(line.words[1])
                 continue
@@ -262,9 +265,9 @@ class ConfigFile(object):
         hod_params = [
             hod_param_names,
             [observables, selection, ingredients, parameters, setup, covar]]
-        hm_params = [model, cov, hod_params, np.array(names), np.array(priors),
-                     np.array(nparams), np.array(repeat), join,
-                     np.array(starting), output]
+        hm_params = [model, cov, preamble, hod_params, np.array(names),
+                     np.array(priors), np.array(nparams), np.array(repeat),
+                     join, np.array(starting), output]
         return hm_params, sampling
 
     def read_function(self, path):

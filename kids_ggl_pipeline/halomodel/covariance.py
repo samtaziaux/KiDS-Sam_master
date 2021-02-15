@@ -1656,7 +1656,7 @@ def covariance(theta, R):
     
     # To be removed, only for testing purposes
     """
-    rescale = 1.0#covar['area']/survey_area #1.0#
+    rescale = covar['area']/survey_area #1.0#
     aw_values = np.ones((observables.gm.size.sum(), observables.gm.size.sum(), 3), dtype=np.float64)
     
     cov_block = np.block([[cov_esd_tot, cov_cross_tot.T],

@@ -80,9 +80,10 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 
 
 def model(theta, R):
+    print('R =', R.shape)
 
     # ideally we would move this to somewhere separate later on
-    preamble(theta, R)
+    preamble(theta)
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
@@ -135,11 +136,8 @@ def model(theta, R):
 
     """Calculating halo model"""
 
-    # can probably move this into populations()
-    completeness = calculate_completeness(
-        observables, selection, ingredients, z)
     pop_c, pop_s = populations(
-        observables, ingredients, completeness, mass_range, theta)
+        observables, ingredients, selection, mass_range, z, theta)
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
@@ -149,7 +147,8 @@ def model(theta, R):
     # Luminosity or mass function as an output:
     if observables.mlf:
         output[observables.mlf.idx] = calculate_mlf(
-            z_mlf, observables, ingredients, mass_range, theta, setup, cosmo_model, sigma8, n_s)
+            z_mlf, observables, ingredients, mass_range, theta, setup,
+            cosmo_model, sigma8, n_s)
 
     ### Power spectra ###
 
@@ -162,8 +161,8 @@ def model(theta, R):
 
     # spectra that are not required are just dummy variables
     Pgm, Pgg, Pmm = calculate_power_spectra(
-            setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
-            c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, z)
+        setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
+        c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, z)
     if observables.gm:
         Pgm_c, Pgm_s, Pgm_2h = Pgm
         Pgm_1h = Pgm_c + Pgm_s
@@ -250,11 +249,12 @@ def model(theta, R):
     #rvir_sigma = rvir_range_2d_i if setup['return'] in ('sigma', 'kappa') \
     #    else rvir_range_3d_i
 
-    # alias
-
+    # this is where the redshift integral happens
+    print('xi_gm =', xi_gm.shape)
     output, sigma_gm, sigma_gg, sigma_mm = calculate_surface_density(
         setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
         rho_bg, z, nz, c_pm, output, cosmo_model, zs)
+    print('sigma_gm =', sigma_gm.shape)
 
     if setup['return'] in ('wp', 'esd_wp'):
         wp_out_i = np.array(
@@ -263,13 +263,11 @@ def model(theta, R):
              for wi, rho_i in zip(sigma_gg, rho_bg)])
         wp_out = [wp_i(r_i) for wp_i, r_i
                   in zip(wp_out_i, observables.gg.R)]
-        #output.append(wp_out)
     if setup['return'] == 'all':
         wp_out = sigma_gg/expand_dims(rho_bg, -1)
         output.append([sigma_gg, wp_out])
 
     if setup['return'] in ('kappa', 'sigma'):
-        #output = list(output)
         output = [output, meff]
         return output
     if setup['return'] == ('wp'):
@@ -278,24 +276,18 @@ def model(theta, R):
     elif setup['return'] == 'all':
         output.append(rvir_range_3d_i)
     elif setup['return'] == 'esd_wp':
-        pass
-    else:
-        pass
+        output[observables.gg.idx] = wp_out
 
     ### excess surface density ###
 
     if observables.gm:
         esd_gm = calculate_esd(setup, observables, ingredients, sigma_gm, c_pm)
-        if setup['return'] == 'esd_wp':
+        if setup['return'] in ('esd','esd_wp'):
             output[observables.gm.idx] = esd_gm
-            # I need to move this to when wp is calculated
-            output[observables.gg.idx] = wp_out
             output = list(output)
-            output = [output, meff]
-        else:
-            output = [esd_gm, meff]
 
     # Finally!
+    output = [output, meff]
     return output
 
 
@@ -492,11 +484,11 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
     
     if ingredients['twohalo']:
         Pgg_2h = F_k2 * bias * array(
-        [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
-        for hmf_i, ngal_i, pop_g_i
-        in zip(hmf[observables.gg.idx],
-                expand_dims(ngal[observables.gg.idx], -1),
-                expand_dims(pop_g[observables.gg.idx], -2))])
+            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
+             for hmf_i, ngal_i, pop_g_i
+             in zip(hmf[observables.gg.idx],
+                    expand_dims(ngal[observables.gg.idx], -1),
+                    expand_dims(pop_g[observables.gg.idx], -2))])
         if ingredients['bnl']:
             Pgg_2h = (Pgg_2h + array([hmf_i.power for hmf_i in hmf[observables.gg.idx]])*Igg)
     else:
@@ -526,7 +518,7 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
     return Pgg_c, Pgg_s, Pgg_cs, Pgg_2h
 
 
-def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
+def calculate_Pgm(setup, observable, ingredients, hmf, mass_range, dndm,
                     rho_bg, bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal,
                     F_k1, F_k2, Igm):
     
@@ -542,51 +534,51 @@ def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
         Pgm_2h = F_k2 * bias * array(
             [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
             for hmf_i, ngal_i, pop_g_i
-            in zip(hmf[observables.gm.idx],
-                   expand_dims(ngal[observables.gm.idx], -1),
-                   expand_dims(pop_g[observables.gm.idx], -2))])
+            in zip(hmf[observable.idx],
+                   expand_dims(ngal[observable.idx], -1),
+                   expand_dims(pop_g[observable.idx], -2))])
         if ingredients['bnl']:
-            Pgm_2h = (Pgm_2h + array([hmf_i.power for hmf_i in hmf[observables.gm.idx]])*Igm)
+            Pgm_2h = (Pgm_2h + array([hmf_i.power for hmf_i in hmf[observable.idx]])*Igm)
     #elif ingredients['nzlens']:
         #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
     else:
-        Pgm_2h = np.zeros((observables.gm.nbins,setup['lnk_bins']))
+        Pgm_2h = np.zeros((observable.nbins,setup['lnk_bins']))
 
     if ingredients['centrals']:
         Pgm_c = F_k1 * gm_cen_analy(
-            dndm[observables.gm.idx], uk_c[observables.gm.idx],
-            rho_bg[observables.gm.idx], pop_c[observables.gm.idx],
-            ngal[observables.gm.idx], mass_range)
+            dndm[observable.idx], uk_c[observable.idx],
+            rho_bg[observable.idx], pop_c[observable.idx],
+            ngal[observable.idx], mass_range)
     elif ingredients['nzlens']:
-        Pgm_c = np.zeros((z.size,observables.gm.nbins,setup['lnk_bins']))
+        Pgm_c = np.zeros((z.size,observable.nbins,setup['lnk_bins']))
     else:
-        Pgm_c = F_k1 * np.zeros((observables.gm.nbins,setup['lnk_bins']))
+        Pgm_c = F_k1 * np.zeros((observable.nbins,setup['lnk_bins']))
 
     if ingredients['satellites']:
         Pgm_s = F_k1 * gm_sat_analy(
-            dndm[observables.gm.idx], uk_c[observables.gm.idx],
-            uk_s[observables.gm.idx], rho_bg[observables.gm.idx],
-            pop_s[observables.gm.idx], ngal[observables.gm.idx],
+            dndm[observable.idx], uk_c[observable.idx],
+            uk_s[observable.idx], rho_bg[observable.idx],
+            pop_s[observable.idx], ngal[observable.idx],
             mass_range)
     else:
         Pgm_s = F_k1 * np.zeros(Pgm_c.shape)
     return Pgm_c, Pgm_s, Pgm_2h
 
 
-def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
+def calculate_Pmm(setup, observable, ingredients, hmf, mass_range, dndm,
                   uk_c, F_k1, F_k2, Imm):
     if ingredients['twohalo']:
         Pmm_2h = F_k2 * array([hmf_i.power
-                               for hmf_i in hmf[observables.mm.idx]])
+                               for hmf_i in hmf[observable.idx]])
     else:
-        Pmm_2h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
+        Pmm_2h = np.zeros((observable.nbins,setup['lnk_bins']))
 
     if ingredients['centrals']:
         Pmm_1h = F_k1 * mm_analy(
-            dndm[observables.mm.idx], uk_c[observables.mm.idx],
-            rho_bg[observables.mm.idx], mass_range)
+            dndm[observable.idx], uk_c[observable.idx],
+            rho_bg[observable.idx], mass_range)
     else:
-        Pmm_1h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
+        Pmm_1h = np.zeros((observable.nbins,setup['lnk_bins']))
     return Pmm_1h, Pmm_2h
 
 
@@ -630,7 +622,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
         else:
             Igm = None
         Pgm_c, Pgm_s, Pgm_2h = calculate_Pgm(
-            setup, observables, ingredients, hmf, mass_range, dndm, rho_bg,
+            setup, observables.gm, ingredients, hmf, mass_range, dndm, rho_bg,
             bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, F_k1, F_k2, Igm)
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgm_k_t = Pgm_c + Pgm_s
@@ -655,7 +647,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
         else:
             Igg = None
         Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = calculate_Pgg(
-            setup, observables, ingredients, hmf, mass_range, dndm, bias,
+            setup, observables.gg, ingredients, hmf, mass_range, dndm, bias,
             pop_g, pop_c, pop_s, uk_s, ngal, s_beta, F_k1, F_k2, Igg)
 
         if ingredients['haloexclusion'] and setup['return'] != 'power':
@@ -668,7 +660,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
     # Matter - matter spectra
     if observables.mm:
         Pmm_1h, Pmm_2h = calculate_Pmm(
-            setup, observables, ingredients, hmf, mass_range, dndm, uk_c,
+            setup, observables.mm, ingredients, hmf, mass_range, dndm, uk_c,
             F_k1, F_k2, Imm=None)
         #if ingredients['haloexclusion'] and setup['return'] != 'power':
         #    Pmm_k_t = Pmm_1h
@@ -700,7 +692,7 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
             and setup['return'] in ('sigma', 'kappa'):
         pointmass = c_pm[1]/(2*np.pi) * array(
             [10**m_pm / r_i**2
-             for m_pm, r_i in zip(c_pm[0], observable.R)])
+             for m_pm, r_i in zip(c_pm[0], setup['rvir_range_3d'])])
         surface_density = surface_density + pointmass
 
     if setup['distances'] == 'proper':
@@ -734,7 +726,8 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
         surface_density[i] = fill_nan(surface_density[i])
     if setup['return'] in ('kappa', 'sigma'):
         surface_density_r = array(
-            [UnivariateSpline(rvir_range_3d_i, np.nan_to_num(si), s=0)
+            [UnivariateSpline(
+                setup['rvir_range_3d_interp'], np.nan_to_num(si), s=0)
              for si in surface_density])
         surface_density = np.array(
             [s_r(r_i) for s_r, r_i in zip(surface_density_r, observable.R)])
@@ -863,32 +856,39 @@ def output_xi(output, setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
     return output
 
 
-def populations(observables, ingredients, completeness, mass_range, theta):
-    pop_c, pop_s = np.zeros((2,observables.nbins,mass_range.size))
-
+def populations(observables, ingredients, selection, mass_range, z, theta):
+    """Number of centrals/satellites as a function of mass"""
+    # make sure this is consistent with the main function!
     c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta[1:]
+    pop_c, pop_s = np.zeros((2,observables.nbins,mass_range.size))
+    prob_c, prob_s = np.zeros(
+        (2,observables.nbins,observables[0].sampling.shape[1],mass_range.size))
 
+    completeness = calculate_completeness(
+        observables, selection, ingredients, z)
     if observables.gm:
+        idx = observables.gm.idx
         if ingredients['centrals']:
-            pop_c[observables.gm.idx,:], prob_c_gm = hod.number(
+            pop_c[idx,:], prob_c[idx,:] = hod.number(
                 observables.gm.sampling, mass_range, c_mor[0], c_scatter[0],
                 c_mor[1:], c_scatter[1:], completeness[observables.gm.idx],
                 obs_is_log=observables.gm.is_log)
         if ingredients['satellites']:
-            pop_s[observables.gm.idx,:], prob_s_gm = hod.number(
+            pop_s[idx,:], prob_s[idx,:] = hod.number(
                 observables.gm.sampling, mass_range, s_mor[0], s_scatter[0],
                 s_mor[1:], s_scatter[1:], completeness[observables.gm.idx],
                 obs_is_log=observables.gm.is_log)
 
     if observables.gg:
+        idx = observables.gg.idx
         if ingredients['centrals']:
-            pop_c[observables.gg.idx,:], prob_c_gg = hod.number(
+            pop_c[idx,:], prob_c[idx,:] = hod.number(
                 observables.gg.sampling, mass_range, c_mor[0], c_scatter[0],
                 c_mor[1:], c_scatter[1:], completeness[observables.gg.idx],
                 obs_is_log=observables.gg.is_log)
         if ingredients['satellites']:
-            pop_s[observables.gg.idx,:], prob_s_gg = hod.number(
+            pop_s[idx,:], prob_s[idx,:] = hod.number(
                 observables.gg.sampling, mass_range, s_mor[0], s_scatter[0],
                 s_mor[1:], s_scatter[1:], completeness[observables.gg.idx],
                 obs_is_log=observables.gg.is_log)
@@ -945,7 +945,7 @@ def power_as_interp(setup, observables, ingredients, Pgm, Pgg, Pmm, nz=None):
     return Pgm_func, Pgg_func, Pmm_func
 
 
-def preamble(theta, R):
+def preamble(theta):
     """Preamble function
 
     This function is specified separately in the configuration file
@@ -1019,7 +1019,7 @@ def preamble(theta, R):
             'Number of redshift bins should be equal to the number of' \
             ' observable bins!')
 
-    return
+    return theta
 
 
 def format_z(z, nbins):

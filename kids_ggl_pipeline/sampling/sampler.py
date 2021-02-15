@@ -38,7 +38,7 @@ from .. import __version__
 
 def run(hm_options, options, args):
 
-    function, function_cov, parameters, names, prior_types, \
+    function, function_cov, preamble, parameters, names, prior_types, \
         nparams, repeat, join, starting, output = \
             hm_options
 
@@ -116,6 +116,10 @@ def run(hm_options, options, args):
 
     if not options['resume']:
         print('Starting values =', starting)
+
+    # if there is a preamble function we can run it now
+    if preamble:
+        parameters = preamble(parameters)
 
     # are we just running a demo?
     if args.demo:

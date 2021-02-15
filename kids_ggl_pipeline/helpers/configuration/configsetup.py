@@ -4,6 +4,7 @@ import numpy as np
 
 
 _default_entries = {
+    'kfilter': 'file name containing the k-space filter. Requires pixell',
     'lnk_bins': 'number of (log-spaced) bins in wavenumber k',
     'lnk_max': 'maximum value for lnk in the power spectrum calculations',
     'lnk_min': 'minimum value for lnk in the power spectrum calculations',
@@ -18,6 +19,7 @@ _default_entries = {
     }
 
 _default_values = {
+    'kfilter': '',
     'lnk_bins': 10000,
     'lnk_min': -15.,
     'lnk_max': 10.,
@@ -48,8 +50,9 @@ _necessary_entries = {
 
 _valid_entries = {
     'delta': float,
-    'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial'),
+    'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial', 'critical', 'matter'),
     'distances': ('comoving', 'proper', 'angular'),
+    'kfilter': str,
     'lnk_bins': int,
     'lnk_min': float,
     'lnk_max': float,
@@ -75,6 +78,28 @@ def add_defaults(setup):
     for key, value in _default_values.items():
         if key not in setup:
             setup[key] = value
+    return setup
+
+
+def add_kfilter(setup):
+    if not setup['kfilter']:
+        return setup
+    try:
+        import pixell
+    except ImportError:
+        err = 'you must install the pixell library in order to use' \
+              ' a k-space filter with KiDS-GGL. Please install with\n' \
+              '    pip install pixell'
+        raise ImportError(err)
+    else:
+        try:
+            from profiley.filtering import Filter
+        except ImportError:
+            err = 'you must install profiley in order to use a k-space' \
+                  ' filter with KiDS-GGL. Please install with\n' \
+                  '    pip install pixell'
+        else:
+            setup['kfilter'] = Filter(setup['kfilter'])
     return setup
 
 
@@ -159,6 +184,7 @@ def check_setup(setup):
     setup = add_mass_range(setup)
     setup = add_rvir_range(setup)
     setup = add_wavenumber(setup)
+    setup = add_kfilter(setup)
     return setup
 
 

@@ -916,7 +916,7 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         concentration = c_concentration[0](mass_range, *c_concentration[1:])
-                uk_c = nfw.uk(
+        uk_c = nfw.uk(
             setup['k_range_lin'], mass_range, rvir_range_lin,
                 concentration, rho_bg,
             setup['delta'])
@@ -927,7 +927,7 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     if ingredients['satellites']:
         concentration_sat = s_concentration[0](
             mass_range, *s_concentration[1:])
-                uk_s = nfw.uk(
+        uk_s = nfw.uk(
             setup['k_range_lin'], mass_range, rvir_range_lin,
                 concentration_sat, rho_bg,
             setup['delta'])
@@ -1147,7 +1147,7 @@ def covariance(theta, R):
     
     completeness = np.ones(observables.sampling.shape)
     pop_c, pop_s = populations(observables,
-        ingredients, completeness, mass_range, theta, nbins):
+        ingredients, completeness, mass_range, theta, nbins)
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness

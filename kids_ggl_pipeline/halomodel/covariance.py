@@ -1057,10 +1057,7 @@ def covariance(theta, R):
     # alias (should probably get rid of it)
     mass_range = setup['mass_range']
 
-    rvir_range_lin = virial_radius(
-        mass_range, rho_bg, setup['delta'])
-    #rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
-    #rvir_range_3d = setup['rvir_range_3d']
+
     
     # Remove, for testing purposes
     """
@@ -1101,6 +1098,8 @@ def covariance(theta, R):
                 'It should be a text file with 2 columns, first column the log10 of stellar mass/luminosity'/
                 'the second one Vmax at that stellar mass/luminosity.')
 
+
+    # Calculate critical surface density, either simply or for KiDS
     if covar['kids_sigma_crit'] == 'True':
         # KiDS specific sigma_crit, accounting for n(z)!
         spec_z_path = covar['specz_file']
@@ -1113,8 +1112,9 @@ def covariance(theta, R):
     Pi_max_lens = hmf[0].cosmo.angular_diameter_distance(z_kids).value
     rho_sc = rho_bg[...,0]
     shape_noise = ((sigma_crit / rho_sc)**2.0) * (kids_variance_squared / eff_density_in_rad)  * ((hmf[0].cosmo.angular_diameter_distance(z).value)**2.0 / Pi_max_lens) # With lensing the projected distance is the distance between the observer and effective survey redshift.
-    #shape_noise = np.zeros_like(shape_noise)
     
+    
+    # Setup area and survey variance
     if covar['healpy'] == 'True':
         healpy_data = covar['healpy_data']
         print('Using healpy map to determine survey variance and area.')
@@ -1142,6 +1142,7 @@ def covariance(theta, R):
     print('Survey and observational details set.')
     if covar['kids_sigma_crit'] == 'True':
         print('Using KiDS specific sigma_crit setup.')
+    
     
     # Calculating halo model
     
@@ -1403,7 +1404,8 @@ def covariance(theta, R):
                     zip(P_lin_inter, hmf, uk_c, rho_bg)])
         print('Trispectra done.')
    
-
+   
+    # Initialise output arrays
     if observables.gm:
         cov_esd = np.zeros((observables.gm.size.sum(), observables.gm.size.sum()), dtype=np.float64)
         cov_esd_tot = cov_esd.copy()
@@ -1423,186 +1425,8 @@ def covariance(theta, R):
         cov_mlf_cross_gg = np.zeros((observables.gg.size.sum(), observables.mlf.size.sum()), dtype=np.float64)
         cov_mlf_cross_gg_tot = cov_mlf_cross_gg.copy()
     
-    """
-    ######################################################
-    ###### To be removed, only for testing purposes ######
-    ######################################################
-    
-    lnk_min, lnk_max = np.log(1e-4), np.log(1e4)
-    k_temp = np.linspace(lnk_min, lnk_max, 80, endpoint=True)
-    k_temp_lin = np.exp(k_temp)
-    
-    # For simulation cube as in Mohammed et al. 2017!
-    W = 500.0**3.0 * sp.jv(1, k_range_lin*500.0) / (k_range_lin*500.0)
-    W_p = UnivariateSpline(k_range_lin, W, s=0, ext=0)
-    survey_var = [survey_variance_test(hmf_i, W_p, k_range, 500.0**3.0) for hmf_i in hmf]
-    
-    
-    #shape_noise[0] = 0.0
-    test_gauss = np.zeros((len(k_temp_lin), len(k_temp_lin)))
-    delta = np.eye(len(k_temp_lin))
-    for i, k in enumerate(k_temp_lin):
-        for j, l in enumerate(k_temp_lin):
-            test_gauss[i,j] = 2.0 * ((np.sqrt(np.exp(P_mm_func[0](np.log(k)))) * np.sqrt(np.exp(P_mm_func[0](np.log(l))))) + delta[i,j]*shape_noise[0])**2.0
-
-    test_gauss = delta * test_gauss
-    
-    ps_deriv_mm = ((68.0/21.0 - (1.0/3.0)*dlnk3P_lin_interdlnk[0](k_temp)) * np.exp(P_lin_inter[0](k_temp)) * np.exp(I_inter_m[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.exp(I_mm_func[0](k_temp)) ) #/ (np.exp(P_mm_func[0](k_temp)))
-    
-    ps_deriv_gg = ((68.0/21.0 - (1.0/3.0)*dlnk3P_lin_interdlnk[0](k_temp)) * np.exp(P_lin_inter[0](k_temp)) * np.exp(I_g_func[0](k_temp))*np.exp(I_g_func[0](k_temp)) + np.exp(I_gg_func[0](k_temp)) - 2.0 * bias_num[0][0] * np.exp(P_gg_func[0](k_temp)) ) #/ (np.exp(P_gg_func[0](k_temp)))
-    
-    ps_deriv_gm = ((68.0/21.0 - (1.0/3.0)*dlnk3P_lin_interdlnk[0](k_temp)) * np.exp(P_lin_inter[0](k_temp)) * np.exp(I_g_func[0](k_temp))*np.exp(I_inter_m[0](k_temp)) + np.exp(I_gm_func[0](k_temp)) - bias_num[0][0] * np.exp(P_gm_func[0](k_temp)) ) #/ (np.exp(P_gm_func[0](k_temp)))
-    
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/ps_deriv_mm.npy', ps_deriv_mm)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/ps_deriv_gm.npy', ps_deriv_gm)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/ps_deriv_gg.npy', ps_deriv_gg)
-    
-    quit()
-    
-    
-    test_1h = trispectra_1h(k_temp_lin, hmf[0], uk_c[0], uk_s[0], rho_bg[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'mmmm')
-    test_1h_gm = trispectra_1h(k_temp_lin, hmf[0], uk_c[0], uk_s[0], rho_bg[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'gmgm')
-    test_1h_gg = trispectra_1h(k_temp_lin, hmf[0], uk_c[0], uk_s[0], rho_bg[0], ngal[0], pop_c[0], pop_s[0], mass_range, k_range_lin, 'gggg')
-    test_1h = test_1h(k_temp_lin, k_temp_lin)
-    test_1h_gm = test_1h_gm(k_temp_lin, k_temp_lin)
-    test_1h_gg = test_1h_gg(k_temp_lin, k_temp_lin)
-    cor_test_1h = test_1h#/np.sqrt(np.outer(np.diag(test_1h), np.diag(test_1h.T)))
-    import matplotlib.pyplot as pl
-    pl.imshow(cor_test_1h, interpolation='nearest', cmap='seismic')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_1h.png', bbox_inches='tight', dpi=360)
-    pl.clf()
-    #print(test_1h)
-
-    test_ah = trispectra_234h(k_temp_lin, P_lin_inter[0], hmf[0], uk_c[0], bias_tinker10(hmf[0]), rho_bg[0], mass_range, k_range_lin)
-    test = test_ah[0](k_temp_lin, k_temp_lin)
-    test_2h = test_ah[1](k_temp_lin, k_temp_lin)
-    test_3h = test_ah[2](k_temp_lin, k_temp_lin)
-    test_4h = test_ah[3](k_temp_lin, k_temp_lin)
-    #test = test/100.0
-    #test_block = test/np.sqrt(np.outer(np.diag(test), np.diag(test.T)))
-    test_tot = test_1h + test
-    
-    cor_test_2h = test_2h#/np.sqrt(np.outer(np.diag(test_2h), np.diag(test_2h.T)))
-    cor_test_3h = test_3h#/np.sqrt(np.outer(np.diag(test_3h), np.diag(test_3h.T)))
-    cor_test_4h = test_4h#/np.sqrt(np.outer(np.diag(test_4h), np.diag(test_4h.T)))
-    cor_test_tot = test_tot#/np.sqrt(np.outer(np.diag(test_tot), np.diag(test_tot.T)))
-    
-    
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_PNL.npy', np.exp(P_mm_func[0](np.log(k_range_lin))))
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_PL.npy', np.exp(P_lin_inter[0](np.log(k_range_lin))))
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_1h.npy', test_1h)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_1h_gm.npy', test_1h_gm)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_1h_gg.npy', test_1h_gg)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_2h.npy', test_2h)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_3h.npy', test_3h)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_4h.npy', test_4h)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_tot.npy', test_tot)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/k_big.npy', k_range_lin)
-    np.save('/net/home/fohlen12/dvornik/test_pipeline2/covariance/k_small.npy', k_temp_lin)
-
-    pl.imshow(cor_test_2h, interpolation='nearest', cmap='seismic')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_2h.png', bbox_inches='tight', dpi=360)
-    pl.clf()
-    
-    pl.imshow(cor_test_3h, interpolation='nearest', cmap='seismic')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_3h.png', bbox_inches='tight', dpi=360)
-    pl.clf()
-    
-    pl.imshow(cor_test_4h, interpolation='nearest', cmap='seismic')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_4h.png', bbox_inches='tight', dpi=360)
-    pl.clf()
-    
-    pl.imshow(cor_test_tot, interpolation='nearest', cmap='seismic')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/test_tri.png', bbox_inches='tight', dpi=360)
-    pl.clf()
-    #print(test)
-
-    #pl.plot(mass_range, hmf[0].dndm)
-    #pl.plot(mass_range, hmf[1].dndm)
-    #pl.plot(mass_range, hmf[2].dndm)
-    #pl.xscale('log')
-    #pl.yscale('log')
-    #pl.show()
-    
-    pl.plot(k_temp_lin, ps_deriv_mm/ (np.exp(P_mm_func[0](k_temp))))
-    pl.plot(k_temp_lin, ps_deriv_gm/ (np.exp(P_gm_func[0](k_temp))))
-    pl.plot(k_temp_lin, ps_deriv_gg/ (np.exp(P_gg_func[0](k_temp))))
-    pl.xscale('log')
-    pl.yscale('log')
-    pl.xlim([0.01, 2.5])
-    #pl.ylim([0.15, 4])
-    pl.xlabel('k [h/Mpc]')
-    pl.ylabel(r'$\rm{d \ln} P(k) / \rm{d \delta_{b}}$')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/ssc_mm.png', bbox_inches='tight', dpi=360)
-    #pl.show()
-    pl.clf()
-
-
-    volume = 500.0**3.0#np.pi*radius**2.0*Pi_max*2.0
-    loc = 0.51
-    index = np.argmin(np.abs(k_temp_lin - loc))
-    #index = 25
-    print(k_temp_lin[index])
-    print(index)
-    st = (k_temp_lin[index+1]-k_temp_lin[index-1])/(k_temp_lin[index+1]+k_temp_lin[index-1])#/k_temp_lin[index]
-    print(st)
-    Nmode = 0.5*(k_temp_lin[index]**2.0 * volume * st) / (2.0*np.pi)**2.0
-    
-    denom = np.outer(np.exp(P_mm_func[0](k_temp)), np.exp(P_mm_func[0](k_temp)).T)
-    
-    #pl.plot(k_temp_lin, np.sqrt(((test_gauss/Nmode) / denom))[:,index], color='red', label='gauss')
-    #pl.plot(k_temp_lin, np.sqrt((test_gauss/Nmode + test_tot/volume)/denom + (survey_var[0] * np.outer(ps_deriv_mm, ps_deriv_mm)))[:,index], color='black', label='tot')
-    pl.plot(k_temp_lin, np.sqrt((test/volume)/denom)[:,index], color='orange', ls='-.', label='tri')
-    pl.plot(k_temp_lin, np.sqrt((test_2h/volume)/denom)[:,index], label='2h')
-    pl.plot(k_temp_lin, np.sqrt((test_3h/volume)/denom)[:,index], label='3h')
-    pl.plot(k_temp_lin, np.sqrt((test_4h/volume)/denom)[:,index], label='4h')
-    pl.plot(k_temp_lin, np.sqrt((test_1h/volume)/denom)[:,index], color='orange', ls='--', label='1h')
-    #pl.plot(k_temp_lin, np.sqrt((survey_var[0] * np.outer(ps_deriv_mm, ps_deriv_mm)))[:,index], color='blue', label='ssc')
-    pl.xscale('log')
-    pl.xlim([0.01, 1.0])
-    pl.ylim([0.0, 0.08])
-    pl.legend()
-    #pl.yscale('log')
-    pl.xlabel('k [h/Mpc]')
-    pl.ylabel(r'$\rm{\sqrt{Cov/P(k)P(k\prime)}}$')
-    pl.title(r'$k\prime = %f $'%loc)
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/tot_mm.png', bbox_inches='tight', dpi=360)
-    #pl.show()
-    pl.clf()
-
-    #pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test)**(1.0/3.0))
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_1h)**(1.0/3.0), label='1h')
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_2h)**(1.0/3.0), label='2h')
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_3h)**(1.0/3.0), label='3h')
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_4h)**(1.0/3.0), label='4h')
-    pl.plot(k_temp_lin, (k_temp_lin**3.0 / (2.0*np.pi)**2.0) * np.diag(test_tot)**(1.0/3.0), label='tot')
-    pl.xscale('log')
-    pl.xlim([0.01, 100.0])
-    pl.ylim([1e-2, 1e6])
-    pl.legend()
-    pl.yscale('log')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/diag_mm.png', bbox_inches='tight', dpi=360)
-    #pl.show()
-    pl.clf()
-    
-    
-    pl.plot(k_temp_lin, np.diag(test_1h), label='1h')
-    pl.plot(k_temp_lin, np.diag(test_2h), label='2h')
-    pl.plot(k_temp_lin, np.diag(test_3h), label='3h')
-    pl.plot(k_temp_lin, np.diag(test_4h), label='4h')
-    pl.plot(k_temp_lin, np.diag(test_tot), label='tot')
-    pl.xscale('log')
-    pl.xlim([0.01, 100.0])
-    pl.ylim([1e-19, 1e12])
-    pl.legend()
-    pl.yscale('log')
-    pl.savefig('/net/home/fohlen12/dvornik/test_pipeline2/covariance/diag_mm2.png', bbox_inches='tight', dpi=360)
-    #pl.show()
-    pl.clf()
-    
-    
-    quit()
-    #"""
+   
+    # Calculate the requested terms and combinations
     if gauss == 'True':
         print('Calculating the Gaussian part of the covariance ...')
         if observables.gm:

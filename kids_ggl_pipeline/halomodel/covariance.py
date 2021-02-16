@@ -888,6 +888,55 @@ def format_z(z, nbins):
     #z = expand_dims(z, -1) # no expand dims in cov!
     return z
     
+
+def populations(observables, ingredients, completeness, mass_range, theta, nbins):
+    pop_c, pop_s = np.zeros((2,nbins,mass_range.size))
+
+    c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        s_concentration, s_mor, s_scatter, s_beta = theta[1:]
+
+    if ingredients['centrals']:
+        pop_c, prob_c = hod.number(
+            observables.sampling, mass_range, c_mor[0], c_scatter[0],
+            c_mor[1:], c_scatter[1:], np.ones(observables.sampling.shape),
+            obs_is_log=observables.gm.is_log)
+
+    if ingredients['satellites']:
+        pop_s, prob_s = hod.number(
+            observables.sampling, mass_range, s_mor[0], s_scatter[0],
+            s_mor[1:], s_scatter[1:], np.ones(observables.sampling.shape),
+            obs_is_log=observables.gm.is_log)
+                
+    return pop_c, pop_s
+    
+    
+def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
+                 c_concentration, s_concentration, c_miscent, nbins):
+    rvir_range_lin = virial_radius(mass_range, rho_bg, setup['delta'])
+    # Fourier Transform of the NFW profile
+    if ingredients['centrals']:
+        concentration = c_concentration[0](mass_range, *c_concentration[1:])
+                uk_c = nfw.uk(
+            setup['k_range_lin'], mass_range, rvir_range_lin,
+                concentration, rho_bg,
+            setup['delta'])
+        uk_c = uk_c / expand_dims(uk_c[...,0], -1)
+    else:
+        uk_c = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
+    # and of the NFW profile of the satellites
+    if ingredients['satellites']:
+        concentration_sat = s_concentration[0](
+            mass_range, *s_concentration[1:])
+                uk_s = nfw.uk(
+            setup['k_range_lin'], mass_range, rvir_range_lin,
+                concentration_sat, rho_bg,
+            setup['delta'])
+        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
+    else:
+        uk_s = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
+
+    return uk_c, uk_s
+    
     
 def preamble(theta, R):
     """Preamble function
@@ -1008,12 +1057,6 @@ def covariance(theta, R):
     # alias (should probably get rid of it)
     mass_range = setup['mass_range']
 
-
-    concentration = c_concentration[0](mass_range, *c_concentration[1:])
-    if ingredients['satellites']:
-        concentration_sat = s_concentration[0](
-            mass_range, *s_concentration[1:])
-
     rvir_range_lin = virial_radius(
         mass_range, rho_bg, setup['delta'])
     #rvir_range_3d = logspace(-3.2, 4, 250, endpoint=True)
@@ -1102,26 +1145,9 @@ def covariance(theta, R):
     
     # Calculating halo model
     
-    # interpolate selection function to the same grid as redshift and
-    # observable to be used in trapz
-    
     completeness = np.ones(observables.sampling.shape)
-    if ingredients['centrals']:
-        pop_c, prob_c = hod.number(
-            observables.sampling, mass_range, c_mor[0], c_scatter[0],
-            c_mor[1:], c_scatter[1:], completeness,
-            obs_is_log=observables.gm.is_log)
-    else:
-        pop_c = np.zeros((nbins,mass_range.size))
-
-    if ingredients['satellites']:
-        pop_s, prob_s = hod.number(
-            observables.sampling, mass_range, s_mor[0], s_scatter[0],
-            s_mor[1:], s_scatter[1:], completeness,
-            obs_is_log=observables.gm.is_log)
-    else:
-        pop_s = np.zeros(pop_c.shape)
-
+    pop_c, pop_s = populations(observables,
+        ingredients, completeness, mass_range, theta, nbins):
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
@@ -1130,32 +1156,12 @@ def covariance(theta, R):
     meff = hod.Mh_effective(
         dndm, pop_g, mass_range, return_log=observables.gm.is_log)
         
-     
-    """
-    # Power spectrum
-    """
     
-    # damping of the 1h power spectra at small k
-    F_k1 = sp.erf(setup['k_range_lin']/0.1)
-    F_k2 = np.ones_like(setup['k_range_lin'])
-    # Fourier Transform of the NFW profile
+    uk_c, uk_s = calculate_uk(
+        setup, observables, ingredients, z, mass_range, rho_bg,
+        c_concentration, s_concentration, c_miscent, nbins)
     
-    if ingredients['centrals']:
-        uk_c = nfw.uk(
-            setup['k_range_lin'], mass_range, rvir_range_lin, concentration, rho_bg,
-            setup['delta'])
-        uk_c = uk_c / expand_dims(uk_c[...,0], -1)
-    else:
-        uk_c = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
-    # and of the NFW profile of the satellites
-    if ingredients['satellites']:
-        uk_s = nfw.uk(
-            setup['k_range_lin'], mass_range, rvir_range_lin, concentration_sat, rho_bg,
-            setup['delta'])
-        uk_s = uk_s / expand_dims(uk_s[...,0], -1)
-    else:
-        uk_s = np.ones((nbins,mass_range.size,setup['k_range_lin'].size))
-
+    
     # Luminosity or mass function as an output:
     if observables.mlf:
         # Needs independent redshift input!
@@ -1224,6 +1230,15 @@ def covariance(theta, R):
         vmax_inter = UnivariateSpline(10.0**M_center, vmax_in, s=0, ext=0)
         vmax = [vmax_inter(i)for i in observables.mlf.R]
     
+    
+    """
+    # Power spectrum
+    """
+    
+    
+    # damping of the 1h power spectra at small k
+    F_k1 = sp.erf(setup['k_range_lin']/0.1)
+    F_k2 = np.ones_like(setup['k_range_lin'])
     
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
@@ -1599,6 +1614,17 @@ def covariance(theta, R):
         if observables.gm and observables.gg and (cross == 'True'):
             cov_cross_gauss = parallelise(calc_cov_gauss, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_gm_func, P_gg_func, P_mm_func, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'cross', subtract_randoms, observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_gauss
+            
+        if observables.mlf:
+            print('Calculating the Gaussian part of the SMF/LF covariance ...')
+            cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, mlf_out, observables.mlf.size, observables.mlf.size, covar)
+            cov_mlf_tot += cov_mlf_gauss
+        if observables.mlf and observables.gm and (cross == 'True'):
+            cov_mlf_cross_gauss_gm = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
+            cov_mlf_cross_gm_tot += cov_mlf_cross_gauss_gm
+        if observables.mlf and observables.gg and (cross == 'True'):
+            cov_mlf_cross_gauss_gg = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
+            cov_mlf_cross_gg_tot += cov_mlf_cross_gauss_gg
         
 
     if ssc == 'True':
@@ -1612,6 +1638,17 @@ def covariance(theta, R):
         if observables.gm and observables.gg and (cross == 'True'):
             cov_cross_ssc = parallelise(calc_cov_ssc, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, area_norm_term, bias_num, survey_var, rho_bg, 'cross', observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_ssc
+            
+        if observables.mlf:
+            print('Calculating the SMF/LF super-sample covariance ...')
+            cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, observables.mlf.size, observables.mlf.size, covar)
+            cov_mlf_tot += cov_mlf_ssc
+        if observables.mlf and observables.gm and (cross == 'True'):
+            cov_mlf_cross_ssc_gm = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
+            cov_mlf_cross_gm_tot += cov_mlf_cross_ssc_gm
+        if observables.mlf and observables.gg and (cross == 'True'):
+            cov_mlf_cross_ssc_gg = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
+            cov_mlf_cross_gg_tot += cov_mlf_cross_ssc_gg
     
 
     if non_gauss == 'True':
@@ -1626,34 +1663,7 @@ def covariance(theta, R):
             cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, Tgggm, T234h, bias_num, area_norm_term, vol, rho_bg, 'cross', observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_non_gauss
             
-            
-    if gauss == 'True':
-        if observables.mlf:
-            print('Calculating the Gaussian part of the SMF/LF covariance ...')
-            cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, mlf_out, observables.mlf.size, observables.mlf.size, covar)
-            cov_mlf_tot += cov_mlf_gauss
-        if observables.mlf and observables.gm and (cross == 'True'):
-            cov_mlf_cross_gauss_gm = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
-            cov_mlf_cross_gm_tot += cov_mlf_cross_gauss_gm
-        if observables.mlf and observables.gg and (cross == 'True'):
-            cov_mlf_cross_gauss_gg = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
-            cov_mlf_cross_gg_tot += cov_mlf_cross_gauss_gg
-            
-            
-    if ssc == 'True':
-        if observables.mlf:
-            print('Calculating the SMF/LF super-sample covariance ...')
-            cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, observables.mlf.size, observables.mlf.size, covar)
-            cov_mlf_tot += cov_mlf_ssc
-        if observables.mlf and observables.gm and (cross == 'True'):
-            cov_mlf_cross_ssc_gm = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
-            cov_mlf_cross_gm_tot += cov_mlf_cross_ssc_gm
-        if observables.mlf and observables.gg and (cross == 'True'):
-            cov_mlf_cross_ssc_gg = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
-            cov_mlf_cross_gg_tot += cov_mlf_cross_ssc_gg
-    
 
-    
     # To be removed, only for testing purposes
     """
     rescale = covar['area']/survey_area #1.0#

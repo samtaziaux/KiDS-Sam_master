@@ -11,6 +11,7 @@ os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 from astropy import units as u
+from functools import wraps
 from glob import glob
 import multiprocessing as multi
 import numpy as np
@@ -110,6 +111,7 @@ def model(theta, R):
     zs = cosmo[-1]
     # astropy (for profiley)
     cosmo_model, sigma8, n_s, z = halo.load_cosmology(cosmo)
+    """
     # colossus (for mass-concentration relation)
     params = dict(Om0=omegam, H0=100*h, ns=n_s, sigma8=sigma8, Ob0=omegab)
     colossus_cosmology.setCosmology('cosmo', params)
@@ -119,6 +121,8 @@ def model(theta, R):
     cclcosmo = ccl.Cosmology(
         Omega_c=omegam-omegab, Omega_b=omegab, h=h, A_s=2.1e-9, n_s=n_s,
         T_CMB=2.725, Neff=Neff, m_nu=0.06, w0=w0, wa=wa)
+    """
+    cclcosmo = define_cosmology(cosmo)
     mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
 
     # probably need to be careful with the normalization of the halo bias
@@ -158,29 +162,49 @@ def model(theta, R):
     # concentration
     profiles = define_profiles(setup, cosmo_model, z, c_concentration)
     print('shape =', profiles.shape)
-    # move to preamble later
-    arcmin_fine_bins = np.linspace(0, 50, 1001) * u.arcmin
-    arcmin_fine = (arcmin_fine_bins[:-1]+arcmin_fine_bins[1:]) / 2
+
     if profiles.frame == 'physical':
         arcmin2kpc = cosmo_model.kpc_proper_per_arcmin
     else:
         arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
-    Rfine = (arcmin_fine * arcmin2kpc(z)).to(u.Mpc).value.T
+    Rfine = (setup['arcmin_fine'] * arcmin2kpc(z)).to(u.Mpc).value.T
     print('Rfine =', Rfine.shape)
 
     output = {}
     output['kappa.1h.mz.raw'] = np.transpose(
-        profiles.convergence(Rfine[:,:,None], zs), axes=(1,2,0))
+        profiles.convergence(Rfine[:,:,None]), axes=(1,2,0))
 
     print_output(output)
 
     output['kappa.1h.mz'] = filter_profiles(
-        ingredients, setup['kfilter'], output['kappa.1h.mz.raw'], arcmin_fine,
-        setup['arcmin_bins'])
+        ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
+        setup['arcmin_fine'], setup['arcmin_bins'])
 
     print_output(output)
 
-    #output['sigma.2h.raw'] = lss.load_profiles('sigma_2h.txt')[0]
+    ti = time()
+    output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
+    tf = time()
+    print(f'calculate_sigma_2h in {tf-ti:.1f} s')
+
+    output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
+        / profiles.sigma_crit()[:,:,None]
+
+    print_output(output)
+
+    output['kappa.2h.mz'] = filter_profiles(
+        ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
+        setup['arcmin_fine'], setup['arcmin_bins'])
+
+    print_output(output)
+
+    # halo mass function weighting
+    hmf = ccl.halos.mass_function_from_name('Tinker10')
+    hmf = hmf(cclcosmo, mass_def=mdef)
+    dndm = np.array([hmf.get_mass_function(cclcosmo, m, ai) for ai in a])
+    print('dndm =', dndm.shape)
+    output['kappa.1h'] = trapz(
+        expand_dims(dndm, -1)*output['kappa.1h.mz'], dndm, axis=1)
 
     print_output(output)
 
@@ -215,6 +239,11 @@ def preamble(theta):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
+    assert setup['distances'] == 'comoving'
+
+    #cclcosmo = define_cosmology(params[0])
+    setup['bias_func'] = ccl.halos.halo_bias_from_name('Tinker10')
+
     # read measurement binning scheme
     # need to do it in a smarter (more flexible) way
     dataset_name = 'des_r2'
@@ -222,12 +251,87 @@ def preamble(theta):
         dataset_name, f'{dataset_name}_l*', '*_bin_edges.txt')))
     arcmin_bins = np.array([np.loadtxt(f) for f in filenames])
     setup['arcmin_bins'] = arcmin_bins
+    setup['arcmin'] = (arcmin_bins[:,:-1]+arcmin_bins[:,1:]) / 2
+
+    # fine binning for filtering
+    setup['arcmin_fine_bins'] = np.linspace(0, 50, 1001) * u.arcmin
+    setup['arcmin_fine'] = 0.5 \
+        * (setup['arcmin_fine_bins'][:-1]+setup['arcmin_fine_bins'][1:])
 
     # we might also want to add a function in the configuration
     # functionality to update theta more easily
     theta[1][theta[0].index('setup')] = setup
 
     return theta
+
+
+def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=6):
+    a = 1 / (1+z[:,0])
+    m = setup['mass_range']
+    # matter power spectra
+    k = setup['k_range_lin']
+    Pk = np.array([ccl.linear_matter_power(cclcosmo, k, ai) for ai in a])
+    # halo bias
+    bias = setup['bias_func'](cclcosmo, mass_def=mdef)
+    bh = np.array([bias.get_halo_bias(cclcosmo, m, ai) for ai in a])
+    # g-m power spectra
+    lnPgm = np.log(bh[:,:,None] * Pk[:,None])
+
+    # correlation function
+    Rxi = np.logspace(-2, 2, 100)
+    xi = np.zeros((z.size,m.size,Rxi.size))
+    for i in range(z.size):
+        for j in range(m.size):
+            lnPgm_lnk = interp1d(setup['k_range'], lnPgm[i,j])
+            xi[i,j] = lss.power2xi(lnPgm_lnk, Rxi)
+
+    Dc = ccl.background.comoving_radial_distance(cclcosmo, a)
+    bg = 'critical' if 'critical' in setup['delta_ref'].lower() else 'matter'
+    rho_m = ccl.background.rho_x(cclcosmo, 1, bg)
+    # note that we assume all arcmin (i.e., for all bins) are the same
+    arcmin = setup['arcmin_fine'][0] if len(setup['arcmin_fine'].shape) == 2 \
+        else setup['arcmin_fine']
+    R = arcmin * Dc[:,None] * (np.pi/180/60)
+
+    # finally, surface density
+    ti = time()
+    sigma_2h = lss.xi2sigma(
+        R, Rxi, xi, rho_m, threads=threads, full_output=False)
+    print('sigma in {0:.2f} min'.format((time()-ti)/60))
+    return sigma_2h
+    # only do this when saving in the preamble?
+    print('shape =', sigma.shape)
+    cosmo_params = {key: val for key, val in params.items()
+                    if key in ('h','Omega_m','Omega_c','Omega_b','As','ns')}
+    lss.save_profiles(
+        'sigma_2h.txt', z[:,0], np.log10(m), theta, sigma, xlabel='z', ylabel='m',
+        label='sigma_2h', R_units='arcmin', cosmo_params=cosmo_params)
+    return sigma_2h
+
+
+def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.06):
+    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
+    if backend == 'ccl':
+        cosmo = ccl.Cosmology(
+            Omega_c=omegam-omegab, Omega_b=omegab, h=h, A_s=2.1e-9, n_s=n_s,
+            T_CMB=Tcmb, Neff=Neff, m_nu=m_nu, w0=w0, wa=wa)
+    params = dict(Om0=omegam, H0=100*h, ns=n_s, sigma8=sigma8, Ob0=omegab)
+    colossus_cosmology.setCosmology('cosmo', params)
+    return cosmo
+
+
+def define_profiles(setup, cosmo, z, c_concentration):
+    model, fc = c_concentration
+    ref = setup['delta_ref']
+    ref = ref[0] if ref in ('critical', 'matter') \
+        else ref[2].lower()
+    bg = f"{int(setup['delta'])}{ref}"
+    c = fc * np.array([concentration(setup['mass_range'], bg, zi, model=model)
+                       for zi in z[:,0]])
+    profiles = NFW(
+        setup['mass_range'], c, z, cosmo=cosmo, overdensity=setup['delta'],
+        background=ref, frame='comoving', z_s=1100)
+    return profiles
 
 
 def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
@@ -249,17 +353,3 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
         #filtered = np.transpose(filtered, axes=(2,0,1))
         filtered = np.array(filtered)
     return filtered
-
-
-def define_profiles(setup, cosmo, z, c_concentration):
-    model, fc = c_concentration
-    ref = setup['delta_ref']
-    ref = ref[0] if ref in ('critical', 'matter') \
-        else ref[2].lower()
-    bg = f"{int(setup['delta'])}{ref}"
-    c = fc * np.array([concentration(setup['mass_range'], bg, zi, model=model)
-                       for zi in z[:,0]])
-    profiles = NFW(
-        setup['mass_range'], c, z, cosmo=cosmo, overdensity=setup['delta'],
-        background=ref, frame=setup['distances'])
-    return profiles

@@ -128,8 +128,10 @@ def add_wavenumber(setup):
     except KeyError:
         pass
     else:
-        setup['k_range'] = np.arange(
-            setup['lnk_min'], setup['lnk_max'], setup['k_step'])
+        #setup['k_range'] = np.arange(
+            #setup['lnk_min'], setup['lnk_max'], setup['k_step'])
+        setup['k_range'] = np.linspace(
+            setup['lnk_min'], setup['lnk_max'], setup['lnk_bins'])
         setup['k_range_lin'] = np.exp(setup['k_range'])
     return setup
 

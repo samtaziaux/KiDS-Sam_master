@@ -1077,6 +1077,8 @@ def covariance(theta, R):
         observables.mlf.size = np.array([len(r) for r in observables.mlf.R])
     #"""
     
+    print('Setting survey and observational details...')
+    
     Pi_max = covar['pi_max'] # in Mpc/h
     eff_density = covar['eff_density'] # as defined in KiDS (gal / arcmin^2)
     kids_variance_squared = covar['variance_squared'] # as defined in KiDS papers
@@ -1101,6 +1103,7 @@ def covariance(theta, R):
 
     # Calculate critical surface density, either simply or for KiDS
     if covar['kids_sigma_crit'] == 'True':
+        print('\t...using KiDS specific sigma_crit setup.')
         # KiDS specific sigma_crit, accounting for n(z)!
         spec_z_path = covar['specz_file']
         sigma_crit = sigma_crit_kids(hmf, z, z_epsilon, z_max, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0
@@ -1117,7 +1120,7 @@ def covariance(theta, R):
     # Setup area and survey variance
     if covar['healpy'] == 'True':
         healpy_data = covar['healpy_data']
-        print('Using healpy map to determine survey variance and area.')
+        print('\t...using healpy map to determine survey variance and area.')
         l_range, alms, survey_area = calculate_alms(healpy_data, 1)
         survey_var = [survey_variance_from_healpy(hmf_i, setup['k_range'], z_kids, l_range, alms, survey_area) for hmf_i in hmf]
         kids_area = survey_area * 3600.0 # to arcmin^2
@@ -1137,11 +1140,6 @@ def covariance(theta, R):
         W_p = UnivariateSpline(setup['k_range_lin'], W, s=0, ext=0)
         survey_var = [survey_variance(hmf_i, W_p, setup['k_range'], radius) for hmf_i in hmf]
         area_norm_term = W_p
-    
-
-    print('Survey and observational details set.')
-    if covar['kids_sigma_crit'] == 'True':
-        print('Using KiDS specific sigma_crit setup.')
     
     
     # Calculating halo model
@@ -1165,6 +1163,7 @@ def covariance(theta, R):
     
     # Luminosity or mass function as an output:
     if observables.mlf:
+        print('Calculating stellar mass function terms...')
         # Needs independent redshift input!
         #z_mlf = z_in[idx_mlf]
         if z_mlf.size == 1 and observables.mlf.nbins > 1:
@@ -1235,7 +1234,7 @@ def covariance(theta, R):
     """
     # Power spectrum
     """
-    
+    print('Calculating power spectra...')
     
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(setup['k_range_lin']/0.1)
@@ -1428,7 +1427,7 @@ def covariance(theta, R):
    
     # Calculate the requested terms and combinations
     if gauss == 'True':
-        print('Calculating the Gaussian part of the covariance ...')
+        print('Calculating the Gaussian part of the covariance...')
         if observables.gm:
             cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, P_gm_func, P_gg_func, P_mm_func, area_norm_term, W_p, Pi_max_lens, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
             cov_esd_tot += cov_esd_gauss
@@ -1440,7 +1439,7 @@ def covariance(theta, R):
             cov_cross_tot += cov_cross_gauss
             
         if observables.mlf:
-            print('Calculating the Gaussian part of the SMF/LF covariance ...')
+            print('Calculating the Gaussian part of the SMF/LF covariance...')
             cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, mlf_out, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_gauss
         if observables.mlf and observables.gm and (cross == 'True'):
@@ -1452,7 +1451,7 @@ def covariance(theta, R):
         
 
     if ssc == 'True':
-        print('Calculating the super-sample covariance ...')
+        print('Calculating the super-sample covariance...')
         if observables.gm:
             cov_esd_ssc = parallelise(calc_cov_ssc, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, area_norm_term, bias_num, survey_var, rho_bg, 'gm', observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
             cov_esd_tot += cov_esd_ssc
@@ -1464,7 +1463,7 @@ def covariance(theta, R):
             cov_cross_tot += cov_cross_ssc
             
         if observables.mlf:
-            print('Calculating the SMF/LF super-sample covariance ...')
+            print('Calculating the SMF/LF super-sample covariance...')
             cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_ssc
         if observables.mlf and observables.gm and (cross == 'True'):
@@ -1476,7 +1475,7 @@ def covariance(theta, R):
     
 
     if non_gauss == 'True':
-        print('Calculating the connected (non-Gaussian) part of the covariance ...')
+        print('Calculating the connected (non-Gaussian) part of the covariance...')
         if observables.gm:
             cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, Tgmgm, T234h, bias_num, area_norm_term, vol, rho_bg, 'gm', observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
             cov_esd_tot += cov_esd_non_gauss
@@ -1514,6 +1513,8 @@ def covariance(theta, R):
     
     #"""
     
+    
+    print('Combining the matrices...')
     # I think this can be simplified a bit :/
     if observables.gm and not (observables.gg or observables.mlf):
         cov_block = cov_esd_tot

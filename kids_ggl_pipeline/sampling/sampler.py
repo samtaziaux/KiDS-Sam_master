@@ -178,7 +178,8 @@ def run(hm_options, options, args):
              pool=pool, backend=backend, blobs_dtype=dtype)
         #result = sampler.run_mcmc(pos, options['nsteps'], thin_by=options['thin'], progress=True, store=True)
         for sample in sampler.sample(pos, iterations=options['nsteps'],
-                                     thin_by=options['thin'], progress=True, store=True):
+                                     thin_by=options['thin'],
+                                     progress=True, store=True):
             if options['stop_when_converged']:
                 # Only check convergence every 100 steps
                 if sampler.iteration % 100:

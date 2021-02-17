@@ -80,7 +80,6 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 
 
 def model(theta, R):
-    print('R =', R.shape)
 
     # ideally we would move this to somewhere separate later on
     preamble(theta)
@@ -250,11 +249,9 @@ def model(theta, R):
     #    else rvir_range_3d_i
 
     # this is where the redshift integral happens
-    print('xi_gm =', xi_gm.shape)
     output, sigma_gm, sigma_gg, sigma_mm = calculate_surface_density(
         setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
         rho_bg, z, nz, c_pm, output, cosmo_model, zs)
-    print('sigma_gm =', sigma_gm.shape)
 
     if setup['return'] in ('wp', 'esd_wp'):
         wp_out_i = np.array(
@@ -404,6 +401,9 @@ def calculate_esd(setup, observables, ingredients, sigma_gm, c_pm):
         """
         esd = calculate_esd_single(setup, observables.gm, sigma_gm)
         if ingredients['pointmass']:
+            assert len(c_pm[0]) == len(esd), \
+                'for the point mass contribution, must provide one stellar' \
+                ' mass per bin; received {len(c_pm[0])} instead'
             # the 1e12 here is to convert Mpc^{-2} to pc^{-2} in the ESD
             pointmass = c_pm[1]/(np.pi*1e12) * array(
                 [10**m_pm / (r_i**2)

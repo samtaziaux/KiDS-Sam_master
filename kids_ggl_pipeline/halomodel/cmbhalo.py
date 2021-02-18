@@ -208,7 +208,7 @@ def model(theta, R):
 
     print_output(output)
 
-    return
+    return [list(output), np.ones(output.shape[0])]
 
 
 ##################################
@@ -265,7 +265,7 @@ def preamble(theta):
     return theta
 
 
-def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=6):
+def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     a = 1 / (1+z[:,0])
     m = setup['mass_range']
     # matter power spectra
@@ -274,31 +274,45 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=6):
     # halo bias
     bias = setup['bias_func'](cclcosmo, mass_def=mdef)
     bh = np.array([bias.get_halo_bias(cclcosmo, m, ai) for ai in a])
-    # g-m power spectra
-    lnPgm = np.log(bh[:,:,None] * Pk[:,None])
 
     # correlation function
+    #print('correlation functions...')
     Rxi = np.logspace(-2, 2, 100)
-    xi = np.zeros((z.size,m.size,Rxi.size))
-    for i in range(z.size):
-        for j in range(m.size):
-            lnPgm_lnk = interp1d(setup['k_range'], lnPgm[i,j])
-            xi[i,j] = lss.power2xi(lnPgm_lnk, Rxi)
+    r = setup['rvir_range_3d']
+    ti = time()
+    lnk = setup['k_range']
+    xi_kz = np.array([lss.power2xi(interp1d(lnk, lnPk_i), Rxi)
+                      for lnPk_i in np.log(Pk)])
+    xi = bh[:,:,None] * xi_kz[:,None]
+    #print(f'in {time()-ti:.2f} s')
 
+    #print('distances...')
+    #ti = time()
     Dc = ccl.background.comoving_radial_distance(cclcosmo, a)
+    #print(f'in {time()-ti:.2f} s')
     bg = 'critical' if 'critical' in setup['delta_ref'].lower() else 'matter'
+    #print('rho_m...')
+    #ti = time()
     rho_m = ccl.background.rho_x(cclcosmo, 1, bg)
+    #print(f'in {time()-ti:.2f} s')
     # note that we assume all arcmin (i.e., for all bins) are the same
     arcmin = setup['arcmin_fine'][0] if len(setup['arcmin_fine'].shape) == 2 \
         else setup['arcmin_fine']
     R = arcmin * Dc[:,None] * (np.pi/180/60)
 
+    # testing one xi2sigma
+    #print('xi =', R.shape, Rxi.shape, xi.shape, rho_m)
+    #ti = time()
+    #sigma_test = lss.xi2sigma(R, Rxi, 
+
     # finally, surface density
-    ti = time()
+    #print('surface densities...')
+    #ti = time()
     sigma_2h = lss.xi2sigma(
-        R, Rxi, xi, rho_m, threads=threads, full_output=False)
-    print('sigma in {0:.2f} min'.format((time()-ti)/60))
+        R, Rxi, xi, rho_m, threads=1, full_output=False)
+    #print(f'in {time()-ti:.2f} s')
     return sigma_2h
+
     # only do this when saving in the preamble?
     print('shape =', sigma.shape)
     cosmo_params = {key: val for key, val in params.items()
@@ -309,12 +323,15 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=6):
     return sigma_2h
 
 
-def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.06):
-    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
+def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0, backend='ccl'):
+    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo_params[:9]
     if backend == 'ccl':
         cosmo = ccl.Cosmology(
             Omega_c=omegam-omegab, Omega_b=omegab, h=h, A_s=2.1e-9, n_s=n_s,
             T_CMB=Tcmb, Neff=Neff, m_nu=m_nu, w0=w0, wa=wa)
+    elif backend == 'astropy':
+        cosmo = halo.load_cosmology(cosmo_params)[0]
+    # colossus (for mass-concentration relation)
     params = dict(Om0=omegam, H0=100*h, ns=n_s, sigma8=sigma8, Ob0=omegab)
     colossus_cosmology.setCosmology('cosmo', params)
     return cosmo

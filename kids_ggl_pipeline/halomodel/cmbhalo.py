@@ -201,14 +201,20 @@ def model(theta, R):
     # halo mass function weighting
     hmf = ccl.halos.mass_function_from_name('Tinker10')
     hmf = hmf(cclcosmo, mass_def=mdef)
-    dndm = np.array([hmf.get_mass_function(cclcosmo, m, ai) for ai in a])
+    dndm = np.expand_dims(
+        [hmf.get_mass_function(cclcosmo, setup['mass_range'], ai)
+         for ai in 1/(1+z[:,0])], -1)
     print('dndm =', dndm.shape)
-    output['kappa.1h'] = trapz(
-        expand_dims(dndm, -1)*output['kappa.1h.mz'], dndm, axis=1)
+    output['kappa.1h'] = trapz(dndm * output['kappa.1h.mz'], dndm, axis=1)
+    output['kappa.2h'] = trapz(dndm * output['kappa.2h.mz'], dndm, axis=1)
 
     print_output(output)
 
-    return [list(output), np.ones(output.shape[0])]
+    output['kappa'] = output['kappa.1h'] + output['kappa.2h']
+
+    print_output(output)
+
+    return [list(output['kappa']), np.ones(output['kappa'].shape[0])]
 
 
 ##################################
@@ -276,7 +282,7 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     bh = np.array([bias.get_halo_bias(cclcosmo, m, ai) for ai in a])
 
     # correlation function
-    #print('correlation functions...')
+    print('correlation functions...')
     Rxi = np.logspace(-2, 2, 100)
     r = setup['rvir_range_3d']
     ti = time()
@@ -284,34 +290,41 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     xi_kz = np.array([lss.power2xi(interp1d(lnk, lnPk_i), Rxi)
                       for lnPk_i in np.log(Pk)])
     xi = bh[:,:,None] * xi_kz[:,None]
-    #print(f'in {time()-ti:.2f} s')
+    print(f'in {time()-ti:.2f} s')
 
-    #print('distances...')
-    #ti = time()
+    print('distances...')
+    ti = time()
     Dc = ccl.background.comoving_radial_distance(cclcosmo, a)
-    #print(f'in {time()-ti:.2f} s')
+    print(f'in {time()-ti:.2f} s')
     bg = 'critical' if 'critical' in setup['delta_ref'].lower() else 'matter'
-    #print('rho_m...')
-    #ti = time()
+    print('rho_m...')
+    ti = time()
     rho_m = ccl.background.rho_x(cclcosmo, 1, bg)
-    #print(f'in {time()-ti:.2f} s')
+    print(f'in {time()-ti:.2f} s')
     # note that we assume all arcmin (i.e., for all bins) are the same
     arcmin = setup['arcmin_fine'][0] if len(setup['arcmin_fine'].shape) == 2 \
         else setup['arcmin_fine']
-    R = arcmin * Dc[:,None] * (np.pi/180/60)
+    print('arcmin =', arcmin)
+    R = (arcmin * Dc[:,None] * (np.pi/180/60)).value
+    print('R =', R)
 
     # testing one xi2sigma
     #print('xi =', R.shape, Rxi.shape, xi.shape, rho_m)
     #ti = time()
     #sigma_test = lss.xi2sigma(R, Rxi, 
 
+    """
+    The R we pass to xi2sigma should be in Mpc (/h?)
+    """
+
     # finally, surface density
-    #print('surface densities...')
-    #ti = time()
+    print('surface densities...')
+    ti = time()
     sigma_2h = lss.xi2sigma(
-        R, Rxi, xi, rho_m, threads=1, full_output=False)
-    #print(f'in {time()-ti:.2f} s')
-    return sigma_2h
+        R, Rxi, xi_kz, rho_m, threads=1, full_output=False)
+    print(f'in {time()-ti:.2f} s')
+
+    return bh[:,:,None] * sigma_2h[:,None]
 
     # only do this when saving in the preamble?
     print('shape =', sigma.shape)

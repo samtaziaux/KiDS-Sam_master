@@ -98,14 +98,22 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     cov2d : array, shape (Nobsbins*Nrbins,Nobsbins*Nrbins)
         re-shaped covariance matrix, for plotting or other uses
     """
+    # npy binary or ascii file?
+    is_npy = (covfile[-4:] == '.npy')
+
     if not hasattr(covcols, '__iter__'):
         covcols = [covcols]
+    covcols = np.array(covcols)
     try:
-        cov = np.loadtxt(covfile, usecols=[covcols[0]])
+        if is_npy:
+            cov = np.load(covfile)[covcols]
+        else:
+            cov = np.loadtxt(covfile, usecols=covcols, unpack=True)
     except IndexError:
         raise ValueError('provided covariance column number does not exist')
     if len(covcols) == 2:
-        cov /= np.loadtxt(covfile, usecols=[covcols[1]])
+        cov = cov[0] / cov[1]
+
     if exclude is None:
         nexcl = 0
     else:
@@ -179,9 +187,11 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     cov2d : array, shape (Nobsbins*Nrbins,Nobsbins*Nrbins)
         re-shaped covariance matrix, for plotting or other uses
     """
-    cov2d = np.loadtxt(covfile)
-    #cov2d = np.delete(cov2d, -1, axis=0) # remove this after testing!
-    #cov2d = np.delete(cov2d, -1, axis=1) # remove this after testing!
+    # npy binary or ascii file?
+    is_npy = (covfile[-4:] == '.npy')
+    load_func = np.load if is_npy else np.loadtxt
+
+    cov2d = load_func(covfile)
     if exclude is None:
         nexcl = 0
     else:
@@ -240,7 +250,6 @@ def load_covariance_2d(covfile, covcols, Nobsbins, Nrbins, exclude=None):
 
 
 def load_data_esd_only(options, setup):
-    
     R, esd, Nobsbins = load_datapoints_2d(*options['data'])
     #Nobsbins = esd.size
     Nrbins = np.array([sh.size for sh in esd])
@@ -302,7 +311,7 @@ def load_data(options, setup):
         R, Rrange = sampling_utils.setup_integrand(
             R, options['precision'])
         angles = np.linspace(0, 2*np.pi, 540)
-        
+
     else:
         # need to run this without exclude to throw out invalid values in it
         R, esd = load_datapoints(*options['data'])
@@ -333,18 +342,28 @@ def load_data(options, setup):
         R, Rrange = sampling_utils.setup_integrand(
             R, options['precision'])
         angles = np.linspace(0, 2*np.pi, 540)
-    
+
     return R, esd, cov, Rrange, angles, Nobsbins, Nrbins
 
 
 def load_datapoints(datafiles, datacols, exclude=None):
     if isinstance(datafiles, six.string_types):
         datafiles = sorted(glob(datafiles))
-    R, esd = np.transpose([np.loadtxt(df, usecols=datacols[:2])
-                           for df in datafiles], axes=(2,0,1))
+    is_npy = (datafiles[0][-4:] == '.npy')
+    datacols = np.array(datacols)
+    if is_npy:
+        R, esd = np.transpose(
+            [np.load(df)[datacols[:2]] for df in datafiles], axes=(1,0,2))
+    else:
+        R, esd = np.transpose([load_func(df, usecols=datacols[:2])
+                               for df in datafiles], axes=(2,0,1))
     if len(datacols) == 3:
-        oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
-                             for df in datafiles])
+        if is_npy:
+            oneplusk = np.array(
+                [np.load(df)[datacols[2]] for df in datafiles])
+        else:
+            oneplusk = np.array(
+                [np.loadtxt(df, usecols=[datacols[2]]) for df in datafiles])
         esd /= oneplusk
     if exclude is not None:
         R = np.array([np.array([Ri[j] for j in range(len(Ri))
@@ -352,25 +371,36 @@ def load_datapoints(datafiles, datacols, exclude=None):
         esd = np.array([np.array([esdi[j] for j in range(len(esdi))
                          if j not in exclude]) for esdi in esd])
     return R, esd
-    
-    
+
+
 def load_datapoints_2d(datafiles, datacols, exclude=None):
     if isinstance(datafiles, six.string_types):
         datafiles = sorted(glob(datafiles))
-    R = np.array([np.loadtxt(df, usecols=datacols[0])
-                       for df in datafiles], dtype=object)
-    esd = np.array([np.loadtxt(df, usecols=datacols[1])
+    is_npy = (datafiles[0][-4:] == '.npy')
+    if is_npy:
+        R = np.array(
+            [np.load(df)[datacols[0]] for df in datafiles], dtype=object)
+        esd = np.array(
+            [np.load(df)[datacols[1]] for df in datafiles], dtype=object)
+    else:
+        R = np.array([np.loadtxt(df, usecols=datacols[0])
+                      for df in datafiles], dtype=object)
+        esd = np.array([np.loadtxt(df, usecols=datacols[1])
                         for df in datafiles], dtype=object)
     Nobsbins = len(datafiles)
     if len(datacols) == 3:
-        oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
-                         for df in datafiles], dtype=object)
+        if is_npy:
+            oneplusk = np.array(
+                [np.load(df)[datacols[2]] for df in datafiles], dtype=object)
+        else:
+            oneplusk = np.array([np.loadtxt(df, usecols=[datacols[2]])
+                                 for df in datafiles], dtype=object)
         esd /= oneplusk
     if exclude is not None:
         R = np.array([np.array([Ri[j] for j in range(len(Ri))
-                   if j not in exclude]) for Ri in R], dtype=object)
+                      if j not in exclude]) for Ri in R], dtype=object)
         esd = np.array([np.array([esdi[j] for j in range(len(esdi))
-                     if j not in exclude]) for esdi in esd], dtype=object)
+                        if j not in exclude]) for esdi in esd], dtype=object)
     return R, esd, Nobsbins
 
 

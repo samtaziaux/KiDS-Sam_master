@@ -495,7 +495,7 @@ def update_parameters(theta, parameters, nparams, join, jfree, repeat):
     # by doing this I'm losing Rrange and angles, but I suppose
     # those should be defined in the config file as well.
     v1 = np.array([v1_list[sum(nparams[:i]):sum(nparams[:i+1])]
-                   for i in range(len(nparams))])
+                   for i in range(len(nparams))], dtype=object) # object added because of DeprecateWarning!
     # note that by now we discard the other v's!
     # we don't want to overwrite the old list now that we've
     # changed one of its components

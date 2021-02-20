@@ -163,40 +163,57 @@ def model(theta, R):
     profiles = define_profiles(setup, cosmo_model, z, c_concentration)
     print('shape =', profiles.shape)
 
+    # all this can be moved to the preamble later
     if profiles.frame == 'physical':
         arcmin2kpc = cosmo_model.kpc_proper_per_arcmin
     else:
         arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
-    Rfine = (setup['arcmin_fine'] * arcmin2kpc(z)).to(u.Mpc).value.T
-    print('Rfine =', Rfine.shape)
+    setup['Rfine'] = (setup['arcmin_fine'] * arcmin2kpc(z)).to(u.Mpc).value.T
+    #setup['Rfine'] = setup['Rfine'][:,None]
+    #print('Rfine =', setup['Rfine'].shape)
 
     output = {}
     output['kappa.1h.mz.raw'] = np.transpose(
-        profiles.convergence(Rfine[:,:,None]), axes=(1,2,0))
+        profiles.convergence(setup['Rfine'][:,:,None]), axes=(1,2,0))
 
-    print_output(output)
+    #print_output(output)
 
     output['kappa.1h.mz'] = filter_profiles(
         ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
         setup['arcmin_fine'], setup['arcmin_bins'])
 
-    print_output(output)
+    #print_output(output)
 
-    ti = time()
+    #ti = time()
     output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
-    tf = time()
-    print(f'calculate_sigma_2h in {tf-ti:.1f} s')
+    #tf = time()
+    #print(f'calculate_sigma_2h in {tf-ti:.1f} s')
+
+    info(output, 'sigma.2h.raw')
+
+    #######################
+    ## could it be the units are not consistent here??
+    #######################
 
     output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
         / profiles.sigma_crit()[:,:,None]
+    #output['kappa.2h.mz.raw.quadpy'] = output['sigma.2h.raw.quadpy'] \
+        #/ profiles.sigma_crit()[:,:,None]
 
-    print_output(output)
+    info(output, 'kappa.2h.mz.raw')
+
+    #print_output(output)
 
     output['kappa.2h.mz'] = filter_profiles(
         ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
         setup['arcmin_fine'], setup['arcmin_bins'])
+    #output['kappa.2h.mz.quadpy'] = filter_profiles(
+        #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
+        #setup['arcmin_fine'], setup['arcmin_bins'])
 
-    print_output(output)
+    info(output, 'kappa.2h.mz')
+
+    #print_output(output)
 
     # halo mass function weighting
     hmf = ccl.halos.mass_function_from_name('Tinker10')
@@ -204,13 +221,41 @@ def model(theta, R):
     dndm = np.expand_dims(
         [hmf.get_mass_function(cclcosmo, setup['mass_range'], ai)
          for ai in 1/(1+z[:,0])], -1)
-    print('dndm =', dndm.shape)
+    #print('dndm =', dndm.shape)
+    #print('mass integrals...')
+    #ti = time()
     output['kappa.1h'] = trapz(dndm * output['kappa.1h.mz'], dndm, axis=1)
+    #print(f'in {time()-ti:.2f} s')
+    #ti = time()
     output['kappa.2h'] = trapz(dndm * output['kappa.2h.mz'], dndm, axis=1)
+    #print(f'in {time()-ti:.2f} s')
 
-    print_output(output)
+    info(output, 'kappa.1h')
+    info(output, 'kappa.2h')
+
+    #print_output(output)
+
+    """
+    kerr = output['kappa.2h.quadpy'] - output['kappa.2h']
+    fig, axes = plt.subplots(1, 2, figsize=(12,5))
+    for i in range(3):
+        axes[0].plot(setup['arcmin'][i], output['kappa.2h'][i], f'C{i}-')
+        axes[0].plot(setup['arcmin'][i], output['kappa.2h.quadpy'][i], f'C{i}--')
+        axes[1].plot(setup['arcmin'][i], kerr[i], f'C{i}-', label=str(i))
+    axes[1].legend()
+    for ax in axes:
+        ax.set_xlabel(r'$\theta$ (arcmin)')
+    axes[0].set_ylabel(r'$\kappa(\theta)$')
+    axes[1].set_ylabel(r'$\kappa_\mathrm{quadpy}/\kappa_\mathrm{scipy}$')
+    fig.tight_layout()
+    plt.savefig('quadpy_test_kappa.png')
+    plt.close()
+    """
+
+    #print_output(output)
 
     output['kappa'] = output['kappa.1h'] + output['kappa.2h']
+    #output['kappa.quadpy'] = output['kappa.1h'] + output['kappa.2h.quadpy']
 
     print_output(output)
 
@@ -222,6 +267,13 @@ def model(theta, R):
 ##  Auxiliary functions
 ##
 ##################################
+
+def info(output, key):
+    print()
+    print(key)
+    print(output[key][-1])
+    print(output[key].shape)
+    print()
 
 def print_output(output):
     print()
@@ -283,14 +335,16 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
 
     # correlation function
     print('correlation functions...')
-    Rxi = np.logspace(-2, 2, 100)
-    r = setup['rvir_range_3d']
+    #Rxi = np.logspace(-4, 3, 200)
+    Rxi = np.logspace(-5, 2, 500)
+    #Rxi = setup['rvir_range_3d']
+    print('Rxi =', Rxi[0], Rxi[-1], Rxi.shape)
     ti = time()
     lnk = setup['k_range']
     xi_kz = np.array([lss.power2xi(interp1d(lnk, lnPk_i), Rxi)
                       for lnPk_i in np.log(Pk)])
-    xi = bh[:,:,None] * xi_kz[:,None]
-    print(f'in {time()-ti:.2f} s')
+    #xi = bh[:,:,None] * xi_kz[:,None]
+    print(f'in {time()-ti:.2f} s {xi_kz.shape}')
 
     print('distances...')
     ti = time()
@@ -301,27 +355,12 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     ti = time()
     rho_m = ccl.background.rho_x(cclcosmo, 1, bg)
     print(f'in {time()-ti:.2f} s')
-    # note that we assume all arcmin (i.e., for all bins) are the same
-    arcmin = setup['arcmin_fine'][0] if len(setup['arcmin_fine'].shape) == 2 \
-        else setup['arcmin_fine']
-    print('arcmin =', arcmin)
-    R = (arcmin * Dc[:,None] * (np.pi/180/60)).value
-    print('R =', R)
-
-    # testing one xi2sigma
-    #print('xi =', R.shape, Rxi.shape, xi.shape, rho_m)
-    #ti = time()
-    #sigma_test = lss.xi2sigma(R, Rxi, 
-
-    """
-    The R we pass to xi2sigma should be in Mpc (/h?)
-    """
 
     # finally, surface density
     print('surface densities...')
     ti = time()
     sigma_2h = lss.xi2sigma(
-        R, Rxi, xi_kz, rho_m, threads=1, full_output=False)
+        setup['Rfine'].T, Rxi, xi_kz, rho_m, threads=1, full_output=False)
     print(f'in {time()-ti:.2f} s')
 
     return bh[:,:,None] * sigma_2h[:,None]

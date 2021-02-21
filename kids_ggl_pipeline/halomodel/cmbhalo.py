@@ -171,18 +171,28 @@ def model(theta, R):
     setup['Rfine'] = (setup['arcmin_fine'] * arcmin2kpc(z)).to(u.Mpc).value.T
     #setup['Rfine'] = setup['Rfine'][:,None]
     #print('Rfine =', setup['Rfine'].shape)
+    af = setup['arcmin_fine']
+    print('arcmin_fine =', af[0], af[-1], af.shape)
+    rf = setup['Rfine']
+    print('Rfine =', rf[0], rf[-1], rf.shape)
 
     output = {}
+
+    # just for testing
+    output['sigma.1h.mz.raw'] = np.transpose(
+        profiles.projected(setup['Rfine'][:,:,None]), axes=(1,2,0))
+    info(output, 'sigma.1h.mz.raw')
+
     output['kappa.1h.mz.raw'] = np.transpose(
         profiles.convergence(setup['Rfine'][:,:,None]), axes=(1,2,0))
 
-    #print_output(output)
+    info(output, 'kappa.1h.mz.raw')
 
     output['kappa.1h.mz'] = filter_profiles(
         ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
         setup['arcmin_fine'], setup['arcmin_bins'])
 
-    #print_output(output)
+    info(output, 'kappa.1h.mz')
 
     #ti = time()
     output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
@@ -336,43 +346,39 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     # correlation function
     print('correlation functions...')
     #Rxi = np.logspace(-4, 3, 200)
-    Rxi = np.logspace(-5, 2, 500)
+    # I have no idea why, but for quadpy to work in xi2sigma the upper
+    # bound on this *must* be 2
+    Rxi = np.logspace(-3, 2, 250)
     #Rxi = setup['rvir_range_3d']
     print('Rxi =', Rxi[0], Rxi[-1], Rxi.shape)
     ti = time()
     lnk = setup['k_range']
     xi_kz = np.array([lss.power2xi(interp1d(lnk, lnPk_i), Rxi)
                       for lnPk_i in np.log(Pk)])
-    #xi = bh[:,:,None] * xi_kz[:,None]
-    print(f'in {time()-ti:.2f} s {xi_kz.shape}')
+    # just for testing
+    out = {'xi_kz': xi_kz}
+    #info(out, 'xi_kz')
+    xi = bh[:,:,None] * xi_kz[:,None]
+    print(f'in {time()-ti:.2f} s xi_kz={xi_kz.shape} xi={xi.shape}')
 
-    print('distances...')
-    ti = time()
-    Dc = ccl.background.comoving_radial_distance(cclcosmo, a)
-    print(f'in {time()-ti:.2f} s')
     bg = 'critical' if 'critical' in setup['delta_ref'].lower() else 'matter'
     print('rho_m...')
     ti = time()
-    rho_m = ccl.background.rho_x(cclcosmo, 1, bg)
+    # in Msum/Mpc^3
+    rho_m = ccl.background.rho_x(cclcosmo, 1, bg, is_comoving=True)
     print(f'in {time()-ti:.2f} s')
+    print('rho_m =', rho_m)
 
     # finally, surface density
     print('surface densities...')
     ti = time()
     sigma_2h = lss.xi2sigma(
-        setup['Rfine'].T, Rxi, xi_kz, rho_m, threads=1, full_output=False)
+        setup['Rfine'].T, Rxi, xi_kz, rho_m, threads=1, full_output=False,
+        #setup['Rfine'].T, Rxi, xi, rho_m, threads=1, full_output=False,
+        integrator='scipy', run_test=False)
     print(f'in {time()-ti:.2f} s')
 
     return bh[:,:,None] * sigma_2h[:,None]
-
-    # only do this when saving in the preamble?
-    print('shape =', sigma.shape)
-    cosmo_params = {key: val for key, val in params.items()
-                    if key in ('h','Omega_m','Omega_c','Omega_b','As','ns')}
-    lss.save_profiles(
-        'sigma_2h.txt', z[:,0], np.log10(m), theta, sigma, xlabel='z', ylabel='m',
-        label='sigma_2h', R_units='arcmin', cosmo_params=cosmo_params)
-    return sigma_2h
 
 
 def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0, backend='ccl'):

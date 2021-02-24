@@ -93,17 +93,25 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
+debug = False
+
 def model(theta, R):
+    """CMB halo modeling
+
+    Note that R here is in arcmin
+    """
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
+    Mh = setup['mass_range']
+
     #assert setup['delta_ref'] in ('critical', 'matter')
 
     cosmo, \
-        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        c_pm, c_concentration, c_mor, c_scatter, c_mis, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
 
     #cosmo_model, sigma8, n_s, z = halo.load_cosmology(cosmo)
@@ -157,30 +165,40 @@ def model(theta, R):
         zs = None
 
     z = halo.format_z(z, nbins)
-    print('z =', z.shape)
+    if debug:
+        print('z =', z.shape)
 
     # concentration
     profiles = define_profiles(setup, cosmo_model, z, c_concentration)
-    print('shape =', profiles.shape)
+    if debug:
+        print('shape =', profiles.shape)
 
     # all this can be moved to the preamble later
     if profiles.frame == 'physical':
         arcmin2kpc = cosmo_model.kpc_proper_per_arcmin
     else:
         arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
+    if debug:
+        print('R =', R, 'arcmin')
+    # right?
+    R = (setup['arcmin']*u.arcmin * arcmin2kpc(z)).to(u.Mpc).value
+    if debug:
+        print('R =', R, 'Mpc')
     setup['Rfine'] = (setup['arcmin_fine'] * arcmin2kpc(z)).to(u.Mpc).value.T
     #setup['Rfine'] = setup['Rfine'][:,None]
     #print('Rfine =', setup['Rfine'].shape)
     af = setup['arcmin_fine']
-    print('arcmin_fine =', af[0], af[-1], af.shape)
     rf = setup['Rfine']
-    print('Rfine =', rf[0], rf[-1], rf.shape)
+    if debug:
+        print('arcmin_fine =', af[0], af[-1], af.shape)
+        print('Rfine =', rf[0], rf[-1], rf.shape)
 
     output = {}
 
     # just for testing
     output['sigma.1h.mz.raw'] = np.transpose(
         profiles.projected(setup['Rfine'][:,:,None]), axes=(1,2,0))
+
     info(output, 'sigma.1h.mz.raw')
 
     output['kappa.1h.mz.raw'] = np.transpose(
@@ -194,82 +212,56 @@ def model(theta, R):
 
     info(output, 'kappa.1h.mz')
 
-    #ti = time()
-    output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
-    #tf = time()
-    #print(f'calculate_sigma_2h in {tf-ti:.1f} s')
-
-    info(output, 'sigma.2h.raw')
-
-    #######################
-    ## could it be the units are not consistent here??
-    #######################
-
-    output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
-        / profiles.sigma_crit()[:,:,None]
-    #output['kappa.2h.mz.raw.quadpy'] = output['sigma.2h.raw.quadpy'] \
-        #/ profiles.sigma_crit()[:,:,None]
-
-    info(output, 'kappa.2h.mz.raw')
-
-    #print_output(output)
-
-    output['kappa.2h.mz'] = filter_profiles(
-        ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
-        setup['arcmin_fine'], setup['arcmin_bins'])
-    #output['kappa.2h.mz.quadpy'] = filter_profiles(
-        #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
-        #setup['arcmin_fine'], setup['arcmin_bins'])
-
-    info(output, 'kappa.2h.mz')
-
-    #print_output(output)
-
     # halo mass function weighting
     hmf = ccl.halos.mass_function_from_name('Tinker10')
     hmf = hmf(cclcosmo, mass_def=mdef)
-    dndm = np.expand_dims(
-        [hmf.get_mass_function(cclcosmo, setup['mass_range'], ai)
-         for ai in 1/(1+z[:,0])], -1)
-    #print('dndm =', dndm.shape)
-    #print('mass integrals...')
+    dndm = np.array(
+        [hmf.get_mass_function(cclcosmo, Mh, ai)
+         for ai in 1/(1+z[:,0])])
+    if debug:
+        print('dndm =', dndm.shape)
+
+    # selection function and mass-observable relation
+    output['pop_c'], output['pop_s'] = halo.populations(
+        observables, ingredients, selection, Mh, z, theta)
+    output['pop_g'] = output['pop_c'] + output['pop_s']
+    # note that pop_g already accounts for incompleteness
+    ngal, logMh_eff = halo.calculate_ngal(
+        observables, output['pop_g'], dndm, Mh)
+
+    info(output, 'pop_g')
+
+    if ingredients['miscentring']:
+        # miscentering (1h only for now)
+        output['kappa.1h.mz.mis'] = miscentering(
+            profiles, R, *c_mis[2:], dist=c_mis[0])
+
+        output['kappa.1h.mz'] = c_mis[1]*output['kappa.1h.mz.mis'] \
+            + (1-c_mis[1])*output['kappa.1h.mz']
+
     #ti = time()
-    output['kappa.1h'] = trapz(dndm * output['kappa.1h.mz'], dndm, axis=1)
-    #print(f'in {time()-ti:.2f} s')
-    #ti = time()
-    output['kappa.2h'] = trapz(dndm * output['kappa.2h.mz'], dndm, axis=1)
-    #print(f'in {time()-ti:.2f} s')
+    mass_norm = trapz(dndm*output['pop_g'], Mh, axis=1)
+    if debug:
+        print('mass_norm =', mass_norm.shape)
+    output['kappa.1h'] = trapz(
+        dndm * output['pop_g'] * output['kappa.1h.mz'], Mh, axis=2) \
+        / mass_norm
 
-    info(output, 'kappa.1h')
-    info(output, 'kappa.2h')
+    output['kappa'] = output['kappa.1h'].T
+    if ingredients['twohalo']:
+        output = calculate_twohalo(
+            output, setup, cclcosmo, mdef, dndm, z, profiles, mass_norm)
 
-    #print_output(output)
+        output['kappa'] = output['kappa'] + output['kappa.2h']
+        #output['kappa.quadpy'] = \
+            #output['kappa.1h'] + output['kappa.2h.quadpy']
 
-    """
-    kerr = output['kappa.2h.quadpy'] - output['kappa.2h']
-    fig, axes = plt.subplots(1, 2, figsize=(12,5))
-    for i in range(3):
-        axes[0].plot(setup['arcmin'][i], output['kappa.2h'][i], f'C{i}-')
-        axes[0].plot(setup['arcmin'][i], output['kappa.2h.quadpy'][i], f'C{i}--')
-        axes[1].plot(setup['arcmin'][i], kerr[i], f'C{i}-', label=str(i))
-    axes[1].legend()
-    for ax in axes:
-        ax.set_xlabel(r'$\theta$ (arcmin)')
-    axes[0].set_ylabel(r'$\kappa(\theta)$')
-    axes[1].set_ylabel(r'$\kappa_\mathrm{quadpy}/\kappa_\mathrm{scipy}$')
-    fig.tight_layout()
-    plt.savefig('quadpy_test_kappa.png')
-    plt.close()
-    """
+        print_output(output)
 
-    #print_output(output)
+    if debug:
+        print('log(Mh_eff) =', logMh_eff.shape)
 
-    output['kappa'] = output['kappa.1h'] + output['kappa.2h']
-    #output['kappa.quadpy'] = output['kappa.1h'] + output['kappa.2h.quadpy']
-
-    print_output(output)
-
-    return [list(output['kappa']), np.ones(output['kappa'].shape[0])]
+    return [list(output['kappa']), logMh_eff]
 
 
 ##################################
@@ -279,13 +271,21 @@ def model(theta, R):
 ##################################
 
 def info(output, key):
+    if not debug:
+        return
     print()
     print(key)
-    print(output[key][-1])
+    if output[key].shape[-1] > 100:
+        print('Last 100 elements:')
+        print(output[key][-1][-100:])
+    else:
+        print(output[key][-1])
     print(output[key].shape)
     print()
 
 def print_output(output):
+    if not debug:
+        return
     print()
     for key, val in output.items():
         print('   ', key, val.shape)
@@ -334,6 +334,8 @@ def preamble(theta):
 
 
 def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
+    # for tests
+    out = {}
     a = 1 / (1+z[:,0])
     m = setup['mass_range']
     # matter power spectra
@@ -342,43 +344,131 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     # halo bias
     bias = setup['bias_func'](cclcosmo, mass_def=mdef)
     bh = np.array([bias.get_halo_bias(cclcosmo, m, ai) for ai in a])
+    Pgm = bh[:,:,None] * Pk[:,None]
+    out['Pk'] = Pk
+    info(out, 'Pk')
+    out['Pgm'] = Pgm
+    info(out, 'Pgm')
 
     # correlation function
-    print('correlation functions...')
+    if debug:
+        print('correlation functions...')
     #Rxi = np.logspace(-4, 3, 200)
     # I have no idea why, but for quadpy to work in xi2sigma the upper
     # bound on this *must* be 2
     Rxi = np.logspace(-3, 2, 250)
     #Rxi = setup['rvir_range_3d']
-    print('Rxi =', Rxi[0], Rxi[-1], Rxi.shape)
-    ti = time()
+    if debug:
+        print('Rxi =', Rxi[0], Rxi[-1], Rxi.shape)
+        print('xi_kz...')
     lnk = setup['k_range']
+    ti = time()
     xi_kz = np.array([lss.power2xi(interp1d(lnk, lnPk_i), Rxi)
                       for lnPk_i in np.log(Pk)])
-    # just for testing
-    out = {'xi_kz': xi_kz}
-    #info(out, 'xi_kz')
+    if debug:
+        print(f'in {time()-ti:.2f} s')
+    out['xi_kz'] = xi_kz
+    info(out, 'xi_kz')
     xi = bh[:,:,None] * xi_kz[:,None]
-    print(f'in {time()-ti:.2f} s xi_kz={xi_kz.shape} xi={xi.shape}')
+    if debug:
+        print('xi:', xi.shape)
 
     bg = 'critical' if 'critical' in setup['delta_ref'].lower() else 'matter'
-    print('rho_m...')
-    ti = time()
+    if debug:
+        print('rho_m...')
+        ti = time()
     # in Msum/Mpc^3
     rho_m = ccl.background.rho_x(cclcosmo, 1, bg, is_comoving=True)
-    print(f'in {time()-ti:.2f} s')
-    print('rho_m =', rho_m)
+    if debug:
+        print(f'in {time()-ti:.2f} s')
+        print('rho_m =', rho_m)
 
     # finally, surface density
-    print('surface densities...')
-    ti = time()
-    sigma_2h = lss.xi2sigma(
+    if debug:
+        print('surface densities...')
+        ti = time()
+    sigma_2h_z = lss.xi2sigma(
         setup['Rfine'].T, Rxi, xi_kz, rho_m, threads=1, full_output=False,
         #setup['Rfine'].T, Rxi, xi, rho_m, threads=1, full_output=False,
         integrator='scipy', run_test=False)
-    print(f'in {time()-ti:.2f} s')
+    if debug:
+        print(f'in {time()-ti:.2f} s')
+        ti = time()
+        sigma_2h = lss.xi2sigma(
+            #setup['Rfine'].T, Rxi, xi_kz, rho_m, threads=1, full_output=False,
+            setup['Rfine'].T, Rxi, xi, rho_m, threads=1, full_output=False,
+            integrator='scipy-vec', run_test=False)
+        print(f'in {time()-ti:.2f} s')
+        sigma_2h_1 = bh[:,:,None] * sigma_2h_z[:,None]
+        s_ = np.s_[:,:10]
+        y = np.allclose(sigma_2h[s_], sigma_2h_1[s_])
+        print(f'are both sigma_2h the same? {y}')
 
-    return bh[:,:,None] * sigma_2h[:,None]
+    return bh[:,:,None] * sigma_2h_z[:,None]
+
+
+def calculate_twohalo(output, setup, cclcosmo, mdef, dndm, z, profiles,
+                      mass_norm):
+    #ti = time()
+    output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
+    #tf = time()
+    #print(f'calculate_sigma_2h in {tf-ti:.1f} s')
+
+    info(output, 'sigma.2h.raw')
+
+    #######################
+    ## could it be the units are not consistent here??
+    #######################
+
+    output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
+        / profiles.sigma_crit()[:,:,None]
+    #output['kappa.2h.mz.raw.quadpy'] = output['sigma.2h.raw.quadpy'] \
+        #/ profiles.sigma_crit()[:,:,None]
+
+    info(output, 'kappa.2h.mz.raw')
+
+    #print_output(output)
+
+    output['kappa.2h.mz'] = filter_profiles(
+        ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
+        setup['arcmin_fine'], setup['arcmin_bins'])
+    #output['kappa.2h.mz.quadpy'] = filter_profiles(
+        #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
+        #setup['arcmin_fine'], setup['arcmin_bins'])
+
+    info(output, 'kappa.2h.mz')
+
+    #print_output(output)
+
+    #print('mass integrals...')
+    output['kappa.2h'] = trapz(
+        dndm * output['kappa.2h.mz'], setup['mass_range'], axis=2) \
+        / mass_norm
+    #print(f'in {time()-ti:.2f} s')
+
+    info(output, 'kappa.1h')
+    info(output, 'kappa.2h')
+
+    #print_output(output)
+
+    """
+    kerr = output['kappa.2h.quadpy'] - output['kappa.2h']
+    fig, axes = plt.subplots(1, 2, figsize=(12,5))
+    for i in range(3):
+        axes[0].plot(setup['arcmin'][i], output['kappa.2h'][i], f'C{i}-')
+        axes[0].plot(setup['arcmin'][i], output['kappa.2h.quadpy'][i], f'C{i}--')
+        axes[1].plot(setup['arcmin'][i], kerr[i], f'C{i}-', label=str(i))
+    axes[1].legend()
+    for ax in axes:
+        ax.set_xlabel(r'$\theta$ (arcmin)')
+    axes[0].set_ylabel(r'$\kappa(\theta)$')
+    axes[1].set_ylabel(r'$\kappa_\mathrm{quadpy}/\kappa_\mathrm{scipy}$')
+    fig.tight_layout()
+    plt.savefig('quadpy_test_kappa.png')
+    plt.close()
+    """
+
+    return output
 
 
 def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0, backend='ccl'):
@@ -424,7 +514,35 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
                                        units=units)[1]
                          for prof_mz in prof_z])
                     for prof_z, theta_bins_z in zip(profiles, theta_bins)]
-        print('filtered =', np.array(filtered).shape)
-        #filtered = np.transpose(filtered, axes=(2,0,1))
-        filtered = np.array(filtered)
+        if debug:
+            print('filtered =', np.array(filtered).shape)
+        filtered = np.transpose(filtered, axes=(2,0,1))
+        #filtered = np.array(filtered)
     return filtered
+
+
+def miscentering(profiles, R, Rmis, tau, Rcl, dist='gamma'):
+    if debug:
+        print('*** in miscentering ***')
+        print('profiles =', profiles)
+        print('R =', R, R.shape)
+        print('Rmis =', Rmis, Rmis.shape)
+    # this does many more calculations than necessary but will do for now
+    # (and also have to do the funny indexing)
+    kappa_mis = np.array(
+        [profiles.offset_convergence(Ri, Rmis)[:,:,i]
+         for i, Ri in  enumerate(R)])
+    if debug:
+        print('kappa_mis =', kappa_mis.shape)
+    if dist == 'gamma':
+        p_mis = Rmis/(tau*Rcl[:,None])**2 * np.exp(-Rmis/(tau*Rcl[:,None]))
+    if debug:
+        print('p_mis =', p_mis.shape)
+    # average over Rmis
+    kappa_mis = trapz(kappa_mis*p_mis[:,:,None,None], Rmis, axis=1) \
+        / trapz(p_mis, Rmis, axis=1)[:,None,None]
+    if debug:
+        print('kappa_mis =', kappa_mis.shape)
+        print('*** end ***')
+    return np.transpose(kappa_mis, axes=(1,0,2))
+

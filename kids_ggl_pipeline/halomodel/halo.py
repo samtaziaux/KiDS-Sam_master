@@ -352,7 +352,7 @@ def calculate_correlations_single(setup, observable, ingredients, Pk_func,
     # halos I guess?
     if ingredients['haloexclusion'] and observable.obstype in ('gm','gg'):
         xi2_2h = [[power_to_corr_ogata(Pk_func_ij, setup['rvir_range_3d'])
-                   for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_func]
+                   for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_2h_func]
         xi2 = xi2 + halo_exclusion(
             xi2_2h, setup['rvir_range_3d'], meff[observable.idx],
             rho_bg[observable.idx], setup['delta'])

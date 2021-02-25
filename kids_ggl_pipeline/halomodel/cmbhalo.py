@@ -58,6 +58,7 @@ from .covariance import covariance
 """
 from . import halo
 from .. import hod
+from ..helpers import io
 
 
 
@@ -93,7 +94,7 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
-debug = False
+debug = True
 
 def model(theta, R):
     """CMB halo modeling
@@ -119,17 +120,7 @@ def model(theta, R):
     zs = cosmo[-1]
     # astropy (for profiley)
     cosmo_model, sigma8, n_s, z = halo.load_cosmology(cosmo)
-    """
-    # colossus (for mass-concentration relation)
-    params = dict(Om0=omegam, H0=100*h, ns=n_s, sigma8=sigma8, Ob0=omegab)
-    colossus_cosmology.setCosmology('cosmo', params)
-    # CCL (for halo mass function, halo bias and matter power spectrum)
-    # note that Tcmb and m_nu are hard-coded both in load_cosmology and here
-    # this needs to change
-    cclcosmo = ccl.Cosmology(
-        Omega_c=omegam-omegab, Omega_b=omegab, h=h, A_s=2.1e-9, n_s=n_s,
-        T_CMB=2.725, Neff=Neff, m_nu=0.06, w0=w0, wa=wa)
-    """
+    # CCL (for 2-halo things)
     cclcosmo = define_cosmology(cosmo)
     mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
 
@@ -180,10 +171,11 @@ def model(theta, R):
         arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
     if debug:
         print('R =', R, 'arcmin')
-    # right?
-    R = (setup['arcmin']*u.arcmin * arcmin2kpc(z)).to(u.Mpc).value
+    # remember that the first element is a zero we added (and should remove)
+    # for nfw_stack
+    R = (R[:,1:]*u.arcmin * arcmin2kpc(z)).to(u.Mpc).value
     if debug:
-        print('R =', R, 'Mpc')
+        print('R =', R, 'Mpc', R.shape)
     setup['Rfine'] = (setup['arcmin_fine'] * arcmin2kpc(z)).to(u.Mpc).value.T
     #setup['Rfine'] = setup['Rfine'][:,None]
     #print('Rfine =', setup['Rfine'].shape)
@@ -248,6 +240,7 @@ def model(theta, R):
         / mass_norm
 
     output['kappa'] = output['kappa.1h'].T
+
     if ingredients['twohalo']:
         output = calculate_twohalo(
             output, setup, cclcosmo, mdef, dndm, z, profiles, mass_norm)
@@ -257,9 +250,6 @@ def model(theta, R):
             #output['kappa.1h'] + output['kappa.2h.quadpy']
 
         print_output(output)
-
-    if debug:
-        print('log(Mh_eff) =', logMh_eff.shape)
 
     return [list(output['kappa']), logMh_eff]
 
@@ -317,7 +307,12 @@ def preamble(theta):
     dataset_name = 'des_r2'
     filenames = sorted(glob(os.path.join(
         dataset_name, f'{dataset_name}_l*', '*_bin_edges.txt')))
-    arcmin_bins = np.array([np.loadtxt(f) for f in filenames])
+    # need to ensure this is consistent with the config file, by hand for now
+    # exclude here should be either 1+exclude if excluding outer data points
+    # or exclude-1 if excluding inner data points!
+    datapoints = io.load_datapoints_2d(
+        filenames, [0,0], exclude=[6,7,8,9])
+    arcmin_bins = np.array(datapoints[0], dtype=float)
     setup['arcmin_bins'] = arcmin_bins
     setup['arcmin'] = (arcmin_bins[:,:-1]+arcmin_bins[:,1:]) / 2
 

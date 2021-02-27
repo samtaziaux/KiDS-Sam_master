@@ -28,3 +28,10 @@ def dutton14(M, f, h=1):
     return f * powerlaw(M, 12, 0.905, -0.101, return_log=False) # h-factor already accounted for in the M, cancels out!
     #return f * powerlaw(M, 12-log10(h), 0.905, -0.101, return_log=False)
 
+
+def cm_powerlaw(M, logM0, a, b):
+    return powerlaw(M, logM0, a, b, return_log=False)
+
+
+def cmz_powerlaw(M, z, logM0, z0, a, b, c):
+    return powerlaw_mz(M, z, logM0, z0, a, b, c, return_log=False)

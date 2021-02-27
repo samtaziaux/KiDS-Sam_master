@@ -1,10 +1,10 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+from glob import glob
 import numpy as np
 
 
 _default_entries = {
-    'kfilter': 'file name containing the k-space filter. Requires pixell',
     'lnk_bins': 'number of (log-spaced) bins in wavenumber k',
     'lnk_max': 'maximum value for lnk in the power spectrum calculations',
     'lnk_min': 'minimum value for lnk in the power spectrum calculations',
@@ -15,10 +15,18 @@ _default_entries = {
     # these three used only for mock production
     'logR_bins': 'number of (log-spaced) bins in lens-source separation',
     'logR_max': 'maximum value of logR for mock observations',
-    'logR_min': 'minimum value of logR for mock observations'
+    'logR_min': 'minimum value of logR for mock observations',
+    # these are used for k-space filtering
+    'bin_edges': 'radial bin edges, used for k-space filtering',
+    'bin_samples': 'number of bins to sample for k-space filtering',
+    'bin_sampling_max': 'max radius to sample for k-space filtering',
+    'kfilter': 'file name(s) containing the k-space filter. Requires pixell',
     }
 
 _default_values = {
+    'bin_edges': [],
+    'bin_samples': 201,
+    'bin_sampling_max': 50,
     'kfilter': '',
     'lnk_bins': 10000,
     'lnk_min': -15.,
@@ -52,6 +60,9 @@ _valid_entries = {
     'delta': float,
     'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial', 'critical', 'matter'),
     'distances': ('comoving', 'proper', 'angular'),
+    'bin_edges': str,
+    'bin_samples': int,
+    'bin_sampling_max': float,
     'kfilter': str,
     'lnk_bins': int,
     'lnk_min': float,
@@ -84,6 +95,9 @@ def add_defaults(setup):
 def add_kfilter(setup):
     if not setup['kfilter']:
         return setup
+    if not setup['bin_edges']:
+        msg = 'must provide bin_edges if applying a k-space filter'
+        raise ValueError(msg)
     try:
         import pixell
     except ImportError:
@@ -100,6 +114,9 @@ def add_kfilter(setup):
                   '    pip install pixell'
         else:
             setup['kfilter'] = Filter(setup['kfilter'])
+    # radial bin edges
+    setup['bin_edges'] = setup['bin_edges'].split()
+    setup['bin_edges'][0] = sorted(glob(setup['bin_edges'][0]))
     return setup
 
 

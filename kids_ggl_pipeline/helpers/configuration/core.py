@@ -221,6 +221,8 @@ class ConfigFile(object):
                 continue
             if line.is_section():
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
+                #if section.name in ('cosmo', 'filtering') \
+                        #section.name[:3] == 'hod':
                     names, parameters, priors = section.append_parameters(
                         names, parameters, priors, repeat, section_names,
                         these_names, these_params, these_priors)
@@ -259,6 +261,9 @@ class ConfigFile(object):
         ingredients = confighod.add_default_ingredients(ingredients)
         observables = ModelObservables(observables)
         setup = configsetup.check_setup(setup)
+        # for now - necessary for k-space filtering functionality
+        setup['exclude'] = sampling['exclude']
+        #
         covar = configcovar.check_covar(covar)
         hod_param_names = ['observables', 'selection', 'ingredients',
                            'parameters', 'setup', 'covariance']

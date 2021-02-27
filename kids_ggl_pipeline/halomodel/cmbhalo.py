@@ -167,47 +167,58 @@ def model(theta, R):
     if debug:
         print('shape =', profiles.shape)
 
-    # all this can be moved to the preamble later
-    if profiles.frame in ('physical', 'proper'):
-        arcmin2kpc = cosmo_model.kpc_proper_per_arcmin
+    # convert radii if necessary - this must be done here because it
+    # depends on cosmology
+    if setup['R_unit'] == 'arcmin':
+        if setup['distances'] in ('physical', 'proper'):
+            arcmin2kpc = cosmo_model.kpc_proper_per_arcmin
+        else:
+            arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
+        arcmin2Mpc = arcmin2kpc(z).to(u.Mpc/u.arcmin).value
+        if debug:
+            print('R =', R, 'arcmin')
+        # remember that the first element is a zero we added (and should remove)
+        # for nfw_stack
+        R = np.array(R[:,1:] * arcmin2Mpc, dtype=float)
+        if debug:
+            print('R =', R, 'Mpc', R.shape, R.dtype)
+        if setup['kfilter']:
+            setup['Rfine'] \
+                = (setup['bin_centers_fine']*arcmin2Mpc).T
+            if debug:
+                # only for the prints below
+                af = setup['bin_centers_fine']
+                rf = setup['Rfine']
+                print('bin_centers_fine =', af[0], af[-1], af.shape)
+                print('Rfine =', rf[0], rf[-1], rf.shape)
+        else:
+            setup['Rfine'] = R.T
+    elif setup['kfilter']:
+        setup['Rfine'] = setup['bin_centers_fine']
     else:
-        arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
-    if debug:
-        print('R =', R, 'arcmin')
-    # remember that the first element is a zero we added (and should remove)
-    # for nfw_stack
-    R = (R[:,1:]*u.arcmin * arcmin2kpc(z)).to(u.Mpc).value
-    if debug:
-        print('R =', R, 'Mpc', R.shape)
-    setup['Rfine'] = (setup['arcmin_fine'] * arcmin2kpc(z)).to(u.Mpc).value.T
-    #setup['Rfine'] = setup['Rfine'][:,None]
-    #print('Rfine =', setup['Rfine'].shape)
-    af = setup['arcmin_fine']
-    rf = setup['Rfine']
-    if debug:
-        print('arcmin_fine =', af[0], af[-1], af.shape)
-        print('Rfine =', rf[0], rf[-1], rf.shape)
+        setup['Rfine'] = R.T
 
     output = {}
 
     # just for testing
-    output['sigma.1h.mz.raw'] = np.transpose(
-        profiles.projected(setup['Rfine'][:,:,None]), axes=(1,2,0))
-
-    info(output, 'sigma.1h.mz.raw')
-
-    output['kappa.1h.mz.raw'] = np.transpose(
-        profiles.convergence(setup['Rfine'][:,:,None]), axes=(1,2,0))
-
-    info(output, 'kappa.1h.mz.raw')
-
     if setup['kfilter']:
+        output['sigma.1h.mz.raw'] = np.transpose(
+            profiles.projected(setup['Rfine'][:,:,None]), axes=(1,2,0))
+
+        output['kappa.1h.mz.raw'] = np.transpose(
+            profiles.convergence(setup['Rfine'][:,:,None]), axes=(1,2,0))
+
+        info(output, 'sigma.1h.mz.raw')
+        info(output, 'kappa.1h.mz.raw')
+
         output['kappa.1h.mz'] = filter_profiles(
             ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
-            setup['arcmin_fine'], setup['arcmin_bins'])
+            setup['bin_centers_fine'], setup['bin_edges'])
     else:
-        output['kappa.1h.mz'] = output.pop('kappa.1h.mz.raw')
+        output['sigma.1h.mz'] = profiles.projected(R.T[:,:,None])
+        output['kappa.1h.mz'] = profiles.convergence(R.T[:,:,None])
 
+    info(output, 'sigma.1h.mz')
     info(output, 'kappa.1h.mz')
 
     # halo mass function weighting
@@ -258,7 +269,18 @@ def model(theta, R):
 
         print_output(output)
 
-        output['sigma'] = output['sigma.1h'] + 
+        if setup['kfilter']:
+            output['sigma'] = output['sigma.1h.mz.raw'] + output['sigma.2h.raw']
+            plot_profile_mz(setup['Rfine'].T, output['sigma'], z[:,0],
+                            mx=setup['mass_range'], z0=0.46, m0=1e14,
+                            output='profiles_sigma_1h2h.png')
+            output['kappa.mz.raw'] = output['kappa.1h.mz.raw'] \
+                + output['kappa.2h.mz.raw']
+            plot_profile_mz(setup['Rfine'].T, output['kappa.mz.raw'], z[:,0],
+                            mx=setup['mass_range'], z0=0.46, m0=1e14,
+                            output='profiles_kappa_1h2h.png')
+    #plot_profile_mz(Rxi, out['xi'], z[:,0], mx=m, z0=0.46, m0=1e14,
+                    #output='profiles_xi.png')
 
     # for now
     output['kappa'] = output['kappa'].T
@@ -277,6 +299,9 @@ def info(output, key):
         return
     print()
     print(key)
+    if key not in output:
+        print(f'key {key} not in output: {list(output.keys())}')
+        return
     if output[key].shape[-1] > 100:
         print('Last 100 elements:')
         print(output[key][-1][-100:])
@@ -314,25 +339,35 @@ def preamble(theta):
     #cclcosmo = define_cosmology(params[0])
     setup['bias_func'] = ccl.halos.halo_bias_from_name('Tinker10')
 
-    # read measurement binning scheme
-    # need to do it in a smarter (more flexible) way
-    dataset_name = 'des_r2'
-    filenames = sorted(glob(os.path.join(
-        dataset_name, f'{dataset_name}_l*', '*_bin_edges.txt')))
-    # need to ensure this is consistent with the config file, by hand for now
-    # exclude here should be either 1+exclude if excluding outer data points
-    # or exclude-1 if excluding inner data points!
-    # currently using 6,7,8,9 for 1h-only and 8,9 for 1h+2h
-    datapoints = io.load_datapoints_2d(
-        filenames, [0,0], exclude=[8,9])
-    arcmin_bins = np.array(datapoints[0], dtype=float)
-    setup['arcmin_bins'] = arcmin_bins
-    setup['arcmin'] = (arcmin_bins[:,:-1]+arcmin_bins[:,1:]) / 2
+    # read measurement binning scheme if filtering
+    if setup['kfilter']:
+        print('bin_edges =', setup['bin_edges'])
+        #if len(setup['bin_edges'][0]) == 1:
+            #bin_edges = np.loadtxt(
+                #setup['bin_edges'][0][0], usecols=[0])
+        #else:
+            #bin_edges = np.array(
+                #[np.loadtxt(file, usecols=[0])
+                 #for file in setup['bin_edges'][0]], dtype=float)
+        bin_edges = []
+        for file in setup['bin_edges'][0]:
+            bin_edges.append(np.loadtxt(file, usecols=[0]))
+            be = [[bin_edges[-1][i] for i in range(len(bin_edges[-1])-1)
+                   if i not in setup['exclude']][0]]
+            bin_edges[-1] = be \
+                + [bin_edges[-1][i+1] for i in range(len(bin_edges[-1])-1)
+                   if i not in setup['exclude']]
+        bin_edges = [np.array(b, dtype=float) for b in bin_edges]
+        print('bin_edges =', bin_edges)
+        setup['bin_edges'] = bin_edges
 
-    # fine binning for filtering
-    setup['arcmin_fine_bins'] = np.linspace(0, 50, 201) * u.arcmin
-    setup['arcmin_fine'] = 0.5 \
-        * (setup['arcmin_fine_bins'][:-1]+setup['arcmin_fine_bins'][1:])
+        # fine binning for filtering
+        setup['bin_edges_fine'] \
+            = np.linspace(0, setup['bin_sampling_max'], setup['bin_samples'])
+        #if setup['R_unit'] == 'arcmin':
+            #setup['bin_edges_fine'] *= u.arcmin
+        setup['bin_centers_fine'] = 0.5 \
+            * (setup['bin_edges_fine'][:-1]+setup['bin_edges_fine'][1:])
 
     # we might also want to add a function in the configuration
     # functionality to update theta more easily
@@ -396,6 +431,7 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     #print('Rfine =', setup['Rfine'], setup['Rfine'].shape)
     # finally, surface density
     # quad_vec
+    """
     if debug:
         print('surface densities...')
         ti = time()
@@ -408,11 +444,12 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z1[:,None], z[:,0],
                     mx=m,
                     z0=0.46, m0=1e14, output='profiles_sigma2hz_quadvec.png')
+    """
+    """
     if debug:
         print('surface densities...')
         ti = time()
     # quadpy
-    """
     sigma_2h_z2 = lss.xi2sigma(
         setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
         integrator='quadpy', run_test=False)
@@ -422,14 +459,15 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z2[:,None], z[:,0],
                     mx=m,
                     z0=0.46, m0=1e14, output='profiles_sigma2hz_quadpy.png')
+    """
     if debug:
         print('surface densities...')
         ti = time()
-    """
+    #R2h = setup['Rfine'].T if setup['kfilter'] else setup['
     sigma_2h_z = lss.xi2sigma(
         setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
         integrator='scipy', run_test=False)
-    plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z[:,None], z[:,0], 
+    plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z[:,None], z[:,0],
                     mx=m,
                     z0=0.46, m0=1e14, output='profiles_sigma2hz_quad.png')
     if debug:
@@ -485,14 +523,20 @@ def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
     if setup['kfilter']:
         output['kappa.2h.mz'] = filter_profiles(
             ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
-            setup['arcmin_fine'], setup['arcmin_bins'])
+            setup['bin_centers_fine'], setup['bin_edges'])
         #output['kappa.2h.mz.quadpy'] = filter_profiles(
             #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
-            #setup['arcmin_fine'], setup['arcmin_bins'])
+            #setup['bin_centers_fine'], setup['arcmin_bins'])
     else:
-        output['kappa.2h.mz'] = output.pop('kappa.2h.mz.raw')
+        output['kappa.2h.mz'] = np.transpose(
+            output.pop('kappa.2h.mz.raw'), axes=(2,0,1))
 
     info(output, 'kappa.2h.mz')
+    #R = (setup['bin_edges'][:,1:]+setup['bin_edges'][:,:-1])/2
+    #print(R.shape)
+    #plot_profile_mz(R.T,
+                    #output['kappa.2h.mz'], z[:,0], mx=setup['mass_range'],
+                    #z0=0.46, output='profiles_kappa2h_filtered.png')
 
     #print_output(output)
 
@@ -566,6 +610,9 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
                     for p_i in profiles]
         filtered = np.transpose(filtered, axes=(2,0,1))
     else:
+        print('in filter_profiles')
+        print('theta_fine =', theta_fine)
+        print('theta_bins =', theta_bins)
         filtered = [np.array(
                         [filter.filter(theta_fine, prof_mz, theta_bins_z,
                                        units=units)[1]
@@ -582,10 +629,11 @@ def miscentering(profiles, R, Rmis, tau, Rcl, dist='gamma'):
     if debug:
         print('*** in miscentering ***')
         print('profiles =', profiles)
-        print('R =', R, R.shape)
-        print('Rmis =', Rmis, Rmis.shape)
+        print('R =', R, R.shape, type(R[0][0]))
+        print('Rmis =', Rmis, Rmis.shape, type(Rmis[0]))
     # this does many more calculations than necessary but will do for now
     # (and also have to do the funny indexing)
+    print(profiles.offset_convergence(R[0], Rmis))
     kappa_mis = np.array(
         [profiles.offset_convergence(Ri, Rmis)[:,:,i]
          for i, Ri in  enumerate(R)])

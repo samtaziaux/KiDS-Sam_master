@@ -60,6 +60,9 @@ from . import halo
 from .. import hod
 from ..helpers import io
 
+# used only in testing phase
+from plott.plotutils import colorscale, savefig, update_rcParams
+update_rcParams()
 
 
 """
@@ -165,7 +168,7 @@ def model(theta, R):
         print('shape =', profiles.shape)
 
     # all this can be moved to the preamble later
-    if profiles.frame == 'physical':
+    if profiles.frame in ('physical', 'proper'):
         arcmin2kpc = cosmo_model.kpc_proper_per_arcmin
     else:
         arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
@@ -198,9 +201,12 @@ def model(theta, R):
 
     info(output, 'kappa.1h.mz.raw')
 
-    output['kappa.1h.mz'] = filter_profiles(
-        ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
-        setup['arcmin_fine'], setup['arcmin_bins'])
+    if setup['kfilter']:
+        output['kappa.1h.mz'] = filter_profiles(
+            ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
+            setup['arcmin_fine'], setup['arcmin_bins'])
+    else:
+        output['kappa.1h.mz'] = output.pop('kappa.1h.mz.raw')
 
     info(output, 'kappa.1h.mz')
 
@@ -239,17 +245,23 @@ def model(theta, R):
         dndm * output['pop_g'] * output['kappa.1h.mz'], Mh, axis=2) \
         / mass_norm
 
-    output['kappa'] = output['kappa.1h'].T
+    output['kappa'] = output['kappa.1h']
 
     if ingredients['twohalo']:
         output = calculate_twohalo(
-            output, setup, cclcosmo, mdef, dndm, z, profiles, mass_norm)
+            output, setup, ingredients, cclcosmo, mdef, dndm, z, profiles,
+            mass_norm)
 
         output['kappa'] = output['kappa'] + output['kappa.2h']
         #output['kappa.quadpy'] = \
             #output['kappa.1h'] + output['kappa.2h.quadpy']
 
         print_output(output)
+
+        output['sigma'] = output['sigma.1h'] + 
+
+    # for now
+    output['kappa'] = output['kappa'].T
 
     return [list(output['kappa']), logMh_eff]
 
@@ -297,7 +309,7 @@ def preamble(theta):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
-    assert setup['distances'] == 'comoving'
+    assert setup['distances'] in ('comoving', 'physical', 'proper')
 
     #cclcosmo = define_cosmology(params[0])
     setup['bias_func'] = ccl.halos.halo_bias_from_name('Tinker10')
@@ -310,14 +322,15 @@ def preamble(theta):
     # need to ensure this is consistent with the config file, by hand for now
     # exclude here should be either 1+exclude if excluding outer data points
     # or exclude-1 if excluding inner data points!
+    # currently using 6,7,8,9 for 1h-only and 8,9 for 1h+2h
     datapoints = io.load_datapoints_2d(
-        filenames, [0,0], exclude=[6,7,8,9])
+        filenames, [0,0], exclude=[8,9])
     arcmin_bins = np.array(datapoints[0], dtype=float)
     setup['arcmin_bins'] = arcmin_bins
     setup['arcmin'] = (arcmin_bins[:,:-1]+arcmin_bins[:,1:]) / 2
 
     # fine binning for filtering
-    setup['arcmin_fine_bins'] = np.linspace(0, 50, 1001) * u.arcmin
+    setup['arcmin_fine_bins'] = np.linspace(0, 50, 201) * u.arcmin
     setup['arcmin_fine'] = 0.5 \
         * (setup['arcmin_fine_bins'][:-1]+setup['arcmin_fine_bins'][1:])
 
@@ -351,22 +364,24 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     #Rxi = np.logspace(-4, 3, 200)
     # I have no idea why, but for quadpy to work in xi2sigma the upper
     # bound on this *must* be 2
-    Rxi = np.logspace(-3, 2, 250)
+    Rxi = np.logspace(-3, 6, 2000)
     #Rxi = setup['rvir_range_3d']
     if debug:
         print('Rxi =', Rxi[0], Rxi[-1], Rxi.shape)
         print('xi_kz...')
     lnk = setup['k_range']
     ti = time()
-    xi_kz = np.array([lss.power2xi(interp1d(lnk, lnPk_i), Rxi)
-                      for lnPk_i in np.log(Pk)])
+    xi_z = np.array([lss.power2xi(interp1d(lnk, lnPk_i), Rxi)
+                     for lnPk_i in np.log(Pk)])
     if debug:
         print(f'in {time()-ti:.2f} s')
-    out['xi_kz'] = xi_kz
-    info(out, 'xi_kz')
-    xi = bh[:,:,None] * xi_kz[:,None]
-    if debug:
-        print('xi:', xi.shape)
+    out['xi_z'] = xi_z
+    info(out, 'xi_z')
+    out['xi'] = bh[:,:,None] * xi_z[:,None]
+    info(out, 'xi')
+
+    plot_profile_mz(Rxi, out['xi'], z[:,0], mx=m, z0=0.46, m0=1e14,
+                    output='profiles_xi.png')
 
     bg = 'critical' if 'critical' in setup['delta_ref'].lower() else 'matter'
     if debug:
@@ -378,19 +393,52 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
         print(f'in {time()-ti:.2f} s')
         print('rho_m =', rho_m)
 
+    #print('Rfine =', setup['Rfine'], setup['Rfine'].shape)
     # finally, surface density
+    # quad_vec
     if debug:
         print('surface densities...')
         ti = time()
-    sigma_2h_z = lss.xi2sigma(
-        setup['Rfine'].T, Rxi, xi_kz, rho_m, threads=1, full_output=False,
-        #setup['Rfine'].T, Rxi, xi, rho_m, threads=1, full_output=False,
-        integrator='scipy', run_test=False)
+    sigma_2h_z1 = lss.xi2sigma(
+        setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
+        integrator='scipy-vec', run_test=False)
     if debug:
         print(f'in {time()-ti:.2f} s')
+        print('sigma_2h_z1 =', sigma_2h_z1.shape)
+    plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z1[:,None], z[:,0],
+                    mx=m,
+                    z0=0.46, m0=1e14, output='profiles_sigma2hz_quadvec.png')
+    if debug:
+        print('surface densities...')
+        ti = time()
+    # quadpy
+    """
+    sigma_2h_z2 = lss.xi2sigma(
+        setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
+        integrator='quadpy', run_test=False)
+    if debug:
+        print(f'in {time()-ti:.2f} s')
+        print('sigma_2h_z2 =', sigma_2h_z2.shape)
+    plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z2[:,None], z[:,0],
+                    mx=m,
+                    z0=0.46, m0=1e14, output='profiles_sigma2hz_quadpy.png')
+    if debug:
+        print('surface densities...')
+        ti = time()
+    """
+    sigma_2h_z = lss.xi2sigma(
+        setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
+        integrator='scipy', run_test=False)
+    plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z[:,None], z[:,0], 
+                    mx=m,
+                    z0=0.46, m0=1e14, output='profiles_sigma2hz_quad.png')
+    if debug:
+        print(f'in {time()-ti:.2f} s')
+        print('sigma_2h_z =', sigma_2h_z.shape)
+        """
         ti = time()
         sigma_2h = lss.xi2sigma(
-            #setup['Rfine'].T, Rxi, xi_kz, rho_m, threads=1, full_output=False,
+            #setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
             setup['Rfine'].T, Rxi, xi, rho_m, threads=1, full_output=False,
             integrator='scipy-vec', run_test=False)
         print(f'in {time()-ti:.2f} s')
@@ -398,18 +446,22 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
         s_ = np.s_[:,:10]
         y = np.allclose(sigma_2h[s_], sigma_2h_1[s_])
         print(f'are both sigma_2h the same? {y}')
+        """
 
     return bh[:,:,None] * sigma_2h_z[:,None]
 
 
-def calculate_twohalo(output, setup, cclcosmo, mdef, dndm, z, profiles,
-                      mass_norm):
+def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
+                      profiles, mass_norm):
     #ti = time()
     output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
     #tf = time()
     #print(f'calculate_sigma_2h in {tf-ti:.1f} s')
 
     info(output, 'sigma.2h.raw')
+    plot_profile_mz(setup['Rfine'].T, output['sigma.2h.raw'], z,
+                    mx=setup['mass_range'], z0=0.46,
+                    output='profiles_sigma.png')
 
     #######################
     ## could it be the units are not consistent here??
@@ -421,15 +473,24 @@ def calculate_twohalo(output, setup, cclcosmo, mdef, dndm, z, profiles,
         #/ profiles.sigma_crit()[:,:,None]
 
     info(output, 'kappa.2h.mz.raw')
+    plot_profile_mz(setup['Rfine'].T, output['kappa.2h.mz.raw'], z,
+                    mx=setup['mass_range'], z0=0.46,
+                    output='profiles_kappa.png')
+
+    # it seems now that kappa.2h.mz.raw is OK but something happens when
+    # we apply the filter?
 
     #print_output(output)
 
-    output['kappa.2h.mz'] = filter_profiles(
-        ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
-        setup['arcmin_fine'], setup['arcmin_bins'])
-    #output['kappa.2h.mz.quadpy'] = filter_profiles(
-        #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
-        #setup['arcmin_fine'], setup['arcmin_bins'])
+    if setup['kfilter']:
+        output['kappa.2h.mz'] = filter_profiles(
+            ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
+            setup['arcmin_fine'], setup['arcmin_bins'])
+        #output['kappa.2h.mz.quadpy'] = filter_profiles(
+            #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
+            #setup['arcmin_fine'], setup['arcmin_bins'])
+    else:
+        output['kappa.2h.mz'] = output.pop('kappa.2h.mz.raw')
 
     info(output, 'kappa.2h.mz')
 
@@ -439,6 +500,7 @@ def calculate_twohalo(output, setup, cclcosmo, mdef, dndm, z, profiles,
     output['kappa.2h'] = trapz(
         dndm * output['kappa.2h.mz'], setup['mass_range'], axis=2) \
         / mass_norm
+    #output['kappa.2h'] = output['kappa.2h'].T
     #print(f'in {time()-ti:.2f} s')
 
     info(output, 'kappa.1h')
@@ -490,7 +552,7 @@ def define_profiles(setup, cosmo, z, c_concentration):
                        for zi in z[:,0]])
     profiles = NFW(
         setup['mass_range'], c, z, cosmo=cosmo, overdensity=setup['delta'],
-        background=ref, frame='comoving', z_s=1100)
+        background=ref, frame=setup['distances'], z_s=1100)
     return profiles
 
 
@@ -541,3 +603,53 @@ def miscentering(profiles, R, Rmis, tau, Rcl, dist='gamma'):
         print('*** end ***')
     return np.transpose(kappa_mis, axes=(1,0,2))
 
+
+def plot_profile_mz(R, profile, z, mx=None, z0=1, m0=1e14, xscale='log',
+                    yscale='log', ylabel='', output='', close=False, fs=14,
+                    figaxes=None):
+    """
+    Parameters
+    ----------
+    R must have shape ([N,]M), where N is the number of redshift bins and
+        M is the number of radial bins
+    profile must have shape (N,P,M) where P is the number of mass bins
+    """
+    z = np.squeeze(z)
+    if len(R.shape) == 1:
+        R = np.array([R for i in range(z.size)])
+    if mx is None:
+        lnm = np.log(m)
+    else:
+        lnm = np.log(mx)
+    logm = np.log10(np.exp(lnm))
+    idx_z = np.argmin(np.abs(z-z0))
+    idx_m = np.argmin(np.abs(lnm-np.log(m0)))
+    if figaxes is None:
+        fig, axes = plt.subplots(figsize=(14,5), ncols=2)
+    else:
+        fig, axes = figaxes
+    # varying redshift
+    axes[0].set_title('log10(m)={0:.2f}'.format(logm[idx_m]), fontsize=fs)
+    colors, cmap = colorscale(z)
+    for i in range(z.size):
+        axes[0].plot(R[i], profile[i,idx_m], color=colors[i])
+    if figaxes is None:
+        plt.colorbar(cmap, label='Redshift', ax=axes[0])
+    # varying mass
+    axes[1].set_title('z={0:.2f}'.format(z[idx_z]), fontsize=fs)
+    colors, cmap = colorscale(logm)
+    for i in range(lnm.size):
+        axes[1].plot(R[idx_z], profile[idx_z,i], color=colors[i])
+    if figaxes is None:
+        plt.colorbar(cmap, label='log10 m', ax=axes[1])
+    for ax in axes:
+        ax.set_xscale(xscale)
+        ax.set_yscale(yscale)
+        if ylabel:
+            ax.set_ylabel(ylabel)
+#     axes[1].set_x
+    if output:
+        savefig(output, fig=fig, close=close)
+    else:
+        fig.tight_layout()
+    return fig, axes

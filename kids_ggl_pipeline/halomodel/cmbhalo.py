@@ -97,7 +97,7 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
-debug = True
+debug = False
 
 def model(theta, R):
     """CMB halo modeling
@@ -341,14 +341,9 @@ def preamble(theta):
 
     # read measurement binning scheme if filtering
     if setup['kfilter']:
-        print('bin_edges =', setup['bin_edges'])
-        #if len(setup['bin_edges'][0]) == 1:
-            #bin_edges = np.loadtxt(
-                #setup['bin_edges'][0][0], usecols=[0])
-        #else:
-            #bin_edges = np.array(
-                #[np.loadtxt(file, usecols=[0])
-                 #for file in setup['bin_edges'][0]], dtype=float)
+        if debug:
+            print('bin_edges before exclude =', setup['bin_edges'])
+        # remove excluded points from bin edges
         bin_edges = []
         for file in setup['bin_edges'][0]:
             bin_edges.append(np.loadtxt(file, usecols=[0]))
@@ -358,7 +353,8 @@ def preamble(theta):
                 + [bin_edges[-1][i+1] for i in range(len(bin_edges[-1])-1)
                    if i not in setup['exclude']]
         bin_edges = [np.array(b, dtype=float) for b in bin_edges]
-        print('bin_edges =', bin_edges)
+        if debug:
+            print('bin_edges =', bin_edges)
         setup['bin_edges'] = bin_edges
 
         # fine binning for filtering
@@ -466,7 +462,7 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     #R2h = setup['Rfine'].T if setup['kfilter'] else setup['
     sigma_2h_z = lss.xi2sigma(
         setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
-        integrator='scipy', run_test=False)
+        integrator='scipy', run_test=False, verbose=2*debug)
     plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z[:,None], z[:,0],
                     mx=m,
                     z0=0.46, m0=1e14, output='profiles_sigma2hz_quad.png')
@@ -605,14 +601,16 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
     if ingredients['nzlens']:
         # fix later
         filtered = [np.array(
-                        [filter.filter(theta_fine, p_ij, theta_bins, units=units)
+                        [filter.filter(theta_fine, p_ij, theta_bins,
+                                       units=units)
                          for p_ij in p_i])
                     for p_i in profiles]
         filtered = np.transpose(filtered, axes=(2,0,1))
     else:
-        print('in filter_profiles')
-        print('theta_fine =', theta_fine)
-        print('theta_bins =', theta_bins)
+        if debug:
+            print('in filter_profiles')
+            print('theta_fine =', theta_fine)
+            print('theta_bins =', theta_bins)
         filtered = [np.array(
                         [filter.filter(theta_fine, prof_mz, theta_bins_z,
                                        units=units)[1]
@@ -662,6 +660,8 @@ def plot_profile_mz(R, profile, z, mx=None, z0=1, m0=1e14, xscale='log',
         M is the number of radial bins
     profile must have shape (N,P,M) where P is the number of mass bins
     """
+    if not debug:
+        return
     z = np.squeeze(z)
     if len(R.shape) == 1:
         R = np.array([R for i in range(z.size)])

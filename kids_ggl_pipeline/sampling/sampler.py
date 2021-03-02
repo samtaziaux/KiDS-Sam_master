@@ -114,7 +114,7 @@ def run(hm_options, options, args):
         fail_value[n] = 9999
     fail_value = list(fail_value[0])
 
-    if not options['resume']:
+    if args.demo or not options['resume']:
         print('Starting values =', starting)
 
     # if there is a preamble function we can run it now

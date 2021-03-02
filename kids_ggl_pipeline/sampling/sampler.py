@@ -256,7 +256,8 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     print()
 
     output = '{0}_demo_{1}.{2}'.format(
-        '.'.join(options['output'].split('.')[:-1]), setup['return'],
+        '.'.join(options['output'].split('.')[:-1]),
+                 '-'.join(setup['return']).replace('.', ''),
         plot_ext)
     # if necessary, create a demo folder within the output path
     path, output = os.path.split(output)

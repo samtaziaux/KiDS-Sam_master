@@ -21,6 +21,9 @@ _default_entries = {
     'bin_samples': 'number of bins to sample for k-space filtering',
     'bin_sampling_max': 'max radius to sample for k-space filtering',
     'kfilter': 'file name(s) containing the k-space filter. Requires pixell',
+    #
+    'return_extra': 'any additional quantities the model should return for' \
+        ' later access.',
     }
 
 _default_values = {
@@ -42,6 +45,8 @@ _default_values = {
     'R_unit': 'Mpc',
     'esd_unit': 'Msun/pc^2',
     'cov_unit': 'Msun^2/pc^4',
+    # return extras
+    'return_extra': [],
     }
 
 _necessary_entries = {
@@ -74,10 +79,11 @@ _valid_entries = {
     'logR_min': float,
     'logR_max': float,
     'transfer': ('CAMB', 'EH', 'EH_NoBAO', 'BBKS', 'BondEfs'),
-    #'return': ('esd', 'kappa', 'power', 'sigma', 'xi')
+    'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp'),
     # will implement others in the future, require handling different
     # x-values
-    'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp'),
+    #'return': list,
+    'return_extra': list,
     #'return': ('esd', 'wp', 'esd_wp'),
     'R_unit': str,
     'esd_unit': str,
@@ -157,12 +163,31 @@ def append_entry(line, setup):
     """
     `line` should be a `ConfigLine` object
     """
+    """
     for dtype in (int, float, str):
         try:
             setup[line.words[0]] = dtype(line.words[1])
             break
         except ValueError:
             pass
+    """
+    key, value = line.words[:2]
+    # this only allows for list of strings but that's all we need for now
+    if _valid_entries[key] == list:
+        setup[key] = value.split(',')
+    elif np.iterable(_valid_entries[key]):
+        if value not in _valid_entries[key]:
+            err = f'value {value} not allowed for setup entry {key}.' \
+                  f' Allowed values are {_valid_entries[key]}.'
+            raise ValueError(err)
+        setup[key] = value
+    else:
+        try:
+            setup[key] = _valid_entries[key](value)
+        except ValueError:
+            err = f'cannot convert value {value} in entry {key} to required' \
+                  f'type {_valid_entries[key]}'
+            raise ValueError(err)
     return setup
 
 
@@ -193,6 +218,13 @@ def check_necessary_entries(setup):
             msg = 'setup entry "{0}" missing from config file'.format(key)
             raise ValueError(msg)
     return
+
+
+def check_return(setup):
+    # should not have esd_wp here - each element should be a combination
+    # of observable type and measurement, e.g., "gm.esd"
+    valid = ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp')
+    # ...
 
 
 def check_setup(setup):

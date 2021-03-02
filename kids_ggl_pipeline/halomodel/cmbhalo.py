@@ -1,5 +1,22 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""Cluster lensing halo model
+
+A halo model tailored for galaxy cluster measurements - that is, when
+the lens sample is composed only of central galaxies, with a satellite
+fraction set to exactly zero. This assumptions allows us to simplify
+much of the halo model implementation, and therefore warrants its own
+module.
+
+For easy exchange with ``halo.model``, the satellite parameters are
+retained in the configuration file, but they are ignored completely in
+the model. Be sure to fix all of them in the configuration or they
+will appear in the output file as free parameters!
+
+NOTES
+-----
+* Only 'gm' observables allowed for now
+"""
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -57,6 +74,7 @@ from .dark_matter import (
 from .covariance import covariance
 """
 from . import halo
+from .lens import d_sigma
 from .. import hod
 from ..helpers import io
 
@@ -97,7 +115,7 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
-debug = False
+debug = True
 
 def model(theta, R):
     """CMB halo modeling
@@ -110,16 +128,18 @@ def model(theta, R):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
+    retvalues = setup['return'] + setup['return_extra']
+
     Mh = setup['mass_range']
 
     #assert setup['delta_ref'] in ('critical', 'matter')
 
+    # satellite parameters in the config file are ignored;
+    # they may or may not be present
     cosmo, \
-        c_pm, c_concentration, c_mor, c_scatter, c_mis, c_twohalo, \
-        s_concentration, s_mor, s_scatter, s_beta = theta
+        c_pm, c_concentration, c_mor, c_scatter, c_mis, c_twohalo = theta[:7]
+        #s_concentration, s_mor, s_scatter, s_beta = theta
 
-    #cosmo_model, sigma8, n_s, z = halo.load_cosmology(cosmo)
-    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
     zs = cosmo[-1]
     # astropy (for profiley)
     cosmo_model, sigma8, n_s, z = halo.load_cosmology(cosmo)
@@ -132,6 +152,7 @@ def model(theta, R):
 
     ### a final bit of massaging ###
 
+    # leaving this for later
     if observables.mlf:
         nbins = observables.nbins - observables.mlf.nbins
     else:
@@ -200,26 +221,53 @@ def model(theta, R):
 
     output = {}
 
+    """
+    # trying to automatize which observables to calculate here
+    R1h = setup['Rfine'] if setup['kfilter'] else R.T
+    qfuncs = (profiles.projected, profiles.convergence,
+              profiles.projected_excess)
+    for quant, func in zip(('sigma', 'kappa', 'esd'), qfuncs):
+        if quant in retvalues or f'{quant}.1h' in retvalues:
+            key = f'{quant}.1h.mz.raw'
+            output[key] = func(R1h[:,:,None])
+            # these two will be removed after enough testing
+            info(output, key)
+            plot_profile_mz(R1h.T, output[key], z, mx=setup['mass_range'],
+                            z0=0.46, m0=1e14,
+                            output=f'profiles_{quant}1h.png')
+            if setup['kfilter']:
+                prof = np.transpose(output[key], axes=(1,2,0))
+                key = f'{quant}.1h.mz'
+                output[key] = filter_profiles(
+                    ingredients, setup['kfilter'], prof,
+                    setup['bin_centers_fine'], setup['bin_edges'])
+
+    """
     # just for testing
     if setup['kfilter']:
         output['sigma.1h.mz.raw'] = np.transpose(
             profiles.projected(setup['Rfine'][:,:,None]), axes=(1,2,0))
-
-        output['kappa.1h.mz.raw'] = np.transpose(
-            profiles.convergence(setup['Rfine'][:,:,None]), axes=(1,2,0))
-
         info(output, 'sigma.1h.mz.raw')
-        info(output, 'kappa.1h.mz.raw')
+
+        if 'kappa' in retvalues or 'kappa.1h' in retvalues:
+            output['kappa.1h.mz.raw'] = np.transpose(
+                profiles.convergence(setup['Rfine'][:,:,None]), axes=(1,2,0))
+            info(output, 'kappa.1h.mz.raw')
 
         output['kappa.1h.mz'] = filter_profiles(
             ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
             setup['bin_centers_fine'], setup['bin_edges'])
     else:
-        output['sigma.1h.mz'] = profiles.projected(R.T[:,:,None])
-        output['kappa.1h.mz'] = profiles.convergence(R.T[:,:,None])
+        if 'sigma' in retvalues or 'sigma.1h' in retvalues:
+            output['sigma.1h.mz'] = profiles.projected(R.T[:,:,None])
+        if 'kappa' in retvalues or 'kappa.1h' in retvalues:
+            output['kappa.1h.mz'] = profiles.convergence(R.T[:,:,None])
+        if 'esd' in retvalues or 'esd.1h' in retvalues:
+            output['esd.1h.mz'] = profiles.projected_excess(R.T[:,:,None])
 
     info(output, 'sigma.1h.mz')
-    info(output, 'kappa.1h.mz')
+    if 'kappa' in retvalues or 'kappa.1h' in retvalues:
+        info(output, 'kappa.1h.mz')
 
     # halo mass function weighting
     hmf = ccl.halos.mass_function_from_name('Tinker10')
@@ -242,8 +290,9 @@ def model(theta, R):
 
     if ingredients['miscentring']:
         # miscentering (1h only for now)
-        output['kappa.1h.mz.mis'] = miscentering(
-            profiles, R, *c_mis[2:], dist=c_mis[0])
+        if 'kappa' in retvalues or 'kappa.1h' in retvalues:
+            output['kappa.1h.mz.mis'] = miscentering(
+                profiles, R, *c_mis[2:], dist=c_mis[0])
 
         output['kappa.1h.mz'] = c_mis[1]*output['kappa.1h.mz.mis'] \
             + (1-c_mis[1])*output['kappa.1h.mz']
@@ -252,18 +301,30 @@ def model(theta, R):
     mass_norm = trapz(dndm*output['pop_g'], Mh, axis=1)
     if debug:
         print('mass_norm =', mass_norm.shape)
-    output['kappa.1h'] = trapz(
-        dndm * output['pop_g'] * output['kappa.1h.mz'], Mh, axis=2) \
-        / mass_norm
+    if 'kappa.1h.mz' in output:
+        output['kappa.1h'] = trapz(
+            dndm * output['pop_g'] * output['kappa.1h.mz'], Mh, axis=2) \
+            / mass_norm
 
-    output['kappa'] = output['kappa.1h']
+        output['kappa'] = output['kappa.1h']
 
     if ingredients['twohalo']:
         output = calculate_twohalo(
             output, setup, ingredients, cclcosmo, mdef, dndm, z, profiles,
             mass_norm)
 
-        output['kappa'] = output['kappa'] + output['kappa.2h']
+        if 'kappa' in retvalues or 'kappa.2h' in retvalues:
+            #print(R.shape, output['kappa.1h.mz'].shape, output['kappa.2h.mz'].shape)
+            plot_profile_mz(R, np.transpose(output['kappa.2h.mz'], axes=(1,2,0)),
+                            z, yscale='linear',
+                            mx=setup['mass_range'], z0=0.46, xscale='linear',
+                            output='profiles_kappa2h_filtered.png')
+            plot_profile_mz(R, np.transpose(output['kappa.2h.mz']+output['kappa.1h.mz'], axes=(1,2,0)),
+                            z, yscale='linear',
+                            mx=setup['mass_range'], z0=0.46, xscale='linear',
+                            output='profiles_kappa1h2h_filtered.png')
+
+            output['kappa'] = output['kappa'] + output['kappa.2h']
         #output['kappa.quadpy'] = \
             #output['kappa.1h'] + output['kappa.2h.quadpy']
 
@@ -284,6 +345,7 @@ def model(theta, R):
 
     # for now
     output['kappa'] = output['kappa'].T
+    info(output, 'kappa')
 
     return [list(output['kappa']), logMh_eff]
 
@@ -334,7 +396,16 @@ def preamble(theta):
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
 
+    for obs in observables:
+        assert obs.obstype == 'gm', \
+            "only 'gm' observables allowed in ``cluster.model``. Please" \
+            " raise an issue on github if you would like to see other" \
+            " observable types implemented"
+
     assert setup['distances'] in ('comoving', 'physical', 'proper')
+
+    # for now
+    setup['return'] = [setup['return']]
 
     #cclcosmo = define_cosmology(params[0])
     setup['bias_func'] = ccl.halos.halo_bias_from_name('Tinker10')
@@ -396,6 +467,7 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     # I have no idea why, but for quadpy to work in xi2sigma the upper
     # bound on this *must* be 2
     Rxi = np.logspace(-3, 6, 2000)
+    #Rxi = np.logspace(-3, 4, 120)
     #Rxi = setup['rvir_range_3d']
     if debug:
         print('Rxi =', Rxi[0], Rxi[-1], Rxi.shape)
@@ -498,18 +570,25 @@ def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
                     output='profiles_sigma.png')
 
     #######################
-    ## could it be the units are not consistent here??
+    ## could it be the units are not consistent here?? I think we're good
     #######################
 
-    output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
-        / profiles.sigma_crit()[:,:,None]
-    #output['kappa.2h.mz.raw.quadpy'] = output['sigma.2h.raw.quadpy'] \
-        #/ profiles.sigma_crit()[:,:,None]
+    if 'esd' in retvalues or 'esd.2h' in retvalues:
+        output['esd.2h.mz.raw'] = halo.calculate_esd(
+            setup, observables, ingredients, output['sigma.2h.raw'], c_pm)
+        info(output, 'esd.2h.mz.raw')
+        plot_profile_mz(R, output['esd.2h.mz.raw'], z,
+                        mx=setup['mass_range'], z0=0.46,
+                        output='profiles_esd2h.png')
 
-    info(output, 'kappa.2h.mz.raw')
-    plot_profile_mz(setup['Rfine'].T, output['kappa.2h.mz.raw'], z,
-                    mx=setup['mass_range'], z0=0.46,
-                    output='profiles_kappa.png')
+    if 'kappa' in retvalues or 'kappa.2h' in retvalues:
+        output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
+            / profiles.sigma_crit()[:,:,None]
+
+        info(output, 'kappa.2h.mz.raw')
+        plot_profile_mz(setup['Rfine'].T, output['kappa.2h.mz.raw'], z,
+                        mx=setup['mass_range'], z0=0.46,
+                        output='profiles_kappa.png')
 
     # it seems now that kappa.2h.mz.raw is OK but something happens when
     # we apply the filter?
@@ -629,9 +708,9 @@ def miscentering(profiles, R, Rmis, tau, Rcl, dist='gamma'):
         print('profiles =', profiles)
         print('R =', R, R.shape, type(R[0][0]))
         print('Rmis =', Rmis, Rmis.shape, type(Rmis[0]))
-    # this does many more calculations than necessary but will do for now
-    # (and also have to do the funny indexing)
-    print(profiles.offset_convergence(R[0], Rmis))
+        # this does many more calculations than necessary but will do for now
+        # (and also have to do the funny indexing)
+        print(profiles.offset_convergence(R[0], Rmis))
     kappa_mis = np.array(
         [profiles.offset_convergence(Ri, Rmis)[:,:,i]
          for i, Ri in  enumerate(R)])

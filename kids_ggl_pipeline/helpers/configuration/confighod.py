@@ -13,7 +13,6 @@ from ...sampling.priors import (
     define_limits, draw, fixed_priors, free_priors, nargs as prior_nargs,
     valid_priors)
 
-
 def add_default_ingredients(ingredients):
     options = ('centrals', 'pointmass', 'miscentring', 'satellites',
                'twohalo', 'haloexclusion', 'nzlens', 'bnl')

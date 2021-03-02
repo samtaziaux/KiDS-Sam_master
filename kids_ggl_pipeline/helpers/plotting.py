@@ -18,7 +18,10 @@ def axlabel(return_value):
               'xi': r'\xi',
               'wp': r'w_{p}',
               'esd_wp': r'\Delta\Sigma\, /\, w_{p}'}
-    return labels[return_value]
+    if isinstance(return_value, str):
+        return labels[return_value]
+    else:
+        return '\,||\,'.join([labels[val] for val in return_value])
 
 
 def covariance(R, cov, cor, output=None):

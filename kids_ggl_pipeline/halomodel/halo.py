@@ -383,22 +383,6 @@ def calculate_esd(setup, observables, ingredients, sigma_gm, c_pm):
     """This is only ever used for gm, but adding the others would
     be trivial if necessary"""
     if observables.gm:
-        """
-        d_sigma_gm = array(
-            [np.nan_to_num(
-                d_sigma(sigma_gm_i, rvir_range_3d_i, r_i))
-            for sigma_gm_i, r_i in zip(sigma_gm, observables.gm.R)])
-
-        out_esd_tot = array(
-            [UnivariateSpline(r_i, np.nan_to_num(d_sigma_gm_i), s=0)
-            for d_sigma_gm_i, r_i in zip(d_sigma_gm, observables.gm.R)])
-
-        #out_esd_tot_inter = np.zeros((nbins, rvir_range_2d_i.size))
-        #for i in range(nbins):
-        #    out_esd_tot_inter[i] = out_esd_tot[i](rvir_range_2d_i)
-        out_esd_tot_inter = [out_esd_tot[i](observables.gm.R[i])
-                             for i in range(observables.gm.nbins)]
-        """
         esd = calculate_esd_single(setup, observables.gm, sigma_gm)
         if ingredients['pointmass']:
             assert len(c_pm[0]) == len(esd), \

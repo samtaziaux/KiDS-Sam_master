@@ -101,7 +101,7 @@ def add_defaults(setup):
 def add_kfilter(setup):
     if not setup['kfilter']:
         return setup
-    if not setup['bin_edges']:
+    if len(setup['bin_edges']) == 0:
         msg = 'must provide bin_edges if applying a k-space filter'
         raise ValueError(msg)
     try:

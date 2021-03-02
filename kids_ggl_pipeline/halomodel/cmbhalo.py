@@ -402,6 +402,9 @@ def preamble(theta):
             " raise an issue on github if you would like to see other" \
             " observable types implemented"
 
+    if setup['kfilter'] and not setup['R_unit'] == 'arcmin':
+        msg = "R_unit must be set to 'arcmin' if applying a k-space filter"
+        raise ValueError(msg)
     assert setup['distances'] in ('comoving', 'physical', 'proper')
 
     # for now

@@ -174,6 +174,9 @@ class ModelObservables:
             return next
         else: raise StopIteration
 
+    def __len__(self):
+        return len(self.observables)
+
     ### hidden methods ###
 
     def _init_obs(self, obs):

@@ -75,6 +75,7 @@ from .covariance import covariance
 """
 from . import halo
 from .lens import d_sigma
+from .miscentring import miscentring
 from .. import hod
 from ..helpers import io
 
@@ -129,7 +130,7 @@ def model(theta, R):
                         'parameters', 'setup')]
 
     retvalues = setup['return'] + setup['return_extra']
-
+    # alias
     Mh = setup['mass_range']
 
     #assert setup['delta_ref'] in ('critical', 'matter')
@@ -183,10 +184,9 @@ def model(theta, R):
     if debug:
         print('z =', z.shape)
 
-    # concentration
     profiles = define_profiles(setup, cosmo_model, z, c_concentration)
-    if debug:
-        print('shape =', profiles.shape)
+    #if debug:
+        #print('shape =', profiles.shape)
 
     # convert radii if necessary - this must be done here because it
     # depends on cosmology
@@ -221,55 +221,8 @@ def model(theta, R):
 
     output = {}
 
-    """
-    # trying to automatize which observables to calculate here
-    R1h = setup['Rfine'] if setup['kfilter'] else R.T
-    qfuncs = (profiles.projected, profiles.convergence,
-              profiles.projected_excess)
-    for quant, func in zip(('sigma', 'kappa', 'esd'), qfuncs):
-        if quant in retvalues or f'{quant}.1h' in retvalues:
-            key = f'{quant}.1h.mz.raw'
-            output[key] = func(R1h[:,:,None])
-            # these two will be removed after enough testing
-            info(output, key)
-            plot_profile_mz(R1h.T, output[key], z, mx=setup['mass_range'],
-                            z0=0.46, m0=1e14,
-                            output=f'profiles_{quant}1h.png')
-            if setup['kfilter']:
-                prof = np.transpose(output[key], axes=(1,2,0))
-                key = f'{quant}.1h.mz'
-                output[key] = filter_profiles(
-                    ingredients, setup['kfilter'], prof,
-                    setup['bin_centers_fine'], setup['bin_edges'])
+    ### halo mass function ###
 
-    """
-    # just for testing
-    if setup['kfilter']:
-        output['sigma.1h.mz.raw'] = np.transpose(
-            profiles.projected(setup['Rfine'][:,:,None]), axes=(1,2,0))
-        info(output, 'sigma.1h.mz.raw')
-
-        if 'kappa' in retvalues or 'kappa.1h' in retvalues:
-            output['kappa.1h.mz.raw'] = np.transpose(
-                profiles.convergence(setup['Rfine'][:,:,None]), axes=(1,2,0))
-            info(output, 'kappa.1h.mz.raw')
-
-        output['kappa.1h.mz'] = filter_profiles(
-            ingredients, setup['kfilter'], output['kappa.1h.mz.raw'],
-            setup['bin_centers_fine'], setup['bin_edges'])
-    else:
-        if 'sigma' in retvalues or 'sigma.1h' in retvalues:
-            output['sigma.1h.mz'] = profiles.projected(R.T[:,:,None])
-        if 'kappa' in retvalues or 'kappa.1h' in retvalues:
-            output['kappa.1h.mz'] = profiles.convergence(R.T[:,:,None])
-        if 'esd' in retvalues or 'esd.1h' in retvalues:
-            output['esd.1h.mz'] = profiles.projected_excess(R.T[:,:,None])
-
-    info(output, 'sigma.1h.mz')
-    if 'kappa' in retvalues or 'kappa.1h' in retvalues:
-        info(output, 'kappa.1h.mz')
-
-    # halo mass function weighting
     hmf = ccl.halos.mass_function_from_name('Tinker10')
     hmf = hmf(cclcosmo, mass_def=mdef)
     dndm = np.array(
@@ -278,29 +231,84 @@ def model(theta, R):
     if debug:
         print('dndm =', dndm.shape)
 
-    # selection function and mass-observable relation
+    ### selection function and mass-observable relation ###
+
     output['pop_c'], output['pop_s'] = halo.populations(
         observables, ingredients, selection, Mh, z, theta)
     output['pop_g'] = output['pop_c'] + output['pop_s']
     # note that pop_g already accounts for incompleteness
     ngal, logMh_eff = halo.calculate_ngal(
         observables, output['pop_g'], dndm, Mh)
-
     info(output, 'pop_g')
 
-    if ingredients['miscentring']:
-        # miscentering (1h only for now)
-        if 'kappa' in retvalues or 'kappa.1h' in retvalues:
-            output['kappa.1h.mz.mis'] = miscentering(
-                profiles, R, *c_mis[2:], dist=c_mis[0])
-
-        output['kappa.1h.mz'] = c_mis[1]*output['kappa.1h.mz.mis'] \
-            + (1-c_mis[1])*output['kappa.1h.mz']
-
-    #ti = time()
     mass_norm = trapz(dndm*output['pop_g'], Mh, axis=1)
     if debug:
         print('mass_norm =', mass_norm.shape)
+
+    # radii for initial calculation
+    Rx = setup['Rfine'] if setup['kfilter'] else R.T
+
+    ### 1-halo term ###
+
+    # for now only includes sigma, kappa, esd (gg_1h=0)
+    qfuncs = ([p.projected for p in profiles],
+              [p.convergence for p in profiles],
+              [p.projected_excess for p in profiles])
+    for profile_name, funcs in zip(('sigma', 'kappa', 'esd'), qfuncs):
+        if profile_name in retvalues:
+            key = f'{profile_name}.1h'
+            print(f'\n *** {key} ***')
+            # note that this will probably not work if the function is
+            # not analytical
+            print('shape =', profiles[0].shape)
+            print(profiles[0])
+            output[key] = np.array(
+                [func(Rx[:,i,None]) for i, func in enumerate(funcs)])
+            print(f'{key} =', output[key].shape)
+            #plot_profile_mz(Rx.T, np.transpose(prof, axes=(1,2,0)),
+                            #z, mx=Mh, z0=0.46, m0=1e14,
+                            #output=f'profiles_{profile_name}1h.png')
+
+            # miscentering (1h only for now)
+            # c_mis[1] corresponds to f_mis
+            if ingredients['miscentring']:
+                #prof_mis = miscentering(
+                    #profiles, Rx, *c_mis[2:], dist=c_mis[0])
+                offkey = f'{key}.off'
+                p_mis = miscentring(c_mis[0], *c_mis[2:])
+                print('p_mis =', p_mis.shape)
+                print('Rx =', Rx.shape)
+                print('c_mis[2] =', c_mis[2])
+                print('profiles[0].shape =', profiles[0].shape)
+                ti = time()
+                output[offkey] = np.array(
+                    [p.offset(f, Rx_i, c_mis[2], weights=p_mis_i)
+                     for p, f, Rx_i, p_mis_i
+                     in zip(profiles, funcs, Rx.T, p_mis)])
+                #output[offkey] = profiles.offset(func, Rx.T
+                print(f'offset in {time()-ti:.2f} s')
+                print(f'{offkey}: {output[offkey].shape}')
+                # rename well-centered profile
+                output[f'{key}.cent'] = output.pop(key)
+                # total 1h profile
+                output[key] = (1-c_mis[1])*output[f'{key}.off'] \
+                    + c_mis[1]*output[f'{key}.cent']
+
+            if setup['kfilter'] and (f'{key}.cent' in retvalues
+                    or f'{key}.off' in retvalues):
+                output[offkey] = np.transpose(
+                    output[offkey], axes=(0,2,1))
+                output[offkey] = filter_profiles(
+                    ingredients, setup['kfilter'], output[offkey],
+                    setup['bin_centers_fine'], setup['bin_edges'])
+
+            # dndm weighting
+            output[key] = trapz(
+                (dndm*output['pop_g'])[:,None] * output[key], Mh, axis=2) \
+                / mass_norm[:,None]
+            print(f'weighted {key}: {output[key].shape}')
+
+    #ti = time()
     if 'kappa.1h.mz' in output:
         output['kappa.1h'] = trapz(
             dndm * output['pop_g'] * output['kappa.1h.mz'], Mh, axis=2) \
@@ -317,11 +325,11 @@ def model(theta, R):
             #print(R.shape, output['kappa.1h.mz'].shape, output['kappa.2h.mz'].shape)
             plot_profile_mz(R, np.transpose(output['kappa.2h.mz'], axes=(1,2,0)),
                             z, yscale='linear',
-                            mx=setup['mass_range'], z0=0.46, xscale='linear',
+                            mx=Mh, z0=0.46, xscale='linear',
                             output='profiles_kappa2h_filtered.png')
             plot_profile_mz(R, np.transpose(output['kappa.2h.mz']+output['kappa.1h.mz'], axes=(1,2,0)),
                             z, yscale='linear',
-                            mx=setup['mass_range'], z0=0.46, xscale='linear',
+                            mx=Mh, z0=0.46, xscale='linear',
                             output='profiles_kappa1h2h_filtered.png')
 
             output['kappa'] = output['kappa'] + output['kappa.2h']
@@ -333,12 +341,12 @@ def model(theta, R):
         if setup['kfilter']:
             output['sigma'] = output['sigma.1h.mz.raw'] + output['sigma.2h.raw']
             plot_profile_mz(setup['Rfine'].T, output['sigma'], z[:,0],
-                            mx=setup['mass_range'], z0=0.46, m0=1e14,
+                            mx=Mh, z0=0.46, m0=1e14,
                             output='profiles_sigma_1h2h.png')
             output['kappa.mz.raw'] = output['kappa.1h.mz.raw'] \
                 + output['kappa.2h.mz.raw']
             plot_profile_mz(setup['Rfine'].T, output['kappa.mz.raw'], z[:,0],
-                            mx=setup['mass_range'], z0=0.46, m0=1e14,
+                            mx=Mh, z0=0.46, m0=1e14,
                             output='profiles_kappa_1h2h.png')
     #plot_profile_mz(Rxi, out['xi'], z[:,0], mx=m, z0=0.46, m0=1e14,
                     #output='profiles_xi.png')
@@ -672,14 +680,21 @@ def define_profiles(setup, cosmo, z, c_concentration):
     bg = f"{int(setup['delta'])}{ref}"
     c = fc * np.array([concentration(setup['mass_range'], bg, zi, model=model)
                        for zi in z[:,0]])
-    profiles = NFW(
-        setup['mass_range'], c, z, cosmo=cosmo, overdensity=setup['delta'],
-        background=ref, frame=setup['distances'], z_s=1100)
+    #profiles = NFW(
+        #setup['mass_range'], c, z, cosmo=cosmo, overdensity=setup['delta'],
+        #background=ref, frame=setup['distances'], z_s=1100)
+    # need to loop through for the miscentring calculations
+    profiles = [NFW(setup['mass_range'], ci, zi, cosmo=cosmo,
+                    overdensity=setup['delta'], background=ref,
+                    frame=setup['distances'], z_s=1100)
+                for ci, zi in zip(c, z[:,0])]
     return profiles
 
 
 def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
                     units='arcmin'):
+    if debug:
+        ti = time()
     if ingredients['nzlens']:
         # fix later
         filtered = [np.array(
@@ -689,10 +704,10 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
                     for p_i in profiles]
         filtered = np.transpose(filtered, axes=(2,0,1))
     else:
-        if debug:
-            print('in filter_profiles')
-            print('theta_fine =', theta_fine)
-            print('theta_bins =', theta_bins)
+        #if debug:
+            #print('in filter_profiles')
+            #print('theta_fine =', theta_fine)
+            #print('theta_bins =', theta_bins)
         filtered = [np.array(
                         [filter.filter(theta_fine, prof_mz, theta_bins_z,
                                        units=units)[1]
@@ -702,10 +717,12 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
             print('filtered =', np.array(filtered).shape)
         filtered = np.transpose(filtered, axes=(2,0,1))
         #filtered = np.array(filtered)
+    if debug:
+        print(f'filtered in {time()-ti:.2f} s')
     return filtered
 
 
-def miscentering(profiles, R, Rmis, tau, Rcl, dist='gamma'):
+def miscentering1(profiles, R, Rmis, tau, Rcl, dist='gamma'):
     if debug:
         print('*** in miscentering ***')
         print('profiles =', profiles)

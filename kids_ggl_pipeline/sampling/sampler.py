@@ -400,7 +400,11 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
+    print('model[0] =', model[0])
+    #print('esd =', esd.shape)
     residuals = esd - model[0]
+    print('residuals =', residuals)
+    print(residuals.shape)
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
     if not isfinite(chi2):

@@ -158,7 +158,7 @@ def model(theta, R):
         nbins = observables.nbins - observables.mlf.nbins
     else:
         nbins = observables.nbins
-    output = np.empty(observables.nbins, dtype=object)
+    output_array = np.empty(len(observables), dtype=object)
 
     if ingredients['nzlens']:
         nz = cosmo[9].T
@@ -240,6 +240,7 @@ def model(theta, R):
     ngal, logMh_eff = halo.calculate_ngal(
         observables, output['pop_g'], dndm, Mh)
     info(output, 'pop_g')
+    print('logMh_eff =', logMh_eff.shape)
 
     mass_norm = trapz(dndm*output['pop_g'], Mh, axis=1)
     if debug:
@@ -255,107 +256,104 @@ def model(theta, R):
               [p.convergence for p in profiles],
               [p.projected_excess for p in profiles])
     for profile_name, funcs in zip(('sigma', 'kappa', 'esd'), qfuncs):
-        if profile_name in retvalues:
-            key = f'{profile_name}.1h'
-            print(f'\n *** {key} ***')
-            # note that this will probably not work if the function is
-            # not analytical
-            print('shape =', profiles[0].shape)
-            print(profiles[0])
-            output[key] = np.array(
-                [func(Rx[:,i,None]) for i, func in enumerate(funcs)])
-            print(f'{key} =', output[key].shape)
-            #plot_profile_mz(Rx.T, np.transpose(prof, axes=(1,2,0)),
-                            #z, mx=Mh, z0=0.46, m0=1e14,
-                            #output=f'profiles_{profile_name}1h.png')
+        if profile_name not in retvalues:
+            continue
+        key1h = f'{profile_name}.1h'
+        key2h = f'{profile_name}.2h'
+        print(f'\n *** {key1h} ***')
+        # note that this will probably not work if the function is
+        # not analytical (should do a list comp in general)
+        print('shape =', profiles[0].shape)
+        print(profiles[0])
+        output[key1h] = np.array(
+            [func(Rx[:,i,None]) for i, func in enumerate(funcs)])
+        print(f'{key1h} =', output[key1h].shape)
+        #plot_profile_mz(Rx.T, np.transpose(prof, axes=(1,2,0)),
+                        #z, mx=Mh, z0=0.46, m0=1e14,
+                        #output=f'profiles_{profile_name}1h.png')
 
-            # miscentering (1h only for now)
-            # c_mis[1] corresponds to f_mis
-            if ingredients['miscentring']:
-                #prof_mis = miscentering(
-                    #profiles, Rx, *c_mis[2:], dist=c_mis[0])
-                offkey = f'{key}.off'
-                p_mis = miscentring(c_mis[0], *c_mis[2:])
-                print('p_mis =', p_mis.shape)
-                print('Rx =', Rx.shape)
-                print('c_mis[2] =', c_mis[2])
-                print('profiles[0].shape =', profiles[0].shape)
-                ti = time()
-                output[offkey] = np.array(
-                    [p.offset(f, Rx_i, c_mis[2], weights=p_mis_i)
-                     for p, f, Rx_i, p_mis_i
-                     in zip(profiles, funcs, Rx.T, p_mis)])
-                #output[offkey] = profiles.offset(func, Rx.T
-                print(f'offset in {time()-ti:.2f} s')
-                print(f'{offkey}: {output[offkey].shape}')
-                # rename well-centered profile
-                output[f'{key}.cent'] = output.pop(key)
-                # total 1h profile
-                output[key] = (1-c_mis[1])*output[f'{key}.off'] \
-                    + c_mis[1]*output[f'{key}.cent']
+        # miscentering (1h only for now)
+        # c_mis[1] corresponds to f_mis
+        if ingredients['miscentring']:
+            #prof_mis = miscentering(
+                #profiles, Rx, *c_mis[2:], dist=c_mis[0])
+            offkey = f'{key1h}.off'
+            p_mis = miscentring(c_mis[0], *c_mis[2:])
+            print('p_mis =', p_mis.shape)
+            print('Rx =', Rx.shape)
+            print('c_mis[2] =', c_mis[2])
+            print('profiles[0].shape =', profiles[0].shape)
+            ti = time()
+            output[offkey] = np.array(
+                [p.offset(f, Rx_i, c_mis[2], weights=p_mis_i)
+                 for p, f, Rx_i, p_mis_i
+                 in zip(profiles, funcs, Rx.T, p_mis)])
+            #output[offkey] = profiles.offset(func, Rx.T
+            print(f'offset in {time()-ti:.2f} s')
+            print(f'{offkey}: {output[offkey].shape}')
+            # rename well-centered profile
+            output[f'{key1h}.cent'] = output.pop(key1h)
+            # total 1h profile
+            output[key1h] = (1-c_mis[1])*output[f'{key1h}.off'] \
+                + c_mis[1]*output[f'{key1h}.cent']
 
-            if setup['kfilter'] and (f'{key}.cent' in retvalues
-                    or f'{key}.off' in retvalues):
-                output[offkey] = np.transpose(
-                    output[offkey], axes=(0,2,1))
-                output[offkey] = filter_profiles(
-                    ingredients, setup['kfilter'], output[offkey],
+        output[profile_name] = output[key1h]
+
+        if ingredients['twohalo']:
+            # this only does kappa for now
+            output = calculate_twohalo(
+                output, setup, ingredients, cclcosmo, mdef, dndm, z, profiles,
+                mass_norm)
+
+            #if profile_name in retvalues or key2h in retvalues:
+                #plot_profile_mz(R, np.transpose(output['kappa.2h.mz'], axes=(1,2,0)),
+                                #z, yscale='linear',
+                                #mx=Mh, z0=0.46, xscale='linear',
+                                #output='profiles_kappa2h_filtered.png')
+                #plot_profile_mz(R, np.transpose(output['kappa.2h.mz']+output['kappa.1h.mz'], axes=(1,2,0)),
+                                #z, yscale='linear',
+                                #mx=Mh, z0=0.46, xscale='linear',
+                                #output='profiles_kappa1h2h_filtered.png')
+
+            print_output(output)
+
+            output[profile_name] += output[key2h]
+
+        # later allow returning 1h and 2h separately (this will mean
+        # filtering the profiles twice!)
+        if setup['kfilter']:
+            for key in (profile_name, key1h, key2h):
+                if key not in retvalues:
+                    continue
+                output[key] = np.transpose(
+                    output[key], axes=(0,2,1))
+                output[key] = filter_profiles(
+                    ingredients, setup['kfilter'], output[key],
                     setup['bin_centers_fine'], setup['bin_edges'])
 
-            # dndm weighting
+        print_output(output)
+
+        # dndm weighting
+        for key in (profile_name, key1h, key2h):
+            if key not in retvalues:
+                continue
             output[key] = trapz(
                 (dndm*output['pop_g'])[:,None] * output[key], Mh, axis=2) \
                 / mass_norm[:,None]
             print(f'weighted {key}: {output[key].shape}')
 
-    #ti = time()
-    if 'kappa.1h.mz' in output:
-        output['kappa.1h'] = trapz(
-            dndm * output['pop_g'] * output['kappa.1h.mz'], Mh, axis=2) \
-            / mass_norm
-
-        output['kappa'] = output['kappa.1h']
-
-    if ingredients['twohalo']:
-        output = calculate_twohalo(
-            output, setup, ingredients, cclcosmo, mdef, dndm, z, profiles,
-            mass_norm)
-
-        if 'kappa' in retvalues or 'kappa.2h' in retvalues:
-            #print(R.shape, output['kappa.1h.mz'].shape, output['kappa.2h.mz'].shape)
-            plot_profile_mz(R, np.transpose(output['kappa.2h.mz'], axes=(1,2,0)),
-                            z, yscale='linear',
-                            mx=Mh, z0=0.46, xscale='linear',
-                            output='profiles_kappa2h_filtered.png')
-            plot_profile_mz(R, np.transpose(output['kappa.2h.mz']+output['kappa.1h.mz'], axes=(1,2,0)),
-                            z, yscale='linear',
-                            mx=Mh, z0=0.46, xscale='linear',
-                            output='profiles_kappa1h2h_filtered.png')
-
-            output['kappa'] = output['kappa'] + output['kappa.2h']
-        #output['kappa.quadpy'] = \
-            #output['kappa.1h'] + output['kappa.2h.quadpy']
-
-        print_output(output)
-
-        if setup['kfilter']:
-            output['sigma'] = output['sigma.1h.mz.raw'] + output['sigma.2h.raw']
-            plot_profile_mz(setup['Rfine'].T, output['sigma'], z[:,0],
-                            mx=Mh, z0=0.46, m0=1e14,
-                            output='profiles_sigma_1h2h.png')
-            output['kappa.mz.raw'] = output['kappa.1h.mz.raw'] \
-                + output['kappa.2h.mz.raw']
-            plot_profile_mz(setup['Rfine'].T, output['kappa.mz.raw'], z[:,0],
-                            mx=Mh, z0=0.46, m0=1e14,
-                            output='profiles_kappa_1h2h.png')
-    #plot_profile_mz(Rxi, out['xi'], z[:,0], mx=m, z0=0.46, m0=1e14,
-                    #output='profiles_xi.png')
+    print_output(output)
 
     # for now
-    output['kappa'] = output['kappa'].T
-    info(output, 'kappa')
+    #output['kappa'] = output['kappa'].T
+    #info(output, 'kappa')
 
-    return [list(output['kappa']), logMh_eff]
+    model_output = [output[key] for key in setup['return']]
+    for i, key in enumerate(setup['return']):
+        output_array[i] = output[key]
+
+    #return [model_output, logMh_eff]
+    return [output_array, logMh_eff]
 
 
 ##################################
@@ -702,7 +700,7 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
                                        units=units)
                          for p_ij in p_i])
                     for p_i in profiles]
-        filtered = np.transpose(filtered, axes=(2,0,1))
+        filtered = np.transpose(filtered, axes=(0,2,1))
     else:
         #if debug:
             #print('in filter_profiles')
@@ -715,7 +713,7 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
                     for prof_z, theta_bins_z in zip(profiles, theta_bins)]
         if debug:
             print('filtered =', np.array(filtered).shape)
-        filtered = np.transpose(filtered, axes=(2,0,1))
+        filtered = np.transpose(filtered, axes=(0,2,1))
         #filtered = np.array(filtered)
     if debug:
         print(f'filtered in {time()-ti:.2f} s')

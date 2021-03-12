@@ -144,75 +144,115 @@ def fill_nan(a):
         return np.interp(indices, indices[not_nan], a[not_nan])
 
 
-def download_directory(repository, server_path, out_path):
+def clone_git(repository, out_path):
     # keep imports local
     import os
-    from github import Github, GithubException
+    import git
     """
-    Download all contents at server_path
+    Clone and download all contents at server_path
     """
-    
-    if not os.path.exists(out_path):
-        os.makedirs(out_path)
-    
-    g = Github()
-    repository = g.get_repo(repository)
-    contents = repository.get_dir_contents(server_path)
-
-    for content in contents:
-        print('Processing %s' % content.path)
-        if content.type == 'dir':
-            download_directory(repository, content.path)
-        else:
-            try:
-                path = content.path
-                file_content = repository.get_contents(path)
-                file_data = file_content.decoded_content
-                file_out = open(out_path + '/' + content.name, 'wb')
-                file_out.write(file_data)
-                file_out.close()
-            except (GithubException, IOError) as exc:
-                print('Error processing %s: %s', content.path, exc)
+    print('Cloning git repository: {0}'.format(repository))
+    git.Git(out_path).clone(repository)
 
 
 def read_mead_data():
     # keep imports local
     import dill as pickle
     import os
-    from scipy.interpolate import LinearNDInterpolator
+    import shutil
+    from scipy.interpolate import RegularGridInterpolator
+    
     
     path0 = os.getcwd()
     path = os.path.join(path0, 'BNL_data')
-
-    download_directory('alexander-mead/BNL', '/data/BNL/M512', path)
     
-    file_num = (len([name for name in os.listdir(path)]) - 1) // 2
-    print(file_num)
+    if not os.path.exists(path):
+        os.makedirs(path)
     
-    # read in the snapshot number and corresponding redshift, will also loop over snap number
-    snaps = np.genfromtxt(path + '/MDR1_redshifts.csv', delimiter=',', skip_header=1)[:,[2,3]]
-    out_array = np.empty((file_num * 8 * 8 * 25, 5))
-    id = 0
-    for i,snap in enumerate(np.flip(snaps[:,0])):
-        try:
-            dat = np.genfromtxt(path+'/MDR1_rockstar_%s_bnl.dat'%int(snap))
-            mass = np.genfromtxt(path+'/MDR1_rockstar_%s_binstats.dat'%int(snap))
-            idx = 0
-            for m1, mass1 in enumerate(mass[:,2]):
-                for m2, mass2 in enumerate(mass[:,2]):
-                    for k, k_val in enumerate(np.unique(dat[:,0])):
-                        out_array[id,:] = np.array([snaps[i,1], mass1, mass2, k_val, dat[idx,1]])
-                        idx += 1
-                        id += 1
-        except:
+    if os.path.exists(os.path.join(path0, 'interpolator_BNL.npy')):
+        with open(os.path.join(path0, 'interpolator_BNL.npy'), 'rb') as dill_file:
+            beta_interp = pickle.load(dill_file)
+        return beta_interp
+       
+    else:
+        print('Using non-linear halo bias correction from Mead at al. 2020. Warning, this is slow!')
+        if os.path.exists(os.path.join(path, 'BNL/data/MDR1_redshifts.csv')):
             pass
+        else:
+            clone_git('https://github.com/alexander-mead/BNL', path)
+        
+        data_dir = os.path.join(path, 'BNL/data/BNL_M200/M512')
+        data_dir_folded = os.path.join(path, 'BNL/data/BNL_M200_folded/M512')
+        
+        snaps = np.genfromtxt(os.path.join(path, 'BNL/data/MDR1_redshifts.csv'), delimiter=',', skip_header=1)[:,[1,2]]
+        snaps = snaps[snaps[:,1] >= 52] # takes data up to z=1, might be removed later
+        
+        file_num = 0
+        for i,snap in enumerate(np.flip(snaps[:,1])):
+            if os.path.exists(os.path.join(data_dir, 'MDR1_rockstar_%s_bnl.dat'%int(snap))) and os.path.exists(os.path.join(data_dir_folded, 'MDR1_rockstar_%s_bnl.dat'%int(snap))):
+                file_num += 1
+        
+        mass_dim = 12
+        mass_interp = np.linspace(11, 16, mass_dim)
+        
+        out_array = np.empty((file_num * mass_dim * mass_dim * 29, 5))
+        out_array_tmp = np.empty((8 * 8 * 29, 4))
+        index_array = np.empty((file_num * mass_dim * mass_dim * 29, 4), dtype=int)
+        index_array_tmp = np.empty((8 * 8 * 29, 3), dtype=int)
+        id = 0
+        i_tmp = 0
     
-    print('Interpolating')
-    x = out_array[:,:4]
-    data = out_array[:,4]
-    my_interpolating_function = LinearNDInterpolator(x, data, fill_value=1.0)
-    with open(path0+'/interpolator_BNL.npy', 'wb') as dill_file:
-        pickle.dump(my_interpolating_function, dill_file)
+        for i,snap in enumerate(np.flip(snaps[:,1])):
+            if os.path.exists(os.path.join(data_dir, 'MDR1_rockstar_%s_bnl.dat'%int(snap))) and os.path.exists(os.path.join(data_dir_folded, 'MDR1_rockstar_%s_bnl.dat'%int(snap))):
+                dat = np.genfromtxt(os.path.join(data_dir, 'MDR1_rockstar_%s_bnl.dat'%int(snap)), usecols=(0,1))
+                mass = np.genfromtxt(os.path.join(data_dir, 'MDR1_rockstar_%s_binstats.dat'%int(snap)))
+
+                dat_folded = np.genfromtxt(os.path.join(data_dir_folded, 'MDR1_rockstar_%s_bnl.dat'%int(snap)), usecols=(0,1))
+                data_del = dat[dat[:,0]<=0.61]
+                split_dat = np.split(data_del, len(data_del)/24)
+    
+                data_fold_del = dat_folded[dat_folded[:,0]>0.61]
+                split_dat_folded = np.split(data_fold_del, len(data_fold_del)/5)
+
+                combined = [np.vstack((split_dat[i], split_dat_folded[i])) for i in np.arange(0, len(split_dat),1)]
+                combined_array = np.asarray(np.concatenate(combined))
+            
+                idx = 0
+                for m1, mass1 in enumerate(mass[:,2]):
+                    for m2, mass2 in enumerate(mass[:,2]):
+                        for k, k_val in enumerate(np.unique(combined_array[:,0])):
+                            out_array_tmp[idx,:] = np.array([mass1, mass2, k_val, combined_array[idx,1]])
+                            index_array_tmp[idx,:] = np.array([m1, m2, k])
+                            idx += 1
+                        
+                data_tmp = np.zeros((8, 8, 29))
+                data_tmp[index_array_tmp[:,0], index_array_tmp[:,1], index_array_tmp[:,2]] = out_array_tmp[:,3]
+                interp = RegularGridInterpolator((mass[:,2], mass[:,2], np.unique(combined_array[:,0])), data_tmp, fill_value=1.0, bounds_error=False)
+                idx = 0
+                for m1, mass1 in enumerate(mass_interp):
+                    for m2, mass2 in enumerate(mass_interp):
+                        for k, k_val in enumerate(np.unique(combined_array[:,0])):
+                            out_array[id,:] = np.array([snaps[i,0], mass1, mass2, k_val, interp([mass1, mass2, k_val])])
+                            index_array[id,:] = np.array([i_tmp, m1, m2, k])
+                            idx += 1
+                            id += 1
+                i_tmp += 1
+            else:
+                continue
+        
+        print('Interpolating...')
+        x = out_array[:,:4]
+        data = out_array[:,4]
+        data = np.zeros((file_num, mass_dim, mass_dim, 29))
+        data[index_array[:,0], index_array[:,1], index_array[:,2], index_array[:,3]] = out_array[:,4]
+        my_interpolating_function = RegularGridInterpolator([np.unique(x[:,0]), mass_interp, mass_interp, np.unique(x[:,3])], data, fill_value=1.0, bounds_error=False)
+        with open(os.path.join(path0, 'interpolator_BNL.npy'), 'wb') as dill_file:
+            pickle.dump(my_interpolating_function, dill_file)
+        print('Cleaning the temporary data...')
+        shutil.rmtree(path)
+        print('Importing BNL pickle...')
+        return my_interpolating_function
+
 
 
 def load_hmf(z, setup, cosmo_model, sigma8, n_s):

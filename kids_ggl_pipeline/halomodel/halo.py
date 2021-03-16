@@ -352,7 +352,7 @@ def calculate_correlations_single(setup, observable, ingredients, Pk_func,
     # halos I guess?
     if ingredients['haloexclusion'] and observable.obstype in ('gm','gg'):
         xi2_2h = [[power_to_corr_ogata(Pk_func_ij, setup['rvir_range_3d'])
-                   for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_func]
+                   for Pk_func_ij in Pk_func_i] for Pk_func_i in Pk_2h_func]
         xi2 = xi2 + halo_exclusion(
             xi2_2h, setup['rvir_range_3d'], meff[observable.idx],
             rho_bg[observable.idx], setup['delta'])
@@ -608,16 +608,12 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
     output = [[], [], []]
 
     if ingredients['bnl']:
-        print('Using non-linear halo bias correction from Mead at al. 2020. Warning, this is slow!')
         from .tools import read_mead_data
-        read_mead_data()
         # read in Alex Mead BNL table:
-        print('Importing BNL pickle...')
-        import dill as pickle
-        path0 = os.getcwd()
-        with open(path0+'/interpolator_BNL.npy', 'rb') as dill_file:
-        #with open('/net/home/fohlen12/dvornik/interpolator_BNL2.npy', 'rb') as dill_file:
-            beta_interp = pickle.load(dill_file)
+        beta_interp = read_mead_data()
+        #import dill as pickle
+        #with open('/net/home/fohlen12/dvornik/interpolator_BNL_test_i.npy', 'rb') as dill_file:
+        #    beta_interp = pickle.load(dill_file)
 
     if observables.gm:
         if ingredients['bnl']:

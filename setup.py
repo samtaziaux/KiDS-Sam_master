@@ -40,7 +40,9 @@ setup(name='kids_ggl_pipeline',
                         'numpy>=1.5.0',
                         'scipy>=0.16.0',
                         'healpy>1.13.0',
-                        'psutil>=3.2.1'],
+                        'psutil>=3.2.1',
+                        'gitpython>=3.1',
+                        'dill>=0.3'],
       zip_safe=False
       )
 

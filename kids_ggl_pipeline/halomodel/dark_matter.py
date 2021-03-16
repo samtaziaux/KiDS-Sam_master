@@ -304,13 +304,14 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     
     beta_i = np.zeros((Mh.size, Mh.size, k.size))
     indices = np.vstack(np.meshgrid(np.arange(Mh.size),np.arange(Mh.size),np.arange(k.size))).reshape(3,-1).T
-    values = np.vstack(np.meshgrid(np.log10(Mh), np.log10(Mh), k)).reshape(3,-1).T
+    values = np.vstack(np.meshgrid(redshift, np.log10(Mh), np.log10(Mh), k)).reshape(4,-1).T
     
-    for i,val in enumerate(values):
-        if (val[-1] < 0.08):# or (val[-1] > 0.74):
-            beta_i[indices[i,0], indices[i,1], indices[i,2]] = 0.0
-        else:
-            beta_i[indices[i,0], indices[i,1], indices[i,2]] = beta_interp(np.insert(val, 0, redshift)) - 1.0
+    to = time.time()
+    re = beta_interp(values)
+    beta_i[indices[:,0], indices[:,1], indices[:,2]] = re - 1.0
+    print(time.time()-to)
+    idx = np.where(values[:,-1] < 0.08)
+    beta_i[indices[idx,0], indices[idx,1], indices[idx,2]] = 0.0
     
     intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
     intg2 = expand_dims(population_2 * hmf.dndm * bias, -1) * trapz(intg1, Mh, axis=1)

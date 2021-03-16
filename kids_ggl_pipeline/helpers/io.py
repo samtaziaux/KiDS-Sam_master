@@ -598,9 +598,8 @@ def write_signal(R, y, options, setup, cov, err=None, output_path='mock'):
         output = os.path.join(
             output_path,
             'kids_ggl_mock_{0}_{1}.txt'.format(yname, i+1))
-        ascii.write(
-            [R[i][1:], yi], output, names=('R',yname), format='commented_header',
-            formats={'R':'.2e',yname:'.2e'})
+        np.savetxt(
+            output, np.array([R[i][1:].flatten(), yi.flatten()]).T, header='R   {0}'.format(yname), comments='# ')
         outputs.append(output)
     if cov is not None:
         output_cov = os.path.join(

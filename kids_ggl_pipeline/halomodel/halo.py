@@ -101,7 +101,7 @@ def model(theta, R):
         nbins = observables.nbins - observables.mlf.nbins
     else:
         nbins = observables.nbins
-    output = np.empty(observables.nbins, dtype=object)
+    output = np.zeros(observables.nbins, dtype=object)
 
     if ingredients['nzlens']:
         nz = cosmo[9].T
@@ -137,14 +137,14 @@ def model(theta, R):
 
     # can probably move this into populations()
     completeness = calculate_completeness(
-        observables, selection, ingredients, z)
+        observables, selection, ingredients, z, nbins)
     pop_c, pop_s = populations(
-        observables, ingredients, completeness, mass_range, theta)
+        observables, ingredients, completeness, mass_range, theta, nbins)
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
-    ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range)
+    ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range, nbins)
 
     # Luminosity or mass function as an output:
     if observables.mlf:
@@ -155,7 +155,7 @@ def model(theta, R):
 
     uk_c, uk_s = calculate_uk(
         setup, observables, ingredients, z, mass_range, rho_bg,
-        c_concentration, s_concentration, c_miscent)
+        c_concentration, s_concentration, c_miscent, nbins)
 
     if not ingredients['nzlens']:
         rho_bg = rho_bg[...,0]
@@ -313,13 +313,13 @@ def model(theta, R):
 #############################
 
 
-def calculate_completeness(observables, selection, ingredients, z):
+def calculate_completeness(observables, selection, ingredients, z, nbins):
     # interpolate selection function to the same grid as redshift and
     # observable to be used in trapz
     if selection.filename == 'None':
         if ingredients['nzlens']:
             completeness = np.ones(
-                (z.size,observables.nbins,observables.sampling.shape[1]))
+                (z.size,nbins,observables.sampling.shape[1]))
         else:
             completeness = np.ones(observables.sampling.shape)
     elif ingredients['nzlens']:
@@ -333,7 +333,7 @@ def calculate_completeness(observables, selection, ingredients, z):
     # shape ([z.size,]nbins,sampling)
     if ingredients['nzlens']:
         assert completeness.shape \
-            == (z.size,observables.nbins,observables.sampling.shape[1])
+            == (z.size,nbins,observables.sampling.shape[1])
     else:
         assert completeness.shape == observables.sampling.shape
     return completeness
@@ -473,9 +473,9 @@ def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta, setup, cos
     return mlf_out
 
 
-def calculate_ngal(observables, pop_g, dndm, mass_range):
-    ngal = np.empty(observables.nbins)
-    meff = np.empty(observables.nbins)
+def calculate_ngal(observables, pop_g, dndm, mass_range, nbins):
+    ngal = np.empty(nbins)
+    meff = np.empty(nbins)
     if observables.gm:
         ngal[observables.gm.idx] = hod.nbar(
             dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range)
@@ -839,7 +839,7 @@ def calculate_surface_density(setup, observables, ingredients,
 
 
 def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
-                 c_concentration, s_concentration, c_miscent):
+                 c_concentration, s_concentration, c_miscent, nbins):
     rvir_range_lin = virial_radius(mass_range, rho_bg, setup['delta'])
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
@@ -848,10 +848,10 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
             setup['k_range_lin'], mass_range, rvir_range_lin, concentration,
             rho_bg, setup['delta'])
     elif ingredients['nzlens']:
-        uk_c = np.ones((observables.nbins, z.size//observables.nbins,
+        uk_c = np.ones((nbins, z.size//nbins,
                         mass_range.size, setup['k_range_lin'].size))
     else:
-        uk_c = np.ones((observables.nbins, mass_range.size,
+        uk_c = np.ones((nbins, mass_range.size,
                         setup['k_range_lin'].size))
     # and of the NFW profile of the satellites
     if ingredients['satellites']:
@@ -862,10 +862,10 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
             concentration_sat, rho_bg, setup['delta'])
         uk_s = uk_s / expand_dims(uk_s[...,0], -1)
     elif ingredients['nzlens']:
-        uk_s = np.ones((observables.nbins, z.size//observables.nbins,
+        uk_s = np.ones((nbins, z.size//nbins,
                         mass_range.size, setup['k_range_lin'].size))
     else:
-        uk_s = np.ones((observables.nbins, mass_range.size,
+        uk_s = np.ones((nbins, mass_range.size,
                         setup['k_range_lin'].size))
 
     # If there is miscentring to be accounted for
@@ -924,8 +924,8 @@ def output_xi(output, setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
     return output
 
 
-def populations(observables, ingredients, completeness, mass_range, theta):
-    pop_c, pop_s = np.zeros((2,observables.nbins,mass_range.size))
+def populations(observables, ingredients, completeness, mass_range, theta, nbins):
+    pop_c, pop_s = np.zeros((2,nbins,mass_range.size))
 
     c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta[1:]
@@ -1030,7 +1030,7 @@ def preamble(theta, R):
         nbins = observables.nbins - observables.mlf.nbins
     else:
         nbins = observables.nbins
-    output = np.empty(observables.nbins, dtype=object)
+    output = np.zeros(observables.nbins, dtype=object)
 
     if ingredients['nzlens']:
         assert len(cosmo) >= 11, \

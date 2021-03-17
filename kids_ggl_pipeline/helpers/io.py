@@ -355,7 +355,7 @@ def load_datapoints(datafiles, datacols, exclude=None):
         R, esd = np.transpose(
             [np.load(df)[datacols[:2]] for df in datafiles], axes=(1,0,2))
     else:
-        R, esd = np.transpose([load_func(df, usecols=datacols[:2])
+        R, esd = np.transpose([np.loadtxt(df, usecols=datacols[:2])
                                for df in datafiles], axes=(2,0,1))
     if len(datacols) == 3:
         if is_npy:

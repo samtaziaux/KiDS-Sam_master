@@ -125,7 +125,11 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     cov2d = cov.transpose(0,2,1,3)
     cov2d = cov2d.reshape(
         (Nobsbins*(Nrbins+nexcl), Nobsbins*(Nrbins+nexcl)))
-    icov = np.linalg.inv(cov2d)
+    try:
+        icov = np.linalg.inv(cov2d)
+    except:
+        icov = np.linalg.pinv(cov2d)
+        print('\nStandard matrix inversion failed, using the Moore-Penrose pseudo-inverse.\n')
     # are there any bins excluded?
     if exclude is not None:
         for b in exclude[::-1]:
@@ -146,7 +150,10 @@ def load_covariance(covfile, covcols, Nobsbins, Nrbins, exclude=None):
     # errors are sqrt of the diagonal of the covariance matrix
     esd_err = np.sqrt(np.diag(cov2d)).reshape((Nobsbins,Nrbins))
     # invert
-    icov = np.linalg.inv(cov2d)
+    try:
+        icov = np.linalg.inv(cov2d)
+    except:
+        icov = np.linalg.pinv(cov2d)
     # reshape back into the desired shape (with the right axes order)
     icov = icov.reshape((Nobsbins,Nrbins,Nobsbins,Nrbins))
     icov = icov.transpose(2,0,3,1)

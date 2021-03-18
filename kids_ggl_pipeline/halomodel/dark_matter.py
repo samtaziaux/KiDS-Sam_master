@@ -306,10 +306,10 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     indices = np.vstack(np.meshgrid(np.arange(Mh.size),np.arange(Mh.size),np.arange(k.size))).reshape(3,-1).T
     values = np.vstack(np.meshgrid(redshift, np.log10(Mh), np.log10(Mh), k)).reshape(4,-1).T
     
-    to = time.time()
+    #to = time.time()
     re = beta_interp(values)
     beta_i[indices[:,0], indices[:,1], indices[:,2]] = re - 1.0
-    print(time.time()-to)
+    #print(time.time()-to)
     idx = np.where(values[:,-1] < 0.08)
     beta_i[indices[idx,0], indices[idx,1], indices[idx,2]] = 0.0
     

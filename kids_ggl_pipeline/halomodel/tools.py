@@ -166,15 +166,15 @@ def read_mead_data():
     path0 = os.getcwd()
     path = os.path.join(path0, 'BNL_data')
     
-    if not os.path.exists(path):
-        os.makedirs(path)
-    
     if os.path.exists(os.path.join(path0, 'interpolator_BNL.npy')):
         with open(os.path.join(path0, 'interpolator_BNL.npy'), 'rb') as dill_file:
             beta_interp = pickle.load(dill_file)
         return beta_interp
        
     else:
+        if not os.path.exists(path):
+            os.makedirs(path)
+    
         print('Using non-linear halo bias correction from Mead at al. 2020. Warning, this is slow!')
         if os.path.exists(os.path.join(path, 'BNL/data/MDR1_redshifts.csv')):
             pass

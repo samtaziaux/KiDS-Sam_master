@@ -144,7 +144,7 @@ def model(theta, R):
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
-    ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range, nbins)
+    ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range)
 
     # Luminosity or mass function as an output:
     if observables.mlf:
@@ -473,9 +473,9 @@ def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta, setup, cos
     return mlf_out
 
 
-def calculate_ngal(observables, pop_g, dndm, mass_range, nbins):
-    ngal = np.empty(nbins)
-    meff = np.empty(nbins)
+def calculate_ngal(observables, pop_g, dndm, mass_range):
+    ngal = np.zeros(observables.nbins)
+    meff = np.zeros(observables.nbins)
     if observables.gm:
         ngal[observables.gm.idx] = hod.nbar(
             dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range)

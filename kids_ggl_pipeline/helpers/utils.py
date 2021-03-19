@@ -96,6 +96,75 @@ def make_block_diag_cov(*covs):
     return cov
 
 
+def interactive():
+    import curses
+    
+    # get the curses screen window
+    screen = curses.initscr()
+    num_rows, num_cols = screen.getmaxyx()
+    # turn off input echoing
+    #curses.noecho()
+    # respond to keys immediately (don't wait for enter)
+    curses.cbreak()
+    # map arrow keys to special values
+    screen.keypad(True)
+    
+    message = 'Welcome to the KiDS-GGL interactive shell!\n\n\n'
+    message_len = int(len(message) / 2)
+    middle = int(num_cols / 2)
+    x_pos = middle - message_len
+    screen.addstr(0, x_pos, message)
+    screen.addstr('> ')
+    screen.refresh()
+ 
+    var = []
+    try:
+        while True:
+            char = screen.getch()
+            if char == 27 or char == curses.KEY_ENTER or char == 10 or char == 13:
+                break
+            elif char == curses.KEY_RIGHT:
+                var.append('right')
+                screen.addstr('→')
+            elif char == curses.KEY_LEFT:
+                var.append('left')
+                screen.addstr('←')
+            elif char == curses.KEY_UP:
+                var.append('up')
+                screen.addstr('↑')
+            elif char == curses.KEY_DOWN:
+                var.append('down')
+                screen.addstr('↓')
+            else:
+                var.append(curses.keyname(char).decode('utf-8'))
+        
+        var = ''.join(var)
+        curses.napms(1000)
+        if var == 'upupdowndownleftrightleftrightab':
+            screen.erase()
+            screen.addstr('\n ___ __________________________________ ______ ______\n|   |                                  |______|      |\n|   | Nintendo®                        |      |      |\n|   | ENTERTAINMENT SYSTEM™            |      |      |\n|   |__________________________________|______|      |\n|______________________________________|______|______|\n|   |    _____   _____  |              | 1  2 |      |\n \  | o [POWER] [RESET] |              ||\ |\ |     /\n  \ |___________________|              ||_||_||    /\n   \___________________________________|______|___/\n\n')
+            
+            screen.addstr('Congratulations you found the NES, press ENTER to exit...\n')
+            screen.refresh()
+            while True:
+                char = screen.getch()
+                if char == 27 or char == curses.KEY_ENTER or char == 10 or char == 13:
+                    break
+        else:
+            screen.addstr('> Input not recognised, press ENTER to exit...\n')
+            screen.refresh()
+            while True:
+                char = screen.getch()
+                if char == 27 or char == curses.KEY_ENTER or char == 10 or char == 13:
+                    break
+    finally:
+        # shut down cleanly
+        curses.nocbreak()
+        screen.keypad(0)
+        #curses.echo()
+        curses.endwin()
+        
+    return
 
 
 if __name__ == '__main__':

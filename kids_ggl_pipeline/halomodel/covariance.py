@@ -719,7 +719,6 @@ def calc_cov_gauss(params):
             #val = ((Aw_rr)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ5, dx=dlnk) + (2.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ6, dx=dlnk) + (2.0*(2.0*Pi_max)/(Awr_i * Awr_j))/(2.0*np.pi) * simps(integ7, dx=dlnk) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
         val = (val1 + val2) * np.sqrt(rho_i[b_i]*rho_j[b_j]) / 1e12
     
-    
     return size_1[:b_i].sum()+i,size_2[:b_j].sum()+j, val
     
     
@@ -835,7 +834,7 @@ def parallelise(func, nproc, cov_out, radius_1, radius_2, *args):
     for p in paramlist:
         p.extend([radius_1, radius_2, *args])
         
-    pool = multi.Pool(processes=nproc)
+    pool = multi.Pool(processes=nproc, maxtasksperchild=10)
     for i, j, val in pool.map(func, paramlist):
         cov_out[i,j] = val
 
@@ -1076,7 +1075,8 @@ def covariance(theta, R):
         observables.mlf.R = [10.0**rvir_center for r in range(2)]
         observables.mlf.size = np.array([len(r) for r in observables.mlf.R])
     #"""
-    
+
+
     print('Setting survey and observational details...')
     
     Pi_max = covar['pi_max'] # in Mpc/h

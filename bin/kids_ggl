@@ -12,6 +12,7 @@ from kids_ggl_pipeline.esd_production import shearcode
 from kids_ggl_pipeline.sampling import sampler, sampling_utils
 from kids_ggl_pipeline.halomodel import hm_utils
 from kids_ggl_pipeline.helpers import configuration
+from kids_ggl_pipeline.helpers.utils import interactive
 
 
 def main():
@@ -30,6 +31,8 @@ def main():
         hm_options, sampling_options = cfg.read()
         # run!
         sampler.run(hm_options, sampling_options, args)
+    elif args.interactive:
+        interactive()
     elif not args.esd:
         print('Nothing to do.\n')
 
@@ -64,6 +67,9 @@ def parse_args():
     # print version
     add('-v', '--version', action='version',
         version='%(prog)s {0}'.format(__version__))
+    # enter interactive version
+    add('-i', '--interactive', dest='interactive', action='store_true',
+        help='Enter interactive version')
     args = parser.parse_args()
 
     return args

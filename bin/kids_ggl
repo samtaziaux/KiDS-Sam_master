@@ -32,7 +32,8 @@ def main():
         # run!
         sampler.run(hm_options, sampling_options, args)
     elif args.interactive:
-        interactive()
+        args = interactive(args)
+        alt(args)
     elif not args.esd:
         print('Nothing to do.\n')
 
@@ -73,6 +74,19 @@ def parse_args():
     args = parser.parse_args()
 
     return args
+
+
+def alt(args):
+    if args.esd:
+        shearcode.run_esd(args.config_file)
+    if args.sampler or args.demo or args.mock or args.cov:
+        # set up halo model and sampler
+        cfg = configuration.ConfigFile(args.config_file)
+        hm_options, sampling_options = cfg.read()
+        # run!
+        sampler.run(hm_options, sampling_options, args)
+    elif not args.esd:
+        print('Nothing to do.\n')
 
 
 main()

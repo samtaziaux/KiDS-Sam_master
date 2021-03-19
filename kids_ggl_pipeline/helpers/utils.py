@@ -106,7 +106,10 @@ def key(screen, var):
             break
         elif char == 8 or char == 127 or char == curses.KEY_BACKSPACE:
             screen.addstr('\b \b')
-            del var[-1]
+            try:
+                del var[-1]
+            except IndexError:
+                continue
         elif char == curses.KEY_RIGHT:
             var.append('right')
             screen.addstr('→')
@@ -122,11 +125,13 @@ def key(screen, var):
         else:
             var.append(curses.keyname(char).decode('utf-8'))
             screen.addch(char)
-    return var
+    return ''.join(var)
 
 
-def interactive():
+def interactive(args):
     
+    config_file = []
+    method = []
     screen = curses.initscr()
     num_rows, num_cols = screen.getmaxyx()
     curses.noecho()
@@ -146,19 +151,28 @@ def interactive():
         while True:
             var = []
             var = key(screen, var)
-        
-            var = ''.join(var)
-            if var == 'upupdowndownleftrightleftrightab':
+            if var == '':
+                pass
+            elif var == 'setup':
+                screen.addstr('\nPlease enter path to the config file: ')
+                config_file = key(screen, config_file)
+                screen.addstr('\nPlease enter the method: ')
+                method = key(screen, method)
+                screen.addstr('\nPipeline configured with config file: {0}, and running in {1} mode. Closing console...'.format(config_file, method))
+                screen.refresh()
+                curses.napms(5000)
+                break
+            elif var == 'upupdowndownleftrightleftrightab':
                 curses.napms(1000)
                 screen.addstr('\n ___ __________________________________ ______ ______\n|   |                                  |______|      |\n|   | Nintendo®                        |      |      |\n|   | ENTERTAINMENT SYSTEM™            |      |      |\n|   |__________________________________|______|      |\n|______________________________________|______|______|\n|   |    _____   _____  |              | 1  2 |      |\n \  | o [POWER] [RESET] |              ||\ |\ |     /\n  \ |___________________|              ||_||_||    /\n   \___________________________________|______|___/\n\n')
             
                 screen.addstr('\nKiDS-pipeline$ Congratulations you found the NES!')
-            elif var == '':
-                pass
+            elif var == 'runcor':
+                screen.addstr('\n    |   _______   _     _   _     _   _ __      _    |\n    |  |__   __| | |   | | | |   | | |  __ \\   | |   |\n    |     | |    | |___| | | |   | | | |  | |  | |   |\n    |     | |    |  ___  | | |   | | | |  | |  |_|   |\n    |     | |    | |   | | | |___| | | |__| |   _    |\n    |     |_|    |_|   |_| |_______| |_____/   |_|   |\n    |                                                |\n     \\  /\\  /\\  /\\  /\\  /\\  /\\  /\\  /\\  /\\  /\\  /\\  /\n      \\/  \\/  \\/  \\/  ,------------,  \\/  \\/  \\/  \\/\n         ____        ({ XX      XX })        ____\n        /////|\\      _|   \\\\  //   |_      /|\\\\\\\\\\\n        VVVV | \\____/ { \\  \\\\//  / } \\____/ | VVVV\n        ////_|       ,|V=V=V=V=V=V=|,       |_\\\\\\\\\n     ___\\\\\\\\/_\\~~~~~/_{+^+^+^+^+^+^}_\\~~~~~/_\\////___\n\n')
             elif var == 'exit()' or var == 'exit':
                 break
             else:
-                screen.addstr('\nKiDS-pipeline$ Input not recognised...')
+                screen.addstr('\nKiDS-pipeline$ Input not recognised, try with setup...')
             screen.addstr('\nKiDS-pipeline$ ')
             screen.refresh()
             
@@ -169,7 +183,18 @@ def interactive():
         #curses.echo()
         curses.endwin()
         
-    return
+    args.config_file = config_file
+    if 'cov' in method:
+        args.cov = True
+    if 'demo' in method:
+        args.demo = True
+    if 'sampler' in method:
+        args.sampler = True
+    if 'mock' in method:
+        args.mock = True
+    if 'esd' in method:
+        args.esd = True
+    return args
 
 
 if __name__ == '__main__':

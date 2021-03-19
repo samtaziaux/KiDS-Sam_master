@@ -3,6 +3,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import numpy as np
 import matplotlib.pyplot as pl
+import curses
 
 
 def read_esdfiles(esdfiles):
@@ -96,69 +97,73 @@ def make_block_diag_cov(*covs):
     return cov
 
 
+def key(screen, var):
+    while True:
+        char = screen.getch()
+        if char == 27:
+            raise SystemExit()
+        elif char == curses.KEY_ENTER or char == 10 or char == 13:
+            break
+        elif char == 8 or char == 127 or char == curses.KEY_BACKSPACE:
+            screen.addstr('\b \b')
+            del var[-1]
+        elif char == curses.KEY_RIGHT:
+            var.append('right')
+            screen.addstr('→')
+        elif char == curses.KEY_LEFT:
+            var.append('left')
+            screen.addstr('←')
+        elif char == curses.KEY_UP:
+            var.append('up')
+            screen.addstr('↑')
+        elif char == curses.KEY_DOWN:
+            var.append('down')
+            screen.addstr('↓')
+        else:
+            var.append(curses.keyname(char).decode('utf-8'))
+            screen.addch(char)
+    return var
+
+
 def interactive():
-    import curses
     
-    # get the curses screen window
     screen = curses.initscr()
     num_rows, num_cols = screen.getmaxyx()
-    # turn off input echoing
-    #curses.noecho()
-    # respond to keys immediately (don't wait for enter)
+    curses.noecho()
     curses.cbreak()
-    # map arrow keys to special values
     screen.keypad(True)
+    screen.scrollok(True)
     
     message = 'Welcome to the KiDS-GGL interactive shell!\n\n\n'
     message_len = int(len(message) / 2)
     middle = int(num_cols / 2)
     x_pos = middle - message_len
     screen.addstr(0, x_pos, message)
-    screen.addstr('> ')
+    screen.addstr('KiDS-pipeline$ ')
     screen.refresh()
  
-    var = []
     try:
         while True:
-            char = screen.getch()
-            if char == 27 or char == curses.KEY_ENTER or char == 10 or char == 13:
-                break
-            elif char == curses.KEY_RIGHT:
-                var.append('right')
-                screen.addstr('→')
-            elif char == curses.KEY_LEFT:
-                var.append('left')
-                screen.addstr('←')
-            elif char == curses.KEY_UP:
-                var.append('up')
-                screen.addstr('↑')
-            elif char == curses.KEY_DOWN:
-                var.append('down')
-                screen.addstr('↓')
-            else:
-                var.append(curses.keyname(char).decode('utf-8'))
+            var = []
+            var = key(screen, var)
         
-        var = ''.join(var)
-        curses.napms(1000)
-        if var == 'upupdowndownleftrightleftrightab':
-            screen.erase()
-            screen.addstr('\n ___ __________________________________ ______ ______\n|   |                                  |______|      |\n|   | Nintendo®                        |      |      |\n|   | ENTERTAINMENT SYSTEM™            |      |      |\n|   |__________________________________|______|      |\n|______________________________________|______|______|\n|   |    _____   _____  |              | 1  2 |      |\n \  | o [POWER] [RESET] |              ||\ |\ |     /\n  \ |___________________|              ||_||_||    /\n   \___________________________________|______|___/\n\n')
+            var = ''.join(var)
+            if var == 'upupdowndownleftrightleftrightab':
+                curses.napms(1000)
+                screen.addstr('\n ___ __________________________________ ______ ______\n|   |                                  |______|      |\n|   | Nintendo®                        |      |      |\n|   | ENTERTAINMENT SYSTEM™            |      |      |\n|   |__________________________________|______|      |\n|______________________________________|______|______|\n|   |    _____   _____  |              | 1  2 |      |\n \  | o [POWER] [RESET] |              ||\ |\ |     /\n  \ |___________________|              ||_||_||    /\n   \___________________________________|______|___/\n\n')
             
-            screen.addstr('Congratulations you found the NES, press ENTER to exit...\n')
+                screen.addstr('\nKiDS-pipeline$ Congratulations you found the NES!')
+            elif var == '':
+                pass
+            elif var == 'exit()' or var == 'exit':
+                break
+            else:
+                screen.addstr('\nKiDS-pipeline$ Input not recognised...')
+            screen.addstr('\nKiDS-pipeline$ ')
             screen.refresh()
-            while True:
-                char = screen.getch()
-                if char == 27 or char == curses.KEY_ENTER or char == 10 or char == 13:
-                    break
-        else:
-            screen.addstr('> Input not recognised, press ENTER to exit...\n')
-            screen.refresh()
-            while True:
-                char = screen.getch()
-                if char == 27 or char == curses.KEY_ENTER or char == 10 or char == 13:
-                    break
+            
+                        
     finally:
-        # shut down cleanly
         curses.nocbreak()
         screen.keypad(0)
         #curses.echo()

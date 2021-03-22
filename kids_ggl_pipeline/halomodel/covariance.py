@@ -1386,19 +1386,19 @@ def covariance(theta, R):
     k_temp_lin = np.exp(k_temp)
   
     if non_gauss == 'True':
-        Tgggg = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggg')
+        Tgggg = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, setup['k_range_lin'], 'gggg')
                     for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
                     zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
     
-        Tgggm = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gggm')
+        Tgggm = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, setup['k_range_lin'], 'gggm')
                     for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
                     zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
                     
-        Tgmgm = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, k_range_lin, 'gmgm')
+        Tgmgm = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, setup['k_range_lin'], 'gmgm')
                     for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
                     zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
     
-        T234h = array([trispectra_234h(k_temp_lin, P_lin_inter_i, hmf_i, u_k_i, bias_tinker10(hmf_i), rho_bg_i, mass_range, k_range_lin)
+        T234h = array([trispectra_234h(k_temp_lin, P_lin_inter_i, hmf_i, u_k_i, bias_tinker10(hmf_i), rho_bg_i, mass_range, setup['k_range_lin'])
                     for P_lin_inter_i, hmf_i, u_k_i, rho_bg_i in
                     zip(P_lin_inter, hmf, uk_c, rho_bg)])
         print('Trispectra done.')

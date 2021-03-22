@@ -299,9 +299,9 @@ def model(theta, R):
             output = list(output)
             output = [output, meff]
     #if ingredients['bnl']:
-    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/delta_sigma_bnl3.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
+    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/delta_sigma_bnl_final.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
     #else:
-    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/delta_sigma_fid3.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
+    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/delta_sigma_fid_final.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
     # Finally!
     return output
 
@@ -658,7 +658,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gm.png')
             plt.clf()
             plt.close()
     
@@ -672,9 +672,10 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gm_ratio.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gm_ratio.png')
             plt.clf()
             plt.close()
+            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/Pgm.npy', np.array([setup['k_range_lin'], Pgm_k - [hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_k, Pgm_2h - [hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_2h], dtype=object), allow_pickle=True)
         #"""
     # Galaxy - galaxy spectra (for clustering)
     if observables.gg:
@@ -708,7 +709,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gg.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gg.png')
             plt.clf()
             plt.close()
     
@@ -722,9 +723,10 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/bnl_gg_ratio.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gg_ratio.png')
             plt.clf()
             plt.close()
+            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/Pgg.npy', np.array([setup['k_range_lin'], Pgg_k - [hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_k, Pgg_2h - [hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_2h], dtype=object), allow_pickle=True)
         #"""
     # Matter - matter spectra
     if observables.mm:

@@ -62,7 +62,7 @@ def memoize(function):
 
 #@memoize
 
-def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
+def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, lens_photoz, galsigma, lens_pz_redshift, spec_cat_path):
     """
     This uses the sigma_crit calculation from ESD extraction part of the code,
         that is accounting for KiDS specific setup.
@@ -75,9 +75,23 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
     
     from kids_ggl_pipeline.esd_production.shearcode_modules import calc_Sigmacrit
     
+    if lens_photoz == 'True':
+        lens_photoz = True
+        if lens_pz_redshift == 'True':
+            lens_pz_redshift = True
+        else:
+            lens_pz_redshift = False
+    else:
+        lens_photoz = False
+        lens_pz_redshift = False
+        galsigma = 0.0
+        
+    
     zsrcbins = np.arange(0.025,3.5,0.05)
+    zlensbins =  np.linspace(0.025, 0.7, 100)
     
     Dcsbins = np.array((hmf[0].cosmo.comoving_distance(zsrcbins).to('pc')).value)
+    Dclbins = np.array((hmf[0].cosmo.comoving_distance(zlensbins).to('pc')).value)
     Dc_epsilon = (hmf[0].cosmo.comoving_distance(z_epsilon).to('pc')).value
 
     spec_cat = fits.open(spec_cat_path, memmap=True)[1].data
@@ -101,9 +115,8 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, spec_cat_path):
                     
         srcPZ_k, bins_k = np.histogram(srcNZ_k, range=[0.025, 3.5], bins=70, weights=spec_weight_k, density=1)
         srcPZ_k = srcPZ_k/srcPZ_k.sum()
-        #k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), Dcsbins, srcPZ_k, 3, Dc_epsilon) #old!
         k[i], kmask = calc_Sigmacrit(np.array([lens_comoving[i]]), np.array([lens_angular[i]]), \
-                        Dcsbins, 0.0, 0.0, False, 0.0, False, \
+                        Dcsbins, zlensbins, Dclbins, lens_photoz, galsigma, lens_pz_redshift, \
                         srcPZ_k, 3, Dc_epsilon, np.array([lens_redshifts[i]]), True)
             
     k_interpolated = interp1d(lens_redshifts, k, kind='cubic', bounds_error=False, fill_value=(0.0, 0.0))
@@ -1090,8 +1103,12 @@ def covariance(theta, R):
     subtract_randoms = covar['subtract_randoms'] #False # if randoms are not subtracted, this will increase the error bars
     nproc = covar['threads'] #4
     
+    # This deals with KiDS specific sigma crit parameters
     z_epsilon = covar['z_epsilon']
     z_max = covar['z_max']
+    lens_photoz = covar['lens_photoz']
+    galsigma = covar['lens_photoz_sigma']
+    lens_pz_redshift = covar['lens_photoz_zdep']
     
     if observables.mlf:
         if covar['vmax_file'] == 'None':
@@ -1106,7 +1123,7 @@ def covariance(theta, R):
         print('\t...using KiDS specific sigma_crit setup.')
         # KiDS specific sigma_crit, accounting for n(z)!
         spec_z_path = covar['specz_file']
-        sigma_crit = sigma_crit_kids(hmf, z, z_epsilon, z_max, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0
+        sigma_crit = sigma_crit_kids(hmf, z, z_epsilon, z_max, lens_photoz, galsigma, lens_pz_redshift, spec_z_path) * hmf[0].cosmo.h * 10.0**12.0
     else:
         sigma_crit = sigma_crit_func(cosmo_model, z, z_kids)
     

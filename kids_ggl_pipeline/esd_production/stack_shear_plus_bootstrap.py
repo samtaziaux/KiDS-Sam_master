@@ -154,10 +154,10 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         if n_boot != 1:
             print('Using {0} KiDS tiles for bootstrapping purposes.'.format(n_boot))
 
-            matched = {}
+            matched_i = {}
             coords = np.array([])
             for i, kidscat in enumerate(kidscats):
-                matched[(
+                matched_i[(
                     np.float64(catmatch[kidscat][1].split('_')[1].replace('m', '-').replace('p', '.')),
                     np.float64(catmatch[kidscat][1].split('_')[2].replace('m', '-').replace('p', '.')))] \
                         = kidscat, i
@@ -166,7 +166,8 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                     np.array([np.float64(catmatch[kidscat][1].split('_')[1].replace('m', '-').replace('p', '.')),
                     np.float64(catmatch[kidscat][1].split('_')[2].replace('m', '-').replace('p', '.'))]))
 
-            matched = collections.OrderedDict(sorted(matched.items()))
+            matched_i = collections.OrderedDict(sorted(matched_i.items()))
+            matched = matched_i.copy()
             coords = coords.reshape(-1, 2)
             n_patches = 4
             result = []
@@ -176,11 +177,11 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
                 plot_i = np.array([])
                 for x, y in [(x_coord+i,y_coord+j) \
                         for i in (0,1) for j in (0,1)]:
-                    if (x,y) in matched:
-                        result_i.append(matched[(x,y)][1])
+                    if (x,y) in matched_i:
+                        result_i.append(matched_i[(x,y)][1])
                         plot_i = np.append(plot_i, np.array([x,y]))
                         if len(result_i) == n_patches:
-                            del matched[(x,y)]
+                            del matched_i[(x,y)]
                 result.append(result_i)
 
             result_final = [x for x in result if x != []]

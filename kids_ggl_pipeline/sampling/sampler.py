@@ -47,10 +47,11 @@ def run(hm_options, options, args):
 
     obs_idx = parameters[0].index('observables')
     observables = parameters[1][obs_idx]
-    init_mlf = observables.mlf # No idea why, but mlf instance doesn't get initilized to adopt R
-    
+    # No idea why, but mlf instance doesn't get initilized to adopt R
+    init_mlf = observables.mlf
+
     assert_output(setup, observables)
-    
+
     print_opening_msg(args, options)
 
     # identify fixed and free parameters
@@ -91,11 +92,10 @@ def run(hm_options, options, args):
     assert Ndatafiles > 0, 'No data files found'
     # Rrange, angles are used in nfw_stack only
     R, esd, cov, Rrange, angles, Nobsbins, Nrbins = io.load_data(options, setup)
-    #val1 = np.append(val1, [Rrange, angles])
     cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
     rng_obsbins = range(Nobsbins)
-    
+
     observables._add_R(R)
     parameters[1][obs_idx] = observables
 
@@ -146,7 +146,7 @@ def run(hm_options, options, args):
             names, prior_types, jfree, starting, parameters,
             options['nwalkers'], ndim)
 
-    if not os.path.isfile(options['output']):
+    if not os.path.isfile(options['output']) or not options['resume']:
         print('Running a new model. Good luck!\n')
 
     # burn-in
@@ -192,8 +192,11 @@ def run(hm_options, options, args):
                 index += 1
                 # Check convergence
                 # should we offer more flexibility here?
-                converged = np.all(tau * options['autocorr_factor'] < sampler.iteration) # n-times autocorrelation time as a measure of convergence
-                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01) # and chains change less than 1%
+                # n-times autocorrelation time as a measure of convergence
+                converged = np.all(
+                    tau * options['autocorr_factor'] < sampler.iteration)
+                # and chains change less than 1%
+                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
                 if converged:
                     break
                 old_tau = tau
@@ -400,11 +403,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     # no covariance
     #chi2 = (((esd-model[0]) / esd_err) ** 2).sum()
     # full covariance included
-    print('model[0] =', model[0])
-    #print('esd =', esd.shape)
     residuals = esd - model[0]
-    print('residuals =', residuals)
-    print(residuals.shape)
     chi2 = array([dot(residuals[m], dot(icov[m][n], residuals[n]))
                   for m in rng_obsbins for n in rng_obsbins]).sum()
     if not isfinite(chi2):

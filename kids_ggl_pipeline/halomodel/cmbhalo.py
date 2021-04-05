@@ -116,13 +116,10 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
-debug = True
+debug = False
 
 def model(theta, R):
-    """CMB halo modeling
-
-    Note that R here is in arcmin
-    """
+    """CMB halo modeling"""
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
@@ -158,7 +155,8 @@ def model(theta, R):
         nbins = observables.nbins - observables.mlf.nbins
     else:
         nbins = observables.nbins
-    output_array = np.empty(len(observables), dtype=object)
+    output_array = np.empty(observables.nbins, dtype=object)
+    #output_array = []
 
     if ingredients['nzlens']:
         nz = cosmo[9].T
@@ -199,7 +197,7 @@ def model(theta, R):
         if debug:
             print('R =', R, 'arcmin')
         # remember that the first element is a zero we added (and should remove)
-        # for nfw_stack
+        # for nfw_stack. I *think* we don't need it in the halo model at all
         R = np.array(R[:,1:] * arcmin2Mpc, dtype=float)
         if debug:
             print('R =', R, 'Mpc', R.shape, R.dtype)
@@ -217,7 +215,7 @@ def model(theta, R):
     elif setup['kfilter']:
         setup['Rfine'] = setup['bin_centers_fine']
     else:
-        setup['Rfine'] = R.T
+        setup['Rfine'] = R.T[1:]
 
     output = {}
 
@@ -240,14 +238,17 @@ def model(theta, R):
     ngal, logMh_eff = halo.calculate_ngal(
         observables, output['pop_g'], dndm, Mh)
     info(output, 'pop_g')
-    print('logMh_eff =', logMh_eff.shape)
+    if debug:
+        print('logMh_eff =', logMh_eff.shape)
 
     mass_norm = trapz(dndm*output['pop_g'], Mh, axis=1)
     if debug:
         print('mass_norm =', mass_norm.shape)
 
     # radii for initial calculation
-    Rx = setup['Rfine'] if setup['kfilter'] else R.T
+    Rx = setup['Rfine'] if setup['kfilter'] else R.T[1:]
+    if debug:
+        print('Rx =', Rx.shape, Rx.dtype)
 
     ### 1-halo term ###
 
@@ -260,17 +261,21 @@ def model(theta, R):
             continue
         key1h = f'{profile_name}.1h'
         key2h = f'{profile_name}.2h'
-        print(f'\n *** {key1h} ***')
+        if debug:
+            print(f'\n *** {key1h} ***')
         # note that this will probably not work if the function is
         # not analytical (should do a list comp in general)
-        print('shape =', profiles[0].shape)
-        print(profiles[0])
+        if debug:
+            print('shape =', profiles[0].shape)
+            print(profiles[0])
         output[key1h] = np.array(
             [func(Rx[:,i,None]) for i, func in enumerate(funcs)])
-        print(f'{key1h} =', output[key1h].shape)
-        #plot_profile_mz(Rx.T, np.transpose(prof, axes=(1,2,0)),
-                        #z, mx=Mh, z0=0.46, m0=1e14,
-                        #output=f'profiles_{profile_name}1h.png')
+        info(output, key1h)
+        if debug:
+            print(f'{key1h} =', output[key1h][0,:,-1], output[key1h].shape)
+            #plot_profile_mz(Rx.T, np.transpose(prof, axes=(1,2,0)),
+                            #z, mx=Mh, z0=0.46, m0=1e14,
+                            #output=f'profiles_{profile_name}1h.png')
 
         # miscentering (1h only for now)
         # c_mis[1] corresponds to f_mis
@@ -279,18 +284,22 @@ def model(theta, R):
                 #profiles, Rx, *c_mis[2:], dist=c_mis[0])
             offkey = f'{key1h}.off'
             p_mis = miscentring(c_mis[0], *c_mis[2:])
-            print('p_mis =', p_mis.shape)
-            print('Rx =', Rx.shape)
-            print('c_mis[2] =', c_mis[2])
-            print('profiles[0].shape =', profiles[0].shape)
-            ti = time()
+            if p_mis.ndim == 1:
+                p_mis = np.ones((z.size,p_mis.size)) * p_mis
+            if debug:
+                print('p_mis =', p_mis.shape)
+                print('Rx =', Rx.shape)
+                print('c_mis[2] =', c_mis[2])
+                print('profiles[0].shape =', profiles[0].shape)
+                ti = time()
             output[offkey] = np.array(
                 [p.offset(f, Rx_i, c_mis[2], weights=p_mis_i)
                  for p, f, Rx_i, p_mis_i
                  in zip(profiles, funcs, Rx.T, p_mis)])
             #output[offkey] = profiles.offset(func, Rx.T
-            print(f'offset in {time()-ti:.2f} s')
-            print(f'{offkey}: {output[offkey].shape}')
+            if debug:
+                print(f'offset in {time()-ti:.2f} s')
+                print(f'{offkey}: {output[offkey].shape}')
             # rename well-centered profile
             output[f'{key1h}.cent'] = output.pop(key1h)
             # total 1h profile
@@ -302,8 +311,8 @@ def model(theta, R):
         if ingredients['twohalo']:
             # this only does kappa for now
             output = calculate_twohalo(
-                output, setup, ingredients, cclcosmo, mdef, dndm, z, profiles,
-                mass_norm)
+                output, setup, observables, ingredients, cclcosmo, mdef,
+                dndm, z, profiles, c_pm, mass_norm)
 
             #if profile_name in retvalues or key2h in retvalues:
                 #plot_profile_mz(R, np.transpose(output['kappa.2h.mz'], axes=(1,2,0)),
@@ -316,7 +325,8 @@ def model(theta, R):
                                 #output='profiles_kappa1h2h_filtered.png')
 
             print_output(output)
-
+            if debug:
+                print(profile_name, key2h)
             output[profile_name] += output[key2h]
 
         # later allow returning 1h and 2h separately (this will mean
@@ -338,9 +348,10 @@ def model(theta, R):
             if key not in retvalues:
                 continue
             output[key] = trapz(
-                (dndm*output['pop_g'])[:,None] * output[key], Mh, axis=2) \
-                / mass_norm[:,None]
-            print(f'weighted {key}: {output[key].shape}')
+                (dndm*output['pop_g'])[:,None] * output[key1h],
+                Mh, axis=2) / mass_norm[:,None]
+            if debug:
+                print(f'weighted {key}: {output[key].shape}')
 
     print_output(output)
 
@@ -348,9 +359,25 @@ def model(theta, R):
     #output['kappa'] = output['kappa'].T
     #info(output, 'kappa')
 
-    model_output = [output[key] for key in setup['return']]
-    for i, key in enumerate(setup['return']):
-        output_array[i] = output[key]
+    if debug:
+        print(type(output['esd']), type(list(output['esd'])))
+        print('esd_unit =', setup['esd_unit'])
+    # will work on a more general version later
+    # for now we only accept one observable?
+    if 'kappa' in setup['return']:
+        #output_array[observables.gm.idx] = list(output['kappa'])
+        output_array = output['kappa']
+    elif 'esd' in setup['return']:
+        if setup['esd_unit'] != 'Msun/Mpc^2':
+            if debug: print('True')
+            if setup['esd_unit'] == 'Msun/pc^2':
+                if debug: print('True')
+                output['esd'] /= 1e12
+        #print('idx =', observables.gm.idx)
+        #output_array[observables.gm.idx] = list(output['esd'])
+        output_array = output['esd']
+
+    #print(type(output_array[observables.gm.idx]))
 
     #return [model_output, logMh_eff]
     return [output_array, logMh_eff]
@@ -412,6 +439,9 @@ def preamble(theta):
         msg = "R_unit must be set to 'arcmin' if applying a k-space filter"
         raise ValueError(msg)
     assert setup['distances'] in ('comoving', 'physical', 'proper')
+
+    if setup['delta_ref'] == 'SOCritical': setup['delta_ref'] = 'critical'
+    else: setup['delta_ref'] = 'matter'
 
     # for now
     setup['return'] = [setup['return']]
@@ -540,11 +570,10 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     if debug:
         print('surface densities...')
         ti = time()
-    #R2h = setup['Rfine'].T if setup['kfilter'] else setup['
     sigma_2h_z = lss.xi2sigma(
-        setup['Rfine'].T, Rxi, xi_z, rho_m, threads=1, full_output=False,
+        setup['R2h'], Rxi, xi_z, rho_m, threads=1, full_output=False,
         integrator='scipy', run_test=False, verbose=2*debug)
-    plot_profile_mz(setup['Rfine'].T, bh[:,:,None]*sigma_2h_z[:,None], z[:,0],
+    plot_profile_mz(setup['R2h'], bh[:,:,None]*sigma_2h_z[:,None], z[:,0],
                     mx=m,
                     z0=0.46, m0=1e14, output='profiles_sigma2hz_quad.png')
     if debug:
@@ -566,15 +595,21 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     return bh[:,:,None] * sigma_2h_z[:,None]
 
 
-def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
-                      profiles, mass_norm):
+def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
+                      dndm, z, profiles, c_pm, mass_norm):
+    # I'm sort of assuming that the kfilter will always be for kappa
+    setup['R2h'] = setup['Rfine'].T if setup['kfilter'] \
+        else setup['rvir_range_3d_interp']
+    if debug:
+        print('R2h =', setup['R2h'].shape)
+
     #ti = time()
     output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
     #tf = time()
     #print(f'calculate_sigma_2h in {tf-ti:.1f} s')
 
     info(output, 'sigma.2h.raw')
-    plot_profile_mz(setup['Rfine'].T, output['sigma.2h.raw'], z,
+    plot_profile_mz(setup['R2h'], output['sigma.2h.raw'], z,
                     mx=setup['mass_range'], z0=0.46,
                     output='profiles_sigma.png')
 
@@ -582,11 +617,17 @@ def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
     ## could it be the units are not consistent here?? I think we're good
     #######################
 
+    # I should probably be able to do this after averaging over mass
+    # and redshift
+    retvalues = setup['return'] + setup['return_extra']
     if 'esd' in retvalues or 'esd.2h' in retvalues:
-        output['esd.2h.mz.raw'] = halo.calculate_esd(
-            setup, observables, ingredients, output['sigma.2h.raw'], c_pm)
+        output['esd.2h.mz.raw'] = np.transpose(
+            [halo.calculate_esd(
+                setup, observables, ingredients, sigma_2h_m, c_pm)
+             for sigma_2h_m in output['sigma.2h.raw'].swapaxes(0,1)],
+            axes=(1,0,2))
         info(output, 'esd.2h.mz.raw')
-        plot_profile_mz(R, output['esd.2h.mz.raw'], z,
+        plot_profile_mz(observables.gm.R[0], output['esd.2h.mz.raw'], z,
                         mx=setup['mass_range'], z0=0.46,
                         output='profiles_esd2h.png')
 
@@ -595,7 +636,7 @@ def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
             / profiles.sigma_crit()[:,:,None]
 
         info(output, 'kappa.2h.mz.raw')
-        plot_profile_mz(setup['Rfine'].T, output['kappa.2h.mz.raw'], z,
+        plot_profile_mz(setup['R2h'], output['kappa.2h.mz.raw'], z,
                         mx=setup['mass_range'], z0=0.46,
                         output='profiles_kappa.png')
 
@@ -612,10 +653,13 @@ def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
             #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
             #setup['bin_centers_fine'], setup['arcmin_bins'])
     else:
-        output['kappa.2h.mz'] = np.transpose(
-            output.pop('kappa.2h.mz.raw'), axes=(2,0,1))
+        for obs in ('kappa', 'esd'):
+            if obs in retvalues or f'{obs}.2h' in retvalues:
+                output[f'{obs}.2h'] = np.transpose(
+                    output.pop(f'{obs}.2h.mz.raw'), axes=(0,2,1))
 
-    info(output, 'kappa.2h.mz')
+                info(output, f'{obs}.2h')
+
     #R = (setup['bin_edges'][:,1:]+setup['bin_edges'][:,:-1])/2
     #print(R.shape)
     #plot_profile_mz(R.T,
@@ -625,14 +669,18 @@ def calculate_twohalo(output, setup, ingredients, cclcosmo, mdef, dndm, z,
     #print_output(output)
 
     #print('mass integrals...')
-    output['kappa.2h'] = trapz(
-        dndm * output['kappa.2h.mz'], setup['mass_range'], axis=2) \
-        / mass_norm
-    #output['kappa.2h'] = output['kappa.2h'].T
-    #print(f'in {time()-ti:.2f} s')
+    """
+    for obs in ('kappa', 'esd'):
+        if obs in retvalues or f'{obs}.2h' in retvalues:
+            output[f'{obs}.2h'] = trapz(
+                dndm * output[f'{obs}.2h.mz'], setup['mass_range'], axis=2) \
+                / mass_norm
+            #output[f'{obs}.2h'] = output[f'{obs}.2h'].T
+            #print(f'in {time()-ti:.2f} s')
 
-    info(output, 'kappa.1h')
-    info(output, 'kappa.2h')
+            info(output, f'{obs}.1h')
+            info(output, f'{obs}.2h')
+    """
 
     #print_output(output)
 
@@ -671,21 +719,24 @@ def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0, backend='ccl'):
 
 
 def define_profiles(setup, cosmo, z, c_concentration):
-    model, fc = c_concentration
     ref = setup['delta_ref']
     ref = ref[0] if ref in ('critical', 'matter') \
         else ref[2].lower()
-    bg = f"{int(setup['delta'])}{ref}"
-    c = fc * np.array([concentration(setup['mass_range'], bg, zi, model=model)
-                       for zi in z[:,0]])
-    #profiles = NFW(
-        #setup['mass_range'], c, z, cosmo=cosmo, overdensity=setup['delta'],
-        #background=ref, frame=setup['distances'], z_s=1100)
+    if callable(c_concentration[0]):
+        c = c_concentration[0](setup['mass_range'], *c_concentration[1:])
+    else:
+        model, fc = c_concentration
+        bg = f"{int(setup['delta'])}{ref}"
+        c = fc * np.array([concentration(setup['mass_range'], bg, zi,
+                                         model=model)
+                           for zi in z[:,0]])
     # need to loop through for the miscentring calculations
     profiles = [NFW(setup['mass_range'], ci, zi, cosmo=cosmo,
                     overdensity=setup['delta'], background=ref,
                     frame=setup['distances'], z_s=1100)
                 for ci, zi in zip(c, z[:,0])]
+    #uk = np.array([p.fourier(setup['k_range_lin']) for p in profiles])
+    #print('uk_c =', uk, uk.shape)
     return profiles
 
 

@@ -310,6 +310,7 @@ def load_data(options, setup):
         # need to adapt or remove
         R, Rrange = sampling_utils.setup_integrand(
             R, options['precision'])
+
         angles = np.linspace(0, 2*np.pi, 540)
 
     else:
@@ -401,6 +402,10 @@ def load_datapoints_2d(datafiles, datacols, exclude=None):
                       if j not in exclude]) for Ri in R], dtype=object)
         esd = np.array([np.array([esdi[j] for j in range(len(esdi))
                         if j not in exclude]) for esdi in esd], dtype=object)
+    print('\n*** check whether setting R and esd dtypes to float causes any' \
+          ' trouble (in io.load_datapoints_2d) ***\n')
+    R = np.array(R, dtype=float)
+    esd = np.array(esd, dtype=float)
     return R, esd, Nobsbins
 
 

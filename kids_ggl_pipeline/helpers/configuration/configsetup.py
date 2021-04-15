@@ -27,6 +27,7 @@ _default_entries = {
     }
 
 _default_values = {
+    'backend': 'ccl',
     'bin_edges': [],
     'bin_samples': 201,
     'bin_sampling_max': 50,
@@ -62,6 +63,7 @@ _necessary_entries = {
     }
 
 _valid_entries = {
+    'backend': ('ccl', 'hmf'),
     'delta': float,
     'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial', 'critical', 'matter'),
     'distances': ('comoving', 'proper', 'angular'),

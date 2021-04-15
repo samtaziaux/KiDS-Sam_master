@@ -61,6 +61,8 @@ def parse_args():
         help='Evaluate a demo sample with the input parameters')
     add('--no-cov', dest='no_demo_cov', action='store_true',
         help='Do not plot the covariance when running in demo mode')
+    add('--debug', dest='debug', action='store_true',
+        help='Print debugging messages')
     # print version
     add('-v', '--version', action='version',
         version='%(prog)s {0}'.format(__version__))

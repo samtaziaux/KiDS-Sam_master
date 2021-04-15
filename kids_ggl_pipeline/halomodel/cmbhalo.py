@@ -16,42 +16,31 @@ will appear in the output file as free parameters!
 NOTES
 -----
 * Only 'gm' observables allowed for now
+
+Andrej Dvornik, Cristóbal Sifón, 2014-2021
 """
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-# Halo model code
-# Andrej Dvornik, 2014/2015
 import os
 # disable threading in numpy
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
+
 from astropy import units as u
-from functools import wraps
-from glob import glob
-import multiprocessing as multi
+from astropy.cosmology import Flatw0waCDM
+from astropy.units import Quantity
 import numpy as np
-import mpmath as mp
 import matplotlib.pyplot as plt
-import scipy
 import sys
-from numpy import (arange, array, exp, expand_dims, iterable,
-                   logspace, ones)
-from scipy import special as sp
-from scipy.integrate import simps, trapz, quad
-from scipy.interpolate import interp1d, UnivariateSpline
-from itertools import count
+from scipy.integrate import trapz
+from scipy.interpolate import interp1d
+from time import time
+
 if sys.version_info[0] == 2:
     from itertools import izip as zip
     range = xrange
-from time import time
-from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
-from astropy.units import Quantity
-
-from hmf import MassFunction
-import hmf.mass_function.fitting_functions as ff
-import hmf.density_field.transfer_models as tf
 
 # specific to cmbhalo
 from colossus.cosmology import cosmology as colossus_cosmology
@@ -61,51 +50,14 @@ from profiley.filtering import Filter
 from profiley.helpers import lss
 import pyccl as ccl
 
-"""
-from . import baryons, halo, longdouble_utils as ld, nfw
-from .tools import (
-    fill_nan, load_hmf, virial_mass, virial_radius)
-from .lens import (
-    power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit,
-    power_to_corr_ogata, wp, wp_beta_correction, power_to_sigma, power_to_sigma_ogata)
-from .dark_matter import (
-    mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
-    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion, beta_nl)
-from .covariance import covariance
-"""
+# local
 from . import halo
 from .lens import d_sigma
 from .miscentring import miscentring
+from .tools import load_hmf
 from .. import hod
 from ..helpers import io
-
-# used only in testing phase
-from plott.plotutils import colorscale, savefig, update_rcParams
-update_rcParams()
-
-
-"""
-# Mass function from HMFcalc.
-"""
-
-def memoize(function):
-    memo = {}
-    def wrapper(*args, **kwargs):
-        if args in memo:
-            return memo[args]
-        else:
-            rv = function(*args, **kwargs)
-            memo[args] = rv
-        return rv
-    return wrapper
-"""
-#@memoize
-def Mass_Function(M_min, M_max, step, name, **cosmology_params):
-    return MassFunction(Mmin=M_min, Mmax=M_max, dlog10m=step,
-        mf_fit=name, delta_h=200.0, delta_wrt='mean',
-        cut_fit=False, z2=None, nz=None, delta_c=1.686,
-        **cosmology_params)
-"""
+from ..helpers._debugging import plot_profile_mz
 
 
 
@@ -116,7 +68,7 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 #################
 
 
-debug = False
+debug = ('--debug' in sys.argv)
 
 def model(theta, R):
     """CMB halo modeling"""
@@ -139,10 +91,14 @@ def model(theta, R):
         #s_concentration, s_mor, s_scatter, s_beta = theta
 
     zs = cosmo[-1]
+    # add this to config file
+    Tcmb0 = 2.725
+    m_nu = 0
     # astropy (for profiley)
-    cosmo_model, sigma8, n_s, z = halo.load_cosmology(cosmo)
+    cosmo_model, sigma8, n_s, z = halo.load_cosmology(
+        cosmo, Tcmb0=2.725, m_nu=m_nu*u.eV)
     # CCL (for 2-halo things)
-    cclcosmo = define_cosmology(cosmo)
+    cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
     mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
 
     # probably need to be careful with the normalization of the halo bias
@@ -221,13 +177,45 @@ def model(theta, R):
 
     ### halo mass function ###
 
-    hmf = ccl.halos.mass_function_from_name('Tinker10')
-    hmf = hmf(cclcosmo, mass_def=mdef)
-    dndm = np.array(
-        [hmf.get_mass_function(cclcosmo, Mh, ai)
-         for ai in 1/(1+z[:,0])])
-    if debug:
-        print('dndm =', dndm.shape)
+    if setup['backend'] == 'ccl' or debug:
+        if debug:
+            delta_ref = str(setup['delta_ref'])
+            if delta_ref not in ('matter', 'critical'):
+                setup['delta_ref'] = 'critical' if delta_ref == 'SOCritical' \
+                    else 'matter'
+            ti = time()
+        hmf = ccl.halos.mass_function_from_name('Tinker10')
+        hmf = hmf(cclcosmo, mass_def=mdef)
+        # this is actually dndlog10m
+        dndm = np.array(
+            [hmf.get_mass_function(cclcosmo, Mh, ai)
+             for ai in 1/(1+z[:,0])])
+        dndm = dndm / (Mh/np.log(10))
+        if debug:
+            print(f'ccl in {time()-ti:.2f} s')
+            setup['delta_ref'] = str(delta_ref)
+    if setup['backend'] == 'hmf':# or debug:
+        if debug:
+            delta_ref = str(setup['delta_ref'])
+            if delta_ref in ('matter', 'critical'):
+                setup['delta_ref'] = 'SOMean' if delta_ref == 'matter' \
+                    else 'SOCritical'
+            ti = time()
+        hmf_hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
+        dndm_hmf = np.array([hmf_i.dndm
+                             for hmf_i in hmf_hmf])
+        if debug:
+            print(f'hmf in {time()-ti:.2f} s')
+            setup['delta_ref'] = str(delta_ref)
+    if debug and False:
+        print('dndm =', dndm / np.max(dndm, axis=1)[:,None])
+        print('dndm_hmf =', dndm_hmf / np.max(dndm_hmf, axis=1)[:,None])
+        print()
+        print('dndm_hmf/dndm - 1 =', dndm_hmf/dndm - 1)
+        sys.exit()
+    if setup['backend'] == 'hmf':
+        hmf = hmf_hmf
+        dndm = dndm_hmf
 
     ### selection function and mass-observable relation ###
 
@@ -239,6 +227,7 @@ def model(theta, R):
         observables, output['pop_g'], dndm, Mh)
     info(output, 'pop_g')
     if debug:
+        print('ngal =', ngal/ngal.max())
         print('logMh_eff =', logMh_eff.shape)
 
     mass_norm = trapz(dndm*output['pop_g'], Mh, axis=1)
@@ -522,8 +511,9 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     out['xi'] = bh[:,:,None] * xi_z[:,None]
     info(out, 'xi')
 
-    plot_profile_mz(Rxi, out['xi'], z[:,0], mx=m, z0=0.46, m0=1e14,
-                    output='profiles_xi.png')
+    if debug:
+        plot_profile_mz(Rxi, out['xi'], z[:,0], mx=m, z0=0.46, m0=1e14,
+                        output='profiles_xi.png')
 
     bg = 'critical' if 'critical' in setup['delta_ref'].lower() else 'matter'
     if debug:
@@ -573,9 +563,10 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     sigma_2h_z = lss.xi2sigma(
         setup['R2h'], Rxi, xi_z, rho_m, threads=1, full_output=False,
         integrator='scipy', run_test=False, verbose=2*debug)
-    plot_profile_mz(setup['R2h'], bh[:,:,None]*sigma_2h_z[:,None], z[:,0],
-                    mx=m,
-                    z0=0.46, m0=1e14, output='profiles_sigma2hz_quad.png')
+    if debug:
+        plot_profile_mz(setup['R2h'], bh[:,:,None]*sigma_2h_z[:,None], z[:,0],
+                        mx=m,
+                        z0=0.46, m0=1e14, output='profiles_sigma2hz_quad.png')
     if debug:
         print(f'in {time()-ti:.2f} s')
         print('sigma_2h_z =', sigma_2h_z.shape)
@@ -609,9 +600,10 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
     #print(f'calculate_sigma_2h in {tf-ti:.1f} s')
 
     info(output, 'sigma.2h.raw')
-    plot_profile_mz(setup['R2h'], output['sigma.2h.raw'], z,
-                    mx=setup['mass_range'], z0=0.46,
-                    output='profiles_sigma.png')
+    if debug:
+        plot_profile_mz(setup['R2h'], output['sigma.2h.raw'], z,
+                        mx=setup['mass_range'], z0=0.46,
+                        output='profiles_sigma.png')
 
     #######################
     ## could it be the units are not consistent here?? I think we're good
@@ -626,19 +618,21 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
                 setup, observables, ingredients, sigma_2h_m, c_pm)
              for sigma_2h_m in output['sigma.2h.raw'].swapaxes(0,1)],
             axes=(1,0,2))
-        info(output, 'esd.2h.mz.raw')
-        plot_profile_mz(observables.gm.R[0], output['esd.2h.mz.raw'], z,
-                        mx=setup['mass_range'], z0=0.46,
-                        output='profiles_esd2h.png')
+        if debug:
+            info(output, 'esd.2h.mz.raw')
+            plot_profile_mz(observables.gm.R[0], output['esd.2h.mz.raw'], z,
+                            mx=setup['mass_range'], z0=0.46,
+                            output='profiles_esd2h.png')
 
     if 'kappa' in retvalues or 'kappa.2h' in retvalues:
         output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
             / profiles.sigma_crit()[:,:,None]
 
-        info(output, 'kappa.2h.mz.raw')
-        plot_profile_mz(setup['R2h'], output['kappa.2h.mz.raw'], z,
-                        mx=setup['mass_range'], z0=0.46,
-                        output='profiles_kappa.png')
+        if debug:
+            info(output, 'kappa.2h.mz.raw')
+            plot_profile_mz(setup['R2h'], output['kappa.2h.mz.raw'], z,
+                            mx=setup['mass_range'], z0=0.46,
+                            output='profiles_kappa.png')
 
     # it seems now that kappa.2h.mz.raw is OK but something happens when
     # we apply the filter?
@@ -704,11 +698,11 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
     return output
 
 
-def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0, backend='ccl'):
+def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.0, backend='ccl'):
     sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo_params[:9]
     if backend == 'ccl':
         cosmo = ccl.Cosmology(
-            Omega_c=omegam-omegab, Omega_b=omegab, h=h, A_s=2.1e-9, n_s=n_s,
+            Omega_c=omegam-omegab, Omega_b=omegab, h=h, sigma8=sigma8, n_s=n_s,
             T_CMB=Tcmb, Neff=Neff, m_nu=m_nu, w0=w0, wa=wa)
     elif backend == 'astropy':
         cosmo = halo.load_cosmology(cosmo_params)[0]
@@ -735,8 +729,11 @@ def define_profiles(setup, cosmo, z, c_concentration):
                     overdensity=setup['delta'], background=ref,
                     frame=setup['distances'], z_s=1100)
                 for ci, zi in zip(c, z[:,0])]
-    #uk = np.array([p.fourier(setup['k_range_lin']) for p in profiles])
-    #print('uk_c =', uk, uk.shape)
+    if debug:
+        #uk = np.array([p.fourier(setup['k_range_lin']) for p in profiles])
+        #print('uk_c =', uk, uk.shape)
+        #p = [prof.profile
+        pass
     return profiles
 
 
@@ -797,55 +794,3 @@ def miscentering1(profiles, R, Rmis, tau, Rcl, dist='gamma'):
         print('*** end ***')
     return np.transpose(kappa_mis, axes=(1,0,2))
 
-
-def plot_profile_mz(R, profile, z, mx=None, z0=1, m0=1e14, xscale='log',
-                    yscale='log', ylabel='', output='', close=False, fs=14,
-                    figaxes=None):
-    """
-    Parameters
-    ----------
-    R must have shape ([N,]M), where N is the number of redshift bins and
-        M is the number of radial bins
-    profile must have shape (N,P,M) where P is the number of mass bins
-    """
-    if not debug:
-        return
-    z = np.squeeze(z)
-    if len(R.shape) == 1:
-        R = np.array([R for i in range(z.size)])
-    if mx is None:
-        lnm = np.log(m)
-    else:
-        lnm = np.log(mx)
-    logm = np.log10(np.exp(lnm))
-    idx_z = np.argmin(np.abs(z-z0))
-    idx_m = np.argmin(np.abs(lnm-np.log(m0)))
-    if figaxes is None:
-        fig, axes = plt.subplots(figsize=(14,5), ncols=2)
-    else:
-        fig, axes = figaxes
-    # varying redshift
-    axes[0].set_title('log10(m)={0:.2f}'.format(logm[idx_m]), fontsize=fs)
-    colors, cmap = colorscale(z)
-    for i in range(z.size):
-        axes[0].plot(R[i], profile[i,idx_m], color=colors[i])
-    if figaxes is None:
-        plt.colorbar(cmap, label='Redshift', ax=axes[0])
-    # varying mass
-    axes[1].set_title('z={0:.2f}'.format(z[idx_z]), fontsize=fs)
-    colors, cmap = colorscale(logm)
-    for i in range(lnm.size):
-        axes[1].plot(R[idx_z], profile[idx_z,i], color=colors[i])
-    if figaxes is None:
-        plt.colorbar(cmap, label='log10 m', ax=axes[1])
-    for ax in axes:
-        ax.set_xscale(xscale)
-        ax.set_yscale(yscale)
-        if ylabel:
-            ax.set_ylabel(ylabel)
-#     axes[1].set_x
-    if output:
-        savefig(output, fig=fig, close=close)
-    else:
-        fig.tight_layout()
-    return fig, axes

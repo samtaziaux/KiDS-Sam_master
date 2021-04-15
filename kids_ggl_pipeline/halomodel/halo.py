@@ -78,6 +78,7 @@ def Mass_Function(M_min, M_max, step, name, **cosmology_params):
 ##
 #################
 
+debug = ('--debug' in sys.argv)
 
 def model(theta, R):
 
@@ -142,6 +143,9 @@ def model(theta, R):
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range)
+    if debug:
+        print('dndm =', dndm/np.max(dndm, axis=1)[:,None])
+        print('ngal =', ngal/ngal.max())
 
     # Luminosity or mass function as an output:
     if observables.mlf:
@@ -168,10 +172,10 @@ def model(theta, R):
         Pgm = (Pgm_1h, Pgm_2h) if ingredients['haloexclusion'] \
             else Pgm_1h + Pgm_2h
     if observables.gg:
-        ncen = hod.nbar(dndm[observables.gg.idx], pop_c[observables.gg.idx],
-                        mass_range)
-        nsat = hod.nbar(dndm[observables.gg.idx], pop_s[observables.gg.idx],
-                        mass_range)
+        ncen = hod.nbar(
+            dndm[observables.gg.idx], pop_c[observables.gg.idx], mass_range)
+        nsat = hod.nbar(
+            dndm[observables.gg.idx], pop_s[observables.gg.idx], mass_range)
         Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = Pgg
         Pgg_1h = Pgg_c + 2*Pgg_cs + Pgg_s
         Pgg = (Pgg_1h, Pgg_2h) if ingredients['haloexclusion'] \
@@ -223,6 +227,7 @@ def model(theta, R):
     xi_gm, xi_gg, xi_mm = calculate_correlations(
         setup, observables, ingredients, Pgm_func, Pgg_func, Pmm_func, rho_bg,
         meff)
+    #print('xi_gm =', xi_gm)
 
     if setup['return'] in ('all', 'xi'):
         output = output_xi(
@@ -252,11 +257,12 @@ def model(theta, R):
     output, sigma_gm, sigma_gg, sigma_mm = calculate_surface_density(
         setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
         rho_bg, z, nz, c_pm, output, cosmo_model, zs)
+    #print('sigma_gm =', sigma_gm)
 
     if setup['return'] in ('wp', 'esd_wp'):
         wp_out_i = np.array(
-            [UnivariateSpline(setup['rvir_range_3d_interp'], np.nan_to_num(wi/rho_i),
-                              s=0)
+            [UnivariateSpline(
+                setup['rvir_range_3d_interp'], np.nan_to_num(wi/rho_i), s=0)
              for wi, rho_i in zip(sigma_gg, rho_bg)])
         wp_out = [wp_i(r_i) for wp_i, r_i
                   in zip(wp_out_i, observables.gg.R)]
@@ -278,8 +284,9 @@ def model(theta, R):
     ### excess surface density ###
 
     if observables.gm:
-        esd_gm = calculate_esd(setup, observables, ingredients, sigma_gm, c_pm)
-        if setup['return'] in ('esd','esd_wp'):
+        esd_gm = calculate_esd(
+            setup, observables, ingredients, sigma_gm, c_pm)
+        if 'esd' in setup['return'] or 'esd_wp' in setup['return']:
             output[observables.gm.idx] = esd_gm
             output = list(output)
 
@@ -463,39 +470,40 @@ def calculate_ngal(observables, pop_g, dndm, mass_range):
     return ngal, meff
 
 
-def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
-                  bias, pop_g, pop_c, pop_s, uk_s, ngal, beta, F_k1, F_k2, Igg):
-    
+def calculate_Pgg(setup, observable, ingredients, hmf, mass_range, dndm,
+                  bias, pop_g, pop_c, pop_s, uk_s, ngal, beta,
+                  F_k1, F_k2, Igg):
     if ingredients['twohalo']:
         Pgg_2h = F_k2 * bias * array(
             [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
              for hmf_i, ngal_i, pop_g_i
-             in zip(hmf[observables.gg.idx],
-                    expand_dims(ngal[observables.gg.idx], -1),
-                    expand_dims(pop_g[observables.gg.idx], -2))])
+             in zip(hmf[observable.idx],
+                    expand_dims(ngal[observable.idx], -1),
+                    expand_dims(pop_g[observable.idx], -2))])
         if ingredients['bnl']:
-            Pgg_2h = (Pgg_2h + array([hmf_i.power for hmf_i in hmf[observables.gg.idx]])*Igg)
+            Pgg_2h = (Pgg_2h \
+                + array([hmf_i.power for hmf_i in hmf[observable.idx]])*Igg)
     else:
-        Pgg_2h = F_k2 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
+        Pgg_2h = F_k2 * np.zeros((observable.nbins,setup['lnk_bins']))
 
     #if ingredients['centrals']:
-        #Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
+        #Pgg_c = F_k1 * np.zeros((observable.nbins,setup['lnk_bins']))
     #else:
-    Pgg_c = F_k1 * np.zeros((observables.gg.nbins,setup['lnk_bins']))
+    Pgg_c = F_k1 * np.zeros((observable.nbins,setup['lnk_bins']))
 
     if ingredients['satellites']:
         Pgg_s = F_k1 * gg_sat_analy(
-            dndm[observables.gg.idx], uk_s[observables.gg.idx],
-            pop_s[observables.gg.idx], ngal[observables.gg.idx], beta,
+            dndm[observable.idx], uk_s[observable.idx],
+            pop_s[observable.idx], ngal[observable.idx], beta,
             mass_range)
     else:
         Pgg_s = F_k1 * np.zeros(Pgg_c.shape)
 
     if ingredients['centrals'] and ingredients['satellites']:
         Pgg_cs = F_k1 * gg_cen_sat_analy(
-            dndm[observables.gg.idx], uk_s[observables.gg.idx],
-            pop_c[observables.gg.idx], pop_s[observables.gg.idx],
-            ngal[observables.gg.idx], mass_range)
+            dndm[observable.idx], uk_s[observable.idx],
+            pop_c[observable.idx], pop_s[observable.idx],
+            ngal[observable.idx], mass_range)
     else:
         Pgg_cs = F_k1 * np.zeros(Pgg_c.shape)
 
@@ -503,9 +511,9 @@ def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,
 
 
 def calculate_Pgm(setup, observable, ingredients, hmf, mass_range, dndm,
-                    rho_bg, bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal,
-                    F_k1, F_k2, Igm):
-    
+                  rho_bg, bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal,
+                  F_k1, F_k2, Igm):
+
     if ingredients['twohalo']:
         """
         # unused but not removing as we might want to use it later
@@ -529,6 +537,8 @@ def calculate_Pgm(setup, observable, ingredients, hmf, mass_range, dndm,
         Pgm_2h = np.zeros((observable.nbins,setup['lnk_bins']))
 
     if ingredients['centrals']:
+        if debug:
+            print('F_k1 =', F_k1)
         Pgm_c = F_k1 * gm_cen_analy(
             dndm[observable.idx], uk_c[observable.idx],
             rho_bg[observable.idx], pop_c[observable.idx],
@@ -580,11 +590,13 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
     F_k1 = sp.erf(setup['k_range_lin']/0.1)
     F_k2 = np.ones_like(setup['k_range_lin'])
     #F_k2 = sp.erfc(setup['k_range_lin']/10.0)
+    F_k1 = F_k2 = 1
 
     output = [[], [], []]
 
     if ingredients['bnl']:
-        print('Using non-linear halo bias correction from Mead at al. 2020. Warning, this is slow!')
+        print('Using non-linear halo bias correction from Mead at al.' \
+              ' 2020. Warning, this is slow!')
         from .tools import read_mead_data
         read_mead_data()
         # read in Alex Mead BNL table:
@@ -666,6 +678,7 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
             for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
         z = expand_dims(z, -1)
     else:
+        #print(f'calculating sigma {len(xi2)} times ...')
         surface_density = array(
             [sigma(xi2_i, rho_i, setup['rvir_range_3d'],
              setup['rvir_range_3d_interp'])
@@ -763,6 +776,7 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
         uk_c = nfw.uk(
             setup['k_range_lin'], mass_range, rvir_range_lin, concentration,
             rho_bg, setup['delta'])
+        #print('uk_c =', np.transpose(uk_c, axes=(0,2,1)), uk_c.shape)
     elif ingredients['nzlens']:
         uk_c = np.ones((observables.nbins, z.size//observables.nbins,
                         mass_range.size, setup['k_range_lin'].size))
@@ -798,10 +812,10 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     return uk_c, uk_s
 
 
-def load_cosmology(cosmo):
+def load_cosmology(cosmo, Tcmb0=2.725, m_nu=0.06*eV):
     sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
     cosmo_model = Flatw0waCDM(
-        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
+        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=Tcmb0, m_nu=m_nu,
         Neff=Neff, w0=w0, wa=wa)
     return cosmo_model, sigma8, n_s, z
 
@@ -1002,6 +1016,10 @@ def preamble(theta):
         raise ValueError(
             'Number of redshift bins should be equal to the number of' \
             ' observable bins!')
+
+    # we might also want to add a function in the configuration
+    # functionality to update theta more easily
+    theta[1][theta[0].index('setup')] = setup
 
     return theta
 

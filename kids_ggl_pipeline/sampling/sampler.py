@@ -258,6 +258,10 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
     print()
 
+    # this for now. The idea is that setup['return'] should eventually
+    # be a list with all the quantities that are being modelled.
+    if isinstance(setup['return'], str):
+        setup['return'] = [setup['return']]
     output = '{0}_demo_{1}.{2}'.format(
         '.'.join(options['output'].split('.')[:-1]),
                  '-'.join(setup['return']).replace('.', ''),

@@ -1,7 +1,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-from itertools import count
+from itertools import count, permutations
 import numpy as np
 from six import string_types
 import sys
@@ -81,6 +81,7 @@ class ConfigLine(str):
 
 
 class ConfigSection(str):
+    """Object that handles a section in the configuration file"""
 
     def __init__(self, name=''):
         self.name = name
@@ -108,6 +109,34 @@ class ConfigSection(str):
 
         Repeat parameters are processed here
         """
+        # cosmological parameters must be reordered
+        if self.name == 'cosmo':
+            cosmo = CosmoSection(name='cosmo')
+            # remember that these_params also contains values relating
+            # to the priors and starting values
+            cosmo.set_values(
+                **{key: val for key, val in zip(these_names, these_params[0])})
+            # need to sort priors accordingly
+            cosmo_priors = ['fixed'] * len(cosmo.names)
+            # the 1+len(cosmo.values) inclu
+            cosmo_params = [cosmo.values] \
+                + [len(cosmo.values)*[i] for i in (None,-np.inf,np.inf)]
+            # also need to set prior parameters and starting values
+            print('these_params =', these_params)
+            for j, name in enumerate(cosmo.names):
+                if name in these_names:
+                    i = these_names.index(name)
+                    cosmo_priors[j] = these_priors[i]
+                    for k in range(3):
+                        cosmo_params[1+k][j] = these_params[1+k][i]
+                    #these_priors[i] = cosmo_priors[j]
+                    #for k in range(3):
+                        #these_params
+            these_names = cosmo.names
+            these_params = cosmo_params
+            these_priors = cosmo_priors
+            print()
+            print('these_params =', these_params)
         names.append(these_names)
         if self.name is None:
             return names, parameters, priors
@@ -115,6 +144,8 @@ class ConfigSection(str):
         if len(parameters) == 0:
             parameters = [[] for i in these_params]
         if self.name not in ('ingredients', 'observables'):
+            #if self.name == 'cosmo':
+                #parameters
             for i, p in enumerate(these_params):
                 parameters[i].append(p)
             for i, n, pr in zip(count(), these_names, these_priors):
@@ -219,14 +250,13 @@ class ConfigFile(object):
             if line.words[0] == 'cov':
                 cov = self.read_function(line.words[1])
                 continue
+            # we reach this once we're done with the previous section
             if line.is_section():
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
-                #if section.name in ('cosmo', 'filtering') \
-                        #section.name[:3] == 'hod':
                     names, parameters, priors = section.append_parameters(
                         names, parameters, priors, repeat, section_names,
                         these_names, these_params, these_priors)
-                # initialize new section
+                # stored all parameters, now we initialize the new section
                 section = ConfigSection(line.section)
                 section_names.append(section.name)
                 these_names = self.initialize_names()
@@ -283,3 +313,98 @@ class ConfigFile(object):
                 np.sort(list(self.valid_modules.keys())))
         return getattr(self.valid_modules[module], func)
 
+
+class CosmoSection:
+
+    """Cosmology section object
+
+    Used to store cosmological parameters so that all parameters are
+    optional in the configuration file and their order does not matter
+
+    Can only handle flat cosmologies for now
+    """
+    # TO DO: add options to specify A_s, Oc0, and Ode0 (some
+    # commented code already exists)
+
+    def __init__(self, name='cosmo', **kwargs):
+        self.name = name
+        # this order is fixed
+        self._names = \
+            ['Om0', 'Ob0', 'h', 'sigma8', 'n_s', 'm_nu', 'Neff',
+             'w0', 'wa', 'Tcmb0', 'z', 'n(z)', 'z_mlf', 'z_s']
+        # Planck 18 by default
+        # TT,TE,EE+lowE+lensing+BAO from Table 2
+        self._default = \
+            [0.311, 0.049, 0.677, 0.810, 0.967, 0.06, 3.046, -1, 0, 2.725,
+             None, None, None, None]
+        # this is only a debugging test, will never happen to the user
+        if len(self._names) != len(self._default):
+            raise ValueError('inconsistent definitions of _names and _default!')
+        self._values = None
+
+    @property
+    def names(self):
+        return self._names
+
+    @property
+    def parameters(self):
+        return {key: val for key, val in zip(self.names, self.values)}
+
+    @property
+    def values(self):
+        if self._values is None:
+            return self._default
+        return self._values
+
+    def set_values(self, **kwargs):
+        # cannot specify all of them!
+        #if 'A_s' in kwargs and 'sigma8' in kwargs:
+            #raise ValueError('Cannot provide both A_s and sigma8')
+        # we don't need so much flexibility for now
+        #if ('Om0' in kwargs) + ('Ob0' in kwargs) + ('Oc0' in kwargs) \
+                #not in (0,2):
+            #raise ValueError(
+                #'Must provide exactly two of {Om0,Ob0,Oc0} or none at all')
+        #if self.flat:
+            #if ('Ode0' in kwargs \
+                    #and ('Om0' in kwargs \
+                        #or ('Ob0' in kwargs and 'Oc0' in kwargs))):
+                #msg = 'cannot provide both Ode0 and the total matter density' \
+                      #' (either Om0 or both Ob0 and Oc0) for a flat cosmology'
+                #raise ValueError(msg)
+        # initialize empty
+        _values = [None] * len(self.names)
+        # assign provided values
+        for key, val in kwargs.items():
+            if key not in self.names:
+                msg = f'parameter {key} not known. Available parameters are' \
+                      f' {self.names}'
+                raise KeyError(msg)
+            _values[self.index(key)] = val
+        # add defaults where no value has been specified
+        for i, (name, val, default) \
+                in enumerate(zip(self.names, _values, self.values)):
+            if val is None:
+                _values[i] = default
+        # note that these things don't matter here because we would
+        # run into the same issue at every step in the chain
+        # sigma8 will have been filled with the default number above
+        # but we don't want that if A_s was provided!
+        #if 'A_s' in kwargs:
+             #values[self.index('sigma8')] = None
+        # make sure the matter density parameters make sense
+        #if 'Om0' is None:
+            #_values[self.index('Om0')] \
+                #= _values[self.index('Ob0')] + _values[self.index('Oc0')]
+        #if 'Oc0' is None:
+            #_values[self.index('Oc0')] \
+                #= _values[self.index('Om0')] - _values[self.index('Ob0')]
+        #if 'Ob0' is None:
+            #_values[self.index('Ob0')] \
+                #= _values[self.index('Om0')] - _values[self.index('Oc0')]
+
+        # finally, assign!
+        self._values = _values
+
+    def index(self, param_name):
+        return self.names.index(param_name)

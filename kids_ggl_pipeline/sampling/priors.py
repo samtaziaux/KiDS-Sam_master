@@ -44,6 +44,7 @@ def calculate_lnprior(lnprior, theta, prior_types, parameters, jfree):
             [fp(v, v1, v2) if v3 <= v <= v4 else -inf
              for v, v1, v2, v3, v4
              in zip(theta[j], v1free[j], v2free[j], v3free[j], v4free[j])])
+        print(theta[j], v1free[j], v2free[j], v3free[j], v4free[j], lnprior[j])
     return lnprior.sum()
 
 

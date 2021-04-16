@@ -83,20 +83,14 @@ debug = ('--debug' in sys.argv)
 def model(theta, R):
 
     # ideally we would move this to somewhere separate later on
-    preamble(theta)
+    #preamble(theta)
+    np.seterr(
+        divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
-
-    cosmo, \
-        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
-        s_concentration, s_mor, s_scatter, s_beta = theta
-
-    cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
-
-    ### a final bit of massaging ###
 
     if observables.mlf:
         nbins = observables.nbins - observables.mlf.nbins
@@ -104,25 +98,17 @@ def model(theta, R):
         nbins = observables.nbins
     output = np.empty(observables.nbins, dtype=object)
 
-    if ingredients['nzlens']:
-        nz = cosmo[9].T
-        size_cosmo = 10
-    else:
-        nz = None
-        # hard-coded
-        size_cosmo = 9
+    cosmo, \
+        c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
+        s_concentration, s_mor, s_scatter, s_beta = theta
 
-    if observables.mlf:
-        z_mlf = cosmo[-1]
-        size_cosmo += 1
+    #cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
+    Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
+        = cosmo
 
-    # cheap hack. I'll use this for CMB lensing, but we can
-    # also use this to account for difference between shear
-    # and reduced shear
-    if len(cosmo) == size_cosmo+1:
-        zs = cosmo[-1]
-    else:
-        zs = None
+    cosmo_model = Flatw0waCDM(
+        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=m_nu*eV,
+        Neff=Neff, w0=w0, wa=wa)
 
     z = format_z(z, nbins)
     ### load halo mass functions ###
@@ -812,10 +798,11 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     return uk_c, uk_s
 
 
-def load_cosmology(cosmo, Tcmb0=2.725, m_nu=0.06*eV):
-    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
+def load_cosmology(cosmo):
+    #sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
+    Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0 = cosmo[:10]
     cosmo_model = Flatw0waCDM(
-        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=Tcmb0, m_nu=m_nu,
+        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=m_nu,
         Neff=Neff, w0=w0, wa=wa)
     return cosmo_model, sigma8, n_s, z
 

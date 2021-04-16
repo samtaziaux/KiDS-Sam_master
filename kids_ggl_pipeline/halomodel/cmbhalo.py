@@ -90,13 +90,13 @@ def model(theta, R):
         c_pm, c_concentration, c_mor, c_scatter, c_mis, c_twohalo = theta[:7]
         #s_concentration, s_mor, s_scatter, s_beta = theta
 
-    zs = cosmo[-1]
-    # add this to config file
-    Tcmb0 = 2.725
-    m_nu = 0
+    Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
+        = cosmo
+
     # astropy (for profiley)
-    cosmo_model, sigma8, n_s, z = halo.load_cosmology(
-        cosmo, Tcmb0=2.725, m_nu=m_nu*u.eV)
+    cosmo_model = Flatw0waCDM(
+        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=m_nu*u.eV,
+        Neff=Neff, w0=w0, wa=wa)
     # CCL (for 2-halo things)
     cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
     mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
@@ -114,6 +114,7 @@ def model(theta, R):
     output_array = np.empty(observables.nbins, dtype=object)
     #output_array = []
 
+    """
     if ingredients['nzlens']:
         nz = cosmo[9].T
         size_cosmo = 10
@@ -121,7 +122,6 @@ def model(theta, R):
         nz = None
         # hard-coded
         size_cosmo = 9
-
     if observables.mlf:
         z_mlf = cosmo[-1]
         size_cosmo += 1
@@ -133,13 +133,15 @@ def model(theta, R):
         zs = cosmo[-1]
     else:
         zs = None
+    """
 
     z = halo.format_z(z, nbins)
     if debug:
         print('z =', z.shape)
 
     profiles = define_profiles(setup, cosmo_model, z, c_concentration)
-    #if debug:
+    if debug:
+        print('loaded profiles!')
         #print('shape =', profiles.shape)
 
     # convert radii if necessary - this must be done here because it

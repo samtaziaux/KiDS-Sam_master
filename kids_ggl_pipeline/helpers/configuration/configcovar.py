@@ -142,6 +142,7 @@ def convert_to_bool(covar):
         if key in ['healpy', 'gauss', 'non_gauss', 'ssc',
                    'mlf_gauss', 'mlf_ssc', 'cross', 'subtract_randoms',
                    'kids_sigma_cirt', 'lens_photoz', 'lens_photoz_zdep']:
+        # if value in ['True', 'False']: ????
             covar[key] = bool(distutils.util.strtobool(covar[key]))
     
     return covar

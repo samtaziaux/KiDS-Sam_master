@@ -163,6 +163,7 @@ def check_necessary_entries(setup):
 def convert_to_bool(setup):
     for key, value in setup.items():
         if key in ['kaiser_correction']:
+        # if value in ['True', 'False']: ????
             setup[key] = bool(distutils.util.strtobool(setup[key]))
     
     return setup

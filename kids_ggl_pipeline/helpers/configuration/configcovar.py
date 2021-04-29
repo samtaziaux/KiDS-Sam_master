@@ -1,5 +1,7 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+import distutils
+import distutils.util
 
 
 _default_entries = {
@@ -61,24 +63,24 @@ _necessary_entries = {
 _valid_entries = {
     'pi_max': float,
     'area': float,
-    'healpy': str,
+    'healpy': ('True', 'False'),
     'healpy_data': str,
     'eff_density': float,
     'variance_squared': float,
     'mean_survey_redshift': float,
-    'gauss': str,
-    'non_gauss': str,
-    'ssc': str,
-    'mlf_gauss': str,
-    'mlf_ssc': str,
-    'cross': str,
-    'subtract_randoms': str,
-    'kids_sigma_crit': str,
+    'gauss': ('True', 'False'),
+    'non_gauss': ('True', 'False'),
+    'ssc': ('True', 'False'),
+    'mlf_gauss': ('True', 'False'),
+    'mlf_ssc': ('True', 'False'),
+    'cross': ('True', 'False'),
+    'subtract_randoms': ('True', 'False'),
+    'kids_sigma_crit': ('True', 'False'),
     'z_epsilon': float,
     'z_max': float,
-    'lens_photoz': str,
+    'lens_photoz': ('True', 'False'),
     'lens_photoz_sigma': float,
-    'lens_photoz_zdep': str,
+    'lens_photoz_zdep': ('True', 'False'),
     'specz_file': str,
     'threads': int,
     'output': str,
@@ -135,11 +137,22 @@ def check_necessary_entries(covar):
     return
 
 
+def convert_to_bool(covar):
+    for key, value in covar.items():
+        if key in ['healpy', 'gauss', 'non_gauss', 'ssc',
+                   'mlf_gauss', 'mlf_ssc', 'cross', 'subtract_randoms',
+                   'kids_sigma_cirt', 'lens_photoz', 'lens_photoz_zdep']:
+            covar[key] = bool(distutils.util.strtobool(covar[key]))
+    
+    return covar
+
+
 def check_covar(covar):
     """Run all checks to ensure that the setup section complies"""
     check_necessary_entries(covar)
     setup = add_defaults(covar)
     check_entry_types(covar)
+    setup = convert_to_bool(covar)
     return covar
 
 

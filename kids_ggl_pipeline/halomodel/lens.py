@@ -224,7 +224,7 @@ def wp(corr, r_i, r_x):
     return 2.0 * s * r_x
 
 
-def wp_beta_correction(corr, r_i, r_x, omegam, bias):
+def wp_beta_correction(corr, r_i, r_x, omegam, bias, pi_max, rho_mean):
     # See Cacciato et al. 2012, equations 21 - 28
     # Gives the same resutls as wp above. :/
     
@@ -240,7 +240,7 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
     J_5 = np.empty(len(r_i))
     for i in range(len(r_i)):
         
-        x_int = np.linspace(0.0, r_i[i], 10000, endpoint=True)
+        x_int = np.linspace(0.0, r_i[i], 1000, endpoint=True)
         
         int_j3 = lambda x: c(log10(x))*x**2.0
         int_j5 = lambda x: c(log10(x))*x**4.0
@@ -260,7 +260,7 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
     int_3 = np.zeros(len(r_x))
     
     for i in range(len(r_x)):
-        x_int = np.linspace(0.0, 100.0, 10000, endpoint=True)
+        x_int = np.linspace(0.0, pi_max, 1000, endpoint=True)
         
         int_1[i] = intg.cumtrapz(np.nan_to_num(xi_0(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_0(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
         int_2[i] = intg.cumtrapz(np.nan_to_num(xi_2(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_2(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
@@ -268,7 +268,7 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias):
     
     w_p = 2.0 * (int_1 + int_2 + int_3)
     
-    return w_p
+    return w_p * rho_mean
 
 
 def sigma_crit(cosmo, zl, zs):

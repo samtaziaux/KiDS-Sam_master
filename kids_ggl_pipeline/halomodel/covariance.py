@@ -75,9 +75,10 @@ def sigma_crit_kids(hmf, z_in, z_epsilon, srclim, lens_photoz, galsigma, lens_pz
     
     from kids_ggl_pipeline.esd_production.shearcode_modules import calc_Sigmacrit
     
-    if lens_photoz == 'True':
+    # This might be removed!
+    if lens_photoz:
         lens_photoz = True
-        if lens_pz_redshift == 'True':
+        if lens_pz_redshift:
             lens_pz_redshift = True
         else:
             lens_pz_redshift = False
@@ -553,7 +554,7 @@ def calc_cov_non_gauss(params):
     
     lnk, dlnk = k_adaptive(r_i, r_j, limit=1000)
     
-    if covar['healpy'] == 'True':
+    if covar['healpy']:
         Awr_i = area_norm_term
         Awr_j = area_norm_term
         Aw_rr = area_norm_term
@@ -602,7 +603,7 @@ def calc_cov_ssc(params):
     
     lnk, dlnk = k_adaptive(r_i, r_j)
     
-    if covar['healpy'] == 'True':
+    if covar['healpy']:
         Awr_i = area_norm_term
         Awr_j = area_norm_term
         Aw_rr = area_norm_term
@@ -676,7 +677,7 @@ def calc_cov_gauss(params):
     
     lnk, dlnk = k_adaptive(r_i, r_j)
     
-    if covar['healpy'] == 'True':
+    if covar['healpy']:
         Awr_i = area_norm_term
         Awr_j = area_norm_term
         Aw_rr = area_norm_term
@@ -767,7 +768,7 @@ def calc_cov_mlf_cross_sn(params):
 
     lnk, dlnk = k_adaptive(r_i, r_i)
     
-    if covar['healpy'] == 'True':
+    if covar['healpy']:
         Awr_i = area_norm_term
     else:
         Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
@@ -803,7 +804,7 @@ def calc_cov_mlf_cross_ssc(params):
     
     lnk, dlnk = k_adaptive(r_i, r_i)
     
-    if covar['healpy'] == 'True':
+    if covar['healpy']:
         Awr_i = area_norm_term
     else:
         Awr_i = simps(np.exp(lnk)**2.0 * sp.jv(0, np.exp(lnk) * r_i)/(2.0*np.pi) * area_norm_term(np.exp(lnk))**2.0, dx=dlnk)
@@ -1119,7 +1120,7 @@ def covariance(theta, R):
 
 
     # Calculate critical surface density, either simply or for KiDS
-    if covar['kids_sigma_crit'] == 'True':
+    if covar['kids_sigma_crit']:
         print('\t...using KiDS specific sigma_crit setup.')
         # KiDS specific sigma_crit, accounting for n(z)!
         spec_z_path = covar['specz_file']
@@ -1135,7 +1136,7 @@ def covariance(theta, R):
     
     
     # Setup area and survey variance
-    if covar['healpy'] == 'True':
+    if covar['healpy']:
         healpy_data = covar['healpy_data']
         print('\t...using healpy map to determine survey variance and area.')
         l_range, alms, survey_area = calculate_alms(healpy_data, 1)
@@ -1236,7 +1237,7 @@ def covariance(theta, R):
                 zip(hmf, uk_c, rho_bg, ngal, mlf_out)])
         count_b_interp = [[UnivariateSpline(setup['k_range'], count_b_i, s=0, ext=0)
                     for count_b_i in count] for count in count_b]
-        if covar['healpy'] == 'True':
+        if covar['healpy']:
             survey_var_mlf = [survey_variance_from_healpy(hmf_i, setup['k_range'], z_kids, l_range, alms, survey_area) for hmf_i in hmf_mlf]
         else:
             survey_var_mlf = [survey_variance(hmf_i, W_p, setup['k_range'], radius) for hmf_i in hmf_mlf]
@@ -1402,7 +1403,7 @@ def covariance(theta, R):
     k_temp = np.linspace(lnk_min, lnk_max, 100, endpoint=True)
     k_temp_lin = np.exp(k_temp)
   
-    if non_gauss == 'True':
+    if non_gauss:
         Tgggg = array([trispectra_1h(k_temp_lin, hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, setup['k_range_lin'], 'gggg')
                     for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
                     zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
@@ -1443,7 +1444,7 @@ def covariance(theta, R):
     
    
     # Calculate the requested terms and combinations
-    if gauss == 'True':
+    if gauss:
         print('Calculating the Gaussian part of the covariance...')
         if observables.gm:
             cov_esd_gauss = parallelise(calc_cov_gauss, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, P_gm_func, P_gg_func, P_mm_func, area_norm_term, W_p, Pi_max_lens, shape_noise, ngal, rho_bg, 'gm', subtract_randoms, observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
@@ -1451,7 +1452,7 @@ def covariance(theta, R):
         if observables.gg:
             cov_wp_gauss = parallelise(calc_cov_gauss, nproc, cov_wp.copy(), observables.gg.R, observables.gg.R, P_gm_func, P_gg_func, P_mm_func, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'gg', subtract_randoms, observables.gg.idx, observables.gg.idx, observables.gg.size, observables.gg.size, covar)
             cov_wp_tot += cov_wp_gauss
-        if observables.gm and observables.gg and (cross == 'True'):
+        if observables.gm and observables.gg and cross:
             cov_cross_gauss = parallelise(calc_cov_gauss, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_gm_func, P_gg_func, P_mm_func, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'cross', subtract_randoms, observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_gauss
             
@@ -1459,15 +1460,15 @@ def covariance(theta, R):
             print('Calculating the Gaussian part of the SMF/LF covariance...')
             cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, mlf_out, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_gauss
-        if observables.mlf and observables.gm and (cross == 'True'):
+        if observables.mlf and observables.gm and cross:
             cov_mlf_cross_gauss_gm = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
             cov_mlf_cross_gm_tot += cov_mlf_cross_gauss_gm
-        if observables.mlf and observables.gg and (cross == 'True'):
+        if observables.mlf and observables.gg and cross:
             cov_mlf_cross_gauss_gg = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
             cov_mlf_cross_gg_tot += cov_mlf_cross_gauss_gg
         
 
-    if ssc == 'True':
+    if ssc:
         print('Calculating the super-sample covariance...')
         if observables.gm:
             cov_esd_ssc = parallelise(calc_cov_ssc, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, area_norm_term, bias_num, survey_var, rho_bg, 'gm', observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
@@ -1475,7 +1476,7 @@ def covariance(theta, R):
         if observables.gg:
             cov_wp_ssc = parallelise(calc_cov_ssc, nproc, cov_wp.copy(), observables.gg.R, observables.gg.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, area_norm_term, bias_num, survey_var, rho_bg, 'gg', observables.gg.idx, observables.gg.idx, observables.gg.size, observables.gg.size, covar)
             cov_wp_tot += cov_wp_ssc
-        if observables.gm and observables.gg and (cross == 'True'):
+        if observables.gm and observables.gg and cross:
             cov_cross_ssc = parallelise(calc_cov_ssc, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, area_norm_term, bias_num, survey_var, rho_bg, 'cross', observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_ssc
             
@@ -1483,15 +1484,15 @@ def covariance(theta, R):
             print('Calculating the SMF/LF super-sample covariance...')
             cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_ssc
-        if observables.mlf and observables.gm and (cross == 'True'):
+        if observables.mlf and observables.gm and cross:
             cov_mlf_cross_ssc_gm = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
             cov_mlf_cross_gm_tot += cov_mlf_cross_ssc_gm
-        if observables.mlf and observables.gg and (cross == 'True'):
+        if observables.mlf and observables.gg and cross:
             cov_mlf_cross_ssc_gg = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
             cov_mlf_cross_gg_tot += cov_mlf_cross_ssc_gg
     
 
-    if non_gauss == 'True':
+    if non_gauss:
         print('Calculating the connected (non-Gaussian) part of the covariance...')
         if observables.gm:
             cov_esd_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_esd.copy(), observables.gm.R, observables.gm.R, Tgmgm, T234h, bias_num, area_norm_term, vol, rho_bg, 'gm', observables.gm.idx, observables.gm.idx, observables.gm.size, observables.gm.size, covar)
@@ -1499,7 +1500,7 @@ def covariance(theta, R):
         if observables.gg:
             cov_wp_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_wp.copy(), observables.gg.R, observables.gg.R, Tgggg, T234h, bias_num, area_norm_term, vol, rho_bg, 'gg', observables.gg.idx, observables.gg.idx, observables.gg.size, observables.gg.size, covar)
             cov_wp_tot += cov_wp_non_gauss
-        if observables.gm and observables.gg and (cross == 'True'):
+        if observables.gm and observables.gg and cross:
             cov_cross_non_gauss = parallelise(calc_cov_non_gauss, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, Tgggm, T234h, bias_num, area_norm_term, vol, rho_bg, 'cross', observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_non_gauss
             

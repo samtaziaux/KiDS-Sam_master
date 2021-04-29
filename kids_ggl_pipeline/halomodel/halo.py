@@ -160,6 +160,16 @@ def model(theta, R):
     if not ingredients['nzlens']:
         rho_bg = rho_bg[...,0]
 
+    if setup['kaiser_correction']:
+        bias_corr = c_twohalo * array(
+            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[1]
+            for hmf_i, ngal_i, pop_g_i
+            in zip(hmf[observables.gg.idx],
+                   expand_dims(ngal[observables.gg.idx], -1),
+                   expand_dims(pop_g[observables.gg.idx], -2))])**0.5
+    else:
+        bias_corr = None
+
     # spectra that are not required are just dummy variables
     Pgm, Pgg, Pmm = calculate_power_spectra(
             setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
@@ -254,7 +264,7 @@ def model(theta, R):
 
     output, sigma_gm, sigma_gg, sigma_mm = calculate_surface_density(
         setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
-        rho_bg, z, nz, c_pm, output, cosmo_model, zs)
+        rho_bg, z, nz, c_pm, output, cosmo_model, zs, bias_corr)
 
     if setup['return'] in ('wp', 'esd_wp'):
         wp_out_i = np.array(
@@ -299,9 +309,9 @@ def model(theta, R):
             output = list(output)
             output = [output, meff]
     #if ingredients['bnl']:
-    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/delta_sigma_bnl_final.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
+    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/delta_sigma_bnl_quest.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
     #else:
-    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/delta_sigma_fid_final.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
+    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/delta_sigma_fid_quest.npy', np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
     # Finally!
     return output
 
@@ -538,14 +548,6 @@ def calculate_Pgm(setup, observables, ingredients, hmf, mass_range, dndm,
                     F_k1, F_k2, Igm):
     
     if ingredients['twohalo']:
-        """
-        # unused but not removing as we might want to use it later
-        #bias_out = bias.T[0] * array(
-            #[TwoHalo(hmf_i, ngal_i, pop_g_i, setup['k_range_lin'], rvir_range_lin_i,
-                 #mass_range)[1]
-            #for rvir_range_lin_i, hmf_i, ngal_i, pop_g_i
-            #in zip(rvir_range_lin, hmf, ngal, pop_g)])
-        """
         Pgm_2h = F_k2 * bias * array(
             [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
             for hmf_i, ngal_i, pop_g_i
@@ -658,7 +660,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gm.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gm_quest.png')
             plt.clf()
             plt.close()
     
@@ -672,10 +674,10 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gm_ratio.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gm_ratio_quest.png')
             plt.clf()
             plt.close()
-            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/Pgm.npy', np.array([setup['k_range_lin'], Pgm_k - [hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_k, Pgm_2h - [hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_2h], dtype=object), allow_pickle=True)
+            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/Pgm_quest.npy', np.array([setup['k_range_lin'], Pgm_k - [hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_k, Pgm_2h - [hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_2h], dtype=object), allow_pickle=True)
         #"""
     # Galaxy - galaxy spectra (for clustering)
     if observables.gg:
@@ -709,7 +711,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gg.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gg_quest.png')
             plt.clf()
             plt.close()
     
@@ -723,10 +725,10 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
             plt.xlim([1e-3,1e1])
             plt.legend()
             plt.show()
-            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gg_ratio.png')
+            plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/bnl_gg_ratio_quest.png')
             plt.clf()
             plt.close()
-            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/Pgg.npy', np.array([setup['k_range_lin'], Pgg_k - [hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_k, Pgg_2h - [hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_2h], dtype=object), allow_pickle=True)
+            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper/Pgg_quest.npy', np.array([setup['k_range_lin'], Pgg_k - [hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_k, Pgg_2h - [hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_2h], dtype=object), allow_pickle=True)
         #"""
     # Matter - matter spectra
     if observables.mm:
@@ -745,13 +747,18 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
 
 def calculate_surface_density_single(setup, observable, ingredients, xi2,
                                      rho_bg, z, nz, c_pm, output,
-                                     cosmo_model, zs):
+                                     cosmo_model, zs, bias):
     if observable.obstype == 'gm' and ingredients['nzlens']:
         surface_density = array(
             [[sigma(xi2_ij, rho_bg_i, setup['rvir_range_3d'],
                     setup['rvir_range_3d_interp'])
             for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
         z = expand_dims(z, -1)
+    if observable.obstype == 'gg' and setup['kaiser_correction']:
+        surface_density = array(
+            [wp_beta_correction(xi2_i, setup['rvir_range_3d'],
+             setup['rvir_range_3d_interp'], cosmo_model.Om, bias_i, setup['pi_max'], rho_i)
+            for xi2_i, rho_i, bias_i in zip(xi2, rho_bg, bias)])
     else:
         surface_density = array(
             [sigma(xi2_i, rho_i, setup['rvir_range_3d'],
@@ -812,7 +819,7 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
 
 def calculate_surface_density(setup, observables, ingredients,
                               xi_gm, xi_gg, xi_mm, rho_bg, z, nz, c_pm,
-                              output, cosmo_model, zs):
+                              output, cosmo_model, zs, bias):
     # dummy
     sigma_gm = None
     sigma_gg = None
@@ -821,19 +828,19 @@ def calculate_surface_density(setup, observables, ingredients,
     if observables.gm:
         output, sigma_gm = calculate_surface_density_single(
             setup, observables.gm, ingredients, xi_gm, rho_bg, z, nz, c_pm,
-            output, cosmo_model, zs)
+            output, cosmo_model, zs, bias)
         if setup['return'] == 'all':
             output.append(sigma_gm)
     if observables.gg:
         output, sigma_gg = calculate_surface_density_single(
             setup, observables.gg, ingredients, xi_gg, rho_bg, z, nz, c_pm,
-            output, cosmo_model, zs)
+            output, cosmo_model, zs, bias)
         if setup['return'] == 'all':
             output.append(sigma_gg)
     if observables.mm:
         output, sigma_mm = calculate_surface_density_single(
             setup, observables.mm, ingredients, xi_mm, rho_bg, z, nz, c_pm,
-            output, cosmo_model, zs)
+            output, cosmo_model, zs, bias)
         if setup['return'] == 'all':
             output.append(sigma_mm)
 

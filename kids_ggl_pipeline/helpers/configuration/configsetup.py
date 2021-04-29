@@ -1,6 +1,8 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import numpy as np
+import distutils
+import distutils.util
 
 
 _default_entries = {
@@ -32,6 +34,8 @@ _default_values = {
     'R_unit': 'Mpc',
     'esd_unit': 'Msun/pc^2',
     'cov_unit': 'Msun^2/pc^4',
+    'pi_max': 100,
+    'kaiser_correction': 'False',
     }
 
 _necessary_entries = {
@@ -44,6 +48,8 @@ _necessary_entries = {
         ' Ignored if the lensing observable is kappa.',
     'cov_unit': 'units of the lensing covariance.' \
         ' Ignored if the lensing observable is kappa.',
+    'pi_max': 'projection length for wp',
+    'kaiser_correction': 'Kaiser effect correction for wp',
     }
 
 _valid_entries = {
@@ -68,6 +74,8 @@ _valid_entries = {
     'R_unit': str,
     'esd_unit': str,
     'cov_unit': str,
+    'pi_max': float,
+    'kaiser_correction': ('True', 'False'),
     }
 
 
@@ -94,6 +102,7 @@ def add_mass_range(setup):
 def add_rvir_range(setup):
     setup['rvir_range_3d'] = np.logspace(-3.2, 4, 250, endpoint=True)
     setup['rvir_range_3d_interp'] = np.logspace(-2.5, 1.2, 25, endpoint=True)
+    #setup['rvir_range_3d_interp'] = np.logspace(-2.5, 2.5, 30, endpoint=True)
     return setup
 
 
@@ -149,6 +158,14 @@ def check_necessary_entries(setup):
             msg = 'setup entry "{0}" missing from config file'.format(key)
             raise ValueError(msg)
     return
+    
+    
+def convert_to_bool(setup):
+    for key, value in setup.items():
+        if key in ['kaiser_correction']:
+            setup[key] = bool(distutils.util.strtobool(setup[key]))
+    
+    return setup
 
 
 def check_setup(setup):
@@ -159,6 +176,7 @@ def check_setup(setup):
     setup = add_mass_range(setup)
     setup = add_rvir_range(setup)
     setup = add_wavenumber(setup)
+    setup = convert_to_bool(setup)
     return setup
 
 

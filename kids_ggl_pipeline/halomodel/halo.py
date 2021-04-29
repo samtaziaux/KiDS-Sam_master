@@ -270,7 +270,7 @@ def model(theta, R):
         wp_out_i = np.array(
             [UnivariateSpline(setup['rvir_range_3d_interp'], np.nan_to_num(wi/rho_i),
                               s=0)
-             for wi, rho_i in zip(sigma_gg, rho_bg)])
+             for wi, rho_i in zip(sigma_gg, rho_bg[observables.gg.idx])])
         wp_out = [wp_i(r_i) for wp_i, r_i
                   in zip(wp_out_i, observables.gg.R)]
         #output.append(wp_out)
@@ -752,18 +752,18 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
         surface_density = array(
             [[sigma(xi2_ij, rho_bg_i, setup['rvir_range_3d'],
                     setup['rvir_range_3d_interp'])
-            for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg)])
+            for xi2_ij in xi2_i] for xi2_i, rho_bg_i in zip(xi2, rho_bg[observable.idx])])
         z = expand_dims(z, -1)
     if observable.obstype == 'gg' and setup['kaiser_correction']:
         surface_density = array(
             [wp_beta_correction(xi2_i, setup['rvir_range_3d'],
-             setup['rvir_range_3d_interp'], cosmo_model.Om, bias_i, setup['pi_max'], rho_i)
-            for xi2_i, rho_i, bias_i in zip(xi2, rho_bg, bias)])
+             setup['rvir_range_3d_interp'], cosmo_model.Om(z_i), bias_i, setup['pi_max'], rho_i)
+            for xi2_i, rho_i, bias_i, z_i in zip(xi2, rho_bg[observable.idx], bias, z[observable.idx])])
     else:
         surface_density = array(
             [sigma(xi2_i, rho_i, setup['rvir_range_3d'],
              setup['rvir_range_3d_interp'])
-            for xi2_i, rho_i in zip(xi2, rho_bg)])
+            for xi2_i, rho_i in zip(xi2, rho_bg[observable.idx])])
 
     # esd pointmass is added at the end
     if observable.obstype == 'gm' and ingredients['pointmass'] \
@@ -774,11 +774,11 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
         surface_density = surface_density + pointmass
 
     if setup['distances'] == 'proper':
-        surface_density *= (1+z)**2
+        surface_density *= (1+z[observable.idx])**2
 
     if observable.obstype == 'gm':
         if setup['return'] == 'kappa':
-            surface_density /= sigma_crit(cosmo_model, z, zs)
+            surface_density /= sigma_crit(cosmo_model, z[observable.idx], zs)
         if ingredients['nzlens']:
             # haven't checked the denominator below
             norm = trapz(nz, z, axis=0)

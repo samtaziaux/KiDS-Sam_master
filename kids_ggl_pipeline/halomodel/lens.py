@@ -229,7 +229,6 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias, pi_max, rho_mean):
     # Gives the same resutls as wp above. :/
     
     c = UnivariateSpline(log10(r_i), corr, s=0, ext=1)
-    
     beta = omegam**0.6 / bias
     
     leg_0 = lambda x: 1.0
@@ -245,8 +244,8 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias, pi_max, rho_mean):
         int_j3 = lambda x: c(log10(x))*x**2.0
         int_j5 = lambda x: c(log10(x))*x**4.0
     
-        J_3[i] = (1.0/r_i[i]**3.0) * intg.cumtrapz((int_j3(x_int)), x_int, initial=None)[-1]
-        J_5[i] = (1.0/r_i[i]**5.0) * intg.cumtrapz((int_j5(x_int)), x_int, initial=None)[-1]
+        J_3[i] = (1.0/r_i[i]**3.0) * cumtrapz((int_j3(x_int)), x_int, initial=None)[-1]
+        J_5[i] = (1.0/r_i[i]**5.0) * cumtrapz((int_j5(x_int)), x_int, initial=None)[-1]
     
     J_3_interpolated = UnivariateSpline(log10(r_i), J_3, s=0, ext=1)
     J_5_interpolated = UnivariateSpline(log10(r_i), J_5, s=0, ext=1)
@@ -262,9 +261,9 @@ def wp_beta_correction(corr, r_i, r_x, omegam, bias, pi_max, rho_mean):
     for i in range(len(r_x)):
         x_int = np.linspace(0.0, pi_max, 1000, endpoint=True)
         
-        int_1[i] = intg.cumtrapz(np.nan_to_num(xi_0(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_0(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
-        int_2[i] = intg.cumtrapz(np.nan_to_num(xi_2(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_2(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
-        int_3[i] = intg.cumtrapz(np.nan_to_num(xi_4(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_4(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
+        int_1[i] = cumtrapz(np.nan_to_num(xi_0(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_0(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
+        int_2[i] = cumtrapz(np.nan_to_num(xi_2(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_2(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
+        int_3[i] = cumtrapz(np.nan_to_num(xi_4(np.sqrt(r_x[i]**2.0 + x_int**2.0)) * leg_4(x_int/np.sqrt(r_x[i]**2.0 + x_int**2.0))), x_int, initial=None)[-1]
     
     w_p = 2.0 * (int_1 + int_2 + int_3)
     

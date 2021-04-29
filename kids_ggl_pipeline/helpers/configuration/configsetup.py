@@ -101,8 +101,8 @@ def add_mass_range(setup):
 
 def add_rvir_range(setup):
     setup['rvir_range_3d'] = np.logspace(-3.2, 4, 250, endpoint=True)
-    setup['rvir_range_3d_interp'] = np.logspace(-2.5, 1.2, 25, endpoint=True)
-    #setup['rvir_range_3d_interp'] = np.logspace(-2.5, 2.5, 30, endpoint=True)
+    #setup['rvir_range_3d_interp'] = np.logspace(-2.5, 1.2, 25, endpoint=True)
+    setup['rvir_range_3d_interp'] = np.logspace(-2.5, 2.5, 30, endpoint=True)
     return setup
 
 

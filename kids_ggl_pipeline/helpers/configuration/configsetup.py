@@ -34,7 +34,7 @@ _default_values = {
     'R_unit': 'Mpc',
     'esd_unit': 'Msun/pc^2',
     'cov_unit': 'Msun^2/pc^4',
-    'pi_max': 100,
+    'pi_max': 100.0,
     'kaiser_correction': 'False',
     }
 
@@ -74,7 +74,7 @@ _valid_entries = {
     'R_unit': str,
     'esd_unit': str,
     'cov_unit': str,
-    'pi_max': float,
+    'pi_max': str,
     'kaiser_correction': ('True', 'False'),
     }
 
@@ -128,6 +128,7 @@ def append_entry(line, setup):
             break
         except ValueError:
             pass
+            
     return setup
 
 
@@ -164,7 +165,9 @@ def convert_to_bool(setup):
     for key, value in setup.items():
         if key in ['kaiser_correction']:
         # if value in ['True', 'False']: ????
-            setup[key] = bool(distutils.util.strtobool(setup[key]))
+            setup[key] = bool(distutils.util.strtobool(value))
+        if key in ['pi_max']:
+            setup[key] = np.array(value.split(','), dtype=np.float)
     
     return setup
 

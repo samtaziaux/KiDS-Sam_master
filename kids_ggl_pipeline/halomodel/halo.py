@@ -757,8 +757,8 @@ def calculate_surface_density_single(setup, observable, ingredients, xi2,
     if observable.obstype == 'gg' and setup['kaiser_correction']:
         surface_density = array(
             [wp_beta_correction(xi2_i, setup['rvir_range_3d'],
-             setup['rvir_range_3d_interp'], cosmo_model.Om(z_i), bias_i, setup['pi_max'], rho_i)
-            for xi2_i, rho_i, bias_i, z_i in zip(xi2, rho_bg[observable.idx], bias, z[observable.idx])])
+             setup['rvir_range_3d_interp'], cosmo_model.Om(z_i), bias_i, pi, rho_i)
+            for xi2_i, rho_i, bias_i, z_i, pi in zip(xi2, rho_bg[observable.idx], bias, z[observable.idx], setup['pi_max'])])
     else:
         surface_density = array(
             [sigma(xi2_i, rho_i, setup['rvir_range_3d'],

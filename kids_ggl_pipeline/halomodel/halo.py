@@ -144,7 +144,8 @@ def model(theta, R):
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
-    ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range)
+    ngal = calculate_ngal(observables, pop_g, dndm, mass_range)
+    meff = calculate_meff(observables, pop_c, dndm, mass_range)
 
     # Luminosity or mass function as an output:
     if observables.mlf:
@@ -483,25 +484,32 @@ def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta, setup, cos
     return mlf_out
 
 
-def calculate_ngal(observables, pop_g, dndm, mass_range):
+def calculate_ngal(observables, pop, dndm, mass_range):
     ngal = np.zeros(observables.nbins)
-    meff = np.zeros(observables.nbins)
     if observables.gm:
         ngal[observables.gm.idx] = hod.nbar(
-            dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range)
-        meff[observables.gm.idx] = hod.Mh_effective(
-            dndm[observables.gm.idx], pop_g[observables.gm.idx], mass_range,
-            return_log=observables.gm.is_log)
+            dndm[observables.gm.idx], pop[observables.gm.idx], mass_range)
     if observables.gg:
         ngal[observables.gg.idx] = hod.nbar(
-            dndm[observables.gg.idx], pop_g[observables.gg.idx], mass_range)
-        meff[observables.gg.idx] = hod.Mh_effective(
-            dndm[observables.gg.idx], pop_g[observables.gg.idx], mass_range,
-            return_log=observables.gg.is_log)
+            dndm[observables.gg.idx], pop[observables.gg.idx], mass_range)
     if observables.mm:
         ngal[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
+    return ngal
+    
+    
+def calculate_meff(observables, pop, dndm, mass_range):
+    meff = np.zeros(observables.nbins)
+    if observables.gm:
+        meff[observables.gm.idx] = hod.Mh_effective(
+            dndm[observables.gm.idx], pop[observables.gm.idx], mass_range,
+            return_log=observables.gm.is_log)
+    if observables.gg:
+        meff[observables.gg.idx] = hod.Mh_effective(
+            dndm[observables.gg.idx], pop[observables.gg.idx], mass_range,
+            return_log=observables.gg.is_log)
+    if observables.mm:
         meff[observables.mm.idx] = np.zeros_like(observables.mm.nbins)
-    return ngal, meff
+    return meff
 
 
 def calculate_Pgg(setup, observables, ingredients, hmf, mass_range, dndm,

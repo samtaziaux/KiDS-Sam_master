@@ -42,7 +42,7 @@ from .lens import (
     power_to_corr_ogata, wp, wp_beta_correction, power_to_sigma, power_to_sigma_ogata)
 from .dark_matter import (
     mm_analy, gm_cen_analy, gm_sat_analy, gg_cen_analy,
-    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion, beta_nl)
+    gg_sat_analy, gg_cen_sat_analy, two_halo_gm, two_halo_gg, halo_exclusion, beta_nl, beta_nl_darkquest)
 from .covariance import covariance
 from .. import hod
 
@@ -173,7 +173,7 @@ def model(theta, R):
 
     # spectra that are not required are just dummy variables
     Pgm, Pgg, Pmm = calculate_power_spectra(
-            setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
+            setup, observables, ingredients, hmf, cosmo_model, n_s, mass_range, dndm, rho_bg,
             c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, z)
     if observables.gm:
         Pgm_c, Pgm_s, Pgm_2h = Pgm
@@ -607,7 +607,7 @@ def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
     return Pmm_1h, Pmm_2h
 
 
-def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
+def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n_s, mass_range,
                             dndm, rho_bg, c_twohalo, s_beta, pop_g, pop_c,
                             pop_s, uk_c, uk_s, ngal, z):
     """Wrapper to calculate gm, gg, and/or mm power spectra"""
@@ -615,7 +615,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
     bias = c_twohalo
     bias = array([bias]*setup['k_range_lin'].size).T
     if setup['delta_ref'] == 'SOCritical':
-        bias = bias * omegam
+        bias = bias * cosmo_model.Om0
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(setup['k_range_lin']/0.1)
@@ -625,12 +625,16 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
     output = [[], [], []]
 
     if ingredients['bnl']:
-        from .tools import read_mead_data
-        # read in Alex Mead BNL table:
-        beta_interp = read_mead_data()
         #import dill as pickle
-        #with open('/net/home/fohlen12/dvornik/interpolator_BNL_test_i.npy', 'rb') as dill_file:
+        #with open('/net/home/fohlen12/dvornik/interpolator_BNL_test_quest.npy', 'rb') as dill_file:
         #    beta_interp = pickle.load(dill_file)
+        lnAs = 3.094
+        cparam = np.array([cosmo_model.Ob0*cosmo_model.h**2.0, cosmo_model.Odm0*cosmo_model.h**2.0, cosmo_model.Ode0, lnAs, n_s, cosmo_model.w0]) # array for cosmological parameters [wb, wc, Om_w, lnAs, ns, w]
+        Mt = np.logspace(12.0, 14.0, 5)
+        kt = np.logspace(-2.0, 1.5, 50)
+        zt = np.linspace(0.0, 0.5, 5)
+        beta_interp = beta_nl_darkquest(cparam, Mt, kt, zt)
+        #print(beta_interp([[0.5, 12.3, 12.8, 1e-1], [0.2, 12.3, 12.8, 1e-1]]))
 
     if observables.gm:
         if ingredients['bnl']:

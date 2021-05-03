@@ -42,7 +42,8 @@ setup(name='kids_ggl_pipeline',
                         'healpy>1.13.0',
                         'psutil>=3.2.1',
                         'gitpython>=3.1',
-                        'dill>=0.3'],
+                        'dill>=0.3',
+                        'dark-emulator==1.0.21'],
       zip_safe=False
       )
 

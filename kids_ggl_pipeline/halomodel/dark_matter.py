@@ -7,10 +7,15 @@ import time
 import matplotlib.pyplot as pl
 import numpy as np
 import sys
+import os
 from numpy import cos, expand_dims, pi, sin, piecewise
 from scipy.integrate import simps, trapz
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, RegularGridInterpolator
 import scipy.special as sp
+
+from dark_emulator import darkemu
+import dill as pickle
+import shutil
 
 if sys.version_info[0] == 3:
     xrange = range
@@ -310,16 +315,68 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     re = beta_interp(values)
     beta_i[indices[:,0], indices[:,1], indices[:,2]] = re - 1.0
     #print(time.time()-to)
-    idx = np.where(values[:,-1] < 0.08)
-    beta_i[indices[idx,0], indices[idx,1], indices[idx,2]] = 0.0
+    #idx = np.where(values[:,-1] < 0.08)
+    #beta_i[indices[idx,0], indices[idx,1], indices[idx,2]] = 0.0
     
     intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
     intg2 = expand_dims(population_2 * hmf.dndm * bias, -1) * trapz(intg1, Mh, axis=1)
     beta = trapz(intg2, Mh, axis=0) / (norm_1*norm_2)
     
     return beta
+    
+    
+def beta_nl_darkquest(cparam, M, k, z):
 
+    path0 = os.getcwd()
+    
+    if os.path.exists(os.path.join(path0, 'interpolator_BNL_DQ.npy')):
+        with open(os.path.join(path0, 'interpolator_BNL_DQ.npy'), 'rb') as dill_file:
+            beta_interp = pickle.load(dill_file)
+        return beta_interp
+    else:
 
+        sys.stdout = open(os.devnull, 'w')
+        emulator = darkemu.base_class()
+        sys.stdout = sys.__stdout__
+
+        emulator.set_cosmology(cparam)
+
+        # Parameters
+        klin = np.array([0.02])  # Large 'linear' scale for linear halo bias [h/Mpc]
+        #to = time.time()
+    
+        # Calculate beta_NL by looping over mass arrays
+        beta_func = np.zeros((len(z), len(M), len(M), len(k)))
+        b = np.zeros(len(M))
+        for iz1, z1 in enumerate(z):
+            # Linear power
+            Pk_lin = emulator.get_pklin_from_z(k, z1)
+            Pk_klin = emulator.get_pklin_from_z(klin, z1)
+            for iM, M0 in enumerate(M):
+                b[iM] = np.sqrt(emulator.get_phh_mass(klin, M0, M0, z1)/Pk_klin)
+            for iM1, M1 in enumerate(M):
+                for iM2, M2 in enumerate(M):
+                    if iM2 < iM1:
+                        # Use symmetry to not double calculate
+                        beta_func[iz1, iM1, iM2, :] = beta_func[iz1, iM2, iM1, :]
+                    else:
+                        # Halo-halo power spectrum
+                        Pk_hh = emulator.get_phh_mass(k, M1, M2, z1)
+                
+                        # Linear halo bias
+                        b1 = b[iM1]
+                        b2 = b[iM2]
+                    
+                        # Create beta_NL
+                        beta_func[iz1, iM1, iM2, :] = Pk_hh/(b1*b2*Pk_lin)#-1. #return 1+beta to be defined as AM data.
+                    
+        #print(time.time()-to)
+        beta = RegularGridInterpolator([z, np.log10(M), np.log10(M), k], beta_func, fill_value=1.0, bounds_error=False)
+        with open(os.path.join(path0, 'interpolator_BNL_DQ.npy'), 'wb') as dill_file:
+            pickle.dump(beta, dill_file)
+        return beta
+    
+    
 """
 # Spectrum 1-halo components for dark matter.
 """

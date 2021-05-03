@@ -16,7 +16,9 @@ _default_entries = {
     # these three used only for mock production
     'logR_bins': 'number of (log-spaced) bins in lens-source separation',
     'logR_max': 'maximum value of logR for mock observations',
-    'logR_min': 'minimum value of logR for mock observations'
+    'logR_min': 'minimum value of logR for mock observations',
+    'pi_max': 'projection length for wp',
+    'kaiser_correction': 'Kaiser effect correction for wp',
     }
 
 _default_values = {
@@ -48,8 +50,6 @@ _necessary_entries = {
         ' Ignored if the lensing observable is kappa.',
     'cov_unit': 'units of the lensing covariance.' \
         ' Ignored if the lensing observable is kappa.',
-    'pi_max': 'projection length for wp',
-    'kaiser_correction': 'Kaiser effect correction for wp',
     }
 
 _valid_entries = {

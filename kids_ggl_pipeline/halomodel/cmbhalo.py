@@ -86,13 +86,10 @@ def model(theta, R):
     # alias
     Mh = setup['mass_range']
 
-    #assert setup['delta_ref'] in ('critical', 'matter')
-
     # satellite parameters in the config file are ignored;
     # they may or may not be present
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_mis, c_twohalo = theta[:7]
-        #s_concentration, s_mor, s_scatter, s_beta = theta
 
     Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
         = cosmo
@@ -102,6 +99,7 @@ def model(theta, R):
         H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=[m_nu,0,0]*u.eV,
         Neff=Neff, w0=w0, wa=wa)
     ic(cosmo_model)
+    ic(sigma8)
     # CCL (for 2-halo things)
     cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
     mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
@@ -709,8 +707,6 @@ def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.0, backend='ccl'):
     # this order is fixed in helpers.configuration.core.CosmoSection.__init__
     Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
         = cosmo_params
-    ic(m_nu)
-    ic(Neff)
     if backend == 'ccl':
         cosmo = ccl.Cosmology(
             Omega_c=Om0-Ob0, Omega_b=Ob0, h=h, sigma8=sigma8, n_s=n_s,

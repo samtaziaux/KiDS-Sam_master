@@ -399,7 +399,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     """
     lnprior_total = priors.calculate_lnprior(
         lnprior, theta, prior_types, parameters, jfree)
-    print('lnprior_total =', lnprior_total)
+    ic(lnprior_total)
     if not isfinite(lnprior_total):
         if args.demo:
             return -inf, fail_value

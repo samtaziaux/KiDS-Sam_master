@@ -58,6 +58,9 @@ from .tools import load_hmf
 from .. import hod
 from ..helpers import io
 from ..helpers._debugging import plot_profile_mz
+# debugging
+from ..helpers._debugging import import_icecream
+ic = import_icecream()
 
 
 
@@ -69,6 +72,7 @@ from ..helpers._debugging import plot_profile_mz
 
 
 debug = ('--debug' in sys.argv)
+
 
 def model(theta, R):
     """CMB halo modeling"""
@@ -95,8 +99,9 @@ def model(theta, R):
 
     # astropy (for profiley)
     cosmo_model = Flatw0waCDM(
-        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=m_nu*u.eV,
+        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=[m_nu,0,0]*u.eV,
         Neff=Neff, w0=w0, wa=wa)
+    ic(cosmo_model)
     # CCL (for 2-halo things)
     cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
     mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
@@ -701,15 +706,19 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
 
 
 def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.0, backend='ccl'):
-    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo_params[:9]
+    # this order is fixed in helpers.configuration.core.CosmoSection.__init__
+    Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
+        = cosmo_params
+    ic(m_nu)
+    ic(Neff)
     if backend == 'ccl':
         cosmo = ccl.Cosmology(
-            Omega_c=omegam-omegab, Omega_b=omegab, h=h, sigma8=sigma8, n_s=n_s,
-            T_CMB=Tcmb, Neff=Neff, m_nu=m_nu, w0=w0, wa=wa)
+            Omega_c=Om0-Ob0, Omega_b=Ob0, h=h, sigma8=sigma8, n_s=n_s,
+            T_CMB=Tcmb0, Neff=Neff, m_nu=m_nu, w0=w0, wa=wa)
     elif backend == 'astropy':
         cosmo = halo.load_cosmology(cosmo_params)[0]
     # colossus (for mass-concentration relation)
-    params = dict(Om0=omegam, H0=100*h, ns=n_s, sigma8=sigma8, Ob0=omegab)
+    params = dict(Om0=Ob0, H0=100*h, ns=n_s, sigma8=sigma8, Ob0=Ob0)
     colossus_cosmology.setCosmology('cosmo', params)
     return cosmo
 

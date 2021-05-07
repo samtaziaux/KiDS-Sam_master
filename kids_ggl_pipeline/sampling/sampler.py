@@ -34,6 +34,9 @@ if sys.version_info[0] == 2:
 from . import priors, sampling_utils
 from ..helpers import io, plotting
 from .. import __version__
+# debugging
+from ..helpers._debugging import import_icecream
+ic = import_icecream()
 
 
 def run(hm_options, options, args):
@@ -480,7 +483,10 @@ def update_parameters(theta, parameters, nparams, join, jfree, repeat):
     v1[where(jfree)] = theta
     # joined parameters
     v1_list = list(v1)
+    ic(join)
     for j in join[::-1]:
+        ic(j)
+        ic(v1[j])
         try:
             v1_list[j[0]] = np.array(v1[j], dtype=float)
         except ValueError:

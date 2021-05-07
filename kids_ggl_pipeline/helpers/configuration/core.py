@@ -10,6 +10,9 @@ from . import confighod, configsampler, configsetup, configcovar
 from ...halomodel import nfw, nfw_stack, halo, cmbhalo, covariance
 from ...halomodel.observables import ModelObservables, Observable
 from ...halomodel.selection import Selection
+# debugging
+from .._debugging import import_icecream
+ic = import_icecream()
 
 # local, if present
 try:
@@ -122,7 +125,6 @@ class ConfigSection(str):
             cosmo_params = [cosmo.values] \
                 + [len(cosmo.values)*[i] for i in (None,-np.inf,np.inf)]
             # also need to set prior parameters and starting values
-            print('these_params =', these_params)
             for j, name in enumerate(cosmo.names):
                 if name in these_names:
                     i = these_names.index(name)
@@ -135,8 +137,8 @@ class ConfigSection(str):
             these_names = cosmo.names
             these_params = cosmo_params
             these_priors = cosmo_priors
-            print()
-            print('these_params =', these_params)
+            ic()
+            ic(these_params)
         names.append(these_names)
         if self.name is None:
             return names, parameters, priors

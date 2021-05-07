@@ -1,11 +1,25 @@
 """KiDS-GGL Debugging utilities"""
 from matplotlib import pyplot as plt
 import numpy as np
+import sys
 
 from plottery.plotutils import colorscale, savefig, update_rcParams
 
 
 update_rcParams()
+
+
+def import_icecream():
+    try:
+        from icecream import ic
+        if '--debug' not in sys.argv:
+            ic.disable()
+    except ImportError:  # Graceful fallback if IceCream isn't installed.
+        if '--debug' in sys.argv:
+            ic = lambda *a: None if not a else (a[0] if len(a) == 1 else a)
+        else:
+            def ic(*args): return
+    return ic
 
 
 def plot_profile_mz(R, profile, z, mx=None, z0=1, m0=1e14, xscale='log',

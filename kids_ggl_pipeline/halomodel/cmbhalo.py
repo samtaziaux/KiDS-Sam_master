@@ -63,7 +63,6 @@ from ..helpers._debugging import import_icecream
 ic = import_icecream()
 
 
-
 #################
 ##
 ## Main function
@@ -96,13 +95,12 @@ def model(theta, R):
 
     # astropy (for profiley)
     cosmo_model = Flatw0waCDM(
-        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=[m_nu,0,0]*u.eV,
+        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=[0,0,m_nu]*u.eV,
         Neff=Neff, w0=w0, wa=wa)
-    ic(cosmo_model)
-    ic(sigma8)
     # CCL (for 2-halo things)
-    cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
-    mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
+    if setup['backend'] == 'ccl':
+        cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
+        mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
 
     # probably need to be careful with the normalization of the halo bias
     # function in CCL? See KiDS-GGL issue #184
@@ -116,27 +114,6 @@ def model(theta, R):
         nbins = observables.nbins
     output_array = np.empty(observables.nbins, dtype=object)
     #output_array = []
-
-    """
-    if ingredients['nzlens']:
-        nz = cosmo[9].T
-        size_cosmo = 10
-    else:
-        nz = None
-        # hard-coded
-        size_cosmo = 9
-    if observables.mlf:
-        z_mlf = cosmo[-1]
-        size_cosmo += 1
-
-    # cheap hack. I'll use this for CMB lensing, but we can
-    # also use this to account for difference between shear
-    # and reduced shear
-    if len(cosmo) == size_cosmo+1:
-        zs = cosmo[-1]
-    else:
-        zs = None
-    """
 
     z = halo.format_z(z, nbins)
     if debug:
@@ -182,13 +159,16 @@ def model(theta, R):
 
     ### halo mass function ###
 
-    if setup['backend'] == 'ccl' or debug:
+    if setup['backend'] == 'ccl':# or debug:
         if debug:
             delta_ref = str(setup['delta_ref'])
             if delta_ref not in ('matter', 'critical'):
                 setup['delta_ref'] = 'critical' if delta_ref == 'SOCritical' \
                     else 'matter'
             ti = time()
+            if setup['backend'] != 'ccl':
+                cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
+                mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
         hmf = ccl.halos.mass_function_from_name('Tinker10')
         hmf = hmf(cclcosmo, mass_def=mdef)
         # this is actually dndlog10m
@@ -199,7 +179,7 @@ def model(theta, R):
         if debug:
             print(f'ccl in {time()-ti:.2f} s')
             setup['delta_ref'] = str(delta_ref)
-    if setup['backend'] == 'hmf':# or debug:
+    if setup['backend'] == 'hmf' or debug:
         if debug:
             delta_ref = str(setup['delta_ref'])
             if delta_ref in ('matter', 'critical'):
@@ -212,7 +192,8 @@ def model(theta, R):
         if debug:
             print(f'hmf in {time()-ti:.2f} s')
             setup['delta_ref'] = str(delta_ref)
-    if debug and False:
+    if debug:
+        ic(dndm)
         print('dndm =', dndm / np.max(dndm, axis=1)[:,None])
         print('dndm_hmf =', dndm_hmf / np.max(dndm_hmf, axis=1)[:,None])
         print()
@@ -232,7 +213,7 @@ def model(theta, R):
         observables, output['pop_g'], dndm, Mh)
     info(output, 'pop_g')
     if debug:
-        print('ngal =', ngal/ngal.max())
+        print('ngal =', ngal)#/ngal.max())
         print('logMh_eff =', logMh_eff.shape)
 
     mass_norm = trapz(dndm*output['pop_g'], Mh, axis=1)
@@ -434,14 +415,18 @@ def preamble(theta):
         raise ValueError(msg)
     assert setup['distances'] in ('comoving', 'physical', 'proper')
 
-    if setup['delta_ref'] == 'SOCritical': setup['delta_ref'] = 'critical'
-    else: setup['delta_ref'] = 'matter'
+    if setup['backend'] == 'ccl':
+        if setup['delta_ref'] == 'SOCritical': setup['delta_ref'] = 'critical'
+        else: setup['delta_ref'] = 'matter'
+    else:
+        if setup['delta_ref'] == 'critical': setup['delta_ref'] = 'SOCritical'
+        elif setup['delta_ref'] == 'matter': setup['delta_ref'] = 'SOMean'
 
     # for now
     setup['return'] = [setup['return']]
 
-    #cclcosmo = define_cosmology(params[0])
-    setup['bias_func'] = ccl.halos.halo_bias_from_name('Tinker10')
+    if setup['backend'] == 'ccl':
+        setup['bias_func'] = ccl.halos.halo_bias_from_name('Tinker10')
 
     # read measurement binning scheme if filtering
     if setup['kfilter']:

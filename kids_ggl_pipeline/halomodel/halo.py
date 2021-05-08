@@ -129,9 +129,10 @@ def model(theta, R):
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range)
-    if debug:
+    if debug or True:
+        print('dndm =', dndm)
         print('dndm =', dndm/np.max(dndm, axis=1)[:,None])
-        print('ngal =', ngal/ngal.max())
+        print('ngal =', ngal)#/ngal.max())
 
     # Luminosity or mass function as an output:
     if observables.mlf:

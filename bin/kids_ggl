@@ -13,6 +13,17 @@ from kids_ggl_pipeline.sampling import sampler, sampling_utils
 from kids_ggl_pipeline.halomodel import hm_utils
 from kids_ggl_pipeline.helpers import configuration
 
+if '--debug' not in sys.argv:
+    import numpy as np
+    import warnings
+    try:
+        import pyccl as ccl
+        warnings.filterwarnings('ignore', category=ccl.CCLWarning)
+    except ImportError:
+        pass
+    for w in (FutureWarning, np.VisibleDeprecationWarning):
+        warnings.filterwarnings('ignore', category=w)
+
 
 def main():
 

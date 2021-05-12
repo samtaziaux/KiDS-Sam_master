@@ -309,10 +309,10 @@ def model(theta, R):
             output[observables.gm.idx] = esd_gm
             output = list(output)
             output = [output, meff]
-    if ingredients['bnl']:
-        np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/delta_sigma_bnl_quest_direct_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
-    else:
-        np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/delta_sigma_fid_quest_direct_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
+    #if ingredients['bnl']:
+    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/delta_sigma_bnl_quest_direct_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
+    #else:
+    #    np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/delta_sigma_fid_quest_direct_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([observables.gm.R, observables.gg.R, esd_gm, wp_out], dtype=object), allow_pickle=True)
     # Finally!
     return output
 
@@ -660,7 +660,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
                 = np.sum(nz*meff[observables.gm.idx], axis=0) \
                     / np.sum(nz, axis=0)
         output[0] = (Pgm_c, Pgm_s, Pgm_2h)
-        #"""
+        """
         if ingredients['bnl']:
             plt.plot(setup['k_range_lin'], Pgm_k[0] - hmf[observables.gm.idx][0].power*Igm[0], label='Total')
             plt.plot(setup['k_range_lin'], Pgm_k[0], label='Total+BNL')
@@ -711,7 +711,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
         else:
             Pgg_k = Pgg_c + 2*Pgg_cs + Pgg_s + Pgg_2h
         output[1] = (Pgg_c, Pgg_s, Pgg_cs, Pgg_2h)
-        #"""
+        """
         if ingredients['bnl']:
             plt.plot(setup['k_range_lin'], Pgg_k[0] - hmf[observables.gg.idx][0].power*Igg[0], label='Total')
             plt.plot(setup['k_range_lin'], Pgg_k[0], label='Total+BNL')

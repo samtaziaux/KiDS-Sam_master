@@ -8,9 +8,8 @@ _default_entries = {
     'gauss': 'calculate the gaussian part of the covariance? [bool]',
     'non_gauss': 'calculate the non-gaussian part of the covariance? [bool]',
     'ssc': 'calculate the super-sample part of the covariance? [bool]',
-    'mlf_gauss': 'calculate the gaussian part of the SMF/LF covariance? [bool]',
-    'mlf_ssc': 'calculate the super-sample part of the SMF/LF covariance? [bool]',
     'cross': 'calculate the cross terms between observables? [bool]',
+    'cross_mlf': 'calculate the cross terms between observables? [bool]',
     'subtract_randoms': 'is the signal from random points subtracted from the data? [bool]',
     'threads': 'number of threads to use to calculate the covariance matrix',
     'pi_max': 'integration length of the 3D clustering correlation function used to obtain w_p(r_p) [Mpc/h]',
@@ -41,9 +40,8 @@ _default_values = {
     'gauss': 'True',
     'non_gauss': 'False',
     'ssc': 'False',
-    'mlf_gauss': 'False',
-    'mlf_ssc': 'False',
     'cross': 'True',
+    'cross_mlf': 'True',
     'subtract_randoms': 'False',
     'kids_sigma_crit': 'False',
     'z_epsilon': 0.0,
@@ -71,9 +69,8 @@ _valid_entries = {
     'gauss': ('True', 'False'),
     'non_gauss': ('True', 'False'),
     'ssc': ('True', 'False'),
-    'mlf_gauss': ('True', 'False'),
-    'mlf_ssc': ('True', 'False'),
     'cross': ('True', 'False'),
+    'cross_mlf': ('True', 'False'),
     'subtract_randoms': ('True', 'False'),
     'kids_sigma_crit': ('True', 'False'),
     'z_epsilon': float,
@@ -140,7 +137,7 @@ def check_necessary_entries(covar):
 def convert_to_bool(covar):
     for key, value in covar.items():
         if key in ['healpy', 'gauss', 'non_gauss', 'ssc',
-                   'mlf_gauss', 'mlf_ssc', 'cross', 'subtract_randoms',
+                   'cross', 'cross_mlf', 'subtract_randoms',
                    'kids_sigma_cirt', 'lens_photoz', 'lens_photoz_zdep']:
         # if value in ['True', 'False']: ????
             covar[key] = bool(distutils.util.strtobool(covar[key]))

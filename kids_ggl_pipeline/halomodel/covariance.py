@@ -1101,6 +1101,7 @@ def covariance(theta, R):
     non_gauss = covar['non_gauss']
     ssc = covar['ssc']
     cross = covar['cross']
+    cross_mlf = covar['cross_mlf']
     subtract_randoms = covar['subtract_randoms'] #False # if randoms are not subtracted, this will increase the error bars
     nproc = covar['threads'] #4
     
@@ -1246,7 +1247,7 @@ def covariance(theta, R):
         M_center = vmax_data[:,0]
         vmax_in = vmax_data[:,1]
         vmax_inter = UnivariateSpline(10.0**M_center, vmax_in, s=0, ext=0)
-        vmax = [vmax_inter(i)for i in observables.mlf.R]
+        vmax = [vmax_inter(i) for i in observables.mlf.R]
     
     
     """
@@ -1455,18 +1456,17 @@ def covariance(theta, R):
         if observables.gm and observables.gg and cross:
             cov_cross_gauss = parallelise(calc_cov_gauss, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_gm_func, P_gg_func, P_mm_func, area_norm_term, W_p, Pi_max, shape_noise, ngal, rho_bg, 'cross', subtract_randoms, observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_gauss
-            
+        
         if observables.mlf:
             print('Calculating the Gaussian part of the SMF/LF covariance...')
             cov_mlf_gauss = parallelise(calc_cov_mlf_sn, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, mlf_out, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_gauss
-        if observables.mlf and observables.gm and cross:
+        if observables.mlf and observables.gm and cross_mlf:
             cov_mlf_cross_gauss_gm = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
             cov_mlf_cross_gm_tot += cov_mlf_cross_gauss_gm
-        if observables.mlf and observables.gg and cross:
+        if observables.mlf and observables.gg and cross_mlf:
             cov_mlf_cross_gauss_gg = parallelise(calc_cov_mlf_cross_sn, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, area_norm_term, count_b_interp, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
             cov_mlf_cross_gg_tot += cov_mlf_cross_gauss_gg
-        
 
     if ssc:
         print('Calculating the super-sample covariance...')
@@ -1479,19 +1479,18 @@ def covariance(theta, R):
         if observables.gm and observables.gg and cross:
             cov_cross_ssc = parallelise(calc_cov_ssc, nproc, cov_cross.copy(), observables.gg.R, observables.gm.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, area_norm_term, bias_num, survey_var, rho_bg, 'cross', observables.gg.idx, observables.gm.idx, observables.gg.size, observables.gm.size, covar)
             cov_cross_tot += cov_cross_ssc
-            
+        
         if observables.mlf:
             print('Calculating the SMF/LF super-sample covariance...')
             cov_mlf_ssc = parallelise(calc_cov_mlf_ssc, nproc, cov_mlf.copy(), observables.mlf.R, observables.mlf.R, vmax, m_bin, area_sur, mlf_til, survey_var_mlf, observables.mlf.size, observables.mlf.size, covar)
             cov_mlf_tot += cov_mlf_ssc
-        if observables.mlf and observables.gm and cross:
+        if observables.mlf and observables.gm and cross_mlf:
             cov_mlf_cross_ssc_gm = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gm.copy(), observables.gm.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gm', observables.gm.idx, observables.mlf.idx, observables.gm.size, observables.mlf.size, covar)
             cov_mlf_cross_gm_tot += cov_mlf_cross_ssc_gm
-        if observables.mlf and observables.gg and cross:
+        if observables.mlf and observables.gg and cross_mlf:
             cov_mlf_cross_ssc_gg = parallelise(calc_cov_mlf_cross_ssc, nproc, cov_mlf_cross_gg.copy(), observables.gg.R, observables.mlf.R, P_lin_inter, dlnk3P_lin_interdlnk, P_gm_func, P_gg_func, I_g_func, I_inter_m, I_gg_func, I_gm_func, mlf_til, area_norm_term, bias_num, survey_var, survey_var_mlf, rho_bg, 'gg', observables.gg.idx, observables.mlf.idx, observables.gg.size, observables.mlf.size, covar)
             cov_mlf_cross_gg_tot += cov_mlf_cross_ssc_gg
-    
-
+        
     if non_gauss:
         print('Calculating the connected (non-Gaussian) part of the covariance...')
         if observables.gm:
@@ -1553,7 +1552,12 @@ def covariance(theta, R):
         cov_block = np.block([[cov_esd_tot, cov_cross_tot.T, cov_mlf_cross_gm_tot],
                             [cov_cross_tot, cov_wp_tot, cov_mlf_cross_gg_tot],
                             [cov_mlf_cross_gm_tot.T, cov_mlf_cross_gg_tot.T, cov_mlf_tot]])
-    
+    detC = np.linalg.det(cov_block)
+    if detC < 0:
+        print('WARNING: Determinant of the covariance is negative!')
+    if np.isnan(detC):
+        print('WARNING: At least one entry of the covariace matrix is NaN!')
+        
     return cov_block
 
 

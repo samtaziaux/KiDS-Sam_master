@@ -90,6 +90,7 @@ def model(theta, R):
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_mis, c_twohalo = theta[:7]
 
+    # this order is fixed in helpers.configuration.core.CosmoSection.__init__
     Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
         = cosmo
 
@@ -97,7 +98,7 @@ def model(theta, R):
     cosmo_model = Flatw0waCDM(
         H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=[0,0,m_nu]*u.eV,
         Neff=Neff, w0=w0, wa=wa)
-    # CCL (for 2-halo things)
+    # CCL (for 2-halo things and mass function)
     if setup['backend'] == 'ccl':
         cclcosmo = define_cosmology(cosmo, Tcmb=Tcmb0, m_nu=m_nu)
         mdef = ccl.halos.MassDef(setup['delta'], setup['delta_ref'])
@@ -198,7 +199,7 @@ def model(theta, R):
         print('dndm_hmf =', dndm_hmf / np.max(dndm_hmf, axis=1)[:,None])
         print()
         print('dndm_hmf/dndm - 1 =', dndm_hmf/dndm - 1)
-        sys.exit()
+        #sys.exit()
     if setup['backend'] == 'hmf':
         hmf = hmf_hmf
         dndm = dndm_hmf
@@ -281,13 +282,13 @@ def model(theta, R):
             output[key1h] = (1-c_mis[1])*output[f'{key1h}.off'] \
                 + c_mis[1]*output[f'{key1h}.cent']
 
-        output[profile_name] = output[key1h]
+        output[profile_name] = 1 * output[key1h]
 
         if ingredients['twohalo']:
             # this only does kappa for now
             output = calculate_twohalo(
                 output, setup, observables, ingredients, cclcosmo, mdef,
-                dndm, z, profiles, c_pm, mass_norm)
+                dndm, z, profiles, c_pm, c_twohalo, mass_norm)
 
             #if profile_name in retvalues or key2h in retvalues:
                 #plot_profile_mz(R, np.transpose(output['kappa.2h.mz'], axes=(1,2,0)),
@@ -302,7 +303,19 @@ def model(theta, R):
             print_output(output)
             if debug:
                 print(profile_name, key2h)
+            ic(profile_name)
+            ic(output[profile_name].shape)
+            ic(output[profile_name][:,:,-1])
+            ic(key2h)
+            ic(output[key2h][:,:,-1])
             output[profile_name] += output[key2h]
+            ic(profile_name)
+            ic(profile_name)
+            ic(output[profile_name][:,:,-1])
+            ic(output[profile_name][:,:,-1]/output[key1h][:,:,-1])
+            if debug:
+                #sys.exit()
+                pass
 
         # later allow returning 1h and 2h separately (this will mean
         # filtering the profiles twice!)
@@ -323,7 +336,7 @@ def model(theta, R):
             if key not in retvalues:
                 continue
             output[key] = trapz(
-                (dndm*output['pop_g'])[:,None] * output[key1h],
+                (dndm*output['pop_g'])[:,None] * output[profile_name],
                 Mh, axis=2) / mass_norm[:,None]
             if debug:
                 print(f'weighted {key}: {output[key].shape}')
@@ -344,9 +357,7 @@ def model(theta, R):
         output_array = output['kappa']
     elif 'esd' in setup['return']:
         if setup['esd_unit'] != 'Msun/Mpc^2':
-            if debug: print('True')
             if setup['esd_unit'] == 'Msun/pc^2':
-                if debug: print('True')
                 output['esd'] /= 1e12
         #print('idx =', observables.gm.idx)
         #output_array[observables.gm.idx] = list(output['esd'])
@@ -416,8 +427,11 @@ def preamble(theta):
     assert setup['distances'] in ('comoving', 'physical', 'proper')
 
     if setup['backend'] == 'ccl':
-        if setup['delta_ref'] == 'SOCritical': setup['delta_ref'] = 'critical'
-        else: setup['delta_ref'] = 'matter'
+        if setup['delta_ref'] not in ('critical', 'matter'):
+            if setup['delta_ref'] == 'SOCritical':
+                setup['delta_ref'] = 'critical'
+            else:
+                setup['delta_ref'] = 'matter'
     else:
         if setup['delta_ref'] == 'critical': setup['delta_ref'] = 'SOCritical'
         elif setup['delta_ref'] == 'matter': setup['delta_ref'] = 'SOMean'
@@ -461,17 +475,19 @@ def preamble(theta):
     return theta
 
 
-def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
+def calculate_sigma_2h(setup, cclcosmo, mdef, z, A_2h, threads=1):
     # for tests
     out = {}
     a = 1 / (1+z[:,0])
     m = setup['mass_range']
     # matter power spectra
     k = setup['k_range_lin']
-    Pk = np.array([ccl.linear_matter_power(cclcosmo, k, ai) for ai in a])
+    Pk = np.array(
+        [ccl.linear_matter_power(cclcosmo, k, ai) for ai in a])
     # halo bias
     bias = setup['bias_func'](cclcosmo, mass_def=mdef)
-    bh = np.array([bias.get_halo_bias(cclcosmo, m, ai) for ai in a])
+    # A_2h can only be a constant in the current implementation
+    bh = A_2h * np.array([bias.get_halo_bias(cclcosmo, m, ai) for ai in a])
     Pgm = bh[:,:,None] * Pk[:,None]
     out['Pk'] = Pk
     info(out, 'Pk')
@@ -553,6 +569,9 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
     sigma_2h_z = lss.xi2sigma(
         setup['R2h'], Rxi, xi_z, rho_m, threads=1, full_output=False,
         integrator='scipy', run_test=False, verbose=2*debug)
+    # are we sure we need this? If so, should move to xi2sigma, probably
+    if setup['distances'] == 'comoving':
+        sigma_2h_z = (1 + z)**2 * sigma_2h_z
     if debug:
         plot_profile_mz(setup['R2h'], bh[:,:,None]*sigma_2h_z[:,None], z[:,0],
                         mx=m,
@@ -577,7 +596,7 @@ def calculate_sigma_2h(setup, cclcosmo, mdef, z, threads=1):
 
 
 def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
-                      dndm, z, profiles, c_pm, mass_norm):
+                      dndm, z, profiles, c_pm, A_2h, mass_norm):
     # I'm sort of assuming that the kfilter will always be for kappa
     setup['R2h'] = setup['Rfine'].T if setup['kfilter'] \
         else setup['rvir_range_3d_interp']
@@ -585,7 +604,8 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
         print('R2h =', setup['R2h'].shape)
 
     #ti = time()
-    output['sigma.2h.raw'] = calculate_sigma_2h(setup, cclcosmo, mdef, z)
+    output['sigma.2h.raw'] = calculate_sigma_2h(
+        setup, cclcosmo, mdef, z, A_2h)
     #tf = time()
     #print(f'calculate_sigma_2h in {tf-ti:.1f} s')
 
@@ -603,14 +623,16 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
     # and redshift
     retvalues = setup['return'] + setup['return_extra']
     if 'esd' in retvalues or 'esd.2h' in retvalues:
-        output['esd.2h.mz.raw'] = np.transpose(
+        output['esd.2h.raw'] = np.transpose(
             [halo.calculate_esd(
                 setup, observables, ingredients, sigma_2h_m, c_pm)
              for sigma_2h_m in output['sigma.2h.raw'].swapaxes(0,1)],
+             #for sigma_2h_m in output['sigma.2h.raw']],
+            #axes=(1,0,2))
             axes=(1,0,2))
         if debug:
-            info(output, 'esd.2h.mz.raw')
-            plot_profile_mz(observables.gm.R[0], output['esd.2h.mz.raw'], z,
+            info(output, 'esd.2h.raw')
+            plot_profile_mz(observables.gm.R[0], output['esd.2h.raw'], z,
                             mx=setup['mass_range'], z0=0.46,
                             output='profiles_esd2h.png')
 
@@ -629,9 +651,11 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
 
     #print_output(output)
 
+    # there's a problem here: if kfilter then the name is kappa.2h.mz
+    # but if not the name is kappa.2h
     if setup['kfilter']:
-        output['kappa.2h.mz'] = filter_profiles(
-            ingredients, setup['kfilter'], output['kappa.2h.mz.raw'],
+        output['kappa.2h'] = filter_profiles(
+            ingredients, setup['kfilter'], output['kappa.2h.raw'],
             setup['bin_centers_fine'], setup['bin_edges'])
         #output['kappa.2h.mz.quadpy'] = filter_profiles(
             #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
@@ -640,7 +664,7 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
         for obs in ('kappa', 'esd'):
             if obs in retvalues or f'{obs}.2h' in retvalues:
                 output[f'{obs}.2h'] = np.transpose(
-                    output.pop(f'{obs}.2h.mz.raw'), axes=(0,2,1))
+                    output.pop(f'{obs}.2h.raw'), axes=(0,2,1))
 
                 info(output, f'{obs}.2h')
 
@@ -657,7 +681,7 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
     for obs in ('kappa', 'esd'):
         if obs in retvalues or f'{obs}.2h' in retvalues:
             output[f'{obs}.2h'] = trapz(
-                dndm * output[f'{obs}.2h.mz'], setup['mass_range'], axis=2) \
+                dndm * output[f'{obs}.2h'], setup['mass_range'], axis=2) \
                 / mass_norm
             #output[f'{obs}.2h'] = output[f'{obs}.2h'].T
             #print(f'in {time()-ti:.2f} s')
@@ -706,8 +730,10 @@ def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.0, backend='ccl'):
 
 def define_profiles(setup, cosmo, z, c_concentration):
     ref = setup['delta_ref']
+    # convert between hmf and CCL conventions
     ref = ref[0] if ref in ('critical', 'matter') \
         else ref[2].lower()
+    # are we using a KiDS-GGL function or a COLOSSUS function?
     if callable(c_concentration[0]):
         c = c_concentration[0](setup['mass_range'], *c_concentration[1:])
     else:

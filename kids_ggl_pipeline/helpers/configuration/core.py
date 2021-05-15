@@ -7,7 +7,7 @@ from six import string_types
 import sys
 
 from . import confighod, configsampler, configsetup, configcovar
-from ...halomodel import nfw, nfw_stack, halo, cmbhalo, covariance
+from ...halomodel import cluster, covariance, halo, nfw, nfw_stack
 from ...halomodel.observables import ModelObservables, Observable
 from ...halomodel.selection import Selection
 # debugging
@@ -137,8 +137,6 @@ class ConfigSection(str):
             these_names = cosmo.names
             these_params = cosmo_params
             these_priors = cosmo_priors
-            ic()
-            ic(these_params)
         names.append(these_names)
         if self.name is None:
             return names, parameters, priors
@@ -202,7 +200,7 @@ class ConfigFile(object):
         if self._valid_modules is None:
             _modules = {
                 'nfw': nfw, 'nfw_stack': nfw_stack, 'halo': halo,
-                'covariance': covariance, 'cmbhalo': cmbhalo}
+                'covariance': covariance, 'cluster': cluster}
             try:
                 _modules['models'] = models
             except NameError:

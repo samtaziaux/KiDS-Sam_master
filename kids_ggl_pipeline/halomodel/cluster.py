@@ -42,7 +42,8 @@ if sys.version_info[0] == 2:
     from itertools import izip as zip
     range = xrange
 
-# specific to cmbhalo
+# specific to the `cluster` model
+import colossus
 from colossus.cosmology import cosmology as colossus_cosmology
 from colossus.halo.concentration import concentration
 from profiley.nfw import NFW
@@ -74,7 +75,7 @@ debug = ('--debug' in sys.argv)
 
 
 def model(theta, R):
-    """CMB halo modeling"""
+    """Cluster lensing halo modeling"""
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
@@ -117,13 +118,9 @@ def model(theta, R):
     #output_array = []
 
     z = halo.format_z(z, nbins)
-    if debug:
-        print('z =', z.shape)
+    ic(z.shape)
 
     profiles = define_profiles(setup, cosmo_model, z, c_concentration)
-    if debug:
-        print('loaded profiles!')
-        #print('shape =', profiles.shape)
 
     # convert radii if necessary - this must be done here because it
     # depends on cosmology
@@ -133,13 +130,9 @@ def model(theta, R):
         else:
             arcmin2kpc = cosmo_model.kpc_comoving_per_arcmin
         arcmin2Mpc = arcmin2kpc(z).to(u.Mpc/u.arcmin).value
-        if debug:
-            print('R =', R, 'arcmin')
         # remember that the first element is a zero we added (and should remove)
         # for nfw_stack. I *think* we don't need it in the halo model at all
         R = np.array(R[:,1:] * arcmin2Mpc, dtype=float)
-        if debug:
-            print('R =', R, 'Mpc', R.shape, R.dtype)
         if setup['kfilter']:
             setup['Rfine'] \
                 = (setup['bin_centers_fine']*arcmin2Mpc).T
@@ -160,6 +153,7 @@ def model(theta, R):
 
     ### halo mass function ###
 
+    #hmf, dndm = define_hmf(setup, cosmo, cclcosmo)
     if setup['backend'] == 'ccl':# or debug:
         if debug:
             delta_ref = str(setup['delta_ref'])
@@ -401,7 +395,7 @@ def print_output(output):
 
 
 def preamble(theta):
-    """Preamble to cmbhalo.model
+    """Preamble to cluster.model
 
     This function should include e.g., all data type assertions and
     general modifications of parameters from the config file. However
@@ -728,6 +722,9 @@ def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.0, backend='ccl'):
     return cosmo
 
 
+def define_hmf(setup, cosmo, mdef):
+    return hmf, dndm
+
 def define_profiles(setup, cosmo, z, c_concentration):
     ref = setup['delta_ref']
     # convert between hmf and CCL conventions
@@ -739,9 +736,15 @@ def define_profiles(setup, cosmo, z, c_concentration):
     else:
         model, fc = c_concentration
         bg = f"{int(setup['delta'])}{ref}"
+        ic.enable()
+        ic(setup['mass_range'])
+        ic(bg)
+        ic(z)
         c = fc * np.array([concentration(setup['mass_range'], bg, zi,
                                          model=model)
                            for zi in z[:,0]])
+        ic(c)
+        if not debug: ic.disable()
     # need to loop through for the miscentring calculations
     profiles = [NFW(setup['mass_range'], ci, zi, cosmo=cosmo,
                     overdensity=setup['delta'], background=ref,

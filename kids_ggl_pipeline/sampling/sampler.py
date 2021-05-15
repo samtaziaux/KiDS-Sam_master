@@ -483,10 +483,7 @@ def update_parameters(theta, parameters, nparams, join, jfree, repeat):
     v1[where(jfree)] = theta
     # joined parameters
     v1_list = list(v1)
-    ic(join)
     for j in join[::-1]:
-        ic(j)
-        ic(v1[j])
         try:
             v1_list[j[0]] = np.array(v1[j], dtype=float)
         except ValueError:

@@ -153,6 +153,7 @@ def model(theta, R):
 
     ### halo mass function ###
 
+    # testing here because hmf and ccl do not give the same results
     #hmf, dndm = define_hmf(setup, cosmo, cclcosmo)
     if setup['backend'] == 'ccl':# or debug:
         if debug:
@@ -238,43 +239,10 @@ def model(theta, R):
         if debug:
             print('shape =', profiles[0].shape)
             print(profiles[0])
-        output[key1h] = np.array(
-            [func(Rx[:,i,None]) for i, func in enumerate(funcs)])
-        info(output, key1h)
-        if debug:
-            print(f'{key1h} =', output[key1h][0,:,-1], output[key1h].shape)
-            #plot_profile_mz(Rx.T, np.transpose(prof, axes=(1,2,0)),
-                            #z, mx=Mh, z0=0.46, m0=1e14,
-                            #output=f'profiles_{profile_name}1h.png')
 
-        # miscentering (1h only for now)
-        # c_mis[1] corresponds to f_mis
-        if ingredients['miscentring']:
-            #prof_mis = miscentering(
-                #profiles, Rx, *c_mis[2:], dist=c_mis[0])
-            offkey = f'{key1h}.off'
-            p_mis = miscentring(c_mis[0], *c_mis[2:])
-            if p_mis.ndim == 1:
-                p_mis = np.ones((z.size,p_mis.size)) * p_mis
-            if debug:
-                print('p_mis =', p_mis.shape)
-                print('Rx =', Rx.shape)
-                print('c_mis[2] =', c_mis[2])
-                print('profiles[0].shape =', profiles[0].shape)
-                ti = time()
-            output[offkey] = np.array(
-                [p.offset(f, Rx_i, c_mis[2], weights=p_mis_i)
-                 for p, f, Rx_i, p_mis_i
-                 in zip(profiles, funcs, Rx.T, p_mis)])
-            #output[offkey] = profiles.offset(func, Rx.T
-            if debug:
-                print(f'offset in {time()-ti:.2f} s')
-                print(f'{offkey}: {output[offkey].shape}')
-            # rename well-centered profile
-            output[f'{key1h}.cent'] = output.pop(key1h)
-            # total 1h profile
-            output[key1h] = (1-c_mis[1])*output[f'{key1h}.off'] \
-                + c_mis[1]*output[f'{key1h}.cent']
+        output = calculate_onehalo(
+            output, setup, observables, ingredients, z, profiles, key1h,
+            funcs, Rx, c_mis)
 
         output[profile_name] = 1 * output[key1h]
 
@@ -323,6 +291,10 @@ def model(theta, R):
                     ingredients, setup['kfilter'], output[key],
                     setup['bin_centers_fine'], setup['bin_edges'])
 
+                info(output, key2h)
+
+    #R = (setup['bin_edges'][:,1:]+setup['bin_edges'][:,:-1])/2
+
         print_output(output)
 
         # dndm weighting
@@ -341,9 +313,6 @@ def model(theta, R):
     #output['kappa'] = output['kappa'].T
     #info(output, 'kappa')
 
-    if debug:
-        print(type(output['esd']), type(list(output['esd'])))
-        print('esd_unit =', setup['esd_unit'])
     # will work on a more general version later
     # for now we only accept one observable?
     if 'kappa' in setup['return']:
@@ -467,6 +436,49 @@ def preamble(theta):
     theta[1][theta[0].index('setup')] = setup
 
     return theta
+
+
+def calculate_onehalo(output, setup, observables, ingredients, z, profiles,
+                      key1h, funcs, Rx, c_mis):
+    output[key1h] = np.array(
+        [func(Rx[:,i,None]) for i, func in enumerate(funcs)])
+    info(output, key1h)
+    if debug:
+        print(f'{key1h} =', output[key1h][0,:,-1], output[key1h].shape)
+        #plot_profile_mz(Rx.T, np.transpose(prof, axes=(1,2,0)),
+                        #z, mx=Mh, z0=0.46, m0=1e14,
+                        #output=f'profiles_{profile_name}1h.png')
+
+    # miscentering (1h only for now)
+    # c_mis[1] corresponds to f_mis
+    if ingredients['miscentring']:
+        #prof_mis = miscentering(
+            #profiles, Rx, *c_mis[2:], dist=c_mis[0])
+        offkey = f'{key1h}.off'
+        p_mis = miscentring(c_mis[0], *c_mis[2:])
+        if p_mis.ndim == 1:
+            p_mis = np.ones((z.size,p_mis.size)) * p_mis
+        ic(p_mis.shape)
+        ic(Rx.shape)
+        ic(c_mis[2])
+        ic(profiles[0].shape)
+        if debug:
+            ti = time()
+        output[offkey] = np.array(
+            [p.offset(f, Rx_i, c_mis[2], weights=p_mis_i)
+             for p, f, Rx_i, p_mis_i
+             in zip(profiles, funcs, Rx.T, p_mis)])
+        #output[offkey] = profiles.offset(func, Rx.T
+        if debug:
+            print(f'offset in {time()-ti:.2f} s')
+            print(f'{offkey}: {output[offkey].shape}')
+        # rename well-centered profile
+        output[f'{key1h}.cent'] = output.pop(key1h)
+        # total 1h profile
+        output[key1h] = (1-c_mis[1])*output[f'{key1h}.off'] \
+            + c_mis[1]*output[f'{key1h}.cent']
+
+    return output
 
 
 def calculate_sigma_2h(setup, cclcosmo, mdef, z, A_2h, threads=1):
@@ -631,22 +643,20 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
                             output='profiles_esd2h.png')
 
     if 'kappa' in retvalues or 'kappa.2h' in retvalues:
-        output['kappa.2h.mz.raw'] = output['sigma.2h.raw'] \
-            / profiles.sigma_crit()[:,:,None]
+        sigma_crit = np.array([p.sigma_crit() for p in profiles])[:,None,None]
+        ic(sigma_crit.shape)
+        ic(output['sigma.2h.raw'].shape)
+        output['kappa.2h.raw'] = output['sigma.2h.raw'] / sigma_crit
 
         if debug:
-            info(output, 'kappa.2h.mz.raw')
-            plot_profile_mz(setup['R2h'], output['kappa.2h.mz.raw'], z,
+            info(output, 'kappa.2h.raw')
+            plot_profile_mz(setup['R2h'], output['kappa.2h.raw'], z,
                             mx=setup['mass_range'], z0=0.46,
                             output='profiles_kappa.png')
 
     # it seems now that kappa.2h.mz.raw is OK but something happens when
     # we apply the filter?
-
-    #print_output(output)
-
-    # there's a problem here: if kfilter then the name is kappa.2h.mz
-    # but if not the name is kappa.2h
+    """
     if setup['kfilter']:
         output['kappa.2h'] = filter_profiles(
             ingredients, setup['kfilter'], output['kappa.2h.raw'],
@@ -655,14 +665,11 @@ def calculate_twohalo(output, setup, observables, ingredients, cclcosmo, mdef,
             #ingredients, setup['kfilter'], output['kappa.2h.mz.raw.quadpy'],
             #setup['bin_centers_fine'], setup['arcmin_bins'])
     else:
-        for obs in ('kappa', 'esd'):
-            if obs in retvalues or f'{obs}.2h' in retvalues:
-                output[f'{obs}.2h'] = np.transpose(
-                    output.pop(f'{obs}.2h.raw'), axes=(0,2,1))
-
-                info(output, f'{obs}.2h')
-
-    #R = (setup['bin_edges'][:,1:]+setup['bin_edges'][:,:-1])/2
+    """
+    for obs in ('kappa', 'esd'):
+        if obs in retvalues or f'{obs}.2h' in retvalues:
+            output[f'{obs}.2h'] = np.transpose(
+                output.pop(f'{obs}.2h.raw'), axes=(0,2,1))
     #print(R.shape)
     #plot_profile_mz(R.T,
                     #output['kappa.2h.mz'], z[:,0], mx=setup['mass_range'],
@@ -771,10 +778,6 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
                     for p_i in profiles]
         filtered = np.transpose(filtered, axes=(0,2,1))
     else:
-        #if debug:
-            #print('in filter_profiles')
-            #print('theta_fine =', theta_fine)
-            #print('theta_bins =', theta_bins)
         filtered = [np.array(
                         [filter.filter(theta_fine, prof_mz, theta_bins_z,
                                        units=units)[1]
@@ -783,7 +786,7 @@ def filter_profiles(ingredients, filter, profiles, theta_fine, theta_bins,
         if debug:
             print('filtered =', np.array(filtered).shape)
         filtered = np.transpose(filtered, axes=(0,2,1))
-        #filtered = np.array(filtered)
+        ic(filtered.shape)
     if debug:
         print(f'filtered in {time()-ti:.2f} s')
     return filtered

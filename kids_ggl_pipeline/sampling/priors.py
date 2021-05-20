@@ -25,6 +25,7 @@ nargs = {'exp': 0, 'jeffreys': 0, 'lognormal': 2, 'normal': 2,
 for p in fixed_priors:
     nargs[p] = 0
 
+
 free_priors = list(lnprior_functions.keys())
 valid_priors = append(fixed_priors, free_priors)
 valid_priors = append(valid_priors, 'repeat')
@@ -44,7 +45,6 @@ def calculate_lnprior(lnprior, theta, prior_types, parameters, jfree):
             [fp(v, v1, v2) if v3 <= v <= v4 else -inf
              for v, v1, v2, v3, v4
              in zip(theta[j], v1free[j], v2free[j], v3free[j], v4free[j])])
-        #print(theta[j], v1free[j], v2free[j], v3free[j], v4free[j], lnprior[j])
     return lnprior.sum()
 
 
@@ -67,7 +67,7 @@ def define_limits(prior, args):
     if prior == 'jeffreys':
         # no choice but to assume this number is of order 0-1
         # (but cannot be exactly zero)
-        return [1e-10, 100]
+        return [1e-4, 10]
 
 
 def draw(prior, args, bounds=None, size=None):

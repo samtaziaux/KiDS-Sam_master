@@ -173,8 +173,8 @@ def hod_parameters(line, names, parameters, priors, starting):
         p0 = -99
     parameters[0].append(p0)
 
-    if priors[-1] == 'repeat' or priors[-1] in fixed_priors \
-            or priors[-1] in ('exp', 'jeffreys'):
+    if priors[-1] == 'repeat' or priors[-1] in fixed_priors:# \
+            #or priors[-1] in ('exp', 'jeffreys'):
         parameters[1].append(-99)
         starting = starting_values(starting, parameters, line)
     else:

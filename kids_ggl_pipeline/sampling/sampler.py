@@ -34,6 +34,7 @@ if sys.version_info[0] == 2:
 from . import priors, sampling_utils
 from ..helpers import io, plotting
 from .. import __version__
+from ..halomodel.halo import initialize_beta_nl
 
 
 def run(hm_options, options, args):
@@ -48,6 +49,9 @@ def run(hm_options, options, args):
     obs_idx = parameters[0].index('observables')
     observables = parameters[1][obs_idx]
     init_mlf = observables.mlf # No idea why, but mlf instance doesn't get initilized to adopt R
+    
+    ingr_idx = parameters[0].index('ingredients')
+    ingredients = parameters[1][ingr_idx]
     
     assert_output(setup, observables)
     
@@ -175,6 +179,8 @@ def run(hm_options, options, args):
         #result = sampler.run_mcmc(pos, options['nsteps'], thin_by=options['thin'], progress=True, store=True)
         for sample in sampler.sample(pos, iterations=options['nsteps'],
                                      thin_by=options['thin'], progress=True, store=True):
+            # Using the pattern below we can use this to update things in sampler iteratively every n steps
+            # (provided by "update" for instance)
             if options['stop_when_converged']:
                 # Only check convergence every 100 steps
                 if sampler.iteration % 100:
@@ -192,6 +198,18 @@ def run(hm_options, options, args):
                 if converged:
                     break
                 old_tau = tau
+            if ingredients['bnl']: # This is to iterativelly calculate the non-linear halo bias every n steps
+                if sampler.iteration % options['update']:
+                    continue
+                # Recalculate the bnl
+                walk = sampler.get_chain(discard=sampler.iteration - 1, flat=True)
+                state = np.nanmedian(walk, axis=0)
+                p = update_parameters(state, parameters, nparams, join, jfree, repeat)
+                cosmo = p[1][p[0].index('parameters')][0]
+                #s8 = cosmo[0], h = cosmo[1], om = cosmo[2],
+                #ob = cosmo[3], ns = cosmo[4], w0 = cosmo[5]
+                beta = initialize_beta_nl(cosmo[3], cosmo[2]-cosmo[3], 1-cosmo[2],
+                        cosmo[0], cosmo[4], cosmo[5], cosmo[1], reset=True)
 
     io.finalize_hdr(sampler, hdrfile)
     print('Everything saved to {0}!'.format(options['output']))

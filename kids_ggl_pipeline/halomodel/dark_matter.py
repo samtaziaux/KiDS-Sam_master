@@ -325,10 +325,12 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     return beta
     
     
-def beta_nl_darkquest(cparam, M, k, z):
-
+def beta_nl_darkquest(cparam, M, k, z, reset=False):
     path0 = os.getcwd()
     
+    if reset == True:
+        os.remove(os.path.join(path0, 'interpolator_BNL_DQ.npy'))
+        
     if os.path.exists(os.path.join(path0, 'interpolator_BNL_DQ.npy')):
         with open(os.path.join(path0, 'interpolator_BNL_DQ.npy'), 'rb') as dill_file:
             beta_interp = pickle.load(dill_file)

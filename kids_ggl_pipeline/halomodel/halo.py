@@ -480,7 +480,7 @@ def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta, setup, cos
         Ri = Quantity(Ri, unit='Mpc')
         observables.mlf.R[i] = Ri.to(setup['R_unit']).value
     mlf_out = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
-               in zip(mlf_inter, observables.mlf.R)]
+            in zip(mlf_inter, observables.mlf.R)]
     return mlf_out
 
 
@@ -605,7 +605,18 @@ def calculate_Pmm(setup, observables, ingredients, hmf, mass_range, dndm,
     else:
         Pmm_1h = np.zeros((observables.mm.nbins,setup['lnk_bins']))
     return Pmm_1h, Pmm_2h
+    
 
+def initialize_beta_nl(omegab, omegadm, omegav, sigma8, ns, w0, h, reset=False):
+    As = 2.43e-9 * (sigma8 / 0.87659)**2
+    lnAs = np.log(10.0**10.0 * As)
+    cparam = np.array([omegab*h**2.0, omegadm*h**2.0, omegav, lnAs, ns, w0]) # array for cosmological parameters [wb, wc, Om_v, lnAs, ns, w]
+    Mt = np.logspace(12.0, 14.0, 5)
+    kt = np.logspace(-2.0, 1.5, 50)
+    zt = np.linspace(0.0, 0.5, 5)
+    beta_interp = beta_nl_darkquest(cparam, Mt, kt, zt, reset)
+    return beta_interp
+    
 
 def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n_s, mass_range,
                             dndm, rho_bg, c_twohalo, s_beta, pop_g, pop_c,
@@ -628,12 +639,7 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
         #import dill as pickle
         #with open('/net/home/fohlen12/dvornik/interpolator_BNL_test_quest.npy', 'rb') as dill_file:
         #    beta_interp = pickle.load(dill_file)
-        lnAs = 3.094
-        cparam = np.array([cosmo_model.Ob0*cosmo_model.h**2.0, cosmo_model.Odm0*cosmo_model.h**2.0, cosmo_model.Ode0, lnAs, n_s, cosmo_model.w0]) # array for cosmological parameters [wb, wc, Om_w, lnAs, ns, w]
-        Mt = np.logspace(12.0, 14.0, 5)
-        kt = np.logspace(-2.0, 1.5, 50)
-        zt = np.linspace(0.0, 0.5, 5)
-        beta_interp = beta_nl_darkquest(cparam, Mt, kt, zt)
+        beta_interp = initialize_beta_nl(cosmo_model.Ob0, cosmo_model.Odm0, cosmo_model.Ode0, hmf[0].sigma_8, n_s, cosmo_model.w0, cosmo_model.h)
         #print(beta_interp([[0.5, 12.3, 12.8, 1e-1], [0.2, 12.3, 12.8, 1e-1]]))
 
     if observables.gm:

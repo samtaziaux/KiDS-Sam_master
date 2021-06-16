@@ -82,10 +82,8 @@ debug = ('--debug' in sys.argv)
 
 def model(theta, R):
 
-    # ideally we would move this to somewhere separate later on
-    #preamble(theta)
-    np.seterr(
-        divide='ignore', over='ignore', under='ignore', invalid='ignore')
+    #np.seterr(
+        #divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
     observables, selection, ingredients, theta, setup \
         = [theta[1][theta[0].index(name)]
@@ -944,30 +942,33 @@ def preamble(theta):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-    observables, selection, ingredients, theta, setup \
+    observables, selection, ingredients, params, setup \
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
-    cosmo = theta[0]
-    sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
+    cosmo = params[0]
+    # the order of elements of cosmo is set in
+    # helpers.configuration.core.CosmoSection
+    z = cosmo[10]
 
+    nbins = observables.nbins
     if observables.mlf:
-        nbins = observables.nbins - observables.mlf.nbins
-    else:
-        nbins = observables.nbins
-    output = np.empty(observables.nbins, dtype=object)
+        nbins = nbins - observables.mlf.nbins
+    #else:
+        #nbins = observables.nbins
+    #output = np.empty(observables.nbins, dtype=object)
 
-    if ingredients['nzlens']:
-        assert len(cosmo) >= 11, \
-            'When integrating nzlens, must provide an additional parameter' \
-            '"nz", corresponding to the histogram of lens redshifts. See' \
-            'demo for an example.'
-        nz = cosmo[9].T
-        size_cosmo = 10
-    else:
+    #if ingredients['nzlens']:
+        #assert len(cosmo) >= 11, \
+            #'When integrating nzlens, must provide an additional parameter' \
+            #'"nz", corresponding to the histogram of lens redshifts. See' \
+            #'demo for an example.'
+        #nz = cosmo[9].T
+        #size_cosmo = 10
+    #else:
         # hard-coded
-        size_cosmo = 9
-    
+        #size_cosmo = 9
+    """
     if observables.mlf:
         if len(cosmo) == size_cosmo+1:
             assert len(cosmo) >= len(cosmo), \
@@ -987,6 +988,7 @@ def preamble(theta):
             ' the last cosmological parameter. Alternatively, make sure' \
             ' that the redshift parameters are properly set given your' \
             ' choice for the zlens parameter')
+    """
 
     # if a single value is given for more than one bin, assign same
     # value to all bins

@@ -13,7 +13,13 @@ from kids_ggl_pipeline.sampling import sampler, sampling_utils
 from kids_ggl_pipeline.halomodel import hm_utils
 from kids_ggl_pipeline.helpers import configuration
 
-if '--debug' not in sys.argv:
+if '--debug' in sys.argv:
+    try:
+        from icecream import install
+        install()
+    except ImportError:
+        pass
+else:
     import numpy as np
     import warnings
     try:

@@ -35,12 +35,13 @@ setup(name='kids_ggl_pipeline',
       scripts=['bin/kids_ggl'],
       install_requires=['astropy>=1.2.0',
                         'emcee>3.0',
+                        'healpy>1.13.0',
                         'hmf>=3.1',
                         'mpmath>=0.19',
                         'numpy>=1.5.0',
-                        'scipy>=0.16.0',
-                        'healpy>1.13.0',
-                        'psutil>=3.2.1'],
+                        'profiley>=1.2.2',
+                        'psutil>=3.2.1',
+                        'scipy>=0.16.0'],
       zip_safe=False
       )
 

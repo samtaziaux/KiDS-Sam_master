@@ -946,6 +946,12 @@ def preamble(theta):
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
+
+    R_units = ('pc','kpc','Mpc')
+    if setup['R_unit'] not in R_units:
+        err = f'R_unit must be one of {R_units}'
+        raise ValueError(err)
+
     cosmo = params[0]
     # the order of elements of cosmo is set in
     # helpers.configuration.core.CosmoSection

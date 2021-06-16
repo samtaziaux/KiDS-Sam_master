@@ -117,6 +117,7 @@ class ConfigSection(str):
             cosmo = CosmoSection(name='cosmo')
             # remember that these_params also contains values relating
             # to the priors and starting values
+            ic(these_names)
             cosmo.set_values(
                 **{key: val for key, val in zip(these_names, these_params[0])})
             # need to sort priors accordingly
@@ -256,6 +257,12 @@ class ConfigFile(object):
                     names, parameters, priors = section.append_parameters(
                         names, parameters, priors, repeat, section_names,
                         these_names, these_params, these_priors)
+                    # need this to format join parameters
+                    if section.name == 'cosmo':
+                        n_cosmo_given = len(these_names)
+                        n_cosmo_total = len(names[-1])
+                        ic(names[-1], n_cosmo_total)
+                        ic(these_names, n_cosmo_given)
                 # stored all parameters, now we initialize the new section
                 section = ConfigSection(line.section)
                 section_names.append(section.name)
@@ -283,7 +290,7 @@ class ConfigFile(object):
                 setup = configsetup.append_entry(line, setup)
             elif section == 'sampler':
                 sampling = configsampler.sampling_dict(line, sampling)
-        join = confighod.format_join(join)
+        join = confighod.format_join(join, n_cosmo_given, n_cosmo_total)
         parameters, names, repeat, nparams = \
             confighod.flatten_parameters(parameters, names, repeat, join)
         sampling = configsampler.add_defaults(sampling)
@@ -330,8 +337,8 @@ class CosmoSection:
         self.name = name
         # this order is fixed
         self._names = \
-            ['Om0', 'Ob0', 'h', 'sigma8', 'n_s', 'm_nu', 'Neff',
-             'w0', 'wa', 'Tcmb0', 'z', 'n(z)', 'z_mlf', 'z_s']
+            ['Om0', 'Ob0', 'h', 'sigma_8', 'n_s', 'm_nu', 'Neff',
+             'w0', 'wa', 'Tcmb0', 'z', 'nz', 'z_mlf', 'z_s']
         # Planck 18 by default
         # TT,TE,EE+lowE+lensing+BAO from Table 2
         self._default = \
@@ -356,24 +363,13 @@ class CosmoSection:
             return self._default
         return self._values
 
+    def index(self, param_name):
+        return self.names.index(param_name)
+
     def set_values(self, **kwargs):
-        # cannot specify all of them!
-        #if 'A_s' in kwargs and 'sigma8' in kwargs:
-            #raise ValueError('Cannot provide both A_s and sigma8')
-        # we don't need so much flexibility for now
-        #if ('Om0' in kwargs) + ('Ob0' in kwargs) + ('Oc0' in kwargs) \
-                #not in (0,2):
-            #raise ValueError(
-                #'Must provide exactly two of {Om0,Ob0,Oc0} or none at all')
-        #if self.flat:
-            #if ('Ode0' in kwargs \
-                    #and ('Om0' in kwargs \
-                        #or ('Ob0' in kwargs and 'Oc0' in kwargs))):
-                #msg = 'cannot provide both Ode0 and the total matter density' \
-                      #' (either Om0 or both Ob0 and Oc0) for a flat cosmology'
-                #raise ValueError(msg)
         # initialize empty
         _values = [None] * len(self.names)
+        ic(kwargs)
         # assign provided values
         for key, val in kwargs.items():
             if key not in self.names:
@@ -405,6 +401,3 @@ class CosmoSection:
 
         # finally, assign!
         self._values = _values
-
-    def index(self, param_name):
-        return self.names.index(param_name)

@@ -721,7 +721,7 @@ def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.0, backend='ccl'):
         cosmo = ccl.Cosmology(
             Omega_c=Om0-Ob0, Omega_b=Ob0, h=h, sigma8=sigma8, n_s=n_s,
             T_CMB=Tcmb0, Neff=Neff, m_nu=m_nu, w0=w0, wa=wa)
-    elif backend == 'astropy':
+    elif backend in ('astropy', 'hmf'):
         cosmo = halo.load_cosmology(cosmo_params)[0]
     # colossus (for mass-concentration relation)
     params = dict(Om0=Ob0, H0=100*h, ns=n_s, sigma8=sigma8, Ob0=Ob0)
@@ -729,8 +729,9 @@ def define_cosmology(cosmo_params, Tcmb=2.725, m_nu=0.0, backend='ccl'):
     return cosmo
 
 
-def define_hmf(setup, cosmo, mdef):
-    return hmf, dndm
+#def define_hmf(setup, cosmo, mdef):
+    #return hmf, dndm
+
 
 def define_profiles(setup, cosmo, z, c_concentration):
     ref = setup['delta_ref']

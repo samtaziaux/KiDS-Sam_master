@@ -70,8 +70,22 @@ def flatten_parameters(parameters, names, repeat, join):
     return flat, flatnames, repeat, nparams
 
 
-def format_join(join):
+def format_join(join, n_cosmo_given, n_cosmo_total):
+    """Format join labels so that they match the parameter array
+
+    `n_cosmo_given` and `n_cosmo_total` are the number of provided
+    and available cosmological parameters, respectively, which we
+    need in order to correct for the fact that some cosmological
+    parameters may be missing from the config file
+    """
     join = np.array(join)
+    # join cosmological parameters not supported, so let's make sure
+    # there are none
+    if np.any(join[:n_cosmo_given] != '-1'):
+        err = 'join labels are not supported for cosmological parameters'
+        raise ValueError(err)
+    # this is why!
+    join = np.append(['-1']*n_cosmo_total, join[n_cosmo_given:])
     rng = np.arange(join.size)
     join_labels = np.unique(join[join != '-1'])
     join_arrays = []

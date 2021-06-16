@@ -954,41 +954,12 @@ def preamble(theta):
     nbins = observables.nbins
     if observables.mlf:
         nbins = nbins - observables.mlf.nbins
-    #else:
-        #nbins = observables.nbins
-    #output = np.empty(observables.nbins, dtype=object)
 
-    #if ingredients['nzlens']:
-        #assert len(cosmo) >= 11, \
-            #'When integrating nzlens, must provide an additional parameter' \
-            #'"nz", corresponding to the histogram of lens redshifts. See' \
-            #'demo for an example.'
-        #nz = cosmo[9].T
-        #size_cosmo = 10
-    #else:
-        # hard-coded
-        #size_cosmo = 9
-    """
-    if observables.mlf:
-        if len(cosmo) == size_cosmo+1:
-            assert len(cosmo) >= len(cosmo), \
-                'When using SMF/LF, must provide an additional parameter' \
-                '"z_mlf", corresponding to mean redshift values for SMF/LF. See' \
-                'demo for an example.'
-        z_mlf = cosmo[-1]
-        size_cosmo += 1
-    # cheap hack. I'll use this for CMB lensing, but we can
-    # also use this to account for difference between shear
-    # and reduced shear
-    if len(cosmo) == size_cosmo+1:
-        zs = cosmo[-1]
-    elif setup['return'] == 'kappa':
-        raise ValueError(
-            'If return=kappa then you must provide a source redshift as' \
-            ' the last cosmological parameter. Alternatively, make sure' \
-            ' that the redshift parameters are properly set given your' \
-            ' choice for the zlens parameter')
-    """
+    if setup['backend'] == 'ccl':
+        wrn = 'Backend ccl not available in halo.model. Falling back to hmf'
+        warnings.warn(wrn)
+    if setup['delta_ref'] == 'critical': setup['delta_ref'] = 'SOCritical'
+    elif setup['delta_ref'] == 'matter': setup['delta_ref'] = 'SOMean'
 
     # if a single value is given for more than one bin, assign same
     # value to all bins

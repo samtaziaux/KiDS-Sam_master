@@ -47,7 +47,11 @@ import colossus
 from colossus.cosmology import cosmology as colossus_cosmology
 from colossus.halo.concentration import concentration
 from profiley.nfw import NFW
-from profiley.filtering import Filter
+try:
+    from profiley.filtering import Filter
+    has_pixell = True
+except ImportError:
+    has_pixell = False
 from profiley.helpers import lss
 import pyccl as ccl
 
@@ -407,6 +411,10 @@ def preamble(theta):
 
     # read measurement binning scheme if filtering
     if setup['kfilter']:
+        if not has_filter:
+            err = 'you have specified a k-space filter but pixell is not' \
+                  ' installed. Please run `pip install pixell` and re-run.'
+            raise ImportError(err)
         if debug:
             print('bin_edges before exclude =', setup['bin_edges'])
         # remove excluded points from bin edges

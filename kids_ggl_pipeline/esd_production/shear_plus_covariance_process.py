@@ -198,9 +198,16 @@ def loop(purpose, Nsplits, Nsplit, output, outputnames, gamacat, colnames,
                                                galweights[lenssplits[l] : lenssplits[l+1]]]
 
                 galZ_split_2, srcZB_2 = np.meshgrid(galZ_split, srcZB)
-                src_mask = np.logical_not(srcZB_2 >= galZ_split_2+z_epsilon).T
+                #src_mask = np.logical_not(srcZB_2 >= galZ_split_2+z_epsilon).T
                 
-                
+                ############
+        # MCF:
+        # Remove galaxies that are farther away that z_epsilon from the lens:
+                src_mask = np.logical_not( (srcZB_2 >= (galZ_split_2 - z_epsilon)) & (srcZB_2 <= (galZ_split_2 + z_epsilon))).T 
+                ############
+
+        #src_mask = ((srcZB_2 >= (galZ_split_2 - z_epsilon)) & (srcZB_2 <= (galZ_split_2 + z_epsilon))).T
+
                 # Create a mask for the complete list of lenses,
                 # that only highlights the lenses in this lens split
                 galIDmask_split = np.in1d(galIDlist, galID_split)
@@ -438,7 +445,7 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         i = 0
         for kidscatname in kidscatname2:
             i += 1
-            print('	{0}/{1}:'.format(i, len(kidscatname2)), kidscatname)
+            print('    {0}/{1}:'.format(i, len(kidscatname2)), kidscatname)
 
             # Import and mask all used data from the sources in this
             # KiDS field
@@ -500,7 +507,12 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         srclims = src_selection['Z_B'][1]
         sigma_selection = {}
         # 10 lens redshifts for calculation of Sigma_crit
-        lens_redshifts = np.arange(0.001, srclims[1]-z_epsilon, 0.05)
+        #lens_redshifts = np.arange(0.001, srclims[1]-z_epsilon, 0.05)
+
+        #########
+        # MCF:
+        lens_redshifts = np.arange(0.001, srclims[1]+z_epsilon, 0.05)        
+        #########
 
         cosmo_eff = LambdaCDM(H0=h*100., Om0=O_matter, Ode0=O_lambda)
         lens_comoving = np.array((cosmo_eff.comoving_distance(lens_redshifts).to('pc')).value)
@@ -510,7 +522,13 @@ def main(nsplit, nsplits, nobsbin, blindcat, config_file, fn):
         k = np.zeros_like(lens_redshifts)
             
         for i in xrange(lens_redshifts.size):
-            sigma_selection['Z_B'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
+            #sigma_selection['Z_B'] = ['self', np.array([lens_redshifts[i]+z_epsilon, srclims[1]])]
+            
+            #########
+            # MCF:
+            sigma_selection['Z_B'] = ['self', np.array([lens_redshifts[i]-z_epsilon, lens_redshifts[i]+z_epsilon])]
+            #########
+        
             srcNZ_k, spec_weight_k = shear.import_spec_cat(path_kidscats, kidscatname2,\
                                         kidscat_end, specz_file, sigma_selection, \
                                         cat_version)

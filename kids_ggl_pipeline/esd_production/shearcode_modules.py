@@ -1171,7 +1171,12 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
         DlsoDs = (Dcsbins-Dclbins)/Dcsbins
         
         # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
-        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+        #DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+        
+    ##########
+    # MCF:
+        DlsoDs[np.logical_not( (Dcsbins > Dclbins) & ( Dcsbins < (Dclbins + Dc_epsilon) ) & (DlsoDs !=0) ) ] = 0.0
+        #########
 
         #print('DlsoDs:', np.shape(DlsoDs))
         #print('Source P(zs):', np.shape(srcPZ))
@@ -1198,7 +1203,12 @@ def calc_Sigmacrit(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galSigm
         DlsoDs = (Dcsbins-Dcls)/Dcsbins
 
         # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
-        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+        #DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+
+        #########
+        # MCF:
+        DlsoDs[np.logical_not( (Dcsbins > Dclbins) & ( Dcsbins < (Dclbins + Dc_epsilon) ) & (DlsoDs !=0) ) ] = 0.0
+        ########
 
         # Matrix multiplication that sums over P(z),
         # to calculate <Dls/Ds> for each lens-source pair
@@ -1240,9 +1250,14 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galS
         DlsoDs = (Dcsbins-Dclbins)/Dcsbins
         
         # Mask all values with Dcl=0 (Dls/Ds=1) and Dcl>Dcsbin (Dls/Ds<0)
-        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+        #DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
 
-        #print('DlsoDs:', np.shape(DlsoDs))
+        #######
+    # MCF:
+        DlsoDs[np.logical_not( (Dcsbins > Dclbins) & ( Dcsbins < (Dclbins + Dc_epsilon) ) & (DlsoDs !=0) ) ] = 0.0
+        #######
+
+    #print('DlsoDs:', np.shape(DlsoDs))
         #print('Source P(zs):', np.shape(srcPZ))
 
         # Matrix multiplication that sums over P(zs), to calculate <Dls/Ds> for each Zlens-bin
@@ -1253,8 +1268,14 @@ def calc_mcorr_weight(Dcls, Dals, Dcsbins, zlensbins, Dclbins, lens_photoz, galS
         Dcls, Dcsbins = np.meshgrid(Dcls, Dcsbins)
         DlsoDs = (Dcsbins-Dcls)/Dcsbins
             
-        DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
-        #else:
+        #DlsoDs[np.logical_not(((Dc_epsilon/Dcsbins) < DlsoDs) & (DlsoDs < 1.))] = 0.0
+        
+    #######
+    # MCF:
+        DlsoDs[np.logical_not( (Dcsbins > Dclbins) & ( Dcsbins < (Dclbins + Dc_epsilon) ) & (DlsoDs !=0) ) ] = 0.0
+    #######
+    
+    #else:
         #DlsoDs[np.logical_not((0.< DlsoDs) & (DlsoDs < 1.))] = 0.0
 
         # Matrix multiplication that sums over P(z),
@@ -1320,7 +1341,7 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     wlist = wlist.T
     klist_t = np.array([klist for b in range(len(blindcats))]).T
     
-    # Calculating the needed errors
+    # Calculating the needed errors -- in this case we only want the lensfit weight
     if 'pc' not in Runit:
         wk2list = wlist
     else:
@@ -1378,10 +1399,8 @@ def calc_shear_output(incosphilist, insinphilist, e1, e2, \
     klist = np.array([klist for b in range(len(blindcats))]).T
     if 'pc' not in Runit:
         for g in range(len(blindcats)):
-            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * \
-                                   insinphilist) * wk2list[:,:,g].T)
-            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * \
-                                   incosphilist) * wk2list[:,:,g].T)
+            gammatlists[g] = np.array((-e1[:,g] * incosphilist - e2[:,g] * insinphilist) * wk2list[:,:,g].T)
+            gammaxlists[g] = np.array((e1[:,g] * insinphilist - e2[:,g] * incosphilist) * wk2list[:,:,g].T)
 
     else:
         for g in range(len(blindcats)):

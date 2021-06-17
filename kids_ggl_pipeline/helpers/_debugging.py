@@ -10,6 +10,7 @@ update_rcParams()
 
 
 def import_icecream():
+    """Icecream import wrapper, in case it's not installed"""
     try:
         from icecream import ic
         if '--debug' not in sys.argv:

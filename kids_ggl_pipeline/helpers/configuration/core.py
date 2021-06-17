@@ -117,7 +117,6 @@ class ConfigSection(str):
             cosmo = CosmoSection(name='cosmo')
             # remember that these_params also contains values relating
             # to the priors and starting values
-            ic(these_names)
             cosmo.set_values(
                 **{key: val for key, val in zip(these_names, these_params[0])})
             # need to sort priors accordingly
@@ -261,8 +260,6 @@ class ConfigFile(object):
                     if section.name == 'cosmo':
                         n_cosmo_given = len(these_names)
                         n_cosmo_total = len(names[-1])
-                        ic(names[-1], n_cosmo_total)
-                        ic(these_names, n_cosmo_given)
                 # stored all parameters, now we initialize the new section
                 section = ConfigSection(line.section)
                 section_names.append(section.name)
@@ -369,7 +366,6 @@ class CosmoSection:
     def set_values(self, **kwargs):
         # initialize empty
         _values = [None] * len(self.names)
-        ic(kwargs)
         # assign provided values
         for key, val in kwargs.items():
             if key not in self.names:

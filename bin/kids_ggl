@@ -12,14 +12,14 @@ from kids_ggl_pipeline.esd_production import shearcode
 from kids_ggl_pipeline.sampling import sampler, sampling_utils
 from kids_ggl_pipeline.halomodel import hm_utils
 from kids_ggl_pipeline.helpers import configuration
+# this is actually a requirement now
+try:
+    from icecream import install
+    install()
+except ImportError:
+    pass
 
-if '--debug' in sys.argv:
-    try:
-        from icecream import install
-        install()
-    except ImportError:
-        pass
-else:
+if '--debug' not in sys.argv:
     import numpy as np
     import warnings
     try:

@@ -10,25 +10,25 @@ import os
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
-from astropy.units import eV
+from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
+from astropy.units import eV, Quantity
+from itertools import count
 import multiprocessing as multi
 import numpy as np
+from numpy import (arange, array, exp, expand_dims, iterable,
+                   logspace, ones)
 import mpmath as mp
 import matplotlib.pyplot as plt
 import scipy
-import sys
-from numpy import (arange, array, exp, expand_dims, iterable,
-                   logspace, ones)
 from scipy import special as sp
 from scipy.integrate import simps, trapz, quad
 from scipy.interpolate import interp1d, UnivariateSpline
-from itertools import count
+import sys
 if sys.version_info[0] == 2:
     from itertools import izip as zip
     range = xrange
 from time import time
-from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
-from astropy.units import Quantity
+import warnings
 
 from hmf import MassFunction
 import hmf.mass_function.fitting_functions as ff
@@ -127,10 +127,6 @@ def model(theta, R):
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
     ngal, meff = calculate_ngal(observables, pop_g, dndm, mass_range)
-    if debug:
-        print('dndm =', dndm)
-        print('dndm =', dndm/np.max(dndm, axis=1)[:,None])
-        print('ngal =', ngal)#/ngal.max())
 
     # Luminosity or mass function as an output:
     if observables.mlf:
@@ -149,7 +145,7 @@ def model(theta, R):
 
     # spectra that are not required are just dummy variables
     Pgm, Pgg, Pmm = calculate_power_spectra(
-        setup, observables, ingredients, hmf,mass_range, dndm, rho_bg,
+        setup, observables, ingredients, Om0, hmf, mass_range, dndm, rho_bg,
         c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, z)
     if observables.gm:
         Pgm_c, Pgm_s, Pgm_2h = Pgm
@@ -522,8 +518,6 @@ def calculate_Pgm(setup, observable, ingredients, hmf, mass_range, dndm,
         Pgm_2h = np.zeros((observable.nbins,setup['lnk_bins']))
 
     if ingredients['centrals']:
-        if debug:
-            print('F_k1 =', F_k1)
         Pgm_c = F_k1 * gm_cen_analy(
             dndm[observable.idx], uk_c[observable.idx],
             rho_bg[observable.idx], pop_c[observable.idx],
@@ -561,15 +555,15 @@ def calculate_Pmm(setup, observable, ingredients, hmf, mass_range, dndm,
     return Pmm_1h, Pmm_2h
 
 
-def calculate_power_spectra(setup, observables, ingredients, hmf, mass_range,
-                            dndm, rho_bg, c_twohalo, s_beta, pop_g, pop_c,
-                            pop_s, uk_c, uk_s, ngal, z):
+def calculate_power_spectra(setup, observables, ingredients, omega_m, hmf,
+                            mass_range, dndm, rho_bg, c_twohalo, s_beta,
+                            pop_g, pop_c, pop_s, uk_c, uk_s, ngal, z):
     """Wrapper to calculate gm, gg, and/or mm power spectra"""
     # Galaxy - dark matter spectra (for lensing)
     bias = c_twohalo
     bias = array([bias]*setup['k_range_lin'].size).T
     if setup['delta_ref'] == 'SOCritical':
-        bias = bias * omegam
+        bias = bias * omega_m
 
     # damping of the 1h power spectra at small k
     F_k1 = sp.erf(setup['k_range_lin']/0.1)
@@ -758,6 +752,7 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         concentration = c_concentration[0](mass_range, *c_concentration[1:])
+        ic(concentration.shape)
         uk_c = nfw.uk(
             setup['k_range_lin'], mass_range, rvir_range_lin, concentration,
             rho_bg, setup['delta'])

@@ -881,14 +881,6 @@ def k_adaptive(r_i, r_j, limit=None):
     
     return lnk, dlnk
     
-    
-def load_cosmology(cosmo):
-    sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
-    cosmo_model = Flatw0waCDM(
-        H0=100*h, Ob0=omegab, Om0=omegam, Tcmb0=2.725, m_nu=0.06*eV,
-        Neff=Neff, w0=w0, wa=wa)
-    return cosmo_model, sigma8, n_s, z
-
 
 def format_z(z, nbins):
     # if a single value is given for more than one bin, assign same
@@ -951,7 +943,7 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     return uk_c, uk_s
     
     
-def preamble(theta, R):
+def preamble(theta):
     """Preamble function
 
     This function is specified separately in the configuration file
@@ -964,39 +956,30 @@ def preamble(theta, R):
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
 
-    observables, selection, ingredients, theta, setup \
+    observables, selection, ingredients, params, setup \
         = [theta[1][theta[0].index(name)]
            for name in ('observables', 'selection', 'ingredients',
                         'parameters', 'setup')]
-    cosmo = theta[0]
-    sigma8, h, omegam, omegab, n, w0, wa, Neff, z = cosmo[:9]
 
-    if observables.mlf:
-        nbins = observables.nbins - observables.mlf.nbins
-    else:
-        nbins = observables.nbins
+    R_units = ('pc','kpc','Mpc')
+    if setup['R_unit'] not in R_units:
+        err = f'R_unit must be one of {R_units}'
+        raise ValueError(err)
 
-    size_cosmo = 9
-    
+    cosmo = params[0]
+    # the order of elements of cosmo is set in
+    # helpers.configuration.core.CosmoSection
+    z = cosmo[10]
+
+    nbins = observables.nbins
     if observables.mlf:
-        if len(cosmo) == size_cosmo+1:
-            assert len(cosmo) >= len(cosmo), \
-                'When using SMF/LF, must provide an additional parameter' \
-                '"z_mlf", corresponding to mean redshift values for SMF/LF. See' \
-                'demo for an example.'
-        z_mlf = cosmo[-1]
-        size_cosmo += 1
-    # cheap hack. I'll use this for CMB lensing, but we can
-    # also use this to account for difference between shear
-    # and reduced shear
-    if len(cosmo) == size_cosmo+1:
-        zs = cosmo[-1]
-    elif setup['return'] == 'kappa':
-        raise ValueError(
-            'If return=kappa then you must provide a source redshift as' \
-            ' the last cosmological parameter. Alternatively, make sure' \
-            ' that the redshift parameters are properly set given your' \
-            ' choice for the zlens parameter')
+        nbins = nbins - observables.mlf.nbins
+
+    if setup['backend'] == 'ccl':
+        wrn = 'Backend ccl not available in halo.model. Falling back to hmf'
+        warnings.warn(wrn)
+    if setup['delta_ref'] == 'critical': setup['delta_ref'] = 'SOCritical'
+    elif setup['delta_ref'] == 'matter': setup['delta_ref'] = 'SOMean'
 
     # if a single value is given for more than one bin, assign same
     # value to all bins
@@ -1005,7 +988,7 @@ def preamble(theta, R):
     # this is in case redshift is used in the concentration or
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
-    #z = expand_dims(z, -1) # no expand dims in cov!
+    z = expand_dims(z, -1)
     if ingredients['nzlens']:
         z_shape_test = (nz.shape[1] == nbins)
     else:
@@ -1015,13 +998,17 @@ def preamble(theta, R):
             'Number of redshift bins should be equal to the number of' \
             ' observable bins!')
 
-    return
+    # we might also want to add a function in the configuration
+    # functionality to update theta more easily
+    theta[1][theta[0].index('setup')] = setup
+
+    return theta
 
 
 def covariance(theta, R):
     
     # ideally we would move this to somewhere separate later on
-    preamble(theta, R)
+    #preamble(theta)
     
     np.seterr(
         divide='ignore', over='ignore', under='ignore', invalid='ignore')
@@ -1039,27 +1026,19 @@ def covariance(theta, R):
         nbins = observables.nbins - observables.mlf.nbins
     else:
         nbins = observables.nbins
-    
+    output = np.empty(observables.nbins, dtype=object)
+
     cosmo, \
         c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta
 
-    cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
-    
-    size_cosmo = 9
-    if observables.mlf:
-        z_mlf = cosmo[-1]
-        size_cosmo += 1
-    # cheap hack. I'll use this for CMB lensing, but we can
-    # also use this to account for difference between shear
-    # and reduced shear
-        # cheap hack. I'll use this for CMB lensing, but we can
-    # also use this to account for difference between shear
-    # and reduced shear
-    if len(cosmo) == size_cosmo+1:
-        zs = cosmo[-1]
-    else:
-        zs = None
+    #cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
+    Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
+        = cosmo
+
+    cosmo_model = Flatw0waCDM(
+        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=m_nu*eV,
+        Neff=Neff, w0=w0, wa=wa)
 
     z = format_z(z, nbins)
     

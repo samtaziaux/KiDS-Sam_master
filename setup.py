@@ -47,7 +47,6 @@ setup(name='kids_ggl_pipeline',
                         'gitpython>=3.1',
                         'dill>=0.3',
                         'dark-emulator==1.0.21'],
-                        'scipy>=0.16.0'],
       zip_safe=False
       )
 

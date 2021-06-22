@@ -411,8 +411,8 @@ def load_datapoints_2d(datafiles, datacols, exclude=None):
                         if j not in exclude]) for esdi in esd], dtype=object)
     print('\n*** check whether setting R and esd dtypes to float causes any' \
           ' trouble (in io.load_datapoints_2d) ***\n')
-    R = np.array(R, dtype=float)
-    esd = np.array(esd, dtype=float)
+    #R = np.array(R, dtype=float)
+    #esd = np.array(esd, dtype=float)
     return R, esd, Nobsbins
 
 

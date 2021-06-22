@@ -28,8 +28,6 @@ if sys.version_info[0] == 2:
     from itertools import izip as zip
     range = xrange
 from time import time
-from astropy.cosmology import FlatLambdaCDM, Flatw0waCDM
-from astropy.units import Quantity
 from collections import OrderedDict
 import warnings
 
@@ -123,11 +121,8 @@ def model(theta, R):
 
     """Calculating halo model"""
 
-    # can probably move this into populations()
-    completeness = calculate_completeness(
-        observables, selection, ingredients, z, nbins)
     pop_c, pop_s = populations(
-        observables, ingredients, completeness, mass_range, theta, nbins)
+        observables, ingredients, selection, mass_range, z, theta, nbins)
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
@@ -857,7 +852,7 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
     # Fourier Transform of the NFW profile
     if ingredients['centrals']:
         concentration = c_concentration[0](mass_range, *c_concentration[1:])
-        ic(concentration.shape)
+        #ic(concentration.shape)
         uk_c = nfw.uk(
             setup['k_range_lin'], mass_range, rvir_range_lin, concentration,
             rho_bg, setup['delta'])
@@ -940,28 +935,27 @@ def output_xi(output, setup, observables, ingredients, xi_gm, xi_gg, xi_mm,
     return output
 
 
-def populations(observables, ingredients, completeness, mass_range, theta, nbins):
-    pop_c, pop_s = np.zeros((2,nbins,mass_range.size))
+def populations(observables, ingredients, selection, mass_range, z, theta, nbins):
 
     c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta[1:]
-    pop_c, pop_s = np.zeros((2,observables.nbins,mass_range.size))
+    pop_c, pop_s = np.zeros((2,nbins,mass_range.size))
     prob_c, prob_s = np.zeros(
-        (2,observables.nbins,observables[0].sampling.shape[1],mass_range.size))
+        (2,nbins,observables[0].sampling.shape[1],mass_range.size))
 
     completeness = calculate_completeness(
-        observables, selection, ingredients, z)
+        observables, selection, ingredients, z, nbins)
     if observables.gm:
         idx = observables.gm.idx
         if ingredients['centrals']:
             pop_c[idx,:], prob_c[idx,:] = hod.number(
                 observables.gm.sampling, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:], completeness[observables.gm.idx],
+                c_mor[1:], c_scatter[1:], completeness[idx],
                 obs_is_log=observables.gm.is_log)
         if ingredients['satellites']:
             pop_s[idx,:], prob_s[idx,:] = hod.number(
                 observables.gm.sampling, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:], completeness[observables.gm.idx],
+                s_mor[1:], s_scatter[1:], completeness[idx],
                 obs_is_log=observables.gm.is_log)
 
     if observables.gg:
@@ -969,12 +963,12 @@ def populations(observables, ingredients, completeness, mass_range, theta, nbins
         if ingredients['centrals']:
             pop_c[idx,:], prob_c[idx,:] = hod.number(
                 observables.gg.sampling, mass_range, c_mor[0], c_scatter[0],
-                c_mor[1:], c_scatter[1:], completeness[observables.gg.idx],
+                c_mor[1:], c_scatter[1:], completeness[idx],
                 obs_is_log=observables.gg.is_log)
         if ingredients['satellites']:
             pop_s[idx,:], prob_s[idx,:] = hod.number(
                 observables.gg.sampling, mass_range, s_mor[0], s_scatter[0],
-                s_mor[1:], s_scatter[1:], completeness[observables.gg.idx],
+                s_mor[1:], s_scatter[1:], completeness[idx],
                 obs_is_log=observables.gg.is_log)
     return pop_c, pop_s
     

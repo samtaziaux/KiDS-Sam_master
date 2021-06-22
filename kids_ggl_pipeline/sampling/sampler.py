@@ -35,11 +35,14 @@ from . import priors, sampling_utils
 from ..helpers import io, plotting
 from .. import __version__
 from ..halomodel.halo import initialize_beta_nl
+# debugging
+from ..helpers._debugging import import_icecream
+ic = import_icecream()
 
 
 def run(hm_options, options, args):
 
-    function, function_cov, parameters, names, prior_types, \
+    function, function_cov, preamble, parameters, names, prior_types, \
         nparams, repeat, join, starting, output = \
             hm_options
 
@@ -54,7 +57,7 @@ def run(hm_options, options, args):
     ingredients = parameters[1][ingr_idx]
     
     assert_output(setup, observables)
-    
+
     print_opening_msg(args, options)
 
     # identify fixed and free parameters
@@ -95,11 +98,10 @@ def run(hm_options, options, args):
     assert Ndatafiles > 0, 'No data files found'
     # Rrange, angles are used in nfw_stack only
     R, esd, cov, Rrange, angles, Nobsbins, Nrbins = io.load_data(options, setup)
-    #val1 = np.append(val1, [Rrange, angles])
     cov, icov, likenorm, esd_err, cov2d, cor = cov
     # utility variables
     rng_obsbins = range(Nobsbins)
-    
+
     observables._add_R(R)
     parameters[1][obs_idx] = observables
 
@@ -118,8 +120,12 @@ def run(hm_options, options, args):
         fail_value[n] = 9999
     fail_value = list(fail_value[0])
 
-    if not options['resume']:
+    if args.demo or not options['resume']:
         print('Starting values =', starting)
+
+    # if there is a preamble function we can run it now
+    if preamble:
+        parameters = preamble(parameters)
 
     # are we just running a demo?
     if args.demo:
@@ -146,7 +152,7 @@ def run(hm_options, options, args):
             names, prior_types, jfree, starting, parameters,
             options['nwalkers'], ndim)
 
-    if not os.path.isfile(options['output']):
+    if not os.path.isfile(options['output']) or not options['resume']:
         print('Running a new model. Good luck!\n')
 
     # burn-in
@@ -193,8 +199,11 @@ def run(hm_options, options, args):
                 index += 1
                 # Check convergence
                 # should we offer more flexibility here?
-                converged = np.all(tau * options['autocorr_factor'] < sampler.iteration) # n-times autocorrelation time as a measure of convergence
-                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01) # and chains change less than 1%
+                # n-times autocorrelation time as a measure of convergence
+                converged = np.all(
+                    tau * options['autocorr_factor'] < sampler.iteration)
+                # and chains change less than 1%
+                converged &= np.all(np.abs(old_tau - tau) / tau < 0.01)
                 if converged:
                     break
                 old_tau = tau
@@ -268,8 +277,13 @@ def demo(args, function, R, esd, esd_err, cov, icov, cor, options, setup,
     print(' ** chi2 = {0:.2f}/{1:d} **'.format(chi2, dof))
     print()
 
+    # this for now. The idea is that setup['return'] should eventually
+    # be a list with all the quantities that are being modelled.
+    if isinstance(setup['return'], str):
+        setup['return'] = [setup['return']]
     output = '{0}_demo_{1}.{2}'.format(
-        '.'.join(options['output'].split('.')[:-1]), setup['return'],
+        '.'.join(options['output'].split('.')[:-1]),
+                 '-'.join(setup['return']).replace('.', ''),
         plot_ext)
     # if necessary, create a demo folder within the output path
     path, output = os.path.split(output)
@@ -401,6 +415,7 @@ def lnprob(theta, R, esd, icov, function, names, prior_types,
     """
     lnprior_total = priors.calculate_lnprior(
         lnprior, theta, prior_types, parameters, jfree)
+    ic(lnprior_total)
     if not isfinite(lnprior_total):
         if args.demo:
             return -inf, fail_value

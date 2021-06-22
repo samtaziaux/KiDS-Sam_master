@@ -1,5 +1,6 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
+from glob import glob
 import numpy as np
 import distutils
 import distutils.util
@@ -19,9 +20,22 @@ _default_entries = {
     'logR_min': 'minimum value of logR for mock observations',
     'pi_max': 'projection length for wp',
     'kaiser_correction': 'Kaiser effect correction for wp',
+    # these are used for k-space filtering
+    'bin_edges': 'radial bin edges, used for k-space filtering',
+    'bin_samples': 'number of bins to sample for k-space filtering',
+    'bin_sampling_max': 'max radius to sample for k-space filtering',
+    'kfilter': 'file name(s) containing the k-space filter. Requires pixell',
+    #
+    'return_extra': 'any additional quantities the model should return for' \
+        ' later access.',
     }
 
 _default_values = {
+    'backend': 'ccl',
+    'bin_edges': [],
+    'bin_samples': 201,
+    'bin_sampling_max': 50,
+    'kfilter': '',
     'lnk_bins': 10000,
     'lnk_min': -15.,
     'lnk_max': 10.,
@@ -38,6 +52,8 @@ _default_values = {
     'cov_unit': 'Msun^2/pc^4',
     'pi_max': 100.0,
     'kaiser_correction': 'False',
+    # return extras
+    'return_extra': [],
     }
 
 _necessary_entries = {
@@ -53,9 +69,14 @@ _necessary_entries = {
     }
 
 _valid_entries = {
+    'backend': ('ccl', 'hmf'),
     'delta': float,
-    'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial'),
+    'delta_ref': ('FOF', 'SOCritical', 'SOMean', 'SOVirial', 'critical', 'matter'),
     'distances': ('comoving', 'proper', 'angular'),
+    'bin_edges': str,
+    'bin_samples': int,
+    'bin_sampling_max': float,
+    'kfilter': str,
     'lnk_bins': int,
     'lnk_min': float,
     'lnk_max': float,
@@ -66,10 +87,11 @@ _valid_entries = {
     'logR_min': float,
     'logR_max': float,
     'transfer': ('CAMB', 'EH', 'EH_NoBAO', 'BBKS', 'BondEfs'),
-    #'return': ('esd', 'kappa', 'power', 'sigma', 'xi')
+    'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp'),
     # will implement others in the future, require handling different
     # x-values
-    'return': ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp'),
+    #'return': list,
+    'return_extra': list,
     #'return': ('esd', 'wp', 'esd_wp'),
     'R_unit': str,
     'esd_unit': str,
@@ -83,6 +105,34 @@ def add_defaults(setup):
     for key, value in _default_values.items():
         if key not in setup:
             setup[key] = value
+    return setup
+
+
+def add_kfilter(setup):
+    if not setup['kfilter']:
+        return setup
+    if len(setup['bin_edges']) == 0:
+        msg = 'must provide bin_edges if applying a k-space filter'
+        raise ValueError(msg)
+    try:
+        import pixell
+    except ImportError:
+        err = 'you must install the pixell library in order to use' \
+              ' a k-space filter with KiDS-GGL. Please install with\n' \
+              '    pip install pixell'
+        raise ImportError(err)
+    else:
+        try:
+            from profiley.filtering import Filter
+        except ImportError:
+            err = 'you must install profiley in order to use a k-space' \
+                  ' filter with KiDS-GGL. Please install with\n' \
+                  '    pip install pixell'
+        else:
+            setup['kfilter'] = Filter(setup['kfilter'])
+    # radial bin edges
+    setup['bin_edges'] = setup['bin_edges'].split()
+    setup['bin_edges'][0] = sorted(glob(setup['bin_edges'][0]))
     return setup
 
 
@@ -112,8 +162,10 @@ def add_wavenumber(setup):
     except KeyError:
         pass
     else:
-        setup['k_range'] = np.arange(
-            setup['lnk_min'], setup['lnk_max'], setup['k_step'])
+        #setup['k_range'] = np.arange(
+            #setup['lnk_min'], setup['lnk_max'], setup['k_step'])
+        setup['k_range'] = np.linspace(
+            setup['lnk_min'], setup['lnk_max'], setup['lnk_bins'])
         setup['k_range_lin'] = np.exp(setup['k_range'])
     return setup
 
@@ -122,13 +174,31 @@ def append_entry(line, setup):
     """
     `line` should be a `ConfigLine` object
     """
+    """
     for dtype in (int, float, str):
         try:
             setup[line.words[0]] = dtype(line.words[1])
             break
         except ValueError:
             pass
-            
+    """
+    key, value = line.words[:2]
+    # this only allows for list of strings but that's all we need for now
+    if _valid_entries[key] == list:
+        setup[key] = value.split(',')
+    elif np.iterable(_valid_entries[key]):
+        if value not in _valid_entries[key]:
+            err = f'value {value} not allowed for setup entry {key}.' \
+                  f' Allowed values are {_valid_entries[key]}.'
+            raise ValueError(err)
+        setup[key] = value
+    else:
+        try:
+            setup[key] = _valid_entries[key](value)
+        except ValueError:
+            err = f'cannot convert value {value} in entry {key} to required' \
+                  f'type {_valid_entries[key]}'
+            raise ValueError(err)
     return setup
 
 
@@ -172,6 +242,13 @@ def convert_to_bool(setup):
     return setup
 
 
+def check_return(setup):
+    # should not have esd_wp here - each element should be a combination
+    # of observable type and measurement, e.g., "gm.esd"
+    valid = ('esd', 'kappa', 'power', 'sigma', 'xi', 'wp', 'all', 'esd_wp')
+    # ...
+
+
 def check_setup(setup):
     """Run all checks to ensure that the setup section complies"""
     check_necessary_entries(setup)
@@ -181,6 +258,7 @@ def check_setup(setup):
     setup = add_rvir_range(setup)
     setup = add_wavenumber(setup)
     setup = convert_to_bool(setup)
+    setup = add_kfilter(setup)
     return setup
 
 

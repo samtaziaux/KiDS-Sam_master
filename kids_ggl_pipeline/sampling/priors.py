@@ -25,6 +25,7 @@ nargs = {'exp': 0, 'jeffreys': 0, 'lognormal': 2, 'normal': 2,
 for p in fixed_priors:
     nargs[p] = 0
 
+
 free_priors = list(lnprior_functions.keys())
 valid_priors = append(fixed_priors, free_priors)
 valid_priors = append(valid_priors, 'repeat')
@@ -66,7 +67,7 @@ def define_limits(prior, args):
     if prior == 'jeffreys':
         # no choice but to assume this number is of order 0-1
         # (but cannot be exactly zero)
-        return [1e-10, 100]
+        return [1e-4, 10]
 
 
 def draw(prior, args, bounds=None, size=None):

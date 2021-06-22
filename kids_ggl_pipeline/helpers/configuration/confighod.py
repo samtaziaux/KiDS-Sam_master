@@ -13,7 +13,6 @@ from ...sampling.priors import (
     define_limits, draw, fixed_priors, free_priors, nargs as prior_nargs,
     valid_priors)
 
-
 def add_default_ingredients(ingredients):
     options = ('centrals', 'pointmass', 'miscentring', 'satellites',
                'twohalo', 'haloexclusion', 'nzlens', 'bnl')
@@ -71,8 +70,22 @@ def flatten_parameters(parameters, names, repeat, join):
     return flat, flatnames, repeat, nparams
 
 
-def format_join(join):
+def format_join(join, n_cosmo_given, n_cosmo_total):
+    """Format join labels so that they match the parameter array
+
+    `n_cosmo_given` and `n_cosmo_total` are the number of provided
+    and available cosmological parameters, respectively, which we
+    need in order to correct for the fact that some cosmological
+    parameters may be missing from the config file
+    """
     join = np.array(join)
+    # join cosmological parameters not supported, so let's make sure
+    # there are none
+    if np.any(join[:n_cosmo_given] != '-1'):
+        err = 'join labels are not supported for cosmological parameters'
+        raise ValueError(err)
+    # this is why!
+    join = np.append(['-1']*n_cosmo_total, join[n_cosmo_given:])
     rng = np.arange(join.size)
     join_labels = np.unique(join[join != '-1'])
     join_arrays = []
@@ -105,7 +118,12 @@ def hod_function(line, names, parameters, priors, section):
     elif 'scatter' in section:
         parameters[0].append(getattr(scatter, line.words[1]))
     elif 'concentration' in section:
-        parameters[0].append(getattr(concentration, line.words[1]))
+        # if the function does not exist, then this might just be a
+        # model name, e.g., for colossus
+        try:
+            parameters[0].append(getattr(concentration, line.words[1]))
+        except AttributeError:
+            parameters[0].append(line.words[1])
     # felixibility not yet implemented
     elif 'miscentring' in section:
         parameters[0].append(line.words[1])
@@ -169,8 +187,8 @@ def hod_parameters(line, names, parameters, priors, starting):
         p0 = -99
     parameters[0].append(p0)
 
-    if priors[-1] == 'repeat' or priors[-1] in fixed_priors \
-            or priors[-1] in ('exp', 'jeffreys'):
+    if priors[-1] == 'repeat' or priors[-1] in fixed_priors:# \
+            #or priors[-1] in ('exp', 'jeffreys'):
         parameters[1].append(-99)
         starting = starting_values(starting, parameters, line)
     else:

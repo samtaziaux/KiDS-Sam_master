@@ -317,6 +317,7 @@ def load_data(options, setup):
         # need to adapt or remove
         R, Rrange = sampling_utils.setup_integrand(
             R, options['precision'])
+
         angles = np.linspace(0, 2*np.pi, 540)
 
     else:
@@ -408,6 +409,10 @@ def load_datapoints_2d(datafiles, datacols, exclude=None):
                       if j not in exclude]) for Ri in R], dtype=object)
         esd = np.array([np.array([esdi[j] for j in range(len(esdi))
                         if j not in exclude]) for esdi in esd], dtype=object)
+    print('\n*** check whether setting R and esd dtypes to float causes any' \
+          ' trouble (in io.load_datapoints_2d) ***\n')
+    R = np.array(R, dtype=float)
+    esd = np.array(esd, dtype=float)
     return R, esd, Nobsbins
 
 
@@ -435,6 +440,77 @@ def read_ascii(file, columns=None):
                 for i, col in enumerate(columns):
                     data[i].append(line[col])
     return np.array(data, dtype=float)
+
+
+def _read_header(hdr):
+    """
+    Note: this function is probably outdated! Leaving hidden for now
+    """
+    paramtypes = ('read', 'uniform',
+                  'normal', 'lognormal', 'fixed', 'derived')
+    params = []
+    prior_types = []
+    val1 = []
+    val2 = []
+    val3 = []
+    val4 = []
+    exclude_bine = None
+    file = open(hdr)
+    for line in file:
+        line = line.split()
+        if len(line) == 0:
+            continue
+        if line[0] == 'acceptance_fraction':
+            print('acceptance_fraction =', array(line[1].split(',')))
+        elif line[0] == 'acor':
+            print('acor =', line[1])
+        elif line[0] == 'nwalkers':
+            nwalkers = int(line[1])
+        elif line[0] == 'nsteps':
+            nsteps = int(line[1])
+        elif line[0] == 'nburn':
+            nburn = int(line[1])
+        elif line[0] == 'datafile':
+            datafile = line[1].split(',')
+            if len(datafile) == 1:
+                datafile = datafile[0]
+        elif line[0] == 'cols':
+            cols = [int(i) for i in line[1].split(',')]
+        elif line[0] == 'covfile':
+            covfile = line[1]
+        elif line[0] in ('covcol', 'covcols'):
+            covcols = [int(i) for i in line[1].split(',')]
+        elif line[0] == 'exclude_bins':
+            exclude_bins = [int(i) for i in line[1].split(',')]
+        elif line[0] == 'model':
+            model = line[1]
+        elif line[0] == 'metadata':
+            meta_names.append(line[1].split(','))
+            fits_format.append(line[2].split(','))
+        if line[1] in paramtypes:
+            params.append(line[0])
+            prior_types.append(line[1])
+            if line[1] in ('read', 'fixed'):
+                v1 = line[2].split(',')
+                if len(v1) == 1:
+                    val1.append(float(v1[0]))
+                else:
+                    val1.append(array(v1, dtype=float))
+                val2.append(-1)
+                val3.append(-1)
+                val4.append(-1)
+            else:
+                val1.append(float(line[2]))
+                val2.append(float(line[3]))
+                val3.append(float(line[4]))
+                val4.append(float(line[5]))
+    file.close()
+    #out = (array(params), prior_types, sat_profile, group_profile,
+    out = (array(params), prior_types,
+           array(val1), array(val2), array(val3), array(val4),
+           datafile, cols, covfile, covcols, exclude_bins,
+           model, nwalkers, nsteps, nburn)
+    return out
 
 
 def write_chain(sampler, options, chi2, names, jfree, output, metadata,

@@ -52,6 +52,9 @@ def lognormal(obs, Mo, Mh, sigma, obs_is_log=False):
     if np.iterable(sigma):
         sigma = expand_dims(expand_dims(sigma, -1), -1)
     obs = expand_dims(obs, -1)
+    # specifically when dealing with 2 dimensions (e.g., m,z)
+    if len(Mo.shape) == 2:
+        Mo = Mo[:,None]
     return exp(-((log10(obs/Mo)**2.0) / (2.0*sigma**2.0))) \
         / ((2.0*pi)**0.5 * sigma * obs * log(10.0))
 

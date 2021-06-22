@@ -10,5 +10,5 @@ from ..helpers.distributions import *
 
 
 # don't forget to update this!
-__all__ = ('lognormal', 'schechter_mod')
+__all__ = ('lognormal', 'modschechter')
 

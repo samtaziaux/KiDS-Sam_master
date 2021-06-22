@@ -13,6 +13,23 @@ from kids_ggl_pipeline.sampling import sampler, sampling_utils
 from kids_ggl_pipeline.halomodel import hm_utils
 from kids_ggl_pipeline.helpers import configuration
 from kids_ggl_pipeline.helpers.utils import interactive
+# this is actually a requirement now
+try:
+    from icecream import install
+    install()
+except ImportError:
+    pass
+
+if '--debug' not in sys.argv:
+    import numpy as np
+    import warnings
+    try:
+        import pyccl as ccl
+        warnings.filterwarnings('ignore', category=ccl.CCLWarning)
+    except ImportError:
+        pass
+    for w in (FutureWarning, np.VisibleDeprecationWarning):
+        warnings.filterwarnings('ignore', category=w)
 
 
 def main():
@@ -65,6 +82,8 @@ def parse_args():
         help='Evaluate a demo sample with the input parameters')
     add('--no-cov', dest='no_demo_cov', action='store_true',
         help='Do not plot the covariance when running in demo mode')
+    add('--debug', dest='debug', action='store_true',
+        help='Print debugging messages')
     # print version
     add('-v', '--version', action='version',
         version='%(prog)s {0}'.format(__version__))

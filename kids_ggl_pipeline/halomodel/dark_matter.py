@@ -315,7 +315,7 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     re = beta_interp(values)
     beta_i[indices[:,0], indices[:,1], indices[:,2]] = re - 1.0
     #print(time.time()-to)
-    #idx = np.where(values[:,-1] < 0.08)
+    #idx = np.where(values[:,-1] > 1.0)
     #beta_i[indices[idx,0], indices[idx,1], indices[idx,2]] = 0.0
     
     intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
@@ -373,7 +373,7 @@ def beta_nl_darkquest(cparam, M, k, z, reset=False):
                         beta_func[iz1, iM1, iM2, :] = Pk_hh/(b1*b2*Pk_lin)#-1. #return 1+beta to be defined as AM data.
                     
         #print(time.time()-to)
-        beta = RegularGridInterpolator([z, np.log10(M), np.log10(M), k], beta_func, fill_value=1.0, bounds_error=False)
+        beta = RegularGridInterpolator([z, np.log10(M), np.log10(M), k], beta_func, fill_value=None, bounds_error=False)
         with open(os.path.join(path0, 'interpolator_BNL_DQ.npy'), 'wb') as dill_file:
             pickle.dump(beta, dill_file)
         return beta

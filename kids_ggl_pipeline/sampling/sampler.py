@@ -175,7 +175,7 @@ def run(hm_options, options, args):
              args=(R,esd,icov,function,names,prior_types[jfree],
                    parameters,nparams,join,jfree,repeat,lnprior,likenorm,
                    rng_obsbins,fail_value,array,dot,inf,zip,outer,pi,args),
-             pool=pool, backend=backend, blobs_dtype=dtype)
+             pool=pool, backend=backend, blobs_dtype=dtype)#, moves=[(emcee.moves.StretchMove(), 0.5), (emcee.moves.KDEMove(), 0.5)])
         #result = sampler.run_mcmc(pos, options['nsteps'], thin_by=options['thin'], progress=True, store=True)
         for sample in sampler.sample(pos, iterations=options['nsteps'],
                                      thin_by=options['thin'], progress=True, store=True):
@@ -475,6 +475,7 @@ def sample_ball(names, prior_types, jfree, starting, parameters, nw, ndim):
     for n, p in enumerate(prior_free):
         ball[:,n] = priors.draw(
             p, (v1free[n],v2free[n]), (v3free[n],v4free[n]), size=nw)
+    #ball = starting + 5e-1 * np.random.randn(nw, ndim)
     return ball
 
 

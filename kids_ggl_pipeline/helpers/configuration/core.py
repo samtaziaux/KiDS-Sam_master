@@ -10,6 +10,7 @@ from . import confighod, configsampler, configsetup, configcovar
 from ...halomodel import cluster, covariance, halo, nfw, nfw_stack
 from ...halomodel.observables import ModelObservables, Observable
 from ...halomodel.selection import Selection
+from ...sampling.priors import fixed_priors
 # debugging
 from .._debugging import import_icecream
 ic = import_icecream()
@@ -107,7 +108,7 @@ class ConfigSection(str):
 
     def append_parameters(
             self, names, parameters, priors, repeat, section_names,
-            these_names, these_params, these_priors):
+            these_names, these_params, these_priors, starting):
         """Append parameters to the section once we're done reading it
 
         Repeat parameters are processed here
@@ -125,6 +126,7 @@ class ConfigSection(str):
             cosmo_params = [cosmo.values] \
                 + [len(cosmo.values)*[i] for i in (None,-np.inf,np.inf)]
             # also need to set prior parameters and starting values
+            starting_cosmo = starting.copy()
             for j, name in enumerate(cosmo.names):
                 if name in these_names:
                     i = these_names.index(name)
@@ -134,9 +136,18 @@ class ConfigSection(str):
                     #these_priors[i] = cosmo_priors[j]
                     #for k in range(3):
                         #these_params
+            sampling_names = [name for i,name in enumerate(cosmo.names)\
+                                if cosmo_priors[i] not in fixed_priors]
+            these_sampling_names = [name for i,name in enumerate(these_names)\
+                                if these_priors[i] not in fixed_priors]
+            for j, name in enumerate(sampling_names):
+                if name in these_sampling_names:
+                    i = these_sampling_names.index(name)
+                    starting_cosmo[j] = starting[i]
             these_names = cosmo.names
             these_params = cosmo_params
             these_priors = cosmo_priors
+            starting = starting_cosmo.copy()
         names.append(these_names)
         if self.name is None:
             return names, parameters, priors
@@ -167,7 +178,7 @@ class ConfigSection(str):
                 else:
                     priors.append(pr)
                     repeat.append(-1)
-        return names, parameters, priors
+        return names, parameters, priors, starting
 
     def is_parent(self):
         return self.name == self.parent
@@ -253,9 +264,9 @@ class ConfigFile(object):
             # we reach this once we're done with the previous section
             if line.is_section():
                 if section.name == 'cosmo' or section.name[:3] == 'hod':
-                    names, parameters, priors = section.append_parameters(
+                    names, parameters, priors, starting = section.append_parameters(
                         names, parameters, priors, repeat, section_names,
-                        these_names, these_params, these_priors)
+                        these_names, these_params, these_priors, starting)
                     # need this to format join parameters
                     if section.name == 'cosmo':
                         n_cosmo_given = len(these_names)

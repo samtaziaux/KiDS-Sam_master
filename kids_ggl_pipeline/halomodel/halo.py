@@ -102,7 +102,7 @@ def model(theta, R):
         s_concentration, s_mor, s_scatter, s_beta = theta
 
     #cosmo_model, sigma8, n_s, z = load_cosmology(cosmo)
-    Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
+    Om0, Ob0, h, sigma_8, n_s, m_nu, Neff, w0, wa, Tcmb0, z, nz, z_mlf, zs \
         = cosmo
 
     cosmo_model = Flatw0waCDM(
@@ -112,10 +112,12 @@ def model(theta, R):
     z = format_z(z, nbins)
     ### load halo mass functions ###
 
-    # Tinker10 should also be read from theta!
-    hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
 
-    assert np.allclose(setup['mass_range'], hmf[0].m)
+    # Tinker10 should also be read from theta!
+    hmf, rho_bg, dndm, power, nu, m, nu_s, fsigma_s = load_hmf(z, setup, cosmo_model, sigma_8, n_s)
+
+    #assert np.allclose(setup['mass_range'], hmf[0].m)
+    assert np.allclose(setup['mass_range'], m[0])
     # alias (should probably get rid of it)
     mass_range = setup['mass_range']
 
@@ -126,7 +128,8 @@ def model(theta, R):
     pop_g = pop_c + pop_s
 
     # note that pop_g already accounts for incompleteness
-    dndm = array([hmf_i.dndm for hmf_i in hmf])
+    #dndm = array([hmf_i.dndm for hmf_i in hmf])
+
     ngal = calculate_ngal(observables, pop_g, dndm, mass_range)
     meff = calculate_meff(observables, pop_c, dndm, mass_range)
 
@@ -134,10 +137,10 @@ def model(theta, R):
     if observables.mlf:
         output[observables.mlf.idx] = calculate_mlf(
             z_mlf, observables, ingredients, mass_range, theta, setup,
-            cosmo_model, sigma8, n_s)
+            cosmo_model, sigma_8, n_s)
 
     ### Power spectra ###
-
+ 
     uk_c, uk_s = calculate_uk(
         setup, observables, ingredients, z, mass_range, rho_bg,
         c_concentration, s_concentration, c_miscent, nbins)
@@ -147,17 +150,19 @@ def model(theta, R):
 
     if setup['kaiser_correction']:
         bias_corr = c_twohalo * array(
-            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[1]
-            for hmf_i, ngal_i, pop_g_i
-            in zip(hmf[observables.gg.idx],
+            [two_halo_gg(dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i, mass_range, setup)[1]
+            for dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i
+            in zip(dndm[observables.gg.idx], power[observables.gg.idx],
+                   nu[observables.gg.idx], nu_s[observables.gg.idx],
+                   fsigma_s[observables.gg.idx],
                    expand_dims(ngal[observables.gg.idx], -1),
                    expand_dims(pop_g[observables.gg.idx], -2))])**0.5
     else:
         bias_corr = None
-
+    
     # spectra that are not required are just dummy variables
     Pgm, Pgg, Pmm = calculate_power_spectra(
-            setup, observables, ingredients, hmf, cosmo_model, n_s, mass_range, dndm, rho_bg,
+            setup, observables, ingredients, dndm, power, nu, nu_s, fsigma_s, cosmo_model, sigma_8, n_s, mass_range, rho_bg,
             c_twohalo, s_beta, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, z)
     if observables.gm:
         Pgm_c, Pgm_s, Pgm_2h = Pgm
@@ -402,15 +407,15 @@ def output_esd_single(output, observable, esd, meff):
         output[observables.gm.idx] = esd
 
 
-def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta, setup, cosmo_model, sigma8, n_s):
+def calculate_mlf(z_mlf, observables, ingredients, mass_range, theta, setup, cosmo_model, sigma_8, n_s):
     if z_mlf.size == 1 and observables.mlf.nbins > 1:
         z_mlf = z_mlf*np.ones(observables.mlf.nbins)
     if z_mlf.size != observables.mlf.nbins:
         raise ValueError(
             'Number of redshift bins should be equal to the number of' \
             ' observable bins!')
-    hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, sigma8, n_s)
-    dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
+    _hmf_mlf, _rho_mean, dndm_mlf, _power, _nu, _m, _nu_s, _fsigma_s = load_hmf(z_mlf, setup, cosmo_model, sigma_8, n_s)
+    #dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
 
     c_pm, c_concentration, c_mor, c_scatter, c_miscent, c_twohalo, \
         s_concentration, s_mor, s_scatter, s_beta = theta[1:]
@@ -471,18 +476,20 @@ def calculate_meff(observables, pop, dndm, mass_range):
     return meff
 
 
-def calculate_Pgg(setup, observable, ingredients, hmf, mass_range, dndm,
+def calculate_Pgg(setup, observable, ingredients, dndm, power, nu, nu_s, fsigma_s, mass_range,
                   bias, pop_g, pop_c, pop_s, uk_s, ngal, beta,
                   F_k1, F_k2, Igg):
     if ingredients['twohalo']:
-        Pgg_2h = F_k2 * bias * array(
-            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
-             for hmf_i, ngal_i, pop_g_i
-             in zip(hmf[observable.idx],
-                    expand_dims(ngal[observable.idx], -1),
-                    expand_dims(pop_g[observable.idx], -2))])
+        Pgg_2h = F_k2 * bias**2.0 * array(
+            [two_halo_gg(dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i, mass_range, setup)[0]
+            for dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i
+            in zip(dndm[observable.idx], power[observable.idx], nu[observable.idx],
+                   nu_s[observable.idx],
+                   fsigma_s[observable.idx],
+                   expand_dims(ngal[observable.idx], -1),
+                   expand_dims(pop_g[observable.idx], -2))])
         if ingredients['bnl']:
-            Pgg_2h = (Pgg_2h + F_k2 * array([hmf_i.power for hmf_i in hmf[observables.gg.idx]])*Igg)
+            Pgg_2h = (Pgg_2h + F_k2 * array([power_i for power_i in power[observable.idx]])*Igg)
     else:
         Pgg_2h = F_k2 * np.zeros((observable.nbins,setup['lnk_bins']))
 
@@ -510,19 +517,21 @@ def calculate_Pgg(setup, observable, ingredients, hmf, mass_range, dndm,
     return Pgg_c, Pgg_s, Pgg_cs, Pgg_2h
 
 
-def calculate_Pgm(setup, observable, ingredients, hmf, mass_range, dndm,
+def calculate_Pgm(setup, observable, ingredients, dndm, power, nu, nu_s, fsigma_s, mass_range,
                   rho_bg, bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal,
                   F_k1, F_k2, Igm):
 
     if ingredients['twohalo']:
         Pgm_2h = F_k2 * bias * array(
-            [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
-            for hmf_i, ngal_i, pop_g_i
-            in zip(hmf[observable.idx],
+            [two_halo_gm(dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i, mass_range, setup)[0]
+            for dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i
+            in zip(dndm[observable.idx], power[observable.idx], nu[observable.idx],
+                   nu_s[observable.idx],
+                   fsigma_s[observable.idx],
                    expand_dims(ngal[observable.idx], -1),
                    expand_dims(pop_g[observable.idx], -2))])
         if ingredients['bnl']:
-            Pgm_2h = (Pgm_2h + F_k2 * array([hmf_i.power for hmf_i in hmf[observables.gm.idx]])*Igm)
+            Pgm_2h = (Pgm_2h + F_k2 * array([power_i for power_i in power[observable.idx]])*Igm)
     #elif ingredients['nzlens']:
         #Pg_2h = np.zeros((nbins,z.size//nbins,setup['lnk_bins']))
     else:
@@ -549,11 +558,11 @@ def calculate_Pgm(setup, observable, ingredients, hmf, mass_range, dndm,
     return Pgm_c, Pgm_s, Pgm_2h
 
 
-def calculate_Pmm(setup, observable, ingredients, hmf, mass_range, dndm,
+def calculate_Pmm(setup, observable, ingredients, dndm, power, nu, nu_s, fsigma_s, mass_range,
                   uk_c, F_k1, F_k2, Imm):
     if ingredients['twohalo']:
-        Pmm_2h = F_k2 * array([hmf_i.power
-                               for hmf_i in hmf[observable.idx]])
+        Pmm_2h = F_k2 * array([power_i
+                               for power_i in power[observable.idx]])
     else:
         Pmm_2h = np.zeros((observable.nbins,setup['lnk_bins']))
 
@@ -586,8 +595,8 @@ def test_cosm_range(cparam_in):
     return cparam_out
     
 
-def initialize_beta_nl(omegab, omegadm, omegav, sigma8, ns, w0, h, reset=False):
-    As = 2.43e-9 * (sigma8 / 0.87659)**2
+def initialize_beta_nl(omegab, omegadm, omegav, sigma_8, ns, w0, h, reset=False):
+    As = 2.43e-9 * (sigma_8 / 0.87659)**2
     lnAs = np.log(10.0**10.0 * As)
     cparam = test_cosm_range(np.array([omegab*h**2.0, omegadm*h**2.0, omegav, lnAs, ns, w0])) # array for cosmological parameters [wb, wc, Om_v, lnAs, ns, w]
     Mt = np.logspace(12.0, 14.0, 5)
@@ -597,8 +606,8 @@ def initialize_beta_nl(omegab, omegadm, omegav, sigma8, ns, w0, h, reset=False):
     return beta_interp
     
 
-def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n_s, mass_range,
-                            dndm, rho_bg, c_twohalo, s_beta, pop_g, pop_c,
+def calculate_power_spectra(setup, observables, ingredients, dndm, power, nu, nu_s, fsigma_s, cosmo_model, sigma_8, n_s, mass_range,
+                            rho_bg, c_twohalo, s_beta, pop_g, pop_c,
                             pop_s, uk_c, uk_s, ngal, z):
     """Wrapper to calculate gm, gg, and/or mm power spectra"""
     # Galaxy - dark matter spectra (for lensing)
@@ -618,21 +627,21 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
         #import dill as pickle
         #with open('/net/home/fohlen12/dvornik/interpolator_BNL_test_quest.npy', 'rb') as dill_file:
         #    beta_interp = pickle.load(dill_file)
-        beta_interp = initialize_beta_nl(cosmo_model.Ob0, cosmo_model.Odm0, cosmo_model.Ode0, hmf[0].sigma_8, n_s, cosmo_model.w0, cosmo_model.h)
+        beta_interp = initialize_beta_nl(cosmo_model.Ob0, cosmo_model.Odm0, cosmo_model.Ode0, sigma_8, n_s, cosmo_model.w0, cosmo_model.h)
         #print(beta_interp([[0.5, 12.3, 12.8, 1e-1], [0.2, 12.3, 12.8, 1e-1]]))
 
     if observables.gm:
         if ingredients['bnl']:
-            Igm = array([beta_nl(hmf_i, pop_g_i, mass_range, ngal_i, rho_bg_i,
-                        mass_range, beta_interp, setup['k_range_lin'], z_i)
-                        for hmf_i, pop_g_i, ngal_i, rho_bg_i, z_i in
-                            zip(hmf[observables.gm.idx], pop_g[observables.gm.idx],
+            Igm = array([beta_nl(dndm_i, pop_g_i, mass_range, ngal_i, rho_bg_i,
+                        mass_range, beta_interp, setup['k_range_lin'], z_i, nu_i, nus_i, fsigma_i, setup)
+                        for dndm_i, pop_g_i, ngal_i, rho_bg_i, z_i, nu_i, nus_i, fsigma_i in
+                            zip(dndm[observables.gm.idx], pop_g[observables.gm.idx],
                             ngal[observables.gm.idx], rho_bg[observables.gm.idx],
-                            z[observables.gm.idx])])
+                            z[observables.gm.idx], nu[observables.gm.idx], nu_s[observables.gm.idx], fsigma_s[observables.gm.idx])])
         else:
             Igm = None
         Pgm_c, Pgm_s, Pgm_2h = calculate_Pgm(
-            setup, observables.gm, ingredients, hmf, mass_range, dndm, rho_bg,
+            setup, observables.gm, ingredients, dndm, power, nu, nu_s, fsigma_s, mass_range, rho_bg,
             bias, pop_g, pop_c, pop_s, uk_c, uk_s, ngal, F_k1, F_k2, Igm)
         if ingredients['haloexclusion'] and setup['return'] != 'power':
             Pgm_k_t = Pgm_c + Pgm_s
@@ -647,9 +656,9 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
         output[0] = (Pgm_c, Pgm_s, Pgm_2h)
         """
         if ingredients['bnl']:
-            plt.plot(setup['k_range_lin'], Pgm_k[0] - F_k2*hmf[observables.gm.idx][0].power*Igm[0], label='Total')
+            plt.plot(setup['k_range_lin'], Pgm_k[0] - F_k2*power[observables.gm.idx][0]*Igm[0], label='Total')
             plt.plot(setup['k_range_lin'], Pgm_k[0], label='Total+BNL')
-            plt.plot(setup['k_range_lin'], Pgm_2h[0] - F_k2*hmf[observables.gm.idx][0].power*Igm[0], label='2h')
+            plt.plot(setup['k_range_lin'], Pgm_2h[0] - F_k2*power[observables.gm.idx][0]*Igm[0], label='2h')
             plt.plot(setup['k_range_lin'], Pgm_2h[0], label='2h BNL')
             plt.xscale('log')
             plt.yscale('log')
@@ -661,10 +670,10 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
             plt.clf()
             plt.close()
     
-            plt.plot(setup['k_range_lin'], (Pgm_k[0] - F_k2*hmf[observables.gm.idx][0].power*Igm[0])/(Pgm_k[0] - F_k2*hmf[observables.gm.idx][0].power*Igm[0]), label='Total')
-            plt.plot(setup['k_range_lin'], Pgm_k[0]/(Pgm_k[0] - F_k2*hmf[observables.gm.idx][0].power*Igm[0]), label='Total+BNL')
-            plt.plot(setup['k_range_lin'], (Pgm_2h[0] + F_k2*hmf[observables.gm.idx][0].power*Igm[0])/(Pgm_2h[0] + F_k2*hmf[observables.gm.idx][0].power*Igm[0]), label='2h')
-            plt.plot(setup['k_range_lin'], (Pgm_2h[0])/(Pgm_2h[0] - F_k2*hmf[observables.gm.idx][0].power*Igm[0]), label='2h BNL')
+            plt.plot(setup['k_range_lin'], (Pgm_k[0] - F_k2*power[observables.gm.idx][0]*Igm[0])/(Pgm_k[0] - F_k2*power[observables.gm.idx][0]*Igm[0]), label='Total')
+            plt.plot(setup['k_range_lin'], Pgm_k[0]/(Pgm_k[0] - F_k2*power[observables.gm.idx][0]*Igm[0]), label='Total+BNL')
+            plt.plot(setup['k_range_lin'], (Pgm_2h[0] + F_k2*power[observables.gm.idx][0]*Igm[0])/(Pgm_2h[0] + F_k2*power[observables.gm.idx][0]*Igm[0]), label='2h')
+            plt.plot(setup['k_range_lin'], (Pgm_2h[0])/(Pgm_2h[0] - F_k2*power[observables.gm.idx][0]*Igm[0]), label='2h BNL')
             plt.xscale('log')
             #pl.yscale('log')
             plt.ylim([0,2])
@@ -674,20 +683,21 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
             plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/bnl_gm_ratio_quest_direct_om{0}_s8{1}.png'.format(cosmo_model.Om0, hmf[0].sigma_8))
             plt.clf()
             plt.close()
-            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/Pgm_quest_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([setup['k_range_lin'], Pgm_k - F_k2*[hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_k, Pgm_2h - F_k2*[hmf_i.power for hmf_i in hmf[observables.gm.idx]]*Igm, Pgm_2h], dtype=object), allow_pickle=True)
+            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/Pgm_quest_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([setup['k_range_lin'], Pgm_k - F_k2*[power_i for power_i in power[observables.gm.idx]]*Igm, Pgm_k, Pgm_2h - F_k2*[power_i for power_i in power[observables.gm.idx]]*Igm, Pgm_2h], dtype=object), allow_pickle=True)
         #"""
     # Galaxy - galaxy spectra (for clustering)
     if observables.gg:
         if ingredients['bnl']:
-            Igg = array([beta_nl(hmf_i, pop_g_i, pop_g_i, ngal_i, ngal_i,
-                        mass_range, beta_interp, setup['k_range_lin'], z_i)
-                        for hmf_i, pop_g_i, ngal_i, z_i in
-                            zip(hmf[observables.gg.idx], pop_g[observables.gg.idx],
-                            ngal[observables.gg.idx], z[observables.gg.idx])])
+            Igg = array([beta_nl(dndm_i, pop_g_i, pop_g_i, ngal_i, ngal_i,
+                        mass_range, beta_interp, setup['k_range_lin'], z_i, nu_i, nus_i, fsigma_i, setup)
+                        for dndm_i, pop_g_i, ngal_i, z_i, nu_i, nus_i, fsigma_i in
+                            zip(dndm[observables.gg.idx], pop_g[observables.gg.idx],
+                            ngal[observables.gg.idx], z[observables.gg.idx],
+                            nu[observables.gg.idx], nu_s[observables.gg.idx], fsigma_s[observables.gg.idx])])
         else:
             Igg = None
         Pgg_c, Pgg_s, Pgg_cs, Pgg_2h = calculate_Pgg(
-            setup, observables.gg, ingredients, hmf, mass_range, dndm, bias,
+            setup, observables.gg, ingredients, dndm, power, nu, nu_s, fsigma_s,  mass_range, bias,
             pop_g, pop_c, pop_s, uk_s, ngal, s_beta, F_k1, F_k2, Igg)
 
         if ingredients['haloexclusion'] and setup['return'] != 'power':
@@ -698,9 +708,9 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
         output[1] = (Pgg_c, Pgg_s, Pgg_cs, Pgg_2h)
         """
         if ingredients['bnl']:
-            plt.plot(setup['k_range_lin'], Pgg_k[0] - F_k2*hmf[observables.gg.idx][0].power*Igg[0], label='Total')
+            plt.plot(setup['k_range_lin'], Pgg_k[0] - F_k2*power[observables.gg.idx][0]*Igg[0], label='Total')
             plt.plot(setup['k_range_lin'], Pgg_k[0], label='Total+BNL')
-            plt.plot(setup['k_range_lin'], Pgg_2h[0] - F_k2*hmf[observables.gg.idx][0].power*Igg[0], label='2h')
+            plt.plot(setup['k_range_lin'], Pgg_2h[0] - F_k2*power[observables.gg.idx][0]*Igg[0], label='2h')
             plt.plot(setup['k_range_lin'], Pgg_2h[0], label='2h BNL')
             plt.xscale('log')
             plt.yscale('log')
@@ -712,10 +722,10 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
             plt.clf()
             plt.close()
     
-            plt.plot(setup['k_range_lin'], (Pgg_k[0] - F_k2*hmf[observables.gg.idx][0].power*Igg[0])/(Pgg_k[0] - F_k2*hmf[observables.gg.idx][0].power*Igg[0]), label='Total')
-            plt.plot(setup['k_range_lin'], Pgg_k[0]/(Pgg_k[0] - F_k2*hmf[observables.gg.idx][0].power*Igg[0]), label='Total+BNL')
-            plt.plot(setup['k_range_lin'], (Pgg_2h[0] + F_k2*hmf[observables.gg.idx][0].power*Igg[0])/(Pgg_2h[0] + F_k2*hmf[observables.gg.idx][0].power*Igg[0]), label='2h')
-            plt.plot(setup['k_range_lin'], (Pgg_2h[0])/(Pgg_2h[0] - F_k2*hmf[observables.gg.idx][0].power*Igg[0]), label='2h BNL')
+            plt.plot(setup['k_range_lin'], (Pgg_k[0] - F_k2*power[observables.gg.idx][0]*Igg[0])/(Pgg_k[0] - F_k2*power[observables.gg.idx][0]*Igg[0]), label='Total')
+            plt.plot(setup['k_range_lin'], Pgg_k[0]/(Pgg_k[0] - F_k2*power[observables.gg.idx][0]*Igg[0]), label='Total+BNL')
+            plt.plot(setup['k_range_lin'], (Pgg_2h[0] + F_k2*power[observables.gg.idx][0]*Igg[0])/(Pgg_2h[0] + F_k2*power[observables.gg.idx][0]*Igg[0]), label='2h')
+            plt.plot(setup['k_range_lin'], (Pgg_2h[0])/(Pgg_2h[0] - F_k2*power[observables.gg.idx][0]*Igg[0]), label='2h BNL')
             plt.xscale('log')
             #pl.yscale('log')
             plt.ylim([0,2])
@@ -725,12 +735,12 @@ def calculate_power_spectra(setup, observables, ingredients, hmf, cosmo_model, n
             plt.savefig('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/bnl_gg_ratio_quest_direct_om{0}_s8{1}.png'.format(cosmo_model.Om0, hmf[0].sigma_8))
             plt.clf()
             plt.close()
-            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/Pgg_quest_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([setup['k_range_lin'], Pgg_k - F_k2*[hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_k, Pgg_2h - F_k2*[hmf_i.power for hmf_i in hmf[observables.gg.idx]]*Igg, Pgg_2h], dtype=object), allow_pickle=True)
+            np.save('/net/home/fohlen12/dvornik/test_pipeline2/bnl_test/data_for_paper_cosmo/Pgg_quest_cosmo_om{0}_s8{1}.npy'.format(cosmo_model.Om0, hmf[0].sigma_8), np.array([setup['k_range_lin'], Pgg_k - F_k2*[power_i for power_i in power[observables.gg.idx]]*Igg, Pgg_k, Pgg_2h - F_k2*[power_i for power_i in power[observables.gg.idx]]*Igg, Pgg_2h], dtype=object), allow_pickle=True)
         #"""
     # Matter - matter spectra
     if observables.mm:
         Pmm_1h, Pmm_2h = calculate_Pmm(
-            setup, observables.mm, ingredients, hmf, mass_range, dndm, uk_c,
+            setup, observables.mm, ingredients, dndm, power, nu, nu_s, fsigma_s, mass_range, uk_c,
             F_k1, F_k2, Imm=None)
         #if ingredients['haloexclusion'] and setup['return'] != 'power':
         #    Pmm_k_t = Pmm_1h
@@ -894,11 +904,11 @@ def calculate_uk(setup, observables, ingredients, z, mass_range, rho_bg,
 
 def load_cosmology(cosmo):
     #sigma8, h, omegam, omegab, n_s, w0, wa, Neff, z = cosmo[:9]
-    Om0, Ob0, h, sigma8, n_s, m_nu, Neff, w0, wa, Tcmb0 = cosmo[:10]
+    Om0, Ob0, h, sigma_8, n_s, m_nu, Neff, w0, wa, Tcmb0 = cosmo[:10]
     cosmo_model = Flatw0waCDM(
-        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=m_nu,
+        H0=100*h, Ob0=Ob0, Om0=Om0, Tcmb0=Tcmb0, m_nu=m_nu*eV,
         Neff=Neff, w0=w0, wa=wa)
-    return cosmo_model, sigma8, n_s, z
+    return cosmo_model, sigma_8, n_s, z
 
 
 def interpolate_xi_single(observable, rvir_range_3d, xi):

@@ -183,13 +183,13 @@ def bias_ps(hmf, r_x):
     return bias
 
 
-def bias_tinker10_func(hmf):
+def bias_tinker10_func(nu, setup):
     """
     Tinker 2010 bias - empirical
         
     """
-    nu = hmf.nu**0.5
-    y = np.log10(hmf.mdef_params['overdensity'])
+    delta_c = 1.686
+    y = np.log10(setup['delta'])
     A = 1.0 + 0.24 * y * np.exp(-(4. / y) ** 4.)
     a = 0.44 * y - 0.88
     B = 0.183
@@ -197,47 +197,42 @@ def bias_tinker10_func(hmf):
     C = 0.019 + 0.107 * y + 0.19 * np.exp(-(4. / y) ** 4.)
     c = 2.4
     #print y, A, a, B, b, C, c
-    return 1 - A * nu**a / (nu**a + hmf.delta_c**a) + B * nu**b + C * nu**c
+    return 1 - A * nu**a / (nu**a + delta_c**a) + B * nu**b + C * nu**c
 
 
-def bias_tinker10(hmf):
+def bias_tinker10(nu, nu_scaled, fsigma_scaled, setup):
     """
     Tinker 2010 bias - empirical
         
     """
-    nu0 = hmf.nu**0.5
-    min, max, step = hmf.Mmin, hmf.Mmax, hmf.dlog10m
-    min_0 = 2.
-    hmf.update(Mmin = min_0, Mmax = max, dlog10m = (max-min_0)/500.0)
-    nu = hmf.nu**0.5
+    nu0 = nu**0.5
+    nu = nu_scaled**0.5
     
-    f_nu = hmf.fsigma / nu
-    b_nu = bias_tinker10_func(hmf)
+    f_nu = fsigma_scaled / nu
+    b_nu = bias_tinker10_func(nu, setup)
     norm = trapz(f_nu * b_nu, nu)
-    
-    func = bias_tinker10_func(hmf)
-    func_i = interp1d(nu, func, bounds_error=False, fill_value='extrapolate')
+
+    func_i = interp1d(nu, b_nu, bounds_error=False, fill_value='extrapolate')
     func = func_i(nu0)
-    hmf.update(Mmin = min, Mmax = max, dlog10m = step)
     return func / norm
     
 
-def two_halo_gm(hmf, ngal, population, m_x, **kwargs):
+def two_halo_gm(dndm, power, nu, nu_scaled, fsigma_scaled, ngal, population, m_x, setup, **kwargs):
     """Galaxy-matter two halo term"""
     b_g = trapz(
-        hmf.dndm * population * bias_tinker10(hmf),
+        dndm * population * bias_tinker10(nu, nu_scaled, fsigma_scaled, setup),
         m_x, **kwargs) / ngal
         
-    return (hmf.power * b_g), b_g
+    return (power * b_g), b_g
     
     
-def two_halo_gg(hmf, ngal, population, m_x, **kwargs):
+def two_halo_gg(dndm, power, nu, nu_scaled, fsigma_scaled, ngal, population, m_x, setup, **kwargs):
     """Galaxy-galaxy two halo term"""
     b_g = trapz(
-        hmf.dndm * population * bias_tinker10(hmf),
+        dndm * population * bias_tinker10(nu, nu_scaled, fsigma_scaled, setup),
         m_x, **kwargs) / ngal
 
-    return (hmf.power * b_g**2.0), b_g**2.0
+    return (power * b_g**2.0), b_g**2.0
 
 
 def halo_exclusion(xi, r, meff, rho_dm, delta):
@@ -272,7 +267,7 @@ def halo_exclusion(xi, r, meff, rho_dm, delta):
     return xi_exc
 
 
-def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, redshift):
+def beta_nl(dndm, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k, redshift, nu, nu_scaled, fsigma_scaled, setup):
     """ Non-linear halo bias correction from Mead et al. 2020 (https://arxiv.org/abs/2011.08858)
         Equation 17, that gets added to the usual 2h term from Cacciato.
     
@@ -305,7 +300,7 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     beta : float array, shape (K,)
         non-linear bias term
     """
-    bias = bias_tinker10(hmf)
+    bias = bias_tinker10(nu, nu_scaled, fsigma_scaled, setup)
     
     beta_i = np.zeros((Mh.size, Mh.size, k.size))
     indices = np.vstack(np.meshgrid(np.arange(Mh.size),np.arange(Mh.size),np.arange(k.size))).reshape(3,-1).T
@@ -318,8 +313,8 @@ def beta_nl(hmf, population_1, population_2, norm_1, norm_2, Mh, beta_interp, k,
     #idx = np.where(values[:,-1] > 1.0)
     #beta_i[indices[idx,0], indices[idx,1], indices[idx,2]] = 0.0
     
-    intg1 = beta_i * expand_dims(population_1 * hmf.dndm * bias, -1)
-    intg2 = expand_dims(population_2 * hmf.dndm * bias, -1) * trapz(intg1, Mh, axis=1)
+    intg1 = beta_i * expand_dims(population_1 * dndm * bias, -1)
+    intg2 = expand_dims(population_2 * dndm * bias, -1) * trapz(intg1, Mh, axis=1)
     beta = trapz(intg2, Mh, axis=0) / (norm_1*norm_2)
     
     return beta

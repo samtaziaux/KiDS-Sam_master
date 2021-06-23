@@ -12,7 +12,8 @@ import scipy
 from scipy.integrate import simps, trapz
 from scipy.interpolate import interp1d
 import scipy.special as sp
-
+import dill as pickle
+import copy
 
 
 """
@@ -157,7 +158,6 @@ def clone_git(repository, out_path):
 
 def read_mead_data():
     # keep imports local
-    import dill as pickle
     import os
     import shutil
     from scipy.interpolate import RegularGridInterpolator
@@ -260,6 +260,61 @@ def load_hmf(z, setup, cosmo_model, sigma8, n_s):
         {'sigma_8': sigma8, 'n': n_s, 'lnk_min': setup['lnk_min'],
          'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
     hmf = []
+    dndm = []
+    power = []
+    nu = []
+    m = []
+    nu_scaled = []
+    fsigma_scaled = []
+    rho_mean = np.zeros(z.shape[0])
+    #rho_mean_z = np.zeros(z.shape[0])
+    
+    hmf_init = MassFunction(
+            Mmin=setup['logM_min'], Mmax=setup['logM_max'],
+            dlog10m=setup['mstep'],
+            hmf_model=ff.Tinker10, mdef_model=setup['delta_ref'],
+            mdef_params={'overdensity':setup['delta']}, disable_mass_conversion=True, delta_c=1.686,
+            cosmo_model=cosmo_model, z=0.0,
+            transfer_model=setup['transfer'], **transfer_params)
+
+    for i, zi in enumerate(z):
+        hmf_init.update(z=zi)
+        dndm.append(hmf_init.dndm)
+        power.append(hmf_init.power)
+        nu.append(hmf_init.nu)
+        m.append(hmf_init.m)
+        rho_mean[i] = hmf_init.mean_density
+        #rho_mean_z[i] = hmf[i].mean_density # Add to return
+        
+    for i, zi in enumerate(z):
+        # rescaling mass range for galaxy bias
+        min_0 = 2.0
+        hmf_init.update(z=zi, Mmin=min_0, Mmax=setup['logM_max'], dlog10m=(setup['logM_max']-min_0)/500.0)
+        nu_scaled.append(hmf_init.nu)
+        fsigma_scaled.append(hmf_init.fsigma)
+        hmf_init.update(z=zi, Mmin=setup['logM_min'], Mmax=setup['logM_max'],
+            dlog10m=setup['mstep']) # reset
+        
+    rho_bg = rho_mean / cosmo_model.Om0 if setup['delta_ref'] == 'SOCritical' \
+        else rho_mean
+    # this is in case redshift is used in the concentration or
+    # scaling relation or scatter (where the new dimension will
+    # be occupied by mass)
+    rho_bg = np.expand_dims(rho_bg, -1)
+    return hmf, rho_bg, np.array(dndm), np.array(power), np.array(nu), np.array(m), np.array(nu_scaled), np.array(fsigma_scaled)
+
+
+def load_hmf_cov(z, setup, cosmo_model, sigma8, n_s):
+    # For the covariance wee keep the old method of calling the halo mass function,
+    # as adding all the instances of the hmf to the return is not feasible
+    # Also, speed is not necessary a concern for this part.
+    transfer_params = \
+        {'sigma_8': sigma8, 'n': n_s, 'lnk_min': setup['lnk_min'],
+         'lnk_max': setup['lnk_max'], 'dlnk': setup['k_step']}
+    hmf = []
+    nu = []
+    nu_scaled = []
+    fsigma_scaled = []
     rho_mean = np.zeros(z.shape[0])
     #rho_mean_z = np.zeros(z.shape[0])
     for i, zi in enumerate(z):
@@ -272,14 +327,25 @@ def load_hmf(z, setup, cosmo_model, sigma8, n_s):
             transfer_model=setup['transfer'], **transfer_params)
             )
         rho_mean[i] = hmf[i].mean_density0
+        nu.append(hmf[i].nu)
         #rho_mean_z[i] = hmf[i].mean_density # Add to return
+        
+    for i, zi in enumerate(z):
+        # rescaling mass range for galaxy bias
+        min_0 = 2.0
+        hmf[i].update(z=zi, Mmin=min_0, Mmax=setup['logM_max'], dlog10m = (setup['logM_max']-min_0)/500.0)
+        nu_scaled.append(hmf[i].nu)
+        fsigma_scaled.append(hmf[i].fsigma)
+        hmf[i].update(z=zi, Mmin=setup['logM_min'], Mmax=setup['logM_max'],
+            dlog10m=setup['mstep']) # reset
+        
     rho_bg = rho_mean / cosmo_model.Om0 if setup['delta_ref'] == 'SOCritical' \
         else rho_mean
     # this is in case redshift is used in the concentration or
     # scaling relation or scatter (where the new dimension will
     # be occupied by mass)
     rho_bg = np.expand_dims(rho_bg, -1)
-    return hmf, rho_bg
+    return hmf, rho_bg, np.array(nu), np.array(nu_scaled), np.array(fsigma_scaled)
 
 
 def virial_mass(r, rho_mean, delta_halo):

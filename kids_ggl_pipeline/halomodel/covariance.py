@@ -35,7 +35,7 @@ import hmf.density_field.transfer_models as tf
 
 from . import baryons, longdouble_utils as ld, nfw
 from .tools import (
-    fill_nan, load_hmf, virial_mass, virial_radius)
+    fill_nan, load_hmf_cov, virial_mass, virial_radius)
 from .lens import (
     power_to_corr, power_to_corr_multi, sigma, d_sigma, sigma_crit as sigma_crit_func,
     power_to_corr_ogata, wp, wp_beta_correction)
@@ -1043,7 +1043,7 @@ def covariance(theta, R):
     z = format_z(z, nbins)
     
         # Tinker10 should also be read from theta!
-    hmf, rho_bg = load_hmf(z, setup, cosmo_model, sigma8, n_s)
+    hmf, rho_bg, nu, nu_s, fsigma_s = load_hmf_cov(z, setup, cosmo_model, sigma8, n_s)
 
     assert np.allclose(setup['mass_range'], hmf[0].m)
     # alias (should probably get rid of it)
@@ -1149,6 +1149,7 @@ def covariance(theta, R):
 
     # note that pop_g already accounts for incompleteness
     dndm = array([hmf_i.dndm for hmf_i in hmf])
+    power = array([hmf_i.power  for hmf_i in hmf])
     ngal = hod.nbar(dndm, pop_g, mass_range)
     meff = hod.Mh_effective(
         dndm, pop_g, mass_range, return_log=observables.gm.is_log)
@@ -1169,9 +1170,9 @@ def covariance(theta, R):
         if z_mlf.size != observables.mlf.nbins:
             raise ValueError(
                 'Number of redshift bins should be equal to the number of observable bins!')
-        hmf_mlf, _rho_mean = load_hmf(z_mlf, setup, cosmo_model, sigma8, n_s)
+        hmf_mlf, _rho_mean, _nu, _nu_s, _fsigma_s = load_hmf_cov(z_mlf, setup, cosmo_model, sigma8, n_s)
         dndm_mlf = array([hmf_i.dndm for hmf_i in hmf_mlf])
-        bias_mlf = array([bias_tinker10(hmf_i) for hmf_i in hmf_mlf])
+        bias_mlf = array([bias_tinker10(nu_i, nus_i, fsigma_i, setup) for nu_i, nus_i, fsigma_i in zip(_nu, _nu_s, _fsigma_s)])
         
         pop_c_mlf = np.zeros(observables.mlf.sampling.shape)
         pop_s_mlf = np.zeros(observables.mlf.sampling.shape)
@@ -1212,9 +1213,9 @@ def covariance(theta, R):
         mlf_til = [exp(mlf_i(np.log10(r_i))) for mlf_i, r_i
                     in zip(mlf_tilde_inter, observables.mlf.R)]
         m_bin = [np.diff(i)[0] for i in observables.mlf.R]
-        count_b = array([count_bispectrum(hmf_i, uk_c_i, bias_tinker10(hmf_i), rho_bg_i, ngal_i, mlf_out_i, mass_range)
-                for hmf_i, uk_c_i, rho_bg_i, ngal_i, mlf_out_i in
-                zip(hmf, uk_c, rho_bg, ngal, mlf_out)])
+        count_b = array([count_bispectrum(hmf_i, uk_c_i, bias_tinker10(nu_i, nus_i, fsigma_i, setup), rho_bg_i, ngal_i, mlf_out_i, mass_range)
+                for hmf_i, uk_c_i, rho_bg_i, ngal_i, mlf_out_i, nu_i, nus_i, fsigma_i in
+                zip(hmf, uk_c, rho_bg, ngal, mlf_out, nu, nu_s, fsigma_s)])
         count_b_interp = [[UnivariateSpline(setup['k_range'], count_b_i, s=0, ext=0)
                     for count_b_i in count] for count in count_b]
         if covar['healpy']:
@@ -1243,20 +1244,20 @@ def covariance(theta, R):
     bias = array([bias]*setup['k_range_lin'].size).T
     
     if setup['delta_ref'] == 'SOCritical':
-        bias = bias * omegam
+        bias = bias * cosmo_model.Om0
    
     rho_bg = rho_bg[...,0]
-    
+                
     Pgm_2h = F_k2 * bias * array(
-            [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[0]
-            for hmf_i, ngal_i, pop_g_i
-            in zip(hmf, expand_dims(ngal, -1),
+            [two_halo_gm(dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i, mass_range, setup)[0]
+            for dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i
+            in zip(dndm, power, nu, nu_s, fsigma_s, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
 
     bias_num = bias * array(
-            [two_halo_gm(hmf_i, ngal_i, pop_g_i, mass_range)[1]
-            for hmf_i, ngal_i, pop_g_i
-            in zip(hmf, expand_dims(ngal, -1),
+            [two_halo_gm(dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i, mass_range, setup)[1]
+            for dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i
+            in zip(dndm, power, nu, nu_s, fsigma_s, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
     
     if ingredients['centrals']:
@@ -1278,9 +1279,9 @@ def covariance(theta, R):
     # Galaxy - galaxy spectra (for clustering)
     
     Pgg_2h = F_k2 * bias * array(
-            [two_halo_gg(hmf_i, ngal_i, pop_g_i, mass_range)[0]
-            for hmf_i, ngal_i, pop_g_i
-            in zip(hmf, expand_dims(ngal, -1),
+            [two_halo_gg(dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i, mass_range, setup)[0]
+            for dndm_i, power_i, nu_i, nus_i, fsigma_i, ngal_i, pop_g_i
+            in zip(dndm, power, nu, nu_s, fsigma_s, expand_dims(ngal, -1),
                     expand_dims(pop_g, -2))])
         
     ncen = hod.nbar(dndm, pop_c, mass_range)
@@ -1330,25 +1331,25 @@ def covariance(theta, R):
     
     # Evaluate halo model integrals needed for SSC
     
-    I_g = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
-                                   for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
-                                   zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
+    I_g = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(nu_i, nus_i, fsigma_i, setup), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'g')
+                                   for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, nu_i, nus_i, fsigma_i in
+                                   zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s, nu, nu_s, fsigma_s)])
                                    
-    I_m = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
-                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
-                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
+    I_m = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(nu_i, nus_i, fsigma_i, setup), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'm')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, nu_i, nus_i, fsigma_i in
+                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s, nu, nu_s, fsigma_s)])
                                     
-    I_gg = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
-                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
-                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
+    I_gg = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(nu_i, nus_i, fsigma_i, setup), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gg')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, nu_i, nus_i, fsigma_i in
+                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s, nu, nu_s, fsigma_s)])
                                     
-    I_gm = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
-                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
-                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
+    I_gm = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(nu_i, nus_i, fsigma_i, setup), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'gm')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, nu_i, nus_i, fsigma_i in
+                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s, nu, nu_s, fsigma_s)])
                                     
-    I_mm = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(hmf_i), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
-                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
-                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
+    I_mm = array([halo_model_integrals(hmf_i.dndm, uk_c_i, uk_s_i, bias_tinker10(nu_i, nus_i, fsigma_i, setup), rho_bg_i, ngal_i, pop_c_i, pop_s_i, mass_range, 'mm')
+                                    for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i, nu_i, nus_i, fsigma_i in
+                                    zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s, nu, nu_s, fsigma_s)])
     
     I_g_func = [UnivariateSpline(setup['k_range'], np.log(I_g_i), s=0, ext=0)
                for I_g_i in I_g]
@@ -1396,9 +1397,9 @@ def covariance(theta, R):
                     for hmf_i, uk_c_i, uk_s_i, rho_bg_i, ngal_i, pop_c_i, pop_s_i in
                     zip(hmf, uk_c, uk_s, rho_bg, ngal, pop_c, pop_s)])
     
-        T234h = array([trispectra_234h(k_temp_lin, P_lin_inter_i, hmf_i, u_k_i, bias_tinker10(hmf_i), rho_bg_i, mass_range, setup['k_range_lin'])
-                    for P_lin_inter_i, hmf_i, u_k_i, rho_bg_i in
-                    zip(P_lin_inter, hmf, uk_c, rho_bg)])
+        T234h = array([trispectra_234h(k_temp_lin, P_lin_inter_i, hmf_i, u_k_i, bias_tinker10(nu_i, nus_i, fsigma_i, setup), rho_bg_i, mass_range, setup['k_range_lin'])
+                    for P_lin_inter_i, hmf_i, u_k_i, rho_bg_i, nu_i, nus_i, fsigma_i in
+                    zip(P_lin_inter, hmf, uk_c, rho_bg, nu, nu_s, fsigma_s)])
         print('Trispectra done.')
    
    

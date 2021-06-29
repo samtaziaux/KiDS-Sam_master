@@ -283,7 +283,7 @@ def load_hmf(z, setup, cosmo_model, sigma8, n_s):
         power.append(hmf_init.power)
         nu.append(hmf_init.nu)
         m.append(hmf_init.m)
-        rho_mean[i] = hmf_init.mean_density
+        rho_mean[i] = hmf_init.mean_density0
         #rho_mean_z[i] = hmf[i].mean_density # Add to return
         
     for i, zi in enumerate(z):

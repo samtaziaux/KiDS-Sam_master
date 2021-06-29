@@ -215,10 +215,11 @@ def run(hm_options, options, args):
                 state = np.nanmedian(walk, axis=0)
                 p = update_parameters(state, parameters, nparams, join, jfree, repeat)
                 cosmo = p[1][p[0].index('parameters')][0]
-                #s8 = cosmo[0], h = cosmo[1], om = cosmo[2],
-                #ob = cosmo[3], ns = cosmo[4], w0 = cosmo[5]
-                beta = initialize_beta_nl(cosmo[3], cosmo[2]-cosmo[3], 1-cosmo[2],
-                        cosmo[0], cosmo[4], cosmo[5], cosmo[1], reset=True)
+                # Cosmology parameters need be set to a dictionary or something, this hardcoding is not optimal at all
+                #s8 = cosmo[3], h = cosmo[2], om = cosmo[0],
+                #ob = cosmo[1], ns = cosmo[4], w0 = cosmo[5]
+                beta = initialize_beta_nl(cosmo[1], cosmo[0]-cosmo[1], 1-cosmo[0],
+                        cosmo[3], cosmo[4], cosmo[5], cosmo[2], reset=True)
 
     io.finalize_hdr(sampler, hdrfile)
     print('Everything saved to {0}!'.format(options['output']))
